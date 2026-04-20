@@ -182,6 +182,17 @@ const messageLimiter = rateLimit({
   message: { error: "You're sending messages too quickly. Please slow down." },
 });
 
+// Global API limiter — applied to all /api/* routes
+const generalLimiter = rateLimit({
+  store: makeRedisStore('rl:general:'),
+  windowMs: 60 * 1000,
+  max: 300,
+  message: { error: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', generalLimiter);
+
 // Setup uploads directory with S3 option
 const uploadDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -1539,13 +1550,20 @@ app.get("/api/search", authenticateToken, async (req, res) => {
   const { q } = req.query;
   if (!q || String(q).trim().length < 2) return res.json({ products: [], stores: [] });
 
+  const searchStr = String(q).trim();
+
+  // Cache search results per role+query for 60s
+  const searchCacheKey = `search:${userRole}:${searchStr.toLowerCase()}`;
+  try {
+    const cached = await pubClient.get(searchCacheKey);
+    if (cached) return res.json(JSON.parse(cached));
+  } catch {}
+
   let allowedRoles: string[] = [];
   if (userRole === 'customer') allowedRoles = ['retailer'];
   else if (userRole === 'retailer') allowedRoles = ['retailer', 'supplier', 'manufacturer', 'brand'];
   else if (['supplier', 'manufacturer', 'brand'].includes(userRole)) allowedRoles = ['retailer'];
   else if (userRole === 'admin') allowedRoles = ['customer', 'retailer', 'supplier', 'manufacturer', 'brand', 'admin'];
-
-  const searchStr = String(q).trim();
 
   try {
     const [products, stores] = await Promise.all([
@@ -1587,9 +1605,10 @@ app.get("/api/search", authenticateToken, async (req, res) => {
       }),
     ]);
 
-    res.json({ products, stores });
+    const result = { products, stores };
+    pubClient.set(searchCacheKey, JSON.stringify(result), { EX: 60 }).catch(() => {});
+    res.json(result);
   } catch (error) {
-    console.error("Search error:", error);
     res.status(500).json({ error: "Failed to perform search" });
   }
 });
@@ -1757,16 +1776,28 @@ app.get("/api/posts", authenticateToken, async (req, res) => {
   const userRole = (req as any).user.role;
   const userId = (req as any).user.userId;
   const { feedType, locationRange, lat, lng } = req.query;
-  
+
+  const page = parseInt(String(req.query.page || '1'));
+  const limit = Math.min(parseInt(String(req.query.limit || '20')), 50);
+  const skip = (page - 1) * limit;
+
+  // Cache discovery feed (no following filter, no location) per role+page — 30s TTL
+  const isCacheable = !feedType || (feedType !== 'following' && (!locationRange || locationRange === 'all'));
+  if (isCacheable) {
+    const cacheKey = `feed:${userRole}:p${page}:l${limit}`;
+    try {
+      const cached = await pubClient.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached));
+    } catch {}
+    // Store result after query (set below)
+    (res as any)._feedCacheKey = cacheKey;
+  }
+
   let allowedRoles: string[] = [];
   if (userRole === 'customer') allowedRoles = ['retailer'];
   else if (userRole === 'retailer') allowedRoles = ['retailer', 'supplier', 'manufacturer', 'brand'];
   else if (['supplier', 'manufacturer', 'brand'].includes(userRole)) allowedRoles = ['retailer'];
   else if (userRole === 'admin') allowedRoles = ['customer', 'retailer', 'supplier', 'manufacturer', 'brand', 'admin'];
-
-  const page = parseInt(String(req.query.page || '1'));
-  const limit = Math.min(parseInt(String(req.query.limit || '20')), 50);
-  const skip = (page - 1) * limit;
 
   let storeFilter: any = { owner: { role: { in: allowedRoles }, isBlocked: false } };
 
@@ -1807,10 +1838,18 @@ app.get("/api/posts", authenticateToken, async (req, res) => {
     }),
   ]);
 
-  res.json({
+  const result = {
     posts: posts.map(p => ({ ...p, isOwnPost: p.store.ownerId === userId })),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) }
-  });
+  };
+
+  // Cache cacheable feeds for 30s
+  const cacheKey = (res as any)._feedCacheKey;
+  if (cacheKey) {
+    pubClient.set(cacheKey, JSON.stringify(result), { EX: 30 }).catch(() => {});
+  }
+
+  res.json(result);
 });
 
 // Interactions
@@ -2318,7 +2357,6 @@ io.use((socket, next) => {
 
 io.on("connection", (socket) => {
   const userId = (socket as any).user.userId;
-  console.log("Authenticated user connected:", userId, "Socket:", socket.id);
   
   // Automatically join the user to a room of their own ID to receive private messages
   socket.join(userId);
@@ -2366,9 +2404,7 @@ io.on("connection", (socket) => {
     }
   });
   
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", userId, "Socket:", socket.id);
-  });
+  socket.on("disconnect", () => {});
 });
 
 async function startServer() {
