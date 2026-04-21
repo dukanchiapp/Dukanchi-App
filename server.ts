@@ -2407,8 +2407,47 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {});
 });
 
+async function ensureAdminAccount() {
+  const ADMIN_PHONE = '8595572765';
+  const ADMIN_PASSWORD = '12345678';
+  const ADMIN_NAME = 'Mandeep';
+
+  try {
+    const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+    await prisma.user.upsert({
+      where: { id: PROTECTED_ADMIN_ID },
+      update: { phone: ADMIN_PHONE, name: ADMIN_NAME, role: 'admin', isBlocked: false },
+      create: {
+        id: PROTECTED_ADMIN_ID,
+        phone: ADMIN_PHONE,
+        password: hashed,
+        name: ADMIN_NAME,
+        role: 'admin',
+      },
+    });
+  } catch {
+    // If upsert by ID fails (fresh DB), upsert by phone
+    try {
+      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      const existing = await prisma.user.findUnique({ where: { phone: '8595572765' } });
+      if (existing) {
+        await prisma.user.update({
+          where: { phone: '8595572765' },
+          data: { role: 'admin', isBlocked: false, name: ADMIN_NAME },
+        });
+      } else {
+        await prisma.user.create({
+          data: { id: PROTECTED_ADMIN_ID, phone: ADMIN_PHONE, password: hashed, name: ADMIN_NAME, role: 'admin' },
+        });
+      }
+    } catch {}
+  }
+}
+
 async function startServer() {
   const PORT = 3000;
+
+  await ensureAdminAccount();
 
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
