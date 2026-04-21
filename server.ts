@@ -335,53 +335,8 @@ app.post("/api/login", authLimiter, async (req, res) => {
   }
 });
 
-app.post("/api/google-login", authLimiter, async (req, res) => {
-  try {
-    const { token, role } = req.body;
-    
-    if (!token) return res.status(400).json({ error: "No token provided" });
-
-    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!userInfoRes.ok) return res.status(401).json({ error: "Invalid Google token" });
-
-    const userInfo = await userInfoRes.json();
-    const { email, name } = userInfo;
-
-    if (!email) return res.status(400).json({ error: "Google account has no email" });
-
-    let user = await prisma.user.findUnique({ where: { email } });
-
-    if (user && user.isBlocked) {
-      return res.status(403).json({ error: "Your account has been blocked. Please contact support." });
-    }
-
-    if (!user) {
-      const assignedRole = role || 'customer';
-      const randomPassword = Math.random().toString(36).slice(-10);
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      user = await prisma.user.create({
-        data: {
-          name: name || 'Google User',
-          email,
-          password: hashedPassword,
-          role: assignedRole,
-        }
-      });
-    }
-
-    const jwtToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    const { password: _, ...userWithoutPassword } = user;
-    res.json({ user: userWithoutPassword, token: jwtToken });
-
-  } catch (error) {
-    console.error("Google Login Error:", error);
-    res.status(500).json({ error: "Google Login failed" });
-  }
-});
+// Google login temporarily disabled
+// app.post("/api/google-login", ...) — removed until re-enabled
 
 // Chat Permissions Helper
 const canChat = (roleA: string, roleB: string): boolean => {
