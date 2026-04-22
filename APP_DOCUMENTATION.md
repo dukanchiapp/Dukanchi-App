@@ -51,6 +51,7 @@ Both share a single **Express + TypeScript backend** (`server.ts`).
 | Auth | JWT (jsonwebtoken) + bcrypt |
 | File Uploads | Multer (local disk) or Multer-S3 (AWS S3) |
 | Security Headers | `helmet` |
+| Validation | `zod` |
 | Compression | `compression` (gzip/brotli) |
 | Rate Limiting | `express-rate-limit` + Redis store |
 | Process Manager | PM2 (cluster mode, all CPU cores) |
@@ -446,4 +447,4 @@ The script installs: Node.js 22, PostgreSQL 14, Redis, Nginx, Certbot (SSL), PM2
 
 ---
 
-*Last updated: 2026-04-22*
+*Last updated: 2026-04-22 (Session 4)*

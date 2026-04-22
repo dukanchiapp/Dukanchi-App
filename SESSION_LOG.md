@@ -6,6 +6,47 @@
 
 ---
 
+## 2026-04-22 — Session 4 (Phase 2 Zod validation)
+
+### Commit: TBD — security: phase 2 zod input validation
+
+#### Zod installed
+**File:** `package.json` / `package-lock.json`
+- `npm install zod`
+
+#### validators/schemas.ts (new file)
+- `signupSchema` — name (min 2), phone (10 digits), password (min 8), role enum
+- `loginSchema` — phone (10 digits), password (min 1)
+- `createPostSchema` — imageUrl (url), caption (max 500, optional), price (positive, optional), productId (uuid, optional)
+- `updatePostSchema` — all of createPost fields but fully optional
+- `createStoreSchema` — storeName (min 2), category, latitude/longitude (coerced numbers), address (min 5), phone (10 digits, optional)
+- `createReviewSchema` — rating (int 1-5), comment (max 1000, optional), storeId/productId (uuid, optional)
+- `sendMessageSchema` — receiverId (uuid), message (min 1, max 5000, optional), imageUrl (url, optional)
+- `submitComplaintSchema` — issueType enum, description (min 10, max 2000)
+- `submitReportSchema` — reason (min 5, max 500), reportedUserId/reportedStoreId (uuid, optional) ← schema only; POST /api/reports route not yet implemented
+- `submitKycSchema` — documentUrl/selfieUrl (url), storeName (min 2), storePhoto (url, optional) — uses actual route field names (no kyc prefix) to avoid breaking existing API
+- All schemas use `.passthrough()` so non-validated fields (storeId, ownerId, etc.) flow through to route handlers unchanged
+
+#### validators/validate.ts (new file)
+- `validate(schema)` middleware: runs `schema.safeParse(req.body)`; on failure returns `400 { error: 'Validation failed', issues: [...] }`; on success replaces `req.body` with parsed data and calls `next()`
+- **Note:** Created at root `/validators/` (not `src/validators/`) since `src/` is the React frontend, not server code
+
+#### server.ts — validate() applied to routes
+- `POST /api/users` — added `validate(signupSchema)`; removed `if (!phone)` check
+- `POST /api/login` — added `validate(loginSchema)`; removed `if (!phone || !password)` check
+- `POST /api/posts` — added `validate(createPostSchema)`
+- `PUT /api/posts/:id` — added `validate(updatePostSchema)`
+- `POST /api/stores` — added `validate(createStoreSchema)`
+- `POST /api/reviews` — added `validate(createReviewSchema)`; removed manual `Math.max(1, Math.min(5, ...))` clamp (Zod enforces 1-5); kept storeId/productId mutual-exclusion business logic checks
+- `POST /api/messages` — added `validate(sendMessageSchema)`; removed `if (!receiverId || (!message && !imageUrl))` check
+- `POST /api/complaints` — added `validate(submitComplaintSchema)`; removed `if (!issueType || !description)` check
+- `POST /api/kyc/submit` — added `validate(submitKycSchema)`; removed `if (!documentUrl || !selfieUrl)` check
+
+#### APP_DOCUMENTATION.md
+- Added `Validation | zod` row to Backend tech stack table
+
+---
+
 ## 2026-04-22 — Session 3 (Phase 1 security cleanup)
 
 ### Commit: TBD — security: phase 1 hardening

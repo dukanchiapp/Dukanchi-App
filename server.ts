@@ -19,6 +19,14 @@ import { createAdapter } from "@socket.io/redis-adapter";
 import { createClient } from "redis";
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
+import { validate } from './validators/validate';
+import {
+  signupSchema, loginSchema,
+  createPostSchema, updatePostSchema,
+  createStoreSchema, createReviewSchema,
+  sendMessageSchema, submitComplaintSchema,
+  submitKycSchema,
+} from './validators/schemas';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -256,13 +264,9 @@ app.get("/api/health", async (req, res) => {
 });
 
 // Users
-app.post("/api/users", authLimiter, async (req, res) => {
+app.post("/api/users", authLimiter, validate(signupSchema), async (req, res) => {
   try {
     const { name, phone, password, role, location } = req.body;
-
-    if (!phone) {
-      return res.status(400).json({ error: "Phone number is required" });
-    }
 
     const existingUser = await prisma.user.findUnique({ where: { phone } });
     if (existingUser) {
@@ -290,13 +294,9 @@ app.post("/api/users", authLimiter, async (req, res) => {
   }
 });
 
-app.post("/api/login", authLimiter, async (req, res) => {
+app.post("/api/login", authLimiter, validate(loginSchema), async (req, res) => {
   try {
     const { phone, password } = req.body;
-
-    if (!phone || !password) {
-      return res.status(400).json({ error: "Phone and password are required" });
-    }
 
     // Check Team Member login first
     const teamMember = await prisma.teamMember.findUnique({ 
@@ -884,14 +884,10 @@ app.post("/api/admin/settings/upload", authenticateToken, requireAdmin, upload.s
 
 // --- Complaint Endpoints ---
 // User: Submit a complaint
-app.post("/api/complaints", authenticateToken, async (req, res) => {
+app.post("/api/complaints", authenticateToken, validate(submitComplaintSchema), async (req, res) => {
   try {
     const userId = (req as any).user.userId;
     const { issueType, description } = req.body;
-
-    if (!issueType || !description) {
-      return res.status(400).json({ error: "Issue type and description are required" });
-    }
 
     const complaint = await prisma.complaint.create({
       data: { userId, issueType, description },
@@ -1047,14 +1043,10 @@ app.delete("/api/search-history", authenticateToken, async (req, res) => {
 
 // --- KYC Endpoints ---
 // User: Submit KYC documents
-app.post("/api/kyc/submit", authenticateToken, async (req, res) => {
+app.post("/api/kyc/submit", authenticateToken, validate(submitKycSchema), async (req, res) => {
   try {
     const userId = (req as any).user.userId;
     const { documentUrl, selfieUrl, storeName, storePhoto } = req.body;
-
-    if (!documentUrl || !selfieUrl) {
-      return res.status(400).json({ error: "Both document and selfie are required" });
-    }
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -1259,7 +1251,7 @@ app.get("/api/users/:id/locations", authenticateToken, async (req, res) => {
 });
 
 // Stores
-app.post("/api/stores", authenticateToken, async (req, res) => {
+app.post("/api/stores", authenticateToken, validate(createStoreSchema), async (req, res) => {
   try {
     // KYC gate: non-customer users must be KYC approved to create a store
     const currentUser = await prisma.user.findUnique({ where: { id: (req as any).user.userId }, select: { role: true, kycStatus: true } });
@@ -1695,7 +1687,7 @@ app.post("/api/products/upload", authenticateToken, upload.single("file"), async
 });
 
 // Posts
-app.post("/api/posts", authenticateToken, async (req, res) => {
+app.post("/api/posts", authenticateToken, validate(createPostSchema), async (req, res) => {
   try {
     const { storeId, caption, imageUrl, productId, price } = req.body;
     
@@ -1899,7 +1891,7 @@ app.post("/api/posts/:id/pin", authenticateToken, async (req, res) => {
   }
 });
 // Edit Post (caption, price, imageUrl)
-app.put("/api/posts/:id", authenticateToken, async (req, res) => {
+app.put("/api/posts/:id", authenticateToken, validate(updatePostSchema), async (req, res) => {
   try {
     const post = await prisma.post.findUnique({ where: { id: req.params.id }, include: { store: true } });
     if (!post) return res.status(404).json({ error: "Not found" });
@@ -2055,11 +2047,10 @@ app.get("/api/messages/:userId/:otherUserId", authenticateToken, async (req, res
 });
 
 // Send message via HTTP (reliable fallback)
-app.post("/api/messages", authenticateToken, messageLimiter, async (req, res) => {
+app.post("/api/messages", authenticateToken, messageLimiter, validate(sendMessageSchema), async (req, res) => {
   try {
     const senderId = (req as any).user.userId;
     const { receiverId, message, imageUrl } = req.body;
-    if (!receiverId || (!message && !imageUrl)) return res.status(400).json({ error: "receiverId and message/imageUrl required" });
 
     const sender = await prisma.user.findUnique({ where: { id: senderId } });
     const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
@@ -2124,7 +2115,7 @@ app.get("/api/reviews/product/:productId", async (req, res) => {
   }
 });
 
-app.post("/api/reviews", authenticateToken, async (req, res) => {
+app.post("/api/reviews", authenticateToken, validate(createReviewSchema), async (req, res) => {
   try {
     const { rating, comment, storeId, productId } = req.body;
     const userId = (req as any).user.userId;
@@ -2132,11 +2123,8 @@ app.post("/api/reviews", authenticateToken, async (req, res) => {
     if (!storeId && !productId) return res.status(400).json({ error: "Must review either a store or a product" });
     if (storeId && productId) return res.status(400).json({ error: "Cannot review both store and product at once" });
 
-    // Ensure the rating is valid
-    const validRating = Math.max(1, Math.min(5, Math.floor(rating) || 5));
-
     const newReview = await prisma.review.create({
-      data: { rating: validRating, comment, storeId, productId, userId }
+      data: { rating, comment, storeId, productId, userId }
     });
 
     // Recalculate Average Rating
