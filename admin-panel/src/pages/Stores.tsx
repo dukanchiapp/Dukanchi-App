@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { Search, ChevronLeft, ChevronRight, Trash2, Star, Users, Package, MapPin, ShieldAlert, ShieldCheck, Image, KeyRound, X, Eye, EyeOff } from 'lucide-react';
-import api, { getAdminHeaders } from '../lib/api';
+import { Search, ChevronLeft, ChevronRight, Trash2, Star, Users, Package, MapPin, ShieldAlert, ShieldCheck, Image, KeyRound, X, Eye, EyeOff, Download } from 'lucide-react';
+import api, { getAdminHeaders, API_URL } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -9,6 +9,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 interface StoreData {
   id: string; storeName: string; category: string; address: string; averageRating: number | null; reviewCount: number; createdAt: string;
   logoUrl: string | null; ownerId: string;
+  city?: string | null; state?: string | null; postalCode?: number | null;
+  latitude?: number | null; longitude?: number | null;
   owner: { name: string; phone: string; role: string; isBlocked: boolean };
   _count: { followers: number; posts: number; products: number };
 }
@@ -61,6 +63,22 @@ export default function Stores() {
     }
   };
 
+  const handleExport = () => {
+    const token = localStorage.getItem('adminToken');
+    fetch(`${API_URL}/api/admin/stores/export`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `stores-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      });
+  };
+
   const handleToggleBlockOwner = async (store: StoreData) => {
     try {
       await api.put(`/api/admin/users/${store.ownerId}`, { isBlocked: !store.owner.isBlocked }, { headers: getAdminHeaders() });
@@ -105,6 +123,13 @@ export default function Stores() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores or categories..."
             className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-300" />
         </form>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap"
+          title="Download all stores as XLSX for Google Sheets"
+        >
+          <Download size={15} /> Export XLSX
+        </button>
       </div>
 
       <p className="text-xs text-gray-500 mb-3">{total} stores found</p>
@@ -143,7 +168,19 @@ export default function Stores() {
                     </td>
                     <td className="px-5 py-3">
                       <p className="text-sm font-medium text-gray-900">{s.storeName}</p>
-                      <p className="text-xs text-gray-400 truncate max-w-[200px]">{s.address}</p>
+                      <p className="text-xs text-gray-400 truncate max-w-[200px]">
+                        {[s.address, s.city, s.state].filter(Boolean).join(', ')}
+                      </p>
+                      {s.latitude && s.longitude && (
+                        <a
+                          href={`https://www.google.com/maps?q=${s.latitude},${s.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] text-indigo-500 hover:text-indigo-700 mt-0.5 font-medium"
+                        >
+                          <MapPin size={9} /> {s.latitude.toFixed(4)}, {s.longitude.toFixed(4)}
+                        </a>
+                      )}
                     </td>
                     <td className="px-5 py-3">
                       <p className="text-sm text-gray-700">{s.owner.name}</p>

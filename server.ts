@@ -25,7 +25,7 @@ import {
   createPostSchema, updatePostSchema,
   createStoreSchema, createReviewSchema,
   sendMessageSchema, submitComplaintSchema,
-  submitKycSchema,
+  submitKycSchema, submitReportSchema,
 } from './validators/schemas';
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -145,7 +145,7 @@ const teamMemberExists = async (teamMemberId: string): Promise<boolean> => {
 };
 
 // Security headers
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false }));
 
 // Gzip/brotli all responses — especially large JSON feeds
 app.use(compression());
@@ -235,7 +235,13 @@ if (process.env.S3_BUCKET_NAME) {
   });
 } else {
   upload = multer({
-    dest: uploadDir,
+    storage: multer.diskStorage({
+      destination: uploadDir,
+      filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+        cb(null, Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + ext);
+      },
+    }),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
     fileFilter: (req, file, cb) => {
       const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif',
@@ -250,7 +256,44 @@ if (process.env.S3_BUCKET_NAME) {
   });
 }
 
-app.use("/uploads", express.static(uploadDir)); // Serve upload images
+// Serve uploads with correct Content-Type by sniffing magic bytes (files have no extension from legacy multer config)
+app.get("/uploads/:filename", (req, res) => {
+  const filename = path.basename(req.params.filename); // prevent path traversal
+  const filePath = path.join(uploadDir, filename);
+  if (!fs.existsSync(filePath)) return res.status(404).end();
+
+  const ext = path.extname(filename).toLowerCase();
+  const extMime: Record<string, string> = {
+    '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.xls': 'application/vnd.ms-excel',
+  };
+
+  let mimeType = extMime[ext];
+  if (!mimeType) {
+    // Sniff MIME from first 12 bytes for extension-less legacy files
+    const buf = Buffer.alloc(12);
+    const fd = fs.openSync(filePath, 'r');
+    fs.readSync(fd, buf, 0, 12, 0);
+    fs.closeSync(fd);
+    if (buf[0] === 0xFF && buf[1] === 0xD8) mimeType = 'image/jpeg';
+    else if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) mimeType = 'image/png';
+    else if (buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') mimeType = 'image/webp';
+    else if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46) mimeType = 'image/gif';
+    else if (buf.toString('ascii', 4, 8) === 'ftyp') mimeType = 'image/avif'; // AVIF/HEIC ISO base media
+    else mimeType = 'application/octet-stream';
+  }
+
+  res.setHeader('Content-Type', mimeType);
+  // Extension-less legacy files get short cache so stale CORP responses expire quickly.
+  // Files with extensions (new uploads) get 30-day cache.
+  const hasExt = ext.length > 0;
+  res.setHeader('Cache-Control', mimeType === 'application/octet-stream' ? 'no-store' : hasExt ? 'public, max-age=2592000, immutable' : 'public, max-age=300, must-revalidate');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Vary', 'Origin');
+  fs.createReadStream(filePath).pipe(res);
+});
 
 // API Routes
 app.get("/api/health", async (req, res) => {
@@ -663,6 +706,12 @@ app.get("/api/admin/store-members", authenticateToken, requireAdmin, async (req,
         storeName: true,
         category: true,
         logoUrl: true,
+        address: true,
+        city: true,
+        state: true,
+        postalCode: true,
+        latitude: true,
+        longitude: true,
         createdAt: true,
         owner: { select: { id: true, name: true, phone: true, role: true, email: true } },
         _count: { select: { teamMembers: true } },
@@ -687,6 +736,11 @@ app.get("/api/admin/store-members/:storeId", authenticateToken, requireAdmin, as
         category: true,
         logoUrl: true,
         address: true,
+        city: true,
+        state: true,
+        postalCode: true,
+        latitude: true,
+        longitude: true,
         phone: true,
         createdAt: true,
         owner: { select: { id: true, name: true, phone: true, role: true, email: true, createdAt: true } },
@@ -713,6 +767,75 @@ app.delete("/api/admin/team/:memberId", authenticateToken, requireAdmin, async (
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Failed to delete team member" });
+  }
+});
+
+// Admin: Export all stores as XLSX
+app.get("/api/admin/stores/export", authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const stores = await prisma.store.findMany({
+      select: {
+        id: true,
+        storeName: true,
+        category: true,
+        address: true,
+        city: true,
+        state: true,
+        postalCode: true,
+        latitude: true,
+        longitude: true,
+        phone: true,
+        gstNumber: true,
+        openingTime: true,
+        closingTime: true,
+        workingDays: true,
+        is24Hours: true,
+        createdAt: true,
+        owner: { select: { id: true, name: true, phone: true, email: true, role: true } },
+        _count: { select: { teamMembers: true, posts: true, followers: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const rows = stores.map(s => ({
+      'Store ID': s.id,
+      'Store Name': s.storeName,
+      'Category': s.category,
+      'Address': s.address,
+      'City': s.city ?? '',
+      'State': s.state ?? '',
+      'Postal Code': s.postalCode ?? '',
+      'Latitude': s.latitude,
+      'Longitude': s.longitude,
+      'Google Maps Link': s.latitude && s.longitude ? `https://www.google.com/maps?q=${s.latitude},${s.longitude}` : '',
+      'Store Phone': s.phone ?? '',
+      'GST Number': s.gstNumber ?? '',
+      'Opening Time': s.openingTime ?? '',
+      'Closing Time': s.closingTime ?? '',
+      'Working Days': s.workingDays ?? '',
+      'Is 24 Hours': s.is24Hours ? 'Yes' : 'No',
+      'Owner ID': s.owner.id,
+      'Owner Name': s.owner.name,
+      'Owner Phone': s.owner.phone ?? '',
+      'Owner Email': s.owner.email ?? '',
+      'Owner Role': s.owner.role,
+      'Team Members': s._count.teamMembers,
+      'Total Posts': s._count.posts,
+      'Followers': s._count.followers,
+      'Created At': new Date(s.createdAt).toISOString(),
+    }));
+
+    const ws = xlsx.utils.json_to_sheet(rows);
+    const wb = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(wb, ws, 'Stores');
+    const buf = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    const filename = `stores-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buf);
+  } catch (error) {
+    res.status(500).json({ error: "Failed to export stores" });
   }
 });
 
@@ -896,6 +1019,24 @@ app.post("/api/complaints", authenticateToken, validate(submitComplaintSchema), 
   } catch (error) {
     console.error("Failed to create complaint:", error);
     res.status(500).json({ error: "Failed to submit complaint" });
+  }
+});
+
+// User: Submit a report against a user or store
+app.post("/api/reports", authenticateToken, validate(submitReportSchema), async (req, res) => {
+  try {
+    const reportedByUserId = (req as any).user.userId;
+    const { reason, reportedUserId, reportedStoreId } = req.body;
+    if (!reportedUserId && !reportedStoreId) {
+      return res.status(400).json({ error: "reportedUserId or reportedStoreId is required" });
+    }
+    const report = await prisma.report.create({
+      data: { reason, reportedByUserId, reportedUserId: reportedUserId || null, reportedStoreId: reportedStoreId || null },
+    });
+    res.json(report);
+  } catch (error) {
+    console.error("Failed to create report:", error);
+    res.status(500).json({ error: "Failed to submit report" });
   }
 });
 
@@ -1324,10 +1465,11 @@ app.put("/api/stores/:id", authenticateToken, async (req, res) => {
       }
     }
 
-    // Parse postalCode to int if provided
+    // Parse postalCode to int if provided; NaN → null to avoid Prisma Int type error
     const updateData = { ...req.body };
     if (updateData.postalCode !== undefined) {
-      updateData.postalCode = updateData.postalCode ? parseInt(updateData.postalCode) : null;
+      const parsed = parseInt(updateData.postalCode);
+      updateData.postalCode = isNaN(parsed) ? null : parsed;
     }
 
     const store = await prisma.store.update({
@@ -2370,7 +2512,7 @@ async function ensureAdminAccount() {
     const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
     await prisma.user.upsert({
       where: { id: PROTECTED_ADMIN_ID },
-      update: { phone: ADMIN_PHONE, name: ADMIN_NAME, role: 'admin', isBlocked: false },
+      update: { phone: ADMIN_PHONE, password: hashed, name: ADMIN_NAME, role: 'admin', isBlocked: false },
       create: {
         id: PROTECTED_ADMIN_ID,
         phone: ADMIN_PHONE,
@@ -2387,7 +2529,7 @@ async function ensureAdminAccount() {
       if (existing) {
         await prisma.user.update({
           where: { phone: ADMIN_PHONE },
-          data: { role: 'admin', isBlocked: false, name: ADMIN_NAME },
+          data: { password: hashed, role: 'admin', isBlocked: false, name: ADMIN_NAME },
         });
       } else {
         await prisma.user.create({

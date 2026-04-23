@@ -1,9 +1,98 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { MessageSquare, Clock, ChevronRight, X } from 'lucide-react';
+import { MessageSquare, Clock, ChevronRight, X, Tag } from 'lucide-react';
 import api, { getAdminHeaders } from '../lib/api';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+const POST_REF_PREFIX = '__POST_REF__:';
+
+function decodePostRef(text: string) {
+  try { return JSON.parse(text.slice(POST_REF_PREFIX.length)); } catch { return null; }
+}
+
+function PostRefBubble({ text, isMe, onOpen }: { text: string; isMe: boolean; onOpen: (post: any) => void }) {
+  const post = decodePostRef(text);
+  if (!post) return <p className="text-xs italic opacity-60">[Post]</p>;
+  const imgSrc = post.imageUrl
+    ? (post.imageUrl.startsWith('http') ? post.imageUrl : `${API_BASE}${post.imageUrl}`)
+    : null;
+  return (
+    <button
+      onClick={() => onOpen({ ...post, imgSrc })}
+      className={`flex items-center overflow-hidden rounded-xl border max-w-[220px] text-left active:scale-95 transition-transform ${
+        isMe ? 'border-white/20 bg-white/10' : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
+      }`}
+    >
+      {imgSrc && (
+        <img src={imgSrc} alt="post" className="w-14 h-14 object-cover flex-shrink-0" />
+      )}
+      <div className="px-3 py-2 min-w-0">
+        <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest mb-1 ${isMe ? 'text-indigo-200' : 'text-indigo-500'}`}>
+          <Tag size={8} /> Tap to view post
+        </span>
+        {post.price && (
+          <p className={`text-sm font-extrabold leading-tight ${isMe ? 'text-white' : 'text-gray-900'}`}>
+            ₹{Number(post.price).toLocaleString()}
+          </p>
+        )}
+        {post.caption && (
+          <p className={`text-[11px] truncate mt-0.5 ${isMe ? 'text-indigo-200' : 'text-gray-500'}`}>
+            {post.caption}
+          </p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function PostPreviewModal({ post, onClose }: { post: any; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60" onClick={onClose}>
+      <div className="bg-white rounded-2xl overflow-hidden shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center">
+              <Tag size={13} className="text-indigo-600" />
+            </div>
+            <span className="text-sm font-bold text-gray-800">Post Preview</span>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+            <X size={15} className="text-gray-600" />
+          </button>
+        </div>
+
+        {/* Image */}
+        {post.imgSrc && (
+          <div className="relative mx-4 mt-4 rounded-xl overflow-hidden bg-gray-100">
+            <img src={post.imgSrc} alt="post" className="w-full object-cover max-h-64" />
+            {post.price && (
+              <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-sm text-white rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                <Tag size={11} className="text-indigo-300" />
+                <span className="text-sm font-extrabold">₹{Number(post.price).toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Caption */}
+        {post.caption && (
+          <div className="px-5 pt-4 pb-2">
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">Caption</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{post.caption}</p>
+          </div>
+        )}
+        <div className="h-5" />
+      </div>
+    </div>
+  );
+}
+
+function previewText(msg: string) {
+  if (msg?.startsWith(POST_REF_PREFIX)) return '📎 Post reference';
+  return msg;
+}
 
 interface ChatUser {
   id: string;
@@ -53,6 +142,7 @@ export default function Chats() {
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [history, setHistory] = useState<Message[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [previewPost, setPreviewPost] = useState<any>(null);
 
   useEffect(() => {
     fetchChats();
@@ -98,6 +188,7 @@ export default function Chats() {
 
   return (
     <AdminLayout title="Chat Monitoring">
+      {previewPost && <PostPreviewModal post={previewPost} onClose={() => setPreviewPost(null)} />}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-140px)]">
         {/* Chat List */}
         <div className="lg:col-span-1 bg-white rounded-2xl border border-gray-100 flex flex-col overflow-hidden shadow-sm">
@@ -131,7 +222,7 @@ export default function Chats() {
                       <span className="text-sm font-bold text-gray-900 truncate max-w-[120px]">{chatDisplayName(chat.user2)}</span>
                       <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium ${roleBadge(chat.user2.role)}`}>{chat.user2.role}</span>
                     </div>
-                    <p className="text-xs text-gray-500 truncate mb-1.5">{chat.lastMessage}</p>
+                    <p className="text-xs text-gray-500 truncate mb-1.5">{previewText(chat.lastMessage)}</p>
                     <div className="flex items-center gap-2 text-[10px] text-gray-400">
                       <Clock size={10} /> {new Date(chat.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                       <span className="inline-block w-1 h-1 bg-gray-200 rounded-full" />
@@ -194,21 +285,33 @@ export default function Chats() {
                         <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-medium ${roleBadge(msg.sender.role || '')}`}>{msg.sender.role}</span>
                         <span className="text-[9px] text-gray-300">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                      <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${
-                        msg.sender.id === selectedChat.user1.id 
-                          ? 'bg-white text-gray-800 rounded-tl-none border border-gray-100' 
-                          : 'bg-indigo-600 text-white rounded-tr-none'
-                      }`}>
-                        {msg.message && <p className="leading-relaxed">{msg.message}</p>}
-                        {msg.imageUrl && (
-                          <img
-                            src={msg.imageUrl.startsWith('http') ? msg.imageUrl : `${API_BASE}${msg.imageUrl}`}
-                            alt="Attachment"
-                            className="mt-2 rounded-lg max-h-60 w-full object-cover border border-black/5 cursor-pointer hover:brightness-95 transition-all"
-                            onClick={() => window.open(msg.imageUrl!.startsWith('http') ? msg.imageUrl! : `${API_BASE}${msg.imageUrl}`, '_blank')}
-                          />
-                        )}
-                      </div>
+                      {(() => {
+                        const isMe = msg.sender.id === selectedChat.user1.id;
+                        const isPostRef = msg.message?.startsWith(POST_REF_PREFIX);
+                        return (
+                          <div className={`max-w-[85%] shadow-sm rounded-2xl text-sm ${
+                            isMe
+                              ? 'bg-white text-gray-800 rounded-tl-none border border-gray-100'
+                              : 'bg-indigo-600 text-white rounded-tr-none'
+                          } ${isPostRef ? 'p-1.5' : 'px-4 py-2.5'}`}>
+                            {isPostRef ? (
+                              <PostRefBubble text={msg.message} isMe={!isMe} onOpen={setPreviewPost} />
+                            ) : (
+                              <>
+                                {msg.message && <p className="leading-relaxed">{msg.message}</p>}
+                                {msg.imageUrl && (
+                                  <img
+                                    src={msg.imageUrl.startsWith('http') ? msg.imageUrl : `${API_BASE}${msg.imageUrl}`}
+                                    alt="Attachment"
+                                    className="mt-2 rounded-lg max-h-60 w-full object-cover border border-black/5 cursor-pointer hover:brightness-95 transition-all"
+                                    onClick={() => window.open(msg.imageUrl!.startsWith('http') ? msg.imageUrl! : `${API_BASE}${msg.imageUrl}`, '_blank')}
+                                  />
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))
                 )}

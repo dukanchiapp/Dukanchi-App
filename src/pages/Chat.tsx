@@ -1,10 +1,133 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle } from 'lucide-react';
+import { useParams, Link, useLocation } from 'react-router-dom';
+import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle, ShoppingBag, Tag } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+
+const POST_REF_PREFIX = '__POST_REF__:';
+
+function encodePostRef(post: { id: string; imageUrl?: string; caption?: string; price?: number | null }) {
+  return POST_REF_PREFIX + JSON.stringify(post);
+}
+
+function decodePostRef(text: string) {
+  try { return JSON.parse(text.slice(POST_REF_PREFIX.length)); } catch { return null; }
+}
+
+function PostRefCard({ text, onTap }: { text: string; onTap: (post: any) => void }) {
+  const post = decodePostRef(text);
+  if (!post) return <p className="text-xs text-gray-400 italic">[Post]</p>;
+  return (
+    <button
+      onClick={() => onTap(post)}
+      className="group relative flex items-center overflow-hidden rounded-2xl border border-white/25 bg-white/15 max-w-[230px] text-left active:scale-95 transition-transform"
+    >
+      {post.imageUrl && (
+        <img src={post.imageUrl} alt="post" className="w-16 h-16 object-cover flex-shrink-0" />
+      )}
+      <div className="px-3 py-2 min-w-0 flex-1">
+        <span className="inline-flex items-center space-x-1 bg-white/20 rounded-full px-2 py-0.5 mb-1">
+          <Tag size={8} className="opacity-80" />
+          <span className="text-[8px] font-bold uppercase tracking-widest opacity-90">Post</span>
+        </span>
+        {post.price && (
+          <p className="text-sm font-extrabold leading-tight">₹{Number(post.price).toLocaleString()}</p>
+        )}
+        {post.caption && (
+          <p className="text-[11px] leading-tight truncate opacity-75 mt-0.5">{post.caption}</p>
+        )}
+        <p className="text-[9px] opacity-50 mt-1">Tap to preview</p>
+      </div>
+    </button>
+  );
+}
+
+function PostPreviewOverlay({ post, onClose }: {
+  post: { id: string; imageUrl?: string; caption?: string; price?: number | null };
+  onClose: () => void;
+}) {
+  return (
+    <div className="absolute inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/70" />
+
+      {/* Sheet */}
+      <div
+        className="relative rounded-t-[2rem] overflow-hidden bg-white shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
+        {/* Image with price overlay */}
+        <div className="relative mx-4 mt-2 rounded-2xl overflow-hidden bg-gray-100">
+          {post.imageUrl
+            ? <img src={post.imageUrl} alt="post" className="w-full object-cover" style={{ maxHeight: '42vh' }} />
+            : <div className="w-full h-48 flex items-center justify-center">
+                <ShoppingBag size={40} className="text-gray-300" />
+              </div>
+          }
+          {post.price && (
+            <div className="absolute bottom-3 left-3">
+              <div className="bg-black/70 backdrop-blur-sm text-white rounded-xl px-3 py-1.5 flex items-center space-x-1.5">
+                <Tag size={12} className="text-indigo-300" />
+                <span className="text-base font-extrabold tracking-tight">
+                  ₹{Number(post.price).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          )}
+          {/* Close button over image */}
+          <button
+            onClick={onClose}
+            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center active:bg-black/70 transition-colors"
+          >
+            <X size={15} className="text-white" />
+          </button>
+        </div>
+
+        {/* Caption */}
+        {post.caption && (
+          <div className="px-5 pt-4 pb-2">
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">Caption</p>
+            <p className="text-sm text-gray-700 leading-relaxed">{post.caption}</p>
+          </div>
+        )}
+
+        <div className="h-6" />
+      </div>
+    </div>
+  );
+}
+
+// Pinned banner shown to customer while typing their first message
+function ReferredPostBanner({ post, onDismiss }: {
+  post: { id: string; imageUrl?: string; caption?: string; price?: number | null };
+  onDismiss: () => void;
+}) {
+  return (
+    <div className="mx-4 mb-2 flex items-center space-x-3 bg-indigo-50 border border-indigo-100 rounded-2xl p-2.5">
+      {post.imageUrl && (
+        <img src={post.imageUrl} alt="post" className="w-12 h-12 object-cover rounded-xl flex-shrink-0 border border-indigo-100" />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Enquiring about</p>
+        {post.price && <p className="text-sm font-bold text-gray-900">₹{Number(post.price).toLocaleString()}</p>}
+        {post.caption && <p className="text-xs text-gray-600 truncate">{post.caption}</p>}
+      </div>
+      <button onClick={onDismiss} className="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0">
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
 
 export default function ChatPage() {
   const { userId } = useParams();
+  const location = useLocation();
+  const referredPostFromState = (location.state as any)?.referredPost ?? null;
+
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -14,6 +137,9 @@ export default function ChatPage() {
   const [receiverName, setReceiverName] = useState('');
   const [receiverInitial, setReceiverInitial] = useState('');
   const [receiverLogo, setReceiverLogo] = useState('');
+  // Referred post stays visible until first message is sent (then it becomes part of history)
+  const [referredPost, setReferredPost] = useState<typeof referredPostFromState>(referredPostFromState);
+  const [previewPost, setPreviewPost] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +178,6 @@ export default function ChatPage() {
   useEffect(() => {
     if (!currentUserId || !token || !userId) return;
 
-    // Initial fetch
     fetch(`/api/messages/${currentUserId}/${userId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -60,12 +185,10 @@ export default function ChatPage() {
       .then(data => setMessages(Array.isArray(data) ? data : (data.messages ?? [])))
       .catch(() => {});
 
-    // Connect Socket.IO — replaces polling entirely
     const socket = io('/', { auth: { token }, transports: ['websocket'] });
     socketRef.current = socket;
 
     socket.on('newMessage', (msg: any) => {
-      // Only add messages that belong to this conversation
       const belongs =
         (msg.senderId === currentUserId && msg.receiverId === userId) ||
         (msg.senderId === userId && msg.receiverId === currentUserId);
@@ -101,12 +224,24 @@ export default function ChatPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const sendRaw = async (body: object) => {
+    const res = await fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const saved = await res.json();
+      setMessages(prev => prev.some(m => m.id === saved.id) ? prev : [...prev, saved]);
+    }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !imageFile) || isSending) return;
 
     setIsSending(true);
-    let uploadedImageUrl = null;
+    let uploadedImageUrl: string | undefined;
 
     if (imageFile) {
       const formData = new FormData();
@@ -127,14 +262,18 @@ export default function ChatPage() {
       }
     }
 
-    // Send via HTTP — server emits newMessage via Socket.IO to both parties
-    try {
-      await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ receiverId: userId, message: newMessage, imageUrl: uploadedImageUrl })
-      });
-    } catch {}
+    // If user came from a post (banner is showing), send the post reference first
+    // so the retailer sees which post triggered this enquiry — regardless of prior history
+    if (referredPost) {
+      await sendRaw({ receiverId: userId, message: encodePostRef(referredPost) });
+      setReferredPost(null); // banner no longer needed; it's now in chat history
+    }
+
+    await sendRaw({
+      receiverId: userId,
+      message: newMessage || undefined,
+      imageUrl: uploadedImageUrl || undefined,
+    });
 
     setNewMessage('');
     clearImagePreview();
@@ -142,7 +281,10 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 h-screen flex flex-col">
+    <div className="max-w-md mx-auto bg-gray-50 h-screen flex flex-col relative">
+      {previewPost && (
+        <PostPreviewOverlay post={previewPost} onClose={() => setPreviewPost(null)} />
+      )}
       <header className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-sm z-10">
         <div className="flex items-center space-x-3">
           <Link to="/messages" className="p-2 -ml-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
@@ -169,7 +311,7 @@ export default function ChatPage() {
           </span>
         </div>
 
-        {messages.length === 0 && (
+        {messages.length === 0 && !referredPost && (
           <div className="text-center py-10 text-gray-400 text-sm">
             <p>No messages yet. Say hi! 👋</p>
           </div>
@@ -177,19 +319,27 @@ export default function ChatPage() {
 
         {messages.map((msg, idx) => {
           const isMe = msg.senderId === currentUserId;
+          const isPostRef = typeof msg.message === 'string' && msg.message.startsWith(POST_REF_PREFIX);
+
           return (
             <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
                 isMe
                   ? 'bg-indigo-600 text-white rounded-tr-sm'
                   : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-tl-sm'
-              }`}>
-                {msg.imageUrl && (
-                  <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
-                    <img src={msg.imageUrl} alt="attachment" className="w-full max-h-48 object-cover" loading="lazy" />
-                  </div>
+              } ${isPostRef ? 'px-2 py-2' : ''}`}>
+                {isPostRef ? (
+                  <PostRefCard text={msg.message} onTap={setPreviewPost} />
+                ) : (
+                  <>
+                    {msg.imageUrl && (
+                      <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
+                        <img src={msg.imageUrl} alt="attachment" className="w-full max-h-48 object-cover" loading="lazy" />
+                      </div>
+                    )}
+                    {msg.message && <p>{msg.message}</p>}
+                  </>
                 )}
-                {msg.message && <p>{msg.message}</p>}
                 <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>
                   {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                 </p>
@@ -200,9 +350,14 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </main>
 
-      <footer className="bg-white p-4 border-t border-gray-100 pb-safe relative">
+      <footer className="bg-white border-t border-gray-100 pb-safe relative">
+        {/* Referred post banner — shown above input until first message is sent */}
+        {referredPost && (
+          <ReferredPostBanner post={referredPost} onDismiss={() => setReferredPost(null)} />
+        )}
+
         {uploadError && (
-          <div className="mb-2 flex items-center space-x-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2 text-xs text-red-600">
+          <div className="mx-4 mb-2 flex items-center space-x-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2 text-xs text-red-600">
             <AlertCircle size={14} className="flex-shrink-0" />
             <span>{uploadError}</span>
             <button type="button" onClick={() => setUploadError('')} className="ml-auto"><X size={12} /></button>
@@ -218,7 +373,7 @@ export default function ChatPage() {
             </div>
           </div>
         )}
-        <form onSubmit={handleSend} className="flex items-center space-x-2">
+        <form onSubmit={handleSend} className="flex items-center space-x-2 p-4">
           <label className="p-2 text-gray-400 hover:bg-gray-50 rounded-full cursor-pointer transition-colors relative">
             <Paperclip size={24} />
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
@@ -227,7 +382,7 @@ export default function ChatPage() {
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message..."
+            placeholder={referredPost ? 'Ask about this post…' : 'Type a message...'}
             className="flex-1 bg-gray-100 border-transparent rounded-full px-4 py-3 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm"
           />
           <button

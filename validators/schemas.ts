@@ -16,14 +16,14 @@ export const loginSchema = z.object({
 }).passthrough();
 
 export const createPostSchema = z.object({
-  imageUrl: z.string().url('imageUrl must be a valid URL'),
+  imageUrl: z.string().min(1, 'imageUrl is required'),
   caption: z.string().max(500).optional(),
   price: z.coerce.number().positive().optional(),
   productId: z.string().uuid().optional(),
 }).passthrough();
 
 export const updatePostSchema = z.object({
-  imageUrl: z.string().url('imageUrl must be a valid URL').optional(),
+  imageUrl: z.string().min(1).optional(),
   caption: z.string().max(500).optional(),
   price: z.coerce.number().positive().nullable().optional(),
   productId: z.string().uuid().optional(),
@@ -35,7 +35,8 @@ export const createStoreSchema = z.object({
   latitude: z.coerce.number(),
   longitude: z.coerce.number(),
   address: z.string().min(5, 'Address must be at least 5 characters'),
-  phone: phone10.optional(),
+  // Store phone may include +91 country code prefix sent by the frontend
+  phone: z.string().regex(/^(\+91)?\d{10}$/, 'Phone must be 10 digits').optional(),
 }).passthrough();
 
 export const createReviewSchema = z.object({
@@ -48,11 +49,14 @@ export const createReviewSchema = z.object({
 export const sendMessageSchema = z.object({
   receiverId: z.string().uuid('receiverId must be a valid UUID'),
   message: z.string().min(1).max(5000).optional(),
-  imageUrl: z.string().url('imageUrl must be a valid URL').optional(),
-}).passthrough();
+  imageUrl: z.string().min(1).nullish(),
+}).passthrough().refine(
+  data => !!(data.message?.trim() || data.imageUrl),
+  { message: 'Message text or image is required' }
+);
 
 export const submitComplaintSchema = z.object({
-  issueType: z.enum(['store_issue', 'bug', 'spam', 'account', 'other']),
+  issueType: z.enum(['store_issue', 'bug', 'spam', 'account', 'other', 'fake_user', 'feedback']),
   description: z.string().min(10, 'Description must be at least 10 characters').max(2000),
 }).passthrough();
 
@@ -64,9 +68,10 @@ export const submitReportSchema = z.object({
 }).passthrough();
 
 // KYC route receives documentUrl/selfieUrl/storeName/storePhoto (no kyc prefix)
+// These are local upload paths (/uploads/...) not external URLs, so min(1) not url()
 export const submitKycSchema = z.object({
-  documentUrl: z.string().url('documentUrl must be a valid URL'),
-  selfieUrl: z.string().url('selfieUrl must be a valid URL'),
+  documentUrl: z.string().min(1, 'documentUrl is required'),
+  selfieUrl: z.string().min(1, 'selfieUrl is required'),
   storeName: z.string().min(2, 'Store name must be at least 2 characters'),
-  storePhoto: z.string().url('storePhoto must be a valid URL').optional(),
+  storePhoto: z.string().min(1).optional(),
 }).passthrough();

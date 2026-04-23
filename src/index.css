@@ -22,3 +22,19 @@
   --dk-radius-lg: 14px;
   --dk-radius-xl: 18px;
 }
+
+.dk-input {
+  background: var(--dk-surface);
+  border: 0.5px solid var(--dk-border);
+  color: var(--dk-text-primary);
+}
+
+.dk-input:focus {
+  background: white;
+  border-color: var(--dk-accent);
+  outline: none;
+}
+
+.dk-update-btn {
+  background: var(--dk-accent);
+}

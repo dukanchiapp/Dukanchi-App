@@ -3,17 +3,14 @@ import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerCompon
 
 const GoogleMap = GoogleMapComponent as any;
 const Marker = MarkerComponent as any;
-import {
-  MapPin, Navigation, Store, X, Clock, Phone,
-  ChevronUp, Layers, LocateFixed, Search, SlidersHorizontal
-} from 'lucide-react';
+import { MapPin, Navigation, X, Clock, Phone, Settings, Search, Store, LocateFixed, ChevronUp, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import NotificationBell from '../components/NotificationBell';
+import AppHeader from '../components/AppHeader';
+import { getStoreStatus } from '../lib/storeUtils';
 
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 
-// Custom map style — clean, minimal, matches app's light aesthetic
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
@@ -23,44 +20,29 @@ const MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
   { featureType: 'landscape', stylers: [{ color: '#f8f8f8' }] },
   { featureType: 'water', stylers: [{ color: '#c9e8f5' }] },
-  { featureType: 'administrative', elementType: 'geometry', stylers: [{ visibility: 'simplified' }] },
 ];
 
-function getStoreStatus(openingTime?: string, closingTime?: string, is24Hours?: boolean, workingDays?: string) {
-  // Check working days first
-  if (workingDays) {
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const today = dayNames[new Date().getDay()];
-    if (!workingDays.includes(today)) {
-      return { isOpen: false, label: 'Closed Today' };
-    }
-  }
-  if (is24Hours) return { isOpen: true, label: 'Open 24 Hours' };
-  if (!openingTime || !closingTime) return null;
-  const now = new Date();
-  const [openH, openM] = openingTime.split(':').map(Number);
-  const [closeH, closeM] = closingTime.split(':').map(Number);
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const openMin = openH * 60 + openM;
-  const closeMin = closeH * 60 + closeM;
-  const isOpen =
-    closeMin > openMin ? nowMin >= openMin && nowMin < closeMin : nowMin >= openMin || nowMin < closeMin;
-  const fmt = (h: number, m: number) => {
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    return `${h % 12 || 12}:${m.toString().padStart(2, '0')} ${ampm}`;
-  };
-  return {
-    isOpen,
-    label: isOpen
-      ? `Open · Closes ${fmt(closeH, closeM)}`
-      : `Closed · Opens ${fmt(openH, openM)}`,
-  };
-}
-
-const STORE_CATEGORIES = [
-  'Electronics', 'Fashion', 'Grocery', 'Food', 'Beauty', 'Sports', 'Health',
-  'General', 'Jewellery', 'Vehicles', 'Education', 'Services', 'Furniture', 'Pharmacy'
+const CATEGORY_CHIPS = [
+  { label: 'All', emoji: '', value: '' },
+  { label: 'Food', emoji: '🍕', value: 'Food' },
+  { label: 'Electronics', emoji: '📱', value: 'Electronics' },
+  { label: 'Fashion', emoji: '👕', value: 'Fashion' },
+  { label: 'Grocery', emoji: '🛒', value: 'Grocery' },
+  { label: 'Beauty', emoji: '💄', value: 'Beauty' },
+  { label: 'Sports', emoji: '⚽', value: 'Sports' },
+  { label: 'Health', emoji: '💊', value: 'Health' },
 ];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Food: '#FF6B35',
+  Electronics: '#4F46E5',
+  Fashion: '#EC4899',
+  Grocery: '#10B981',
+  Beauty: '#F59E0B',
+  Sports: '#3B82F6',
+  Health: '#06B6D4',
+  General: '#6B7280',
+};
 
 export default function MapPage() {
   const [stores, setStores] = useState<any[]>([]);
@@ -68,35 +50,23 @@ export default function MapPage() {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [showFilter, setShowFilter] = useState(false);
-  const [radius, setRadius] = useState<number>(5);
-  const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
-  const [storesExpanded, setStoresExpanded] = useState(false);
+  const [listExpanded, setListExpanded] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
-  // Distance helper
   const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
   const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number): string => {
     const d = getDistanceKm(lat1, lng1, lat2, lng2);
-    return d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)}km`;
+    return d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)} km`;
   };
 
-  const getZoomForRadius = (r: number) => {
-    if (r <= 2) return 15;
-    if (r <= 5) return 13;
-    if (r <= 10) return 12;
-    if (r <= 25) return 11;
-    return 10;
-  };
-
-  const { isLoaded, loadError } = useJsApiLoader({
+  const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     id: 'google-map-script',
   });
@@ -127,19 +97,6 @@ export default function MapPage() {
     mapRef.current = null;
   }, []);
 
-  useEffect(() => {
-    if (mapRef.current) {
-      mapRef.current.setZoom(getZoomForRadius(radius));
-    }
-  }, [radius]);
-
-  const recenterMap = () => {
-    if (mapRef.current && userLocation) {
-      mapRef.current.panTo(userLocation);
-      mapRef.current.setZoom(15);
-    }
-  };
-
   const flyToStore = (store: any) => {
     if (mapRef.current && store.latitude && store.longitude) {
       mapRef.current.panTo({ lat: store.latitude, lng: store.longitude });
@@ -148,462 +105,398 @@ export default function MapPage() {
     setSelectedStore(store);
   };
 
-  const storeStatus = selectedStore
-    ? getStoreStatus(selectedStore.openingTime, selectedStore.closingTime, selectedStore.is24Hours, selectedStore.workingDays)
-    : null;
+  const recenterMap = () => {
+    if (mapRef.current && userLocation) {
+      mapRef.current.panTo(userLocation);
+      mapRef.current.setZoom(13);
+    }
+  };
+
+  const filteredStores = stores.filter(s => {
+    if (selectedCategory && s.category?.toLowerCase() !== selectedCategory.toLowerCase()) return false;
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      s.storeName?.toLowerCase().includes(q) ||
+      s.category?.toLowerCase().includes(q) ||
+      s.address?.toLowerCase().includes(q)
+    );
+  });
+
+  const validStores = filteredStores
+    .filter(s => s.latitude && s.longitude && s.latitude !== 0)
+    .sort((a, b) => {
+      if (!userLocation) return 0;
+      return getDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude)
+        - getDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude);
+    });
 
   const selectedStoreDistance = selectedStore && userLocation
     ? getDistance(userLocation.lat, userLocation.lng, selectedStore.latitude, selectedStore.longitude)
     : null;
-
-  const filteredStores = stores.filter(
-    (s) => {
-      // Category filter
-      if (selectedCategory && s.category?.toLowerCase() !== selectedCategory.toLowerCase()) return false;
-      // Search filter
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        s.storeName?.toLowerCase().includes(q) ||
-        s.category?.toLowerCase().includes(q) ||
-        s.address?.toLowerCase().includes(q) ||
-        s.description?.toLowerCase().includes(q) ||
-        s.manualProductText?.toLowerCase().includes(q)
-      );
-    }
-  );
-
-  const validStores = filteredStores
-    .filter((s) => {
-      if (!s.latitude || !s.longitude || s.latitude === 0) return false;
-      if (!userLocation) return true;
-      const dist = getDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude);
-      return dist <= radius && dist <= 100;
-    })
-    .sort((a, b) => {
-      if (!userLocation) return 0;
-      const distA = getDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude);
-      const distB = getDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude);
-      return distA - distB;
-    });
-
-  if (loadError) {
-    return (
-      <div className="max-w-md mx-auto bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MapPin size={28} className="text-red-500" />
-          </div>
-          <h2 className="text-lg font-bold text-gray-800">Map failed to load</h2>
-          <p className="text-sm text-gray-500 mt-2">Please check your Google Maps API key configuration.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isLoaded || !userLocation) {
-    return (
-      <div className="max-w-md mx-auto bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center p-8">
-          <div className="w-14 h-14 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm font-medium text-gray-500">Loading map…</p>
-        </div>
-      </div>
-    );
-  }
+  const storeStatus = selectedStore
+    ? getStoreStatus(selectedStore.openingTime, selectedStore.closingTime, selectedStore.is24Hours, selectedStore.workingDays)
+    : null;
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen relative overflow-hidden">
+    <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+      <div className="max-w-md mx-auto">
 
-      {/* ── Header ── */}
-      <header className="bg-white absolute top-0 left-0 right-0 z-20 border-b border-gray-100 shadow-sm">
-        <div className="px-4 py-3 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">Nearby Stores</h1>
-          <NotificationBell />
-        </div>
-        {/* Search Bar + Filter */}
-        <div className="px-4 pb-2 flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        {/* ── Header ── */}
+        <div className="sticky top-0 z-20 px-4 pt-5 pb-3" style={{ background: 'var(--dk-bg)' }}>
+          <AppHeader />
+
+          {/* Search */}
+          <div
+            className="flex items-center gap-2 px-3 mt-3"
+            style={{ background: 'var(--dk-surface)', borderRadius: 'var(--dk-radius-md)', height: 44 }}
+          >
+            <Search size={16} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
             <input
               type="text"
-              placeholder="Search electronics, fashion, grocery..."
+              placeholder="Search stores near you..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-9 py-2.5 bg-gray-100 rounded-xl text-sm outline-none focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
+              onChange={e => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-sm"
+              style={{ color: 'var(--dk-text-primary)' }}
             />
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={14} />
+              <button onClick={() => setSearchQuery('')}>
+                <X size={14} style={{ color: 'var(--dk-text-tertiary)' }} />
               </button>
             )}
           </div>
-          <button
-            onClick={() => setShowFilter(!showFilter)}
-            className={`p-2.5 rounded-xl border transition-colors flex-shrink-0 ${
-              showFilter || selectedCategory ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'
-            }`}
+
+          {/* Category chips */}
+          <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', paddingBottom: 2 }}>
+            {CATEGORY_CHIPS.map(chip => {
+              const active = selectedCategory === chip.value;
+              return (
+                <button
+                  key={chip.value}
+                  onClick={() => setSelectedCategory(chip.value)}
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold"
+                  style={{
+                    background: active ? '#1A1A1A' : 'var(--dk-surface)',
+                    color: active ? 'white' : 'var(--dk-text-secondary)',
+                  }}
+                >
+                  {chip.emoji && <span>{chip.emoji}</span>}
+                  {chip.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Map container ── */}
+        <div className="px-4">
+          <div
+            className="relative overflow-hidden"
+            style={{ borderRadius: 20, height: 300 }}
           >
-            <SlidersHorizontal size={16} />
-          </button>
-        </div>
-        {/* Filter Panel */}
-        {showFilter && (
-        <div className="px-4 pb-4 space-y-4 border-t border-gray-100 pt-3 mt-1">
-          {/* Categories */}
-          <div className="flex space-x-2 overflow-x-auto scrollbar-none">
-            <button
-              onClick={() => setSelectedCategory('')}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                !selectedCategory ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              All
-            </button>
-            {STORE_CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                  selectedCategory === cat ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+            {isLoaded && userLocation ? (
+              <GoogleMap
+                mapContainerStyle={MAP_CONTAINER_STYLE}
+                center={userLocation}
+                zoom={13}
+                onLoad={onLoad}
+                onUnmount={onUnmount}
+                onClick={() => setSelectedStore(null)}
+                options={{
+                  disableDefaultUI: true,
+                  zoomControl: false,
+                  styles: MAP_STYLES,
+                  clickableIcons: false,
+                }}
               >
-                {cat}
-              </button>
-            ))}
-          </div>
-          {/* Radius Filter */}
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-              <span className="text-xs font-semibold text-gray-700">Search Radius</span>
-              <span className="text-xs font-bold text-indigo-600">{radius} km</span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="50"
-              value={radius}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              className="w-full accent-indigo-600"
-            />
-          </div>
-        </div>
-        )}
-      </header>
+                {/* User dot */}
+                <Marker
+                  position={userLocation}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#FF6B35',
+                    fillOpacity: 1,
+                    strokeWeight: 3,
+                    strokeColor: '#ffffff',
+                  }}
+                  zIndex={100}
+                />
 
-      {/* ── Google Map ── */}
-      <div className={`absolute inset-0 pb-16 ${showFilter ? 'pt-[210px]' : 'pt-[112px]'}`} style={{ transition: 'padding-top 0.2s ease' }}>
-        <GoogleMap
-          mapContainerStyle={MAP_CONTAINER_STYLE}
-          center={userLocation}
-          zoom={getZoomForRadius(radius)}
-          onLoad={onLoad}
-          onUnmount={onUnmount}
-          onClick={() => setSelectedStore(null)}
-          options={{
-            disableDefaultUI: true,
-            zoomControl: false,
-            mapTypeId: mapType,
-            styles: mapType === 'roadmap' ? MAP_STYLES : [],
-            clickableIcons: false,
-          }}
-        >
-          {/* User dot */}
-          <Marker
-            position={userLocation}
-            icon={{
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 10,
-              fillColor: '#4F46E5',
-              fillOpacity: 1,
-              strokeWeight: 3,
-              strokeColor: '#ffffff',
-            }}
-            zIndex={100}
-            title="You are here"
-          />
-
-          {/* Store markers */}
-          {validStores.map((store) => {
-            const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
-            const isSelected = selectedStore?.id === store.id;
-            const pinColor = isSelected ? '#4F46E5' : (sStatus?.isOpen ? '#10B981' : '#EF4444');
-            return (
-            <Marker
-              key={store.id}
-              position={{ lat: store.latitude, lng: store.longitude }}
-              onClick={() => flyToStore(store)}
-              icon={{
-                url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48">
-                    <ellipse cx="20" cy="46" rx="6" ry="2" fill="rgba(0,0,0,0.15)"/>
-                    <path d="M20 0C9 0 0 9 0 20c0 15 20 28 20 28S40 35 40 20C40 9 31 0 20 0z"
-                      fill="${pinColor}"
-                      stroke="#ffffff"
-                      stroke-width="2"/>
-                    <circle cx="20" cy="18" r="10" fill="#000" stroke="#fff" stroke-width="1.5"/>
-                    <text x="20" y="22" text-anchor="middle" font-size="12" font-family="sans-serif"
-                      fill="#ffffff">🏪</text>
-                  </svg>`)}`,
-                scaledSize: new google.maps.Size(40, 48),
-                anchor: new google.maps.Point(20, 48),
-              }}
-              zIndex={isSelected ? 20 : 10}
-            />
-          );
-          })}
-        </GoogleMap>
-      </div>
-
-      {/* ── Floating Map Controls ── */}
-      <div className="absolute right-4 z-10 flex flex-col space-y-2"
-        style={{ top: showFilter ? '220px' : '124px', transition: 'top 0.2s ease' }}>
-        {/* Recenter */}
-        <button
-          onClick={recenterMap}
-          className="w-10 h-10 bg-white shadow-md border border-gray-200 rounded-full flex items-center justify-center text-indigo-600 hover:bg-indigo-50 transition-colors"
-          title="Your location"
-        >
-          <LocateFixed size={18} />
-        </button>
-        {/* Map type toggle */}
-        <button
-          onClick={() => setMapType(t => t === 'roadmap' ? 'satellite' : 'roadmap')}
-          className="w-10 h-10 bg-white shadow-md border border-gray-200 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors"
-          title="Toggle map type"
-        >
-          <Layers size={18} />
-        </button>
-      </div>
-
-      {/* ── Store Count Pill ── */}
-      {!selectedStore && (
-        <div
-          className="absolute left-4 z-10 bg-white shadow-md border border-gray-100 rounded-full px-3 py-1.5 flex items-center space-x-1.5"
-          style={{ top: showFilter ? '220px' : '124px', transition: 'top 0.2s ease' }}
-        >
-          <div className="w-2 h-2 rounded-full bg-indigo-600"></div>
-          <span className="text-xs font-semibold text-gray-700">
-            {validStores.length} store{validStores.length !== 1 ? 's' : ''} nearby
-          </span>
-        </div>
-      )}
-
-      {/* ── Store Details Bottom Sheet ── */}
-      {selectedStore && (
-        <div className="absolute bottom-16 left-0 right-0 px-4 pb-2 z-20">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-
-            {/* Drag handle */}
-            <div className="flex justify-center pt-2.5 pb-1">
-              <div className="w-8 h-1 bg-gray-200 rounded-full"></div>
-            </div>
-
-            {/* Store info */}
-            <div className="px-4 pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3 flex-1 min-w-0">
-                  <div className="w-12 h-12 bg-black rounded-xl overflow-hidden flex-shrink-0">
-                    <img
-                      src={selectedStore.logoUrl || '/uploads/default-logo.png'}
-                      alt={selectedStore.storeName}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
+                {/* Store markers */}
+                {validStores.map(store => {
+                  const pinColor = CATEGORY_COLORS[store.category] || '#FF6B35';
+                  const catChip = CATEGORY_CHIPS.find(c => c.value === store.category);
+                  const emoji = catChip?.emoji || '🏪';
+                  return (
+                    <Marker
+                      key={store.id}
+                      position={{ lat: store.latitude, lng: store.longitude }}
+                      onClick={() => flyToStore(store)}
+                      icon={{
+                        url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="48" viewBox="0 0 40 48"><ellipse cx="20" cy="46" rx="6" ry="2" fill="rgba(0,0,0,0.15)"/><path d="M20 0C9 0 0 9 0 20c0 15 20 28 20 28S40 35 40 20C40 9 31 0 20 0z" fill="${pinColor}" stroke="#ffffff" stroke-width="2"/><circle cx="20" cy="18" r="10" fill="#000" stroke="#fff" stroke-width="1.5"/><text x="20" y="22" text-anchor="middle" font-size="12" font-family="sans-serif" fill="#ffffff">${emoji}</text></svg>`)}`,
+                        scaledSize: new google.maps.Size(40, 48),
+                        anchor: new google.maps.Point(20, 48),
+                      }}
+                      zIndex={selectedStore?.id === store.id ? 20 : 10}
                     />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-gray-900 truncate">{selectedStore.storeName}</h3>
+                  );
+                })}
+              </GoogleMap>
+            ) : (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{ background: 'var(--dk-surface)' }}
+              >
+                <div className="text-center">
+                  <div
+                    className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin mx-auto mb-2"
+                    style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }}
+                  />
+                  <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>Loading map…</p>
+                </div>
+              </div>
+            )}
+
+            {/* Store count pill */}
+            <div
+              className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5"
+              style={{ background: 'white', borderRadius: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+            >
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF6B35', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A' }}>
+                {validStores.length} stores nearby
+              </span>
+            </div>
+
+            {/* Recenter + settings buttons */}
+            <div className="absolute bottom-3 right-3 flex flex-col gap-2">
+              <button
+                onClick={recenterMap}
+                className="flex items-center justify-center"
+                style={{ width: 36, height: 36, borderRadius: 10, background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+              >
+                <LocateFixed size={16} style={{ color: '#FF6B35' }} />
+              </button>
+              <button
+                className="flex items-center justify-center"
+                style={{ width: 36, height: 36, borderRadius: 10, background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+              >
+                <Settings size={16} style={{ color: '#555' }} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Selected store card ── */}
+        {selectedStore && (
+          <div className="px-4 mt-3">
+            <div
+              className="rounded-2xl p-4"
+              style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className="flex-shrink-0 overflow-hidden"
+                  style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--dk-surface)' }}
+                >
+                  {selectedStore.logoUrl ? (
+                    <img src={selectedStore.logoUrl} className="w-full h-full object-cover" alt="logo" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: 'var(--dk-accent)' }}>
+                      {selectedStore.storeName?.charAt(0)}
                     </div>
-                    {selectedStore.category && (
-                      <p className="text-xs text-indigo-600 font-medium mt-0.5">{selectedStore.category}</p>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate" style={{ fontSize: 15, color: '#1A1A1A' }}>{selectedStore.storeName}</p>
+                      {selectedStore.category && (
+                        <p style={{ fontSize: 12, color: 'var(--dk-accent)', fontWeight: 600, marginTop: 1 }}>{selectedStore.category}</p>
+                      )}
+                    </div>
+                    <button onClick={() => setSelectedStore(null)}>
+                      <X size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+                    </button>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    {selectedStoreDistance && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={12} style={{ color: 'var(--dk-accent)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: 'var(--dk-text-secondary)' }}>{selectedStoreDistance} away</span>
+                      </div>
+                    )}
+                    {storeStatus && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} style={{ color: storeStatus.isOpen ? '#10B981' : '#EF4444', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: storeStatus.isOpen ? '#10B981' : '#EF4444', fontWeight: 600 }}>{storeStatus.label}</span>
+                      </div>
+                    )}
+                    {selectedStore.address && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin size={12} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
+                        <span className="truncate" style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{selectedStore.address}</span>
+                      </div>
+                    )}
+                    {selectedStore.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone size={12} style={{ color: 'var(--dk-text-tertiary)' }} />
+                        <span style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{selectedStore.phone}</span>
+                      </div>
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setSelectedStore(null)}
-                  className="ml-2 w-7 h-7 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-colors flex-shrink-0"
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Link
+                  to={`/store/${selectedStore.id}`}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{ background: 'var(--dk-surface)', color: '#1A1A1A' }}
                 >
-                  <X size={14} className="text-gray-500" />
-                </button>
+                  <Store size={14} />
+                  View Store
+                </Link>
+                <a
+                  href={selectedStore.latitude && selectedStore.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${selectedStore.latitude},${selectedStore.longitude}` : '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{ background: '#1A1A1A', color: 'white' }}
+                >
+                  <Navigation size={14} />
+                  Navigate
+                </a>
               </div>
-
-              {/* Status & address */}
-              <div className="mt-3 space-y-1.5">
-                {selectedStoreDistance && (
-                  <div className="flex items-center space-x-1.5 text-xs text-gray-500">
-                    <MapPin size={13} className="text-indigo-500 flex-shrink-0" />
-                    <span className="font-semibold">{selectedStoreDistance} away</span>
-                  </div>
-                )}
-                {storeStatus && (
-                  <div className="flex items-center space-x-1.5">
-                    <Clock size={13} className={storeStatus.isOpen ? 'text-green-500' : 'text-red-400'} />
-                    <span className={`text-xs font-medium ${storeStatus.isOpen ? 'text-green-600' : 'text-red-500'}`}>
-                      {storeStatus.label}
-                    </span>
-                  </div>
-                )}
-                {selectedStore.address && (
-                  <div className="flex items-center space-x-1.5">
-                    <MapPin size={13} className="text-gray-400 flex-shrink-0" />
-                    <span className="text-xs text-gray-600 truncate">{selectedStore.address}</span>
-                  </div>
-                )}
-                {selectedStore.phone && (
-                  <div className="flex items-center space-x-1.5">
-                    <Phone size={13} className="text-gray-400" />
-                    <span className="text-xs text-gray-600">{selectedStore.phone}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="px-4 pb-4 flex space-x-3">
-              <Link
-                to={`/store/${selectedStore.id}`}
-                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-sm font-semibold text-center hover:bg-gray-200 transition-colors flex items-center justify-center space-x-1.5"
-              >
-                <Store size={14} />
-                <span>View Store</span>
-              </Link>
-              <a
-                href={
-                  selectedStore.latitude && selectedStore.longitude && selectedStore.latitude !== 0
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${selectedStore.latitude},${selectedStore.longitude}`
-                    : '#'
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center space-x-1.5 hover:bg-indigo-700 transition-colors"
-              >
-                <Navigation size={14} />
-                <span>Navigate</span>
-              </a>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ── Stores Near You — Expandable ── */}
-      {!selectedStore && validStores.length > 0 && (
-        <div className={`absolute bottom-16 left-0 right-0 px-4 z-10 transition-all duration-300 ${storesExpanded ? 'max-h-[60vh]' : ''}`}>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-            {/* Header — clickable to expand/collapse */}
+        {/* ── Stores near you (expandable list) ── */}
+        {validStores.length > 0 && (
+          <div className="mt-4 px-4">
+            {/* Header row — tap to expand/collapse */}
             <button
-              onClick={() => setStoresExpanded(!storesExpanded)}
-              className="w-full px-4 py-3 flex items-center justify-between"
+              onClick={() => setListExpanded(!listExpanded)}
+              className="w-full flex items-center justify-between py-3 px-4 rounded-2xl"
+              style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}
             >
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Stores Near You ({validStores.length})</p>
-              <ChevronUp size={14} className={`text-gray-400 transition-transform duration-300 ${storesExpanded ? '' : 'rotate-180'}`} />
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
+                Stores near you ·{' '}
+                <span style={{ color: 'var(--dk-accent)' }}>{validStores.length}</span>
+              </p>
+              {listExpanded
+                ? <ChevronUp size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+                : <ChevronDown size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+              }
             </button>
 
-            {/* Collapsed: horizontal scroll of small circles */}
-            {!storesExpanded && (
-              <div className="px-4 pb-3 flex space-x-2 overflow-x-auto scrollbar-none">
-                {validStores.slice(0, 8).map((store) => (
-                  <button
-                    key={store.id}
-                    onClick={() => flyToStore(store)}
-                    className="flex-shrink-0 flex flex-col items-center space-y-1 w-14"
-                  >
-                    <div className="w-11 h-11 bg-black rounded-xl overflow-hidden border-2 border-transparent hover:border-indigo-400 transition-all">
-                      <img
-                        src={store.logoUrl || '/uploads/default-logo.png'}
-                        alt={store.storeName}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <span className="text-[9px] font-medium text-gray-600 text-center leading-tight line-clamp-2 w-full">
-                      {store.storeName}
-                    </span>
-                  </button>
-                ))}
+            {/* Collapsed: horizontal quick scroll */}
+            {!listExpanded && (
+              <div className="flex gap-3 overflow-x-auto mt-3 pb-2" style={{ scrollbarWidth: 'none' }}>
+                {validStores.slice(0, 8).map(store => {
+                  const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : null;
+                  const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
+                  return (
+                    <button
+                      key={store.id}
+                      onClick={() => flyToStore(store)}
+                      className="flex-shrink-0 text-left overflow-hidden"
+                      style={{ width: 130, background: 'white', borderRadius: 14, border: selectedStore?.id === store.id ? '1.5px solid var(--dk-accent)' : '0.5px solid var(--dk-border)' }}
+                    >
+                      <div style={{ width: '100%', height: 72, background: 'var(--dk-surface)', position: 'relative' }}>
+                        {store.logoUrl
+                          ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} />
+                          : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 26 }}>🏪</div>
+                        }
+                        {sStatus && (
+                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full" style={{ background: sStatus.isOpen ? '#10B981' : '#EF4444', fontSize: 9, fontWeight: 700, color: 'white' }}>
+                            {sStatus.isOpen ? 'Open' : 'Closed'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-2">
+                        <p className="truncate font-semibold" style={{ fontSize: 11, color: '#1A1A1A' }}>{store.storeName}</p>
+                        {store.category && <p style={{ fontSize: 10, color: 'var(--dk-accent)', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
+                        {dist && <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>{dist}</p>}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
-            {/* Expanded: scrollable list of detail cards */}
-            {storesExpanded && (
-              <div className="px-3 pb-3 max-h-[50vh] overflow-y-auto space-y-2">
-                {validStores.map((store) => {
-                  const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
+            {/* Expanded: full vertical list ordered nearest → farthest */}
+            {listExpanded && (
+              <div className="mt-3 space-y-2">
+                {validStores.map((store, idx) => {
                   const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : null;
+                  const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
                   return (
                     <div
                       key={store.id}
-                      className="bg-gray-50 rounded-xl border border-gray-100 overflow-hidden hover:border-indigo-200 transition-colors"
+                      className="rounded-2xl overflow-hidden"
+                      style={{ background: 'white', border: selectedStore?.id === store.id ? '1.5px solid var(--dk-accent)' : '0.5px solid var(--dk-border)' }}
                     >
                       <button
-                        onClick={() => { flyToStore(store); setStoresExpanded(false); }}
-                        className="w-full p-3 text-left"
+                        onClick={() => { flyToStore(store); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className="w-full text-left p-3"
                       >
-                        {/* Top row: logo + info */}
-                        <div className="flex items-start space-x-3">
-                          <div className="w-12 h-12 bg-black rounded-xl overflow-hidden flex-shrink-0">
-                            <img
-                              src={store.logoUrl || '/uploads/default-logo.png'}
-                              alt={store.storeName}
-                              className="w-full h-full object-cover"
-                            />
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0 overflow-hidden" style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--dk-surface)' }}>
+                            {store.logoUrl
+                              ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} />
+                              : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 22 }}>🏪</div>
+                            }
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-bold text-sm text-gray-900 truncate">{store.storeName}</h4>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-semibold truncate" style={{ fontSize: 14, color: '#1A1A1A' }}>{store.storeName}</p>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', flexShrink: 0 }}>#{idx + 1}</span>
                             </div>
-                            {store.category && <p className="text-xs text-indigo-600 font-medium">{store.category}</p>}
+                            {store.category && <p style={{ fontSize: 11, color: 'var(--dk-accent)', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
+                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                              {dist && (
+                                <div className="flex items-center gap-1">
+                                  <MapPin size={11} style={{ color: 'var(--dk-accent)' }} />
+                                  <span style={{ fontSize: 11, color: 'var(--dk-text-secondary)' }}>{dist}</span>
+                                </div>
+                              )}
+                              {sStatus && (
+                                <span style={{ fontSize: 11, fontWeight: 600, color: sStatus.isOpen ? '#10B981' : '#EF4444' }}>
+                                  ● {sStatus.isOpen ? 'Open' : 'Closed'}
+                                </span>
+                              )}
+                              {store.phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone size={11} style={{ color: 'var(--dk-text-tertiary)' }} />
+                                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>{store.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                            {store.address && (
+                              <p className="truncate mt-1" style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>{store.address}</p>
+                            )}
                           </div>
                         </div>
-                        {/* Status + Address */}
-                        <div className="mt-2 space-y-1">
-                          {dist && (
-                            <div className="flex items-center text-xs text-gray-500 mb-1">
-                              <MapPin size={12} className="mr-1.5 text-indigo-500" />
-                              <span className="font-semibold">{dist} away</span>
-                            </div>
-                          )}
-                          {sStatus && (
-                            <div className="flex items-center text-xs">
-                              <Clock size={12} className={`mr-1.5 ${sStatus.isOpen ? 'text-green-500' : 'text-red-500'}`} />
-                              <span className={`font-semibold ${sStatus.isOpen ? 'text-green-600' : 'text-red-500'}`}>
-                                {sStatus.label}
-                              </span>
-                            </div>
-                          )}
-                          {store.address && (
-                            <div className="flex items-center text-xs text-gray-500">
-                              <MapPin size={12} className="mr-1.5 text-gray-400" />
-                              <span className="truncate">{store.address}</span>
-                            </div>
-                          )}
-                          {store.phone && (
-                            <div className="flex items-center text-xs text-gray-500">
-                              <Phone size={12} className="mr-1.5 text-gray-400" />
-                              <span>{store.phone}</span>
-                            </div>
-                          )}
-                        </div>
                       </button>
-                      {/* Action buttons */}
-                      <div className="px-3 pb-3 flex space-x-3 border-t border-gray-100 pt-3 mt-2">
+                      <div className="flex gap-2 px-3 pb-3">
                         <Link
                           to={`/store/${store.id}`}
-                          className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-xl text-xs font-semibold text-center hover:bg-gray-200 transition-colors flex items-center justify-center space-x-1.5"
+                          className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold"
+                          style={{ background: 'var(--dk-surface)', color: '#1A1A1A', border: '0.5px solid var(--dk-border)' }}
                         >
-                          <Store size={14} />
-                          <span>View Store</span>
+                          <Store size={12} /> View Store
                         </Link>
                         <a
-                          href={store.latitude && store.longitude && store.latitude !== 0 ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'}
+                          href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 bg-indigo-600 text-white py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 hover:bg-indigo-700 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold"
+                          style={{ background: '#1A1A1A', color: 'white' }}
                         >
-                          <Navigation size={14} />
-                          <span>Navigate</span>
+                          <Navigation size={12} /> Navigate
                         </a>
                       </div>
                     </div>
@@ -612,8 +505,18 @@ export default function MapPage() {
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Empty state */}
+        {!isLoaded || !userLocation ? null : validStores.length === 0 && (
+          <div className="text-center py-16 px-4">
+            <MapPin size={40} style={{ color: 'var(--dk-border-strong)', margin: '0 auto 8px' }} />
+            <p style={{ fontSize: 14, color: 'var(--dk-text-secondary)', fontWeight: 600 }}>No stores found nearby</p>
+            <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Try changing the category filter</p>
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

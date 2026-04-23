@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { Users, Store, Search, ChevronRight, X, Trash2, Phone, Mail, Crown, UserCheck, Shield, Calendar } from 'lucide-react';
-import api, { getAdminHeaders } from '../lib/api';
+import { Users, Store, Search, ChevronRight, X, Trash2, Phone, Mail, Crown, UserCheck, Shield, Calendar, MapPin, Download } from 'lucide-react';
+import api, { getAdminHeaders, imgUrl, API_URL } from '../lib/api';
 
 interface StoreOwner {
   id: string;
@@ -26,6 +26,11 @@ interface StoreRow {
   category: string;
   logoUrl?: string | null;
   createdAt: string;
+  address?: string;
+  city?: string | null;
+  state?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   owner: StoreOwner;
   _count: { teamMembers: number };
 }
@@ -36,6 +41,11 @@ interface StoreDetail {
   category: string;
   logoUrl?: string | null;
   address?: string;
+  city?: string | null;
+  state?: string | null;
+  postalCode?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
   phone?: string;
   createdAt: string;
   owner: StoreOwner;
@@ -112,6 +122,25 @@ export default function StoreMembers() {
     }
   };
 
+  const handleExport = () => {
+    const token = localStorage.getItem('adminToken');
+    const url = `${API_URL}/api/admin/stores/export`;
+    const a = document.createElement('a');
+    a.href = url;
+    // Attach token via a temporary fetch → blob download (CORS-safe)
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.blob())
+      .then(blob => {
+        const blobUrl = URL.createObjectURL(blob);
+        a.href = blobUrl;
+        a.download = `stores-export-${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+      });
+  };
+
   const filtered = stores.filter(s =>
     !search ||
     s.storeName.toLowerCase().includes(search.toLowerCase()) ||
@@ -129,9 +158,18 @@ export default function StoreMembers() {
               <h2 className="font-bold text-gray-900 flex items-center gap-2">
                 <Store size={18} className="text-indigo-600" /> All Stores
               </h2>
-              <span className="text-xs bg-white px-2 py-0.5 rounded-full border border-gray-200 text-gray-500 font-medium">
-                {filtered.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs bg-white px-2 py-0.5 rounded-full border border-gray-200 text-gray-500 font-medium">
+                  {filtered.length}
+                </span>
+                <button
+                  onClick={handleExport}
+                  className="flex items-center gap-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors"
+                  title="Download all stores as CSV"
+                >
+                  <Download size={13} /> Export CSV
+                </button>
+              </div>
             </div>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -164,7 +202,7 @@ export default function StoreMembers() {
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {store.logoUrl ? (
-                      <img src={store.logoUrl} alt="" className="w-full h-full object-cover" />
+                      <img src={imgUrl(store.logoUrl)} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <Store size={18} className="text-indigo-400" />
                     )}
@@ -208,7 +246,7 @@ export default function StoreMembers() {
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                     {selectedStore.logoUrl ? (
-                      <img src={selectedStore.logoUrl} alt="" className="w-full h-full object-cover" />
+                      <img src={imgUrl(selectedStore.logoUrl)} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <Store size={24} className="text-indigo-400" />
                     )}
@@ -216,7 +254,21 @@ export default function StoreMembers() {
                   <div>
                     <h3 className="text-lg font-bold text-gray-900">{selectedStore.storeName}</h3>
                     <p className="text-xs text-gray-500">{selectedStore.category}</p>
-                    {selectedStore.address && <p className="text-xs text-gray-400 mt-0.5">{selectedStore.address}</p>}
+                    {selectedStore.address && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {[selectedStore.address, selectedStore.city, selectedStore.state, selectedStore.postalCode].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                    {selectedStore.latitude && selectedStore.longitude && (
+                      <a
+                        href={`https://www.google.com/maps?q=${selectedStore.latitude},${selectedStore.longitude}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] text-indigo-600 hover:text-indigo-800 mt-1 font-medium"
+                      >
+                        <MapPin size={10} /> View on Maps · {selectedStore.latitude.toFixed(5)}, {selectedStore.longitude.toFixed(5)}
+                      </a>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

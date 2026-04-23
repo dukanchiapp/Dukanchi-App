@@ -204,34 +204,94 @@ export default function SearchPage() {
             Kya dhoondh rahe ho?
           </h1>
 
-          {/* Search input */}
-          <div
-            className="flex items-center gap-2 mb-5"
-            style={{
-              background: 'var(--dk-surface)',
-              borderRadius: 14,
-              padding: '10px 12px',
-            }}
-          >
-            <SearchIcon size={18} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
-            <input
-              type="text"
-              placeholder="Search products, brands, or stores..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: 'var(--dk-text-primary)' }}
-            />
-            {query ? (
-              <button onClick={() => setQuery('')}>
-                <X size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
-              </button>
-            ) : (
-              <button onClick={() => console.log('TODO: mic input')}>
-                <Mic size={18} style={{ color: 'var(--dk-accent)' }} />
-              </button>
-            )}
+          {/* Search input + filter button */}
+          <div className="flex items-center gap-2 mb-2">
+            <div
+              className="flex items-center gap-2 flex-1"
+              style={{ background: 'var(--dk-surface)', borderRadius: 14, padding: '10px 12px' }}
+            >
+              <SearchIcon size={18} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Search products, brands, or stores..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-sm"
+                style={{ color: 'var(--dk-text-primary)' }}
+              />
+              {query ? (
+                <button onClick={() => setQuery('')}>
+                  <X size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+                </button>
+              ) : (
+                <button onClick={() => console.log('TODO: mic input')}>
+                  <Mic size={18} style={{ color: 'var(--dk-accent)' }} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center justify-center flex-shrink-0"
+              style={{
+                width: 46, height: 46, borderRadius: 14,
+                background: hasFilters || showFilters ? '#1A1A1A' : 'var(--dk-surface)',
+                border: '0.5px solid var(--dk-border)',
+              }}
+            >
+              <SlidersHorizontal size={18} color={hasFilters || showFilters ? 'white' : 'var(--dk-text-secondary)'} />
+            </button>
           </div>
+
+          {/* Filter panel */}
+          {showFilters && (
+            <div
+              className="rounded-2xl p-4 mb-4"
+              style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Filters</p>
+                {hasFilters && (
+                  <button onClick={clearFilters} style={{ fontSize: 12, color: 'var(--dk-accent)', fontWeight: 600 }}>Clear all</button>
+                )}
+              </div>
+              {/* Category */}
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Category</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {['Electronics', 'Fashion', 'Grocery', 'Food', 'Beauty', 'Health', 'Jewellery'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                    style={{
+                      background: selectedCategory === cat ? 'var(--dk-accent)' : 'var(--dk-surface)',
+                      color: selectedCategory === cat ? 'white' : 'var(--dk-text-secondary)',
+                      border: '0.5px solid var(--dk-border)',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              {/* Sort */}
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Sort by</p>
+              <div className="flex gap-2 flex-wrap">
+                {[{ key: 'relevance', label: 'Relevance' }, { key: 'price_low', label: 'Price ↑' }, { key: 'price_high', label: 'Price ↓' }, { key: 'name', label: 'Name A-Z' }].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setSortBy(opt.key)}
+                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
+                    style={{
+                      background: sortBy === opt.key ? '#1A1A1A' : 'var(--dk-surface)',
+                      color: sortBy === opt.key ? 'white' : 'var(--dk-text-secondary)',
+                      border: '0.5px solid var(--dk-border)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Discovery state */}
           {!isSearching && (

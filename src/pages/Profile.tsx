@@ -324,8 +324,9 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="flex justify-center items-center h-screen" style={{ background: 'var(--dk-bg)' }}>
+        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
+          style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }} />
       </div>
     );
   }
@@ -342,70 +343,96 @@ export default function ProfilePage() {
   // ========================
   if (!isBusinessAccount) {
     return (
-      <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-20">
-        <header className="sticky top-0 bg-white z-20 px-4 py-3 flex items-center justify-between border-b border-gray-100">
-           <h1 className="text-xl font-bold text-gray-900">Your Account</h1>
-           <div className="flex items-center space-x-3">
-             <NotificationBell />
-             <Link to="/settings"><Settings size={20} className="text-gray-900" /></Link>
-           </div>
-        </header>
-
-        <div className="p-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col items-center mb-6">
-              <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-3xl mb-3">
-                 {user?.name?.charAt(0)}
+      <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+        <div className="max-w-md mx-auto">
+          <div className="sticky top-0 z-20 px-4 pt-5 pb-3" style={{ background: 'var(--dk-bg)' }}>
+            <div className="flex items-center justify-between">
+              <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Profile</h1>
+              <div className="flex items-center gap-3">
+                <NotificationBell />
+                <Link to="/settings">
+                  <Settings size={20} style={{ color: 'var(--dk-text-primary)' }} />
+                </Link>
               </div>
-              <h2 className="font-bold text-xl text-gray-900">{user?.name}</h2>
-              <p className="text-gray-500 mb-4">{user?.email}</p>
-              <button 
+            </div>
+          </div>
+
+          <div className="px-4">
+            {/* Avatar card */}
+            <div className="flex flex-col items-center py-6">
+              <div
+                className="flex items-center justify-center mb-3 font-bold"
+                style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--dk-accent)', color: 'white', fontSize: 32 }}
+              >
+                {user?.name?.charAt(0)}
+              </div>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', marginBottom: 2 }}>{user?.name}</h2>
+              {user?.email && <p style={{ fontSize: 13, color: 'var(--dk-text-tertiary)' }}>{user.email}</p>}
+              <button
                 onClick={() => navigate('/settings')}
-                className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg text-sm font-semibold w-full">
-                Edit Personal Details
+                className="mt-4 px-6 py-2 rounded-full font-semibold text-sm"
+                style={{ background: 'var(--dk-surface)', color: 'var(--dk-text-primary)', border: '0.5px solid var(--dk-border)' }}
+              >
+                Edit Details
               </button>
-          </div>
+            </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div className="divide-y divide-gray-100">
-              <div onClick={() => navigate('/settings')} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-gray-700"><UserCheck size={20} className="mr-3 text-indigo-500" /> Following Stores</div>
-                <ChevronRight size={16} className="text-gray-400" />
+            {/* Menu items */}
+            <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '0.5px solid var(--dk-border)', background: 'white' }}>
+              {[
+                { icon: <UserCheck size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Following Stores', tab: 'settings' },
+                { icon: <Bookmark size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Saved Posts & Stores', tab: 'settings' },
+                { icon: <MapPin size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Saved Locations', tab: 'settings' },
+                { icon: <History size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Search History', tab: 'settings' },
+                { icon: <Star size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'My Reviews', tab: 'settings' },
+              ].map((item, i, arr) => (
+                <div
+                  key={item.label}
+                  onClick={() => navigate('/settings')}
+                  className="flex items-center justify-between px-4 py-3.5 cursor-pointer"
+                  style={{ borderBottom: i < arr.length - 1 ? '0.5px solid var(--dk-border)' : 'none' }}
+                >
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}>{item.label}</span>
+                  </div>
+                  <ChevronRight size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '0.5px solid var(--dk-border)', background: 'white' }}>
+              <div
+                onClick={() => navigate('/support', { state: { activeTab: 'help' } })}
+                className="flex items-center justify-between px-4 py-3.5 cursor-pointer"
+                style={{ borderBottom: '0.5px solid var(--dk-border)' }}
+              >
+                <div className="flex items-center gap-3">
+                  <HelpCircle size={18} style={{ color: 'var(--dk-text-tertiary)' }} />
+                  <span style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}>Help & Feedback</span>
+                </div>
+                <ChevronRight size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
               </div>
-              <div onClick={() => navigate('/settings')} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-gray-700"><Bookmark size={20} className="mr-3 text-indigo-500" /> Saved Posts & Stores</div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-              <div onClick={() => navigate('/settings')} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-gray-700"><MapPin size={20} className="mr-3 text-indigo-500" /> Saved Locations</div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-              <div onClick={() => navigate('/settings')} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-gray-700"><History size={20} className="mr-3 text-indigo-500" /> Search History</div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-              <div onClick={() => navigate('/settings')} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-gray-700"><Star size={20} className="mr-3 text-indigo-500" /> My Reviews</div>
-                <ChevronRight size={16} className="text-gray-400" />
+              <div
+                onClick={() => navigate('/support', { state: { activeTab: 'complaints' } })}
+                className="flex items-center justify-between px-4 py-3.5 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <AlertTriangle size={18} style={{ color: '#EF4444' }} />
+                  <span style={{ fontSize: 14, color: '#EF4444' }}>Complaint Box</span>
+                </div>
+                <ChevronRight size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
               </div>
             </div>
-          </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div className="divide-y divide-gray-100">
-              <div onClick={() => navigate('/support', { state: { activeTab: 'help' } })} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-gray-700"><HelpCircle size={20} className="mr-3 text-gray-400" /> Help & Feedback</div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-              <div onClick={() => navigate('/support', { state: { activeTab: 'complaints' } })} className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50">
-                <div className="flex items-center text-red-600"><AlertTriangle size={20} className="mr-3" /> Complaint Box</div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm mb-6"
+              style={{ background: 'white', border: '0.5px solid #FECACA', color: '#EF4444' }}
+            >
+              <LogOut size={16} /> Log Out
+            </button>
           </div>
-
-          <button onClick={handleLogout} className="w-full bg-white border border-red-200 text-red-600 font-semibold py-3 rounded-xl flex items-center justify-center">
-            <LogOut size={18} className="mr-2" /> Log Out
-          </button>
         </div>
       </div>
     );
@@ -543,241 +570,201 @@ export default function ProfilePage() {
   }
 
   // ========================
-  // RETAILER PROFILE VIEW (FINAL SPEC)
+  // RETAILER PROFILE VIEW
   // ========================
+  const profileCompletionFields = [store.storeName, store.description, store.logoUrl, store.address, store.phone, store.openingTime, store.workingDays];
+  const completedFields = profileCompletionFields.filter(Boolean).length;
+  const completionPct = Math.round((completedFields / profileCompletionFields.length) * 100);
+  const storeStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
+
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-20">
-      {/* HEADER BAR */}
-      <header className="sticky top-0 bg-white z-20 px-4 py-3 flex items-center justify-between border-b border-gray-100">
-        <h1 className="text-lg font-bold text-gray-900 truncate">{store.storeName}</h1>
-        <div className="flex space-x-3 items-center">
-          <NotificationBell />
-          <Link to="/settings" state={{ activeTab: 'bulk_upload' }}>
-             <Settings size={20} className="text-gray-900" />
-          </Link>
+    <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+      <div className="max-w-md mx-auto">
+
+        {/* ── Cover ── */}
+        <div className="relative" style={{ height: 180 }}>
+          <div className="absolute inset-0 overflow-hidden">
+            {store.logoUrl ? (
+              <img src={store.logoUrl} className="w-full h-full object-cover" style={{ filter: 'blur(14px) brightness(0.5)', transform: 'scale(1.2)' }} alt="" />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF6B35 0%, #FFA94D 100%)' }} />
+            )}
+          </div>
+          {/* Floating controls */}
+          <div className="absolute top-0 right-0 flex items-center gap-2 px-4 pt-12 z-10">
+            <NotificationBell />
+            <Link to="/settings" state={{ activeTab: 'bulk_upload' }}>
+              <div className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
+                <Settings size={18} color="white" />
+              </div>
+            </Link>
+          </div>
+          {/* Logo overlapping */}
+          <div
+            className="absolute"
+            style={{ bottom: -28, left: 16, width: 72, height: 72, borderRadius: 18, overflow: 'hidden', border: '3px solid white', background: 'var(--dk-surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}
+          >
+            {store.logoUrl ? (
+              <img src={store.logoUrl} className="w-full h-full object-cover" alt="logo" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center font-bold text-2xl" style={{ color: 'var(--dk-accent)' }}>
+                {store.storeName?.charAt(0)}
+              </div>
+            )}
+          </div>
         </div>
-      </header>
 
-      <main>
-        {/* PROFILE HEADER SECTION */}
-        <div className="px-4 pt-4 pb-2 bg-white">
-          {/* Logo + Stats Row */}
-          <div className="flex items-start">
-            <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center flex-shrink-0 border border-gray-200 overflow-hidden">
-              <img 
-                src={store.logoUrl || '/uploads/default-logo.png'} 
-                alt={store.storeName}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            
-            {/* STATS: ONLY Posts, Followers, Chats */}
-            <div className="flex-1 flex justify-around ml-4 mt-2">
-              <div className="flex flex-col items-center">
-                <span className="font-bold text-lg text-gray-900">{sortedPosts.length}</span>
-                <span className="text-xs text-gray-500">Posts</span>
+        {/* ── Store name + badge ── */}
+        <div className="px-4 pt-10 pb-3">
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', lineHeight: '1.2' }}>{store.storeName}</h1>
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                {user?.role && user.role !== 'customer' && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide" style={{ background: 'var(--dk-accent)', color: 'white' }}>
+                    {user.role === 'retailer' ? 'Retail' : user.role}
+                  </span>
+                )}
+                <span style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{store.category}</span>
               </div>
-              <div className="flex flex-col items-center">
-                <span className="font-bold text-lg text-gray-900">{store._count?.followers || 0}</span>
-                <span className="text-xs text-gray-500">Followers</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="font-bold text-lg text-gray-900">{chatCount}</span>
-                <span className="text-xs text-gray-500">Chats</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Store Info */}
-          <div className="mt-4">
-            <h2 className="font-bold text-gray-900 text-[15px] flex items-center">
-              {store.storeName}
-              {user?.role && user.role !== 'customer' && (
-                <span className="ml-2 bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide font-bold">
-                  {user.role === 'retailer' ? 'Retail Store' : user.role}
-                </span>
+              {store.description && (
+                <p className="mt-1.5" style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>{store.description}</p>
               )}
-            </h2>
-            {store && !store.hideRatings && (
-              <div className="flex items-center space-x-2 my-1">
-                <StarRating rating={store.averageRating || 0} size={14} />
-                <span className="text-xs font-medium text-gray-500">
-                  {store.averageRating ? store.averageRating.toFixed(1) : 'No ratings'} ({store.reviewCount || 0})
-                </span>
-              </div>
-            )}
-            <p className="text-gray-500 text-xs mt-0.5 mb-1">{store.category}</p>
-            {store.description && (
-              <p className="text-sm text-gray-800 leading-tight mt-1.5 whitespace-pre-line">{store.description}</p>
-            )}
-            
-            {/* Store Details Card */}
-            <div className="mt-3 space-y-2 bg-gray-50 rounded-xl p-3 border border-gray-100">
-               {/* Address */}
-               <div className="flex items-start text-xs text-gray-700">
-                 <MapPin size={14} className="mr-2 mt-0.5 flex-shrink-0 text-indigo-500" />
-                 <span className="font-medium">{store.address}</span>
-               </div>
-               {/* Postal Code + City/State */}
-               {(store.postalCode || store.city || store.state) && (
-                 <div className="flex items-start text-xs text-gray-700">
-                   <MapPin size={14} className="mr-2 mt-0.5 flex-shrink-0 text-indigo-500 invisible" />
-                   <span className="text-gray-500">
-                     {store.postalCode && <span>{store.postalCode}</span>}
-                     {(store.city || store.state) && <span>{store.postalCode ? ' · ' : ''}{[store.city, store.state].filter(Boolean).join(', ')}</span>}
-                   </span>
-                 </div>
-               )}
-
-               {/* Phone (conditionally shown) */}
-               {store.phoneVisible !== false && store.phone && (
-                 <div className="flex items-start text-xs text-gray-700">
-                   <Phone size={14} className="mr-2 mt-0.5 flex-shrink-0 text-indigo-500" />
-                   <span>{store.phone}</span>
-                 </div>
-               )}
-
-               {/* Open/Closed Status */}
-               {(() => {
-                 const status = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
-                 return status ? (
-                   <div className="flex items-start text-xs">
-                     <Clock size={14} className={`mr-2 mt-0.5 flex-shrink-0 ${status.isOpen ? 'text-green-500' : 'text-red-500'}`} />
-                     <span className={`font-semibold ${status.isOpen ? 'text-green-600' : 'text-red-600'}`}>{status.label}</span>
-                   </div>
-                 ) : null;
-               })()}
-
-               {/* Store Timing */}
-               {(store.openingTime || store.closingTime) && (
-                 <div className="flex items-start text-xs text-gray-600">
-                   <Clock size={14} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
-                   <span>Hours: {store.openingTime || '--:--'} – {store.closingTime || '--:--'}</span>
-                 </div>
-               )}
-
-               {/* Working Days */}
-               {store.workingDays && (
-                 <div className="flex items-start text-xs text-gray-600">
-                   <Calendar size={14} className="mr-2 mt-0.5 flex-shrink-0 text-gray-400" />
-                   <span>{store.workingDays}</span>
-                 </div>
-               )}
-
-               {/* Direction to Store */}
-               {store.latitude && store.longitude && store.latitude !== 0 && (
-                 <a
-                   href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   className="flex items-center text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg mt-1 hover:bg-indigo-100 transition-colors w-full justify-center"
-                 >
-                   <Navigation size={14} className="mr-1.5" />
-                   Direction to Store
-                   <ExternalLink size={10} className="ml-1.5 opacity-60" />
-                 </a>
-               )}
             </div>
           </div>
 
-          {/* ACTION BUTTONS: STRICTLY Edit Profile + New Post ONLY */}
-          <div className="grid grid-cols-2 gap-2 mt-5">
-            <Link to="/retailer/dashboard" className="bg-gray-100 text-gray-900 py-2 rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-gray-200 transition-colors">
+          {/* Profile completion card */}
+          {completionPct < 100 && (
+            <div
+              className="flex items-center gap-3 mt-4 p-3 rounded-2xl"
+              style={{ background: 'rgba(255,107,53,0.08)', border: '0.5px solid rgba(255,107,53,0.2)' }}
+            >
+              <div className="flex items-center justify-center flex-shrink-0" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--dk-accent)' }}>
+                <span style={{ fontSize: 18 }}>⚡</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Profile {completionPct}% complete</p>
+                <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>Complete your profile to get more customers</p>
+              </div>
+              <Link to="/retailer/dashboard" style={{ fontSize: 12, fontWeight: 700, color: 'var(--dk-accent)', flexShrink: 0 }}>Fix</Link>
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="flex mt-4 rounded-2xl overflow-hidden" style={{ border: '0.5px solid var(--dk-border)' }}>
+            {[
+              { label: 'Posts', value: sortedPosts.length },
+              { label: 'Followers', value: store._count?.followers || 0 },
+              { label: 'Chats', value: chatCount },
+            ].map((stat, i, arr) => (
+              <React.Fragment key={stat.label}>
+                <div className="flex-1 flex flex-col items-center py-3" style={{ background: 'white' }}>
+                  <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{stat.value}</span>
+                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>{stat.label}</span>
+                </div>
+                {i < arr.length - 1 && <div style={{ width: '0.5px', background: 'var(--dk-border)' }} />}
+              </React.Fragment>
+            ))}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => setShowNewPostModal(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm"
+              style={{ background: '#1A1A1A', color: 'white' }}
+            >
+              <Plus size={16} /> New Post
+            </button>
+            <Link
+              to="/retailer/dashboard"
+              className="flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm"
+              style={{ background: 'var(--dk-bg-soft)', color: 'var(--dk-accent)', border: '0.5px solid var(--dk-border)' }}
+            >
               Edit Profile
             </Link>
-            <button 
-              onClick={() => setShowNewPostModal(true)} 
-              className="bg-indigo-600 text-white py-2 rounded-lg font-semibold text-sm flex items-center justify-center hover:bg-indigo-700 transition-colors"
-            >
-              <Plus size={16} className="mr-1.5" /> New Post
-            </button>
           </div>
         </div>
 
-        {/* TABS: STRICTLY Posts + Reviews ONLY */}
-        <div className="flex border-t border-b border-gray-200 mt-2 sticky top-[61px] bg-white z-10 w-full">
-          <button 
+        {/* ── Tabs ── */}
+        <div className="sticky z-10 flex border-b" style={{ top: 0, background: 'var(--dk-bg)', borderColor: 'var(--dk-border)' }}>
+          <button
             onClick={() => setActiveTab('posts')}
-            className={`flex-1 py-3 flex justify-center uppercase font-bold text-xs tracking-wider transition-colors ${
-              activeTab === 'posts' ? 'border-b-2 border-gray-900 text-gray-900' : 'text-gray-400'
-            }`}
+            className="flex-1 flex items-center justify-center gap-1 py-3"
+            style={{
+              fontSize: 13, fontWeight: activeTab === 'posts' ? 700 : 400,
+              color: activeTab === 'posts' ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)',
+              borderBottom: activeTab === 'posts' ? '2px solid var(--dk-accent)' : '2px solid transparent',
+            }}
           >
             Posts
+            <span className="px-1.5 py-0.5 rounded-full" style={{ fontSize: 10, fontWeight: 600, background: activeTab === 'posts' ? 'var(--dk-accent)' : 'var(--dk-surface)', color: activeTab === 'posts' ? 'white' : 'var(--dk-text-tertiary)' }}>
+              {sortedPosts.length}
+            </span>
           </button>
           {!store.hideRatings && (
-             <button 
-               onClick={() => setActiveTab('reviews')}
-               className={`flex-1 py-3 flex justify-center uppercase font-bold text-xs tracking-wider transition-colors ${
-                 activeTab === 'reviews' ? 'border-b-2 border-gray-900 text-gray-900' : 'text-gray-400'
-               }`}
-             >
-               Reviews
-             </button>
+            <button
+              onClick={() => setActiveTab('reviews')}
+              className="flex-1 flex items-center justify-center gap-1 py-3"
+              style={{
+                fontSize: 13, fontWeight: activeTab === 'reviews' ? 700 : 400,
+                color: activeTab === 'reviews' ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)',
+                borderBottom: activeTab === 'reviews' ? '2px solid var(--dk-accent)' : '2px solid transparent',
+              }}
+            >
+              Reviews
+              <span className="px-1.5 py-0.5 rounded-full" style={{ fontSize: 10, fontWeight: 600, background: activeTab === 'reviews' ? 'var(--dk-accent)' : 'var(--dk-surface)', color: activeTab === 'reviews' ? 'white' : 'var(--dk-text-tertiary)' }}>
+                {reviews.length}
+              </span>
+            </button>
           )}
         </div>
 
-        {/* TAB CONTENT */}
-        <div className="min-h-[300px] bg-white">
-          {/* POSTS TAB */}
+        {/* ── Tab content ── */}
+        <div className="min-h-72">
+          {/* POSTS */}
           {activeTab === 'posts' && (
             <div>
-              {/* Manage Posts Header */}
-              {posts.length > 0 && (
-                <div className="flex items-center justify-between p-3 pb-1 border-b border-gray-50">
-                   <span className="text-xs text-gray-500 font-medium">Last 30 days • {sortedPosts.length} post{sortedPosts.length !== 1 ? 's' : ''}</span>
-                </div>
-              )}
-
-              {/* Post Grid */}
-              <div className="grid grid-cols-3 gap-0.5 mt-1">
+              <div className="grid grid-cols-3 gap-0.5">
                 {sortedPosts.map(post => (
-                  <div 
-                    key={post.id} 
-                    className="aspect-[3/4] relative cursor-pointer group bg-gray-100"
+                  <div
+                    key={post.id}
+                    className="aspect-[3/4] relative cursor-pointer group"
+                    style={{ background: 'var(--dk-surface)' }}
                     onClick={() => setSelectedPost(post)}
                   >
-                    <img 
-                      src={post.imageUrl} 
-                      alt={post.caption || 'Post'}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    {/* Opening post badge */}
+                    <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     {post.isOpeningPost && (
-                      <div className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide z-10">Store</div>
+                      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,0,0,0.6)', fontSize: 8, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Store</div>
                     )}
-                    {/* PIN / UNPIN CONTROL (hidden for opening post) */}
                     {!post.isOpeningPost && (
                       <button
-                         onClick={(e) => handleTogglePin(e, post.id)}
-                         title={post.isPinned ? 'Unpin post' : 'Pin post (max 3)'}
-                         className={`absolute top-1.5 right-1.5 p-1.5 rounded-full transition-all shadow-sm z-10 ${
-                           post.isPinned
-                             ? 'bg-indigo-600 text-white'
-                             : 'bg-black/40 text-white opacity-0 group-hover:opacity-100 hover:bg-black/60'
-                         }`}
+                        onClick={(e) => handleTogglePin(e, post.id)}
+                        className="absolute top-1.5 right-1.5 p-1.5 rounded-full transition-all shadow-sm z-10"
+                        style={{ background: post.isPinned ? 'var(--dk-accent)' : 'rgba(0,0,0,0.4)', opacity: post.isPinned ? 1 : 0 }}
+                        title={post.isPinned ? 'Unpin' : 'Pin'}
                       >
-                         <Pin size={12} fill={post.isPinned ? 'white' : 'transparent'} />
+                        <Pin size={12} color="white" fill={post.isPinned ? 'white' : 'transparent'} />
                       </button>
                     )}
-                    {/* Price overlay */}
                     {post.product && (
-                      <div className="absolute bottom-1 right-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,0,0,0.65)', fontSize: 10, fontWeight: 600, color: 'white' }}>
                         ₹{Number(post.product.price).toLocaleString()}
                       </div>
                     )}
                   </div>
                 ))}
                 {sortedPosts.length === 0 && (
-                  <div className="col-span-3 py-16 text-center text-gray-500 flex flex-col items-center">
-                    <Grid className="h-10 w-10 text-gray-300 mb-2" />
-                    <p className="text-sm font-medium">No recent posts</p>
-                    <p className="text-xs mt-1 text-gray-400">Posts within the last 30 days appear here.</p>
-                    <button 
+                  <div className="col-span-3 py-16 text-center flex flex-col items-center">
+                    <Grid size={40} style={{ color: 'var(--dk-border-strong)', marginBottom: 8 }} />
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>No recent posts</p>
+                    <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Posts in the last 30 days appear here</p>
+                    <button
                       onClick={() => setShowNewPostModal(true)}
-                      className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                      className="mt-4 px-5 py-2 rounded-xl font-semibold text-sm"
+                      style={{ background: '#1A1A1A', color: 'white' }}
                     >
-                      Create Your First Post
+                      Create Post
                     </button>
                   </div>
                 )}
@@ -785,151 +772,129 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {/* REVIEWS TAB (hidden if hideRatings is on) */}
+          {/* REVIEWS */}
           {activeTab === 'reviews' && !store.hideRatings && (
-             <div className="p-4 bg-gray-50 min-h-[300px]">
-                {reviews.length === 0 ? (
-                   <div className="text-center py-16 text-gray-500 flex flex-col items-center">
-                      <Star className="h-10 w-10 text-gray-300 mb-2" />
-                      <p className="text-sm font-medium">No reviews yet</p>
-                      <p className="text-xs mt-1 text-gray-400">Customer reviews will appear here.</p>
-                   </div>
-                ) : (
-                   <div className="space-y-3">
-                      {reviews.map((review: any) => (
-                         <div key={review.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                             <div className="flex items-center justify-between mb-2">
-                               <div className="flex items-center">
-                                 {[1, 2, 3, 4, 5].map(star => (
-                                   <Star key={star} size={14} className={star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"} />
-                                 ))}
-                               </div>
-                               <span className="text-[10px] text-gray-400">{new Date(review.createdAt).toLocaleDateString()}</span>
-                             </div>
-                             <p className="text-sm text-gray-700">{review.comment}</p>
-                             {review.user && <p className="text-xs text-gray-400 mt-2">– {review.user.name}</p>}
-                         </div>
-                      ))}
-                   </div>
-                )}
-             </div>
+            <div className="px-4 py-3">
+              {reviews.length === 0 ? (
+                <div className="py-16 text-center flex flex-col items-center">
+                  <Star size={40} style={{ color: 'var(--dk-border-strong)', marginBottom: 8 }} />
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>No reviews yet</p>
+                  <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Customer reviews will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reviews.map((review: any) => (
+                    <div key={review.id} className="p-4 rounded-xl" style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map(star => (
+                            <Star key={star} size={13} style={{ color: star <= review.rating ? '#F59E0B' : 'var(--dk-border-strong)', fill: star <= review.rating ? '#F59E0B' : 'none' }} />
+                          ))}
+                        </div>
+                        <span style={{ fontSize: 10, color: 'var(--dk-text-tertiary)' }}>{new Date(review.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      {review.comment && <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>{review.comment}</p>}
+                      {review.user && <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 6 }}>— {review.user.name}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
-      </main>
+      </div>
 
-      {/* POST DETAIL / MANAGE POST MODAL (LIST VIEW) */}
+      {/* POST DETAIL / MANAGE POST MODAL */}
       {selectedPost && (
-        <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col">
-          <header className="flex items-center justify-between p-4 bg-white text-gray-900 border-b border-gray-200 shadow-sm z-10">
-            <button onClick={() => setSelectedPost(null)} className="hover:bg-gray-100 p-1.5 rounded-full transition-colors">
-              <ArrowLeft size={24} />
+        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--dk-bg)' }}>
+          <header className="flex items-center justify-between px-4 py-3" style={{ background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}>
+            <button onClick={() => setSelectedPost(null)}>
+              <ArrowLeft size={22} style={{ color: 'var(--dk-text-primary)' }} />
             </button>
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-[10px] text-gray-400 uppercase tracking-widest">Posts</span>
-              <span className="font-bold text-sm">{store.storeName}</span>
-            </div>
-            <div className="w-8"></div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{store.storeName}</span>
+            <div style={{ width: 22 }} />
           </header>
           
           <div className="flex-1 overflow-y-auto pb-20">
-            <div className="max-w-md mx-auto sm:py-6">
+            <div className="max-w-md mx-auto">
               {sortedPosts.map(post => {
                 const isLiked = interactions.likedPostIds.includes(post.id);
                 const isSaved = interactions.savedPostIds.includes(post.id);
                 const likeCount = getLikeCount(post);
                 return (
-                <div key={post.id} id={`post-${post.id}`} className="bg-white mb-4 sm:border sm:border-gray-200 sm:rounded-2xl border-y border-gray-200 shadow-sm overflow-hidden scroll-mt-20">
-                  <div className="flex items-center p-3 justify-between">
-                     <div className="flex items-center">
-                       <div className="w-8 h-8 rounded-full bg-black border border-gray-100 overflow-hidden mr-3">
-                         <img src={store.logoUrl || '/uploads/default-logo.png'} alt="store" className="w-full h-full object-cover" />
-                       </div>
-                       <div>
-                         <span className="font-bold text-sm block leading-tight hover:text-indigo-600 transition-colors cursor-pointer">
-                           {store.storeName}
-                         </span>
-                         {user?.role && user.role !== 'customer' && (
-                            <span className="inline-block mt-0.5 mb-0.5 bg-indigo-100 text-indigo-700 text-[8px] px-1.5 py-0.5 rounded-full uppercase tracking-wide font-bold">
-                              {user.role === 'retailer' ? 'Retail Store' : user.role}
-                            </span>
-                         )}
-                         <span className="text-[10px] text-gray-500 block leading-none">{new Date(post.createdAt).toLocaleDateString()}</span>
-                       </div>
-                     </div>
-                     <div className="flex items-center space-x-2">
+                  <div key={post.id} id={`post-${post.id}`} className="mb-3 scroll-mt-20" style={{ background: 'white', borderBottom: '0.5px solid var(--dk-border)' }}>
+                    <div className="flex items-center justify-between px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--dk-accent)' }}>
+                          <img src={store.logoUrl} className="w-full h-full object-cover" alt="store" />
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{store.storeName}</p>
+                          <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)' }}>{new Date(post.createdAt).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => openEditModal(post)}
-                          className="text-indigo-600 font-bold text-[11px] py-1.5 px-3 bg-indigo-50 hover:bg-indigo-100 transition-colors rounded-full flex items-center"
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                          style={{ background: 'rgba(255,107,53,0.1)', color: 'var(--dk-accent)' }}
                         >
-                          <Pencil size={12} className="mr-1" /> Edit
+                          <Pencil size={11} /> Edit
                         </button>
                         {!post.isOpeningPost && (
                           <button
                             onClick={(e) => handleTogglePin(e, post.id)}
-                            className={`text-[11px] font-bold py-1.5 px-3 rounded-full flex items-center transition-colors ${
-                              post.isPinned
-                                ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                            style={{ background: post.isPinned ? 'var(--dk-accent)' : 'var(--dk-surface)', color: post.isPinned ? 'white' : 'var(--dk-text-secondary)' }}
                           >
-                            <Pin size={12} className="mr-1" fill={post.isPinned ? "currentColor" : "none"} /> {post.isPinned ? 'Unpin' : 'Pin'}
+                            <Pin size={11} fill={post.isPinned ? 'white' : 'none'} /> {post.isPinned ? 'Unpin' : 'Pin'}
                           </button>
                         )}
                         {!post.isOpeningPost && (
-                          <button onClick={() => handleDeletePost(post.id)} className="text-red-600 font-bold text-[11px] py-1.5 px-3 bg-red-50 hover:bg-red-100 transition-colors rounded-full flex items-center">
-                            <Trash2 size={12} className="mr-1" /> Delete
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
+                            style={{ background: '#FEF2F2', color: '#EF4444' }}
+                          >
+                            <Trash2 size={11} /> Delete
                           </button>
                         )}
-                     </div>
-                  </div>
-                  
-                  <div className="bg-gray-50 relative border-y border-gray-100">
-                    <img 
-                      src={post.imageUrl} 
-                      alt={post.caption || 'Post image'}
-                      className="w-full h-auto max-h-[500px] object-contain"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                  
-                  <div className="p-4">
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex space-x-4">
-                         <button onClick={() => toggleLike(post.id)} className="flex items-center group transition-colors">
-                            <Heart size={24} className={`transition-colors ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-900 group-hover:text-red-500'}`} />
-                            <span className="ml-1.5 font-semibold text-sm text-gray-700">{likeCount}</span>
-                         </button>
-                         <button onClick={() => handleShare(post)} className="text-gray-900 hover:text-indigo-500 transition-colors"><Share2 size={24} /></button>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        {post.product && (
-                          <span className="font-bold text-lg text-gray-900">₹{Number(post.product.price).toLocaleString()}</span>
-                        )}
-                        {!post.product && post.price && (
-                          <span className="font-bold text-lg text-gray-900">₹{post.price}</span>
-                        )}
-                        <button onClick={() => toggleSave(post.id)} className="group transition-colors">
-                           <Bookmark size={24} className={`transition-colors ${isSaved ? 'fill-gray-900 text-gray-900' : 'text-gray-900 group-hover:text-gray-600'}`} />
-                        </button>
                       </div>
                     </div>
-                    <div>
-                      <span className="font-bold text-sm mr-2">{store.storeName}</span>
-                      <span className="text-sm text-gray-800 leading-snug">{post.caption}</span>
+                    <div style={{ background: 'black' }}>
+                      <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-auto max-h-[500px] object-contain" referrerPolicy="no-referrer" />
                     </div>
-                    {post.product && (
-                      <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <Package size={16} className="text-indigo-600 mr-2" />
-                            <span className="font-semibold text-sm">{post.product.productName}</span>
-                          </div>
+                    <div className="px-4 py-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-4">
+                          <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1">
+                            <Heart size={22} fill={isLiked ? '#EF4444' : 'none'} color={isLiked ? '#EF4444' : 'var(--dk-text-primary)'} strokeWidth={isLiked ? 0 : 2} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>{likeCount}</span>
+                          </button>
+                          <button onClick={() => handleShare(post)}>
+                            <Share2 size={22} style={{ color: 'var(--dk-text-primary)' }} />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {(post.product?.price || post.price) && (
+                            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
+                              ₹{Number(post.product?.price || post.price).toLocaleString()}
+                            </span>
+                          )}
+                          <button onClick={() => toggleSave(post.id)}>
+                            <Bookmark size={22} fill={isSaved ? 'var(--dk-text-primary)' : 'none'} style={{ color: 'var(--dk-text-primary)' }} strokeWidth={isSaved ? 0 : 2} />
+                          </button>
                         </div>
                       </div>
-                    )}
+                      {post.caption && (
+                        <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--dk-text-primary)', marginRight: 6 }}>{store.storeName}</span>
+                          {post.caption}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
+                );
               })}
             </div>
           </div>
@@ -939,11 +904,11 @@ export default function ProfilePage() {
       {/* NEW POST MODAL */}
       {showNewPostModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-          <div className="bg-white w-full max-w-md rounded-t-2xl p-5 animate-slide-up">
+          <div className="w-full max-w-md rounded-t-2xl p-5" style={{ background: 'var(--dk-bg)' }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">New Post</h3>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--dk-text-primary)' }}>New Post</h3>
               <button onClick={() => { setShowNewPostModal(false); setNewPostImage(''); setNewPostCaption(''); setNewPostPrice(''); }}>
-                <X size={24} className="text-gray-400" />
+                <X size={22} style={{ color: 'var(--dk-text-tertiary)' }} />
               </button>
             </div>
             
@@ -984,18 +949,19 @@ export default function ProfilePage() {
                   </button>
                 </div>
               ) : (
-                <label className="border-2 border-dashed border-gray-300 rounded-xl h-48 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-400 transition-colors">
-                  <ImageIcon size={32} className="text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500 font-medium">Tap to upload image</span>
-                  <span className="text-[10px] text-gray-400 mt-1">Will be cropped to 3:4 ratio</span>
+                <label className="h-48 flex flex-col items-center justify-center cursor-pointer rounded-xl" style={{ border: '1.5px dashed var(--dk-border-strong)', background: 'var(--dk-surface)' }}>
+                  <ImageIcon size={32} style={{ color: 'var(--dk-text-tertiary)', marginBottom: 8 }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>Tap to upload image</span>
+                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Will be cropped to 3:4 ratio</span>
                   <input type="file" accept="image/*" className="hidden" onChange={handlePostImageUpload} />
                 </label>
               )}
             </div>
 
             {/* Caption */}
-            <textarea 
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+            <textarea
+              className="w-full p-3 rounded-xl text-sm outline-none"
+              style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
               rows={3}
               placeholder="Write a caption..."
               value={newPostCaption}
@@ -1004,12 +970,13 @@ export default function ProfilePage() {
 
             {/* Optional Price */}
             <div className="mt-3">
-              <label className="block text-xs text-gray-500 font-medium mb-1">Price (optional)</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 4 }}>Price (optional)</label>
               <div className="relative">
-                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <DollarSign size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--dk-text-tertiary)' }} />
                 <input
                   type="text"
-                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
                   placeholder="e.g. 299 or 1,500"
                   value={newPostPrice}
                   onChange={(e) => setNewPostPrice(e.target.value)}
@@ -1018,10 +985,11 @@ export default function ProfilePage() {
             </div>
 
             {/* Post Button */}
-            <button 
+            <button
               onClick={handleCreatePost}
               disabled={newPostUploading || !newPostImage}
-              className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+              className="w-full mt-4 py-3 rounded-xl font-bold disabled:opacity-50"
+              style={{ background: '#1A1A1A', color: 'white' }}
             >
               {newPostUploading ? 'Publishing...' : 'Publish Post'}
             </button>
@@ -1031,10 +999,10 @@ export default function ProfilePage() {
       {/* EDIT POST MODAL */}
       {editingPost && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end justify-center">
-          <div className="bg-white w-full max-w-md rounded-t-2xl p-5 animate-slide-up max-h-[90vh] overflow-y-auto">
+          <div className="w-full max-w-md rounded-t-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ background: 'var(--dk-bg)' }}>
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-gray-900">Edit Post</h3>
-              <button onClick={() => setEditingPost(null)}><X size={24} className="text-gray-400" /></button>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Edit Post</h3>
+              <button onClick={() => setEditingPost(null)}><X size={22} style={{ color: 'var(--dk-text-tertiary)' }} /></button>
             </div>
 
             {/* Image */}
@@ -1068,7 +1036,8 @@ export default function ProfilePage() {
 
             {/* Caption */}
             <textarea
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+              className="w-full p-3 rounded-xl text-sm outline-none"
+              style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
               rows={3}
               placeholder="Write a caption..."
               value={editCaption}
@@ -1077,12 +1046,13 @@ export default function ProfilePage() {
 
             {/* Price */}
             <div className="mt-3">
-              <label className="block text-xs text-gray-500 font-medium mb-1">Price (optional)</label>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 4 }}>Price (optional)</label>
               <div className="relative">
-                <DollarSign size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <DollarSign size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--dk-text-tertiary)' }} />
                 <input
                   type="text"
-                  className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
                   placeholder="e.g. 299"
                   value={editPrice}
                   onChange={(e) => setEditPrice(e.target.value)}
@@ -1093,7 +1063,8 @@ export default function ProfilePage() {
             <button
               onClick={handleSaveEdit}
               disabled={editUploading || !editImage}
-              className="w-full mt-4 bg-indigo-600 text-white py-3 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors"
+              className="w-full mt-4 py-3 rounded-xl font-bold disabled:opacity-50"
+              style={{ background: '#1A1A1A', color: 'white' }}
             >
               {editUploading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -1104,16 +1075,16 @@ export default function ProfilePage() {
       {/* POST DELETE CONFIRMATION MODAL */}
       {postToDelete && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-6" onClick={() => setPostToDelete(null)}>
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="rounded-2xl p-6 w-full max-w-sm" style={{ background: 'var(--dk-bg)' }} onClick={e => e.stopPropagation()}>
             <div className="text-center">
-              <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 size={24} className="text-red-600" />
+              <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#FEF2F2' }}>
+                <Trash2 size={24} style={{ color: '#EF4444' }} />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Post?</h3>
-              <p className="text-sm text-gray-500 mb-6">Are you sure you want to delete this post? This action cannot be undone.</p>
-              <div className="flex space-x-3">
-                <button onClick={() => setPostToDelete(null)} className="flex-1 py-2.5 rounded-xl font-medium text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-                <button onClick={confirmDeletePost} className="flex-1 py-2.5 rounded-xl font-medium text-sm text-white bg-red-600 hover:bg-red-700 transition-colors">Delete</button>
+              <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--dk-text-primary)', marginBottom: 8 }}>Delete Post?</h3>
+              <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', marginBottom: 24 }}>This action cannot be undone.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setPostToDelete(null)} className="flex-1 py-2.5 rounded-xl font-semibold text-sm" style={{ background: 'var(--dk-surface)', color: 'var(--dk-text-primary)', border: '0.5px solid var(--dk-border)' }}>Cancel</button>
+                <button onClick={confirmDeletePost} className="flex-1 py-2.5 rounded-xl font-semibold text-sm" style={{ background: '#EF4444', color: 'white' }}>Delete</button>
               </div>
             </div>
           </div>

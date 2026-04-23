@@ -309,8 +309,9 @@ export default function RetailerDashboard() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="flex justify-center items-center h-screen" style={{ background: 'var(--dk-bg)' }}>
+        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
+          style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }} />
       </div>
     );
   }
@@ -318,13 +319,14 @@ export default function RetailerDashboard() {
   // KYC Gate — show upload/pending/rejected screen before allowing profile edit
   if (needsKyc && !kycApproved && !storeId) {
     return (
-      <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-20">
-        <header className="bg-white px-4 py-4 sticky top-0 z-20 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center">
-            <Link to="/profile" className="mr-3 text-gray-400 hover:text-gray-900 transition-colors">
-              <ArrowLeft size={24} />
+      <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+        <div className="max-w-md mx-auto">
+        <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{ background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}>
+          <div className="flex items-center gap-3">
+            <Link to="/profile">
+              <ArrowLeft size={22} style={{ color: 'var(--dk-text-primary)' }} />
             </Link>
-            <h1 className="text-xl font-bold text-gray-900">Identity Verification</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Identity Verification</h1>
           </div>
           <NotificationBell />
         </header>
@@ -396,69 +398,76 @@ export default function RetailerDashboard() {
             </div>
           )}
         </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-20">
-      <header className="bg-white px-4 py-4 sticky top-0 z-20 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center">
-          <Link to="/profile" className="mr-3 text-gray-400 hover:text-gray-900 transition-colors">
-            <ArrowLeft size={24} />
+    <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+      <div className="max-w-md mx-auto">
+      <header
+        className="sticky top-0 z-20 flex items-center justify-between px-4 py-3"
+        style={{ background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}
+      >
+        <div className="flex items-center gap-3">
+          <Link to="/profile">
+            <ArrowLeft size={22} style={{ color: 'var(--dk-text-primary)' }} />
           </Link>
-          <h1 className="text-xl font-bold text-gray-900">Edit Profile</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Edit Profile</h1>
         </div>
         <NotificationBell />
       </header>
 
-      <main className="p-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6">
+      <main className="px-4 pt-4 pb-8">
+        <div className="rounded-2xl overflow-hidden" style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}>
+          <div className="p-5">
             {/* Store Image Upload */}
             <div className="flex flex-col items-center justify-center mb-6">
               <div className="relative">
-                <div className="w-24 h-24 bg-indigo-50 rounded-full border-4 border-white shadow-md overflow-hidden flex items-center justify-center">
-                  <img 
-                    src={logoUrl || store?.logoUrl || '/uploads/default-logo.png'} 
-                    alt="Store Logo" 
+                <div
+                  className="overflow-hidden"
+                  style={{ width: 88, height: 88, borderRadius: 20, border: '3px solid white', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', background: 'var(--dk-surface)' }}
+                >
+                  <img
+                    src={logoUrl || store?.logoUrl || '/uploads/default-logo.png'}
+                    alt="Store Logo"
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <button 
+                <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 bg-gray-900 text-white p-2 rounded-full shadow-lg border-2 border-white hover:bg-gray-800 transition-colors"
+                  className="absolute bottom-0 right-0 p-2 rounded-full"
+                  style={{ background: 'var(--dk-accent)', border: '2px solid white' }}
                 >
-                  <Camera size={16} />
+                  <Camera size={15} color="white" />
                 </button>
-                <input 
-                  ref={fileInputRef}
-                  type="file" 
-                  accept="image/*" 
-                  className="hidden" 
-                  onChange={handleLogoUpload} 
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
               </div>
-              <p className="text-xs text-gray-500 mt-3 font-medium cursor-pointer hover:text-indigo-600 transition-colors" onClick={() => fileInputRef.current?.click()}>
+              <p
+                className="mt-2 cursor-pointer font-semibold text-xs"
+                style={{ color: 'var(--dk-accent)' }}
+                onClick={() => fileInputRef.current?.click()}
+              >
                 Change Logo
               </p>
               {store && !store?.hideRatings && typeof store.averageRating === 'number' && (
-                 <div className="flex items-center space-x-2 mt-3 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-                    <StarRating rating={store.averageRating || 0} size={14} />
-                    <span className="text-xs font-semibold text-gray-600">{store.averageRating.toFixed(1)} ({store.reviewCount || 0} reviews)</span>
-                 </div>
+                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-full" style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)' }}>
+                  <StarRating rating={store.averageRating || 0} size={13} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>{store.averageRating.toFixed(1)} ({store.reviewCount || 0})</span>
+                </div>
               )}
             </div>
 
             <form className="space-y-4" onSubmit={handleSaveStoreInfo}>
               {/* Store Name */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Store Name</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Store Name</label>
                 <input 
                   name="storeName"
                   type="text"
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                  className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                   defaultValue={store?.storeName || ''}
                   required
                 />
@@ -466,11 +475,11 @@ export default function RetailerDashboard() {
 
               {/* Store Category */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Store Category</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Store Category</label>
                 <select
                   value={selectedCategory}
                   onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm text-gray-900 font-medium"
+                  className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                 >
                   {STORE_CATEGORIES.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -480,10 +489,10 @@ export default function RetailerDashboard() {
 
               {/* Store Bio */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Store Bio</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Store Bio</label>
                 <textarea 
                   name="description"
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm text-gray-900 leading-relaxed"
+                  className="w-full p-3 rounded-xl outline-none text-sm leading-relaxed dk-input"
                   rows={3}
                   defaultValue={store?.description || ''}
                   placeholder="Tell customers about your business..."
@@ -493,7 +502,7 @@ export default function RetailerDashboard() {
 
               {/* Address */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Physical Address</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Physical Address</label>
                 <input 
                   name="address"
                   type="text"
@@ -505,8 +514,8 @@ export default function RetailerDashboard() {
 
               {/* Google Map Location Picker */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Map Location</label>
-                <div className="rounded-xl overflow-hidden border border-gray-200 bg-indigo-50">
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Map Location</label>
+                <div className="rounded-xl overflow-hidden" style={{ border: '0.5px solid var(--dk-border)', background: 'var(--dk-surface)' }}>
                   {mapLat !== 0 && mapLng !== 0 ? (
                     <div className="relative">
                         <img 
@@ -517,7 +526,7 @@ export default function RetailerDashboard() {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
                       />
-                      <div className="p-3 bg-indigo-50 border-t border-gray-200">
+                      <div className="p-3" style={{ background: 'var(--dk-surface)', borderTop: '0.5px solid var(--dk-border)' }}>
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-xs text-gray-600 font-medium">📍 Coordinates saved</p>
@@ -527,7 +536,7 @@ export default function RetailerDashboard() {
                             <button 
                               type="button" 
                               onClick={handleGPSUpdate} 
-                              className="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded-lg font-medium flex items-center hover:bg-indigo-700 transition-colors"
+                              className="text-xs text-white px-3 py-1.5 rounded-lg font-medium flex items-center dk-update-btn"
                             >
                               <Navigation size={12} className="mr-1" /> Update Location
                             </button>
@@ -543,7 +552,7 @@ export default function RetailerDashboard() {
                       <button 
                         type="button" 
                         onClick={handleGPSUpdate} 
-                        className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center mx-auto hover:bg-indigo-700 transition-colors"
+                        className="text-white px-5 py-2.5 rounded-xl text-sm font-medium flex items-center mx-auto" style={{ background: 'var(--dk-accent)' }}
                       >
                         <Navigation size={16} className="mr-2" /> Save My Current Location
                       </button>
@@ -554,10 +563,10 @@ export default function RetailerDashboard() {
 
               {/* Postal Code + City/State */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Postal Code</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Postal Code</label>
                 <input 
                   type="number"
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                  className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                   value={postalCode}
                   onChange={async (e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 6);
@@ -580,16 +589,16 @@ export default function RetailerDashboard() {
                   placeholder="e.g. 400001"
                   maxLength={6}
                 />
-                {pincodeLoading && <p className="text-xs text-indigo-500 mt-1 animate-pulse">Looking up pincode...</p>}
+                {pincodeLoading && <p className="text-xs mt-1 animate-pulse" style={{ color: 'var(--dk-accent)' }}>Looking up pincode...</p>}
               </div>
 
               {/* City */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">City / District</label>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>City / District</label>
                   {cityOptions.length > 0 ? (
                     <select
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                      className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                     >
@@ -599,7 +608,7 @@ export default function RetailerDashboard() {
                   ) : (
                     <input
                       type="text"
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                      className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
                       placeholder="Enter city"
@@ -607,10 +616,10 @@ export default function RetailerDashboard() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">State</label>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>State</label>
                   {stateOptions.length > 0 ? (
                     <select
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                      className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                       value={state}
                       onChange={(e) => setState(e.target.value)}
                     >
@@ -620,7 +629,7 @@ export default function RetailerDashboard() {
                   ) : (
                     <input
                       type="text"
-                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                      className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                       value={state}
                       onChange={(e) => setState(e.target.value)}
                       placeholder="Enter state"
@@ -631,13 +640,13 @@ export default function RetailerDashboard() {
 
               {/* Phone Number + Visibility Toggle */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Phone Number</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Phone Number</label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 bg-gray-100 border border-r-0 border-gray-200 rounded-l-xl text-sm font-medium text-gray-600">+91</span>
+                  <span className="inline-flex items-center px-3 rounded-l-xl text-sm font-medium" style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', borderRight: 'none', color: 'var(--dk-text-secondary)' }}>+91</span>
                   <input 
                     name="phone"
                     type="tel"
-                    className="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-r-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                    className="flex-1 p-3 rounded-r-xl outline-none text-sm font-medium dk-input"
                     defaultValue={store?.phone?.replace(/^\+91/, '') || ''}
                     placeholder="XXXXX XXXXX"
                     required
@@ -651,11 +660,11 @@ export default function RetailerDashboard() {
 
               {/* GST Number */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">GST Number <span className="text-gray-400 normal-case font-normal ml-1">(Optional)</span></label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>GST Number <span className="text-gray-400 normal-case font-normal ml-1">(Optional)</span></label>
                 <input 
                   name="gstNumber"
                   type="text"
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                  className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                   defaultValue={store?.gstNumber || ''}
                   placeholder="e.g. 22AAAAA0000A1Z5"
                 />
@@ -663,17 +672,14 @@ export default function RetailerDashboard() {
 
               {/* Store Timing */}
               <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Store Timing</label>
+                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Store Timing</label>
                 
                 {/* 24 Hours Toggle */}
                 <button
                   type="button"
                   onClick={() => setIs24Hours(!is24Hours)}
-                  className={`mb-3 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center transition-all w-full justify-center ${
-                    is24Hours 
-                      ? 'bg-indigo-600 text-white shadow-sm' 
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                  className="mb-3 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center w-full justify-center"
+                  style={{ background: is24Hours ? 'var(--dk-accent)' : 'var(--dk-surface)', color: is24Hours ? 'white' : 'var(--dk-text-secondary)', border: '0.5px solid var(--dk-border)' }}
                 >
                   <Clock size={14} className="mr-2" />
                   {is24Hours ? '✓ Open 24 Hours' : 'Set as 24 Hours Open'}
@@ -712,11 +718,8 @@ export default function RetailerDashboard() {
                       key={day}
                       type="button"
                       onClick={() => toggleDay(day)}
-                      className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                        selectedDays.includes(day)
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
+                      className="px-3.5 py-2 rounded-lg text-xs font-bold"
+                      style={{ background: selectedDays.includes(day) ? 'var(--dk-accent)' : 'var(--dk-surface)', color: selectedDays.includes(day) ? 'white' : 'var(--dk-text-secondary)', border: '0.5px solid var(--dk-border)' }}
                     >
                       {selectedDays.includes(day) && <Check size={10} className="inline mr-1" />}
                       {day}
@@ -727,18 +730,20 @@ export default function RetailerDashboard() {
 
               {/* Save Button */}
               <div className="pt-4">
-                 <button 
-                   type="submit" 
-                   disabled={saving}
-                   className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-bold tracking-wide hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-50"
-                 >
-                   {saving ? 'Saving...' : 'Save Profile Changes'}
-                 </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="w-full py-3.5 rounded-xl font-bold tracking-wide disabled:opacity-50"
+                  style={{ background: '#1A1A1A', color: 'white' }}
+                >
+                  {saving ? 'Saving...' : 'Save Profile Changes'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       </main>
+      </div>
     </div>
   );
 }
@@ -762,7 +767,7 @@ function KycUploadForm({
     <div className="space-y-4">
       {/* Store Name */}
       <div>
-        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Intended Store Name</label>
+        <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Intended Store Name</label>
         <input 
           type="text"
           className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 transition-all outline-none text-sm font-medium text-gray-900"
