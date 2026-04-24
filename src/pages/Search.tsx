@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, Mic } from 'lucide-react';
+import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, Mic, MessageCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { useAuth } from '../context/AuthContext';
@@ -544,51 +544,102 @@ export default function SearchPage() {
                         Products ({filteredProducts.length})
                       </p>
                       <div className="space-y-3">
-                        {filteredProducts.map(product => (
-                          <div
-                            key={product.id}
-                            className="bg-white p-4 flex gap-4"
-                            style={{ borderRadius: 'var(--dk-radius-lg)', border: '0.5px solid var(--dk-border)' }}
-                          >
+                        {filteredProducts.map(product => {
+                          const store = product.store || {};
+                          const status = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
+                          const distance = getDistance(store.latitude, store.longitude);
+                          return (
                             <div
-                              className="w-20 h-20 overflow-hidden flex-shrink-0"
-                              style={{ borderRadius: 'var(--dk-radius-md)', background: 'var(--dk-surface)' }}
+                              key={product.id}
+                              className="overflow-hidden"
+                              style={{ background: 'white', borderRadius: 'var(--dk-radius-lg)', border: '0.5px solid var(--dk-border)' }}
                             >
-                              <img
-                                src={`https://picsum.photos/seed/${product.id}/200/200`}
-                                alt={product.productName}
-                                className="w-full h-full object-cover"
-                                referrerPolicy="no-referrer"
-                                loading="lazy"
-                              />
-                            </div>
-                            <div className="flex-1 flex flex-col justify-between">
-                              <div>
-                                <h3 className="font-semibold leading-tight" style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}>
-                                  {product.productName}
-                                </h3>
-                                {product.brand && (
-                                  <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>
-                                    {product.brand}
-                                  </p>
-                                )}
+                              {/* Store header */}
+                              <div className="flex items-center gap-2.5 px-3 pt-3 pb-2">
+                                <Link to={`/store/${product.storeId}`} onClick={e => e.stopPropagation()}>
+                                  <div style={{ width: 38, height: 38, borderRadius: 12, overflow: 'hidden', background: 'var(--dk-surface)', border: '1.5px solid var(--dk-accent)', flexShrink: 0 }}>
+                                    {store.logoUrl
+                                      ? <img src={store.logoUrl} alt={store.storeName} className="w-full h-full object-cover" />
+                                      : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 16 }}>🏪</div>
+                                    }
+                                  </div>
+                                </Link>
+                                <div className="flex-1 min-w-0">
+                                  <Link to={`/store/${product.storeId}`}>
+                                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }} className="truncate">{store.storeName || 'Store'}</p>
+                                  </Link>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    {status && (
+                                      <span style={{ fontSize: 11, fontWeight: 600, color: status.isOpen ? 'var(--dk-success)' : 'var(--dk-danger)' }}>
+                                        {status.label}
+                                      </span>
+                                    )}
+                                    {distance && (
+                                      <>
+                                        {status && <span style={{ fontSize: 10, color: 'var(--dk-border-strong)' }}>·</span>}
+                                        <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>{distance} away</span>
+                                      </>
+                                    )}
+                                    {store.category && (
+                                      <>
+                                        <span style={{ fontSize: 10, color: 'var(--dk-border-strong)' }}>·</span>
+                                        <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>{store.category}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-end justify-between mt-2">
-                                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--dk-accent)' }}>
-                                  ₹{product.price.toLocaleString()}
-                                </p>
+
+                              {/* Product image */}
+                              {product.imageUrl && (
+                                <div style={{ aspectRatio: '4/3', overflow: 'hidden', background: 'var(--dk-surface)' }}>
+                                  <img src={product.imageUrl} alt={product.productName} className="w-full h-full object-cover" loading="lazy" />
+                                </div>
+                              )}
+
+                              {/* Product details */}
+                              <div className="px-3 pt-2.5 pb-1">
+                                <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{product.productName}</p>
+                                {product.brand && (
+                                  <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>{product.brand}</p>
+                                )}
+                                {product.description && (
+                                  <p style={{ fontSize: 12, color: 'var(--dk-text-secondary)', marginTop: 4, lineHeight: 1.4 }} className="line-clamp-2">{product.description}</p>
+                                )}
+                                <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--dk-accent)', marginTop: 6 }}>₹{product.price.toLocaleString()}</p>
+                              </div>
+
+                              {/* Action buttons */}
+                              <div className="flex gap-2 px-3 pb-3 pt-1">
+                                <Link
+                                  to={`/chat/${store.userId || product.storeId}`}
+                                  onClick={e => e.stopPropagation()}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold"
+                                  style={{ background: 'var(--dk-surface)', color: 'var(--dk-text-secondary)', border: '0.5px solid var(--dk-border)' }}
+                                >
+                                  <MessageCircle size={13} />
+                                  Chat
+                                </Link>
+                                <button
+                                  onClick={() => openDirections(store)}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold"
+                                  style={{ background: 'var(--dk-accent)', color: 'white' }}
+                                >
+                                  <Navigation size={13} />
+                                  Navigate
+                                </button>
                                 <Link
                                   to={`/store/${product.storeId}`}
-                                  className="flex items-center gap-1"
-                                  style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}
+                                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold"
+                                  style={{ background: '#1A1A1A', color: 'white' }}
                                 >
-                                  <Store size={11} />
-                                  {product.store?.storeName}
+                                  <Store size={13} />
+                                  Store
                                 </Link>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
