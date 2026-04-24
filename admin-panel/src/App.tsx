@@ -12,9 +12,24 @@ import Settings from './pages/Settings';
 import StoreMembers from './pages/StoreMembers';
 import { ToastProvider } from './context/ToastContext';
 
+function isTokenValid(token: string | null): boolean {
+  if (!token) return false;
+  try {
+    // Decode payload without verifying signature (server verifies on each request)
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // exp is in seconds; Date.now() in ms
+    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('adminToken');
-  if (!token) return <Navigate to="/login" replace />;
+  if (!isTokenValid(token)) {
+    localStorage.removeItem('adminToken');
+    return <Navigate to="/login" replace />;
+  }
   return <>{children}</>;
 }
 

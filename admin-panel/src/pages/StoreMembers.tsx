@@ -133,7 +133,7 @@ export default function StoreMembers() {
       .then(blob => {
         const blobUrl = URL.createObjectURL(blob);
         a.href = blobUrl;
-        a.download = `stores-export-${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `stores-export-${new Date().toISOString().split('T')[0]}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

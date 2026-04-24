@@ -171,16 +171,16 @@ export default function KycReview() {
                     <td className="px-5 py-3">
                       <div className="flex gap-2">
                         {u.kycDocumentUrl && (
-                          <img src={`${API_BASE}${u.kycDocumentUrl}`} alt="ID" className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-gray-200 hover:border-indigo-400 transition-colors"
-                            onClick={() => setPreviewImg(`${API_BASE}${u.kycDocumentUrl}`)} />
+                          <img src={u.kycDocumentUrl.startsWith('http') ? u.kycDocumentUrl : `${API_BASE}${u.kycDocumentUrl}`} alt="ID" className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-gray-200 hover:border-indigo-400 transition-colors"
+                            onClick={() => setPreviewImg(u.kycDocumentUrl!.startsWith('http') ? u.kycDocumentUrl! : `${API_BASE}${u.kycDocumentUrl}`)} />
                         )}
                         {u.kycSelfieUrl && (
-                          <img src={`${API_BASE}${u.kycSelfieUrl}`} alt="Selfie" className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-gray-200 hover:border-indigo-400 transition-colors"
-                            onClick={() => setPreviewImg(`${API_BASE}${u.kycSelfieUrl}`)} />
+                          <img src={u.kycSelfieUrl.startsWith('http') ? u.kycSelfieUrl : `${API_BASE}${u.kycSelfieUrl}`} alt="Selfie" className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-gray-200 hover:border-indigo-400 transition-colors"
+                            onClick={() => setPreviewImg(u.kycSelfieUrl!.startsWith('http') ? u.kycSelfieUrl! : `${API_BASE}${u.kycSelfieUrl}`)} />
                         )}
                         {u.kycStorePhoto && (
-                          <img src={`${API_BASE}${u.kycStorePhoto}`} alt="Store" className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-gray-200 hover:border-indigo-400 transition-colors"
-                            onClick={() => setPreviewImg(`${API_BASE}${u.kycStorePhoto}`)} />
+                          <img src={u.kycStorePhoto.startsWith('http') ? u.kycStorePhoto : `${API_BASE}${u.kycStorePhoto}`} alt="Store" className="w-10 h-10 rounded-lg object-cover cursor-pointer border border-gray-200 hover:border-indigo-400 transition-colors"
+                            onClick={() => setPreviewImg(u.kycStorePhoto!.startsWith('http') ? u.kycStorePhoto! : `${API_BASE}${u.kycStorePhoto}`)} />
                         )}
                       </div>
                     </td>
@@ -230,16 +230,16 @@ export default function KycReview() {
                 </div>
                 <div className="flex gap-2 mb-3">
                   {u.kycDocumentUrl && (
-                    <img src={`${API_BASE}${u.kycDocumentUrl}`} alt="ID" className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
-                      onClick={() => setPreviewImg(`${API_BASE}${u.kycDocumentUrl}`)} />
+                    <img src={u.kycDocumentUrl.startsWith('http') ? u.kycDocumentUrl : `${API_BASE}${u.kycDocumentUrl}`} alt="ID" className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
+                      onClick={() => setPreviewImg(u.kycDocumentUrl!.startsWith('http') ? u.kycDocumentUrl! : `${API_BASE}${u.kycDocumentUrl}`)} />
                   )}
                   {u.kycSelfieUrl && (
-                    <img src={`${API_BASE}${u.kycSelfieUrl}`} alt="Selfie" className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
-                      onClick={() => setPreviewImg(`${API_BASE}${u.kycSelfieUrl}`)} />
+                    <img src={u.kycSelfieUrl.startsWith('http') ? u.kycSelfieUrl : `${API_BASE}${u.kycSelfieUrl}`} alt="Selfie" className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
+                      onClick={() => setPreviewImg(u.kycSelfieUrl!.startsWith('http') ? u.kycSelfieUrl! : `${API_BASE}${u.kycSelfieUrl}`)} />
                   )}
                   {u.kycStorePhoto && (
-                    <img src={`${API_BASE}${u.kycStorePhoto}`} alt="Store" className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
-                      onClick={() => setPreviewImg(`${API_BASE}${u.kycStorePhoto}`)} />
+                    <img src={u.kycStorePhoto.startsWith('http') ? u.kycStorePhoto : `${API_BASE}${u.kycStorePhoto}`} alt="Store" className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
+                      onClick={() => setPreviewImg(u.kycStorePhoto!.startsWith('http') ? u.kycStorePhoto! : `${API_BASE}${u.kycStorePhoto}`)} />
                   )}
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-gray-50">
@@ -299,19 +299,19 @@ export default function KycReview() {
               <div>
                 <p className="text-xs text-gray-400 mb-1">ID Document</p>
                 {selectedUser.kycDocumentUrl ? (
-                  <img src={`${API_BASE}${selectedUser.kycDocumentUrl}`} alt="Document" className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer" onClick={() => setPreviewImg(`${API_BASE}${selectedUser.kycDocumentUrl}`)} />
+                  <img src={selectedUser.kycDocumentUrl.startsWith('http') ? selectedUser.kycDocumentUrl : `${API_BASE}${selectedUser.kycDocumentUrl}`} alt="Document" className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer" onClick={() => setPreviewImg(selectedUser.kycDocumentUrl!.startsWith('http') ? selectedUser.kycDocumentUrl! : `${API_BASE}${selectedUser.kycDocumentUrl}`)} />
                 ) : <div className="w-full h-32 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300">No document</div>}
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Selfie</p>
                 {selectedUser.kycSelfieUrl ? (
-                  <img src={`${API_BASE}${selectedUser.kycSelfieUrl}`} alt="Selfie" className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer" onClick={() => setPreviewImg(`${API_BASE}${selectedUser.kycSelfieUrl}`)} />
+                  <img src={selectedUser.kycSelfieUrl.startsWith('http') ? selectedUser.kycSelfieUrl : `${API_BASE}${selectedUser.kycSelfieUrl}`} alt="Selfie" className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer" onClick={() => setPreviewImg(selectedUser.kycSelfieUrl!.startsWith('http') ? selectedUser.kycSelfieUrl! : `${API_BASE}${selectedUser.kycSelfieUrl}`)} />
                 ) : <div className="w-full h-32 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300">No selfie</div>}
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Store photo</p>
                 {selectedUser.kycStorePhoto ? (
-                  <img src={`${API_BASE}${selectedUser.kycStorePhoto}`} alt="Store" className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer" onClick={() => setPreviewImg(`${API_BASE}${selectedUser.kycStorePhoto}`)} />
+                  <img src={selectedUser.kycStorePhoto.startsWith('http') ? selectedUser.kycStorePhoto : `${API_BASE}${selectedUser.kycStorePhoto}`} alt="Store" className="w-full h-32 object-cover rounded-xl border border-gray-200 cursor-pointer" onClick={() => setPreviewImg(selectedUser.kycStorePhoto!.startsWith('http') ? selectedUser.kycStorePhoto! : `${API_BASE}${selectedUser.kycStorePhoto}`)} />
                 ) : <div className="w-full h-32 bg-gray-50 rounded-xl flex items-center justify-center text-gray-300">No photo</div>}
               </div>
             </div>

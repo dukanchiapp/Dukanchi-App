@@ -159,7 +159,7 @@ export default function Stores() {
                   <tr key={s.id} className={`hover:bg-gray-50/50 transition-colors ${s.owner.isBlocked ? 'bg-red-50/30' : ''}`}>
                     <td className="px-5 py-3">
                       {s.logoUrl ? (
-                        <img src={`${API_BASE}${s.logoUrl}`} alt={s.storeName} className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
+                        <img src={s.logoUrl.startsWith('http') ? s.logoUrl : `${API_BASE}${s.logoUrl}`} alt={s.storeName} className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
                       ) : (
                         <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
                           <Image size={16} className="text-gray-300" />
@@ -232,7 +232,7 @@ export default function Stores() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     {s.logoUrl ? (
-                      <img src={`${API_BASE}${s.logoUrl}`} alt={s.storeName} className="w-11 h-11 rounded-lg object-cover border border-gray-200 flex-shrink-0" />
+                      <img src={s.logoUrl.startsWith('http') ? s.logoUrl : `${API_BASE}${s.logoUrl}`} alt={s.storeName} className="w-11 h-11 rounded-lg object-cover border border-gray-200 flex-shrink-0" />
                     ) : (
                       <div className="w-11 h-11 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                         <Image size={16} className="text-gray-300" />

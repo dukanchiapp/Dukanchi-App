@@ -175,7 +175,7 @@ const makeRedisStore = (prefix: string) => new RedisStore({
 const authLimiter = rateLimit({
   store: makeRedisStore('rl:auth:'),
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: process.env.NODE_ENV === 'production' ? 20 : 100,
   message: { error: "Too many attempts. Please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -593,6 +593,7 @@ app.delete("/api/admin/users/:id", authenticateToken, requireAdmin, async (req, 
       prisma.searchHistory.deleteMany({ where: { userId: id } }),
       prisma.savedLocation.deleteMany({ where: { userId: id } }),
       prisma.like.deleteMany({ where: { userId: id } }),
+      prisma.complaint.deleteMany({ where: { userId: id } }),
       prisma.report.deleteMany({ where: { OR: [{ reportedByUserId: id }, { reportedUserId: id }] } }),
       
       // Handle stores owned by the user
@@ -1048,7 +1049,7 @@ app.get("/api/admin/complaints", authenticateToken, requireAdmin, async (req, re
     const where: any = {};
     if (status && status !== "all") where.status = status;
 
-    const [complaints, total, openCount] = await Promise.all([
+    const [complaints, total, openCount, inProgressCount, resolvedCount] = await Promise.all([
       prisma.complaint.findMany({
         where,
         skip,
@@ -1060,9 +1061,11 @@ app.get("/api/admin/complaints", authenticateToken, requireAdmin, async (req, re
       }),
       prisma.complaint.count({ where }),
       prisma.complaint.count({ where: { status: "open" } }),
+      prisma.complaint.count({ where: { status: "in_progress" } }),
+      prisma.complaint.count({ where: { status: "resolved" } }),
     ]);
 
-    res.json({ complaints, total, openCount, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
+    res.json({ complaints, total, openCount, inProgressCount, resolvedCount, page: parseInt(page), totalPages: Math.ceil(total / parseInt(limit)) });
   } catch (error) {
     res.status(500).json({ error: "Failed to fetch complaints" });
   }
@@ -1300,12 +1303,19 @@ app.put("/api/users/:id", authenticateToken, async (req, res) => {
       return res.status(403).json({ error: "Unauthorized to update this user" });
     }
     const { name, phone, email } = req.body;
-    const user = await prisma.user.update({
-      where: { id },
-      data: { name, phone, email }
-    });
-    await pubClient.del(ADMIN_STATS_KEY);
-    res.json(user);
+    try {
+      const user = await prisma.user.update({
+        where: { id },
+        data: { name, phone, email }
+      });
+      await pubClient.del(ADMIN_STATS_KEY);
+      res.json(user);
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        return res.status(400).json({ error: 'This phone number is already in use by another account.' });
+      }
+      throw error;
+    }
   } catch (error) {
     res.status(500).json({ error: "Failed to update user profile" });
   }
@@ -2509,34 +2519,33 @@ async function ensureAdminAccount() {
   const ADMIN_NAME = 'Mandeep';
 
   try {
-    const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
-    await prisma.user.upsert({
-      where: { id: PROTECTED_ADMIN_ID },
-      update: { phone: ADMIN_PHONE, password: hashed, name: ADMIN_NAME, role: 'admin', isBlocked: false },
-      create: {
-        id: PROTECTED_ADMIN_ID,
-        phone: ADMIN_PHONE,
-        password: hashed,
-        name: ADMIN_NAME,
-        role: 'admin',
-      },
+    // Check if admin already exists with matching credentials — avoid unnecessary re-hash on every restart
+    const existing = await prisma.user.findFirst({
+      where: { OR: [{ id: PROTECTED_ADMIN_ID }, { phone: ADMIN_PHONE }] },
     });
-  } catch {
-    // If upsert by ID fails (fresh DB), upsert by phone
-    try {
-      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
-      const existing = await prisma.user.findUnique({ where: { phone: ADMIN_PHONE } });
-      if (existing) {
-        await prisma.user.update({
-          where: { phone: ADMIN_PHONE },
-          data: { password: hashed, role: 'admin', isBlocked: false, name: ADMIN_NAME },
-        });
-      } else {
-        await prisma.user.create({
-          data: { id: PROTECTED_ADMIN_ID, phone: ADMIN_PHONE, password: hashed, name: ADMIN_NAME, role: 'admin' },
-        });
+
+    if (existing) {
+      // Only update if the password has actually changed
+      const passwordMatches = await bcrypt.compare(ADMIN_PASSWORD, existing.password);
+      if (passwordMatches && existing.role === 'admin' && !existing.isBlocked && existing.phone === ADMIN_PHONE) {
+        // Admin account already correct — skip update
+        return;
       }
-    } catch {}
+      // Password or config changed — re-hash and update
+      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      await prisma.user.update({
+        where: { id: existing.id },
+        data: { phone: ADMIN_PHONE, password: hashed, name: ADMIN_NAME, role: 'admin', isBlocked: false },
+      });
+    } else {
+      // Fresh DB — create the admin user
+      const hashed = await bcrypt.hash(ADMIN_PASSWORD, 10);
+      await prisma.user.create({
+        data: { id: PROTECTED_ADMIN_ID, phone: ADMIN_PHONE, password: hashed, name: ADMIN_NAME, role: 'admin' },
+      });
+    }
+  } catch (err) {
+    console.error("Failed to ensure admin account:", err);
   }
 }
 

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { ChevronLeft, ChevronRight, Trash2, Flag, AlertTriangle } from 'lucide-react';
 import api, { getAdminHeaders } from '../lib/api';
-
+import { useToast } from '../context/ToastContext';
 
 
 interface Report {
@@ -19,6 +19,7 @@ export default function Reports() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const fetchReports = useCallback(async () => {
     setLoading(true);
@@ -42,9 +43,14 @@ export default function Reports() {
   }, [fetchReports]);
 
   const handleDelete = async (id: string) => {
-    await api.delete(`/api/admin/reports/${id}`, { headers: getAdminHeaders() });
-    setDeleteConfirm(null);
-    fetchReports();
+    try {
+      await api.delete(`/api/admin/reports/${id}`, { headers: getAdminHeaders() });
+      setDeleteConfirm(null);
+      showToast('Report dismissed', { type: 'success' });
+      fetchReports();
+    } catch {
+      showToast('Failed to dismiss report', { type: 'error' });
+    }
   };
 
   const reportedEntity = (r: Report) => {

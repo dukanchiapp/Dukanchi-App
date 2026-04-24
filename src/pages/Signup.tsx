@@ -17,9 +17,12 @@ export default function SignupPage() {
     setError('');
 
     // Validate mandatory fields
-    if (!name.trim()) { setError('Full name is required.'); return; }
-    if (!phone.trim()) { setError('Phone number is required.'); return; }
-    if (!password.trim()) { setError('Password is required.'); return; }
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+
+    if (!trimmedName) { setError('Full name is required.'); return; }
+    if (!trimmedPhone) { setError('Phone number is required.'); return; }
+    if (!password) { setError('Password is required.'); return; }
 
     setIsLoading(true);
 
@@ -27,12 +30,15 @@ export default function SignupPage() {
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, password, role }),
+        body: JSON.stringify({ name: trimmedName, phone: trimmedPhone, password, role }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.issues && data.issues.length > 0) {
+          throw new Error(data.issues[0].message);
+        }
         throw new Error(data.error || 'Signup failed');
       }
 

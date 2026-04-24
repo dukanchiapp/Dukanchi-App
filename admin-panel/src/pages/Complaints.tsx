@@ -32,6 +32,8 @@ const ISSUE_LABELS: Record<string, string> = {
   bug: 'Bug / Technical',
   spam: 'Spam / Abuse',
   account: 'Account Access',
+  feedback: 'Feedback / Suggestion',
+  fake_user: 'Fake User',
   other: 'Other',
 };
 
@@ -42,6 +44,8 @@ export default function Complaints() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [openCount, setOpenCount] = useState(0);
+  const [inProgressCount, setInProgressCount] = useState(0);
+  const [resolvedCount, setResolvedCount] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
@@ -57,7 +61,9 @@ export default function Complaints() {
       setComplaints(res.data.complaints);
       setTotalPages(res.data.totalPages);
       setTotal(res.data.total);
-      setOpenCount(res.data.openCount);
+      setOpenCount(res.data.openCount ?? 0);
+      setInProgressCount(res.data.inProgressCount ?? 0);
+      setResolvedCount(res.data.resolvedCount ?? 0);
     } catch {
       showToast('Failed to fetch complaints', { type: 'error' });
     } finally {
@@ -110,21 +116,23 @@ export default function Complaints() {
       <div className="space-y-6">
         {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {['all', 'open', 'in_progress', 'resolved'].map(st => {
-            const count = st === 'all' ? total : st === 'open' ? openCount : complaints.filter(c => c.status === st).length;
-            const isActive = statusFilter === st;
+          {[
+            { key: 'all', label: 'All', count: total },
+            { key: 'open', label: 'Open', count: openCount },
+            { key: 'in_progress', label: 'In Progress', count: inProgressCount },
+            { key: 'resolved', label: 'Resolved', count: resolvedCount },
+          ].map(({ key, label, count }) => {
+            const isActive = statusFilter === key;
             return (
               <button
-                key={st}
-                onClick={() => { setStatusFilter(st); setPage(1); }}
+                key={key}
+                onClick={() => { setStatusFilter(key); setPage(1); }}
                 className={`p-4 rounded-2xl border transition-all text-left ${
                   isActive ? 'border-indigo-300 bg-indigo-50 shadow-sm' : 'border-gray-100 bg-white hover:border-gray-200'
                 }`}
               >
-                <p className="text-2xl font-bold text-gray-900">{st === 'all' ? total : count}</p>
-                <p className={`text-xs font-medium mt-1 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>
-                  {st === 'all' ? 'All' : st === 'in_progress' ? 'In Progress' : st.charAt(0).toUpperCase() + st.slice(1)}
-                </p>
+                <p className="text-2xl font-bold text-gray-900">{count}</p>
+                <p className={`text-xs font-medium mt-1 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>{label}</p>
               </button>
             );
           })}
