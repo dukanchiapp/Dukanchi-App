@@ -192,7 +192,7 @@ export default function HomePage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchFeed(); }, [token, feedType, locationRange, userLoc]);
+  useEffect(() => { fetchFeed(); }, [token, feedType, locationRange, userLocCtx?.lat, userLocCtx?.lng]);
 
   // Update top sticky bar height for the tabs to stick just beneath it
   useEffect(() => {
