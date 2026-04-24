@@ -38,3 +38,11 @@
 - Installed `@sentry/node` and created `instrument.ts` configuration.
 - Configured the Sentry Express error handler in `server.ts` before other error middlewares.
 - Verified tracking end-to-end via an intentional throw in a `/debug-sentry` endpoint.
+## Session: 2026-04-24 22:56:52
+- Completed Phase 4 & Phase 5 of the Domain-Driven Design (DDD) migration.
+- Extracted Admin, Team, Notifications, and Misc domains into src/modules/.
+- Extracted BullMQ workers into src/workers/.
+- Extracted Socket.io logic into src/config/socket-listeners.ts.
+- Replaced the monolithic server.ts with a lightweight entry point connecting all routers in src/app.ts.
+- Verified compilation with tsc --noEmit (Exit code 0).
+- System is fully modularized and testable.
