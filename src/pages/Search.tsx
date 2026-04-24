@@ -265,6 +265,29 @@ export default function SearchPage() {
                   </button>
                 ))}
               </div>
+              {/* Price Range */}
+              <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Price range</p>
+              <div className="flex items-center gap-3 mb-4">
+                <input
+                  type="number"
+                  min="0"
+                  value={priceRange[0]}
+                  onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])}
+                  className="rounded-xl text-sm outline-none"
+                  style={{ width: 80, padding: '8px 10px', background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
+                  placeholder="Min"
+                />
+                <span style={{ color: 'var(--dk-text-tertiary)', fontSize: 13 }}>–</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={priceRange[1]}
+                  onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
+                  className="rounded-xl text-sm outline-none"
+                  style={{ width: 80, padding: '8px 10px', background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
+                  placeholder="Max"
+                />
+              </div>
               {/* Sort */}
               <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Sort by</p>
               <div className="flex gap-2 flex-wrap">
@@ -390,121 +413,12 @@ export default function SearchPage() {
           {/* Search results state */}
           {isSearching && (
             <>
-              {/* Filter bar */}
-              <div className="flex items-center justify-between mb-4">
+              {/* Results count */}
+              <div className="flex items-center mb-4">
                 <span style={{ fontSize: 13, color: 'var(--dk-text-secondary)' }}>
                   {loading ? 'Searching...' : hasResults ? `${filteredStores.length + filteredProducts.length} results` : ''}
                 </span>
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold relative"
-                  style={
-                    showFilters || hasFilters
-                      ? { background: 'var(--dk-accent)', color: 'white' }
-                      : { background: 'var(--dk-surface)', color: 'var(--dk-text-secondary)' }
-                  }
-                >
-                  <SlidersHorizontal size={13} />
-                  Filters
-                  {hasFilters && !showFilters && (
-                    <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-white" />
-                  )}
-                </button>
               </div>
-
-              {/* Filter panel */}
-              {showFilters && (
-                <div
-                  className="mb-4 p-4 rounded-xl space-y-4"
-                  style={{
-                    background: 'var(--dk-bg-warm)',
-                    border: '0.5px solid var(--dk-border)',
-                  }}
-                >
-                  <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--dk-text-tertiary)' }}>
-                      Category
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {CATEGORIES.map(cat => (
-                        <button
-                          key={cat.label}
-                          onClick={() => setSelectedCategory(selectedCategory === cat.label ? '' : cat.label)}
-                          className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-                          style={
-                            selectedCategory === cat.label
-                              ? { background: 'var(--dk-accent)', color: 'white' }
-                              : { background: 'white', color: 'var(--dk-text-secondary)', border: '0.5px solid var(--dk-border)' }
-                          }
-                        >
-                          {cat.emoji} {cat.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--dk-text-tertiary)' }}>
-                      Price Range
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="number"
-                        min="0"
-                        value={priceRange[0]}
-                        onChange={e => setPriceRange([Number(e.target.value), priceRange[1]])}
-                        className="w-24 px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{ background: 'white', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
-                        placeholder="Min"
-                      />
-                      <span style={{ color: 'var(--dk-text-tertiary)' }}>–</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={priceRange[1]}
-                        onChange={e => setPriceRange([priceRange[0], Number(e.target.value)])}
-                        className="w-24 px-3 py-2 rounded-lg text-sm outline-none"
-                        style={{ background: 'white', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
-                        placeholder="Max"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold uppercase tracking-wider mb-2 block" style={{ color: 'var(--dk-text-tertiary)' }}>
-                      Sort by
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { id: 'relevance', label: 'Relevance' },
-                        { id: 'price_low', label: 'Price ↑' },
-                        { id: 'price_high', label: 'Price ↓' },
-                        { id: 'name', label: 'Name A-Z' },
-                      ].map(opt => (
-                        <button
-                          key={opt.id}
-                          onClick={() => setSortBy(opt.id)}
-                          className="px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-                          style={
-                            sortBy === opt.id
-                              ? { background: 'var(--dk-accent)', color: 'white' }
-                              : { background: 'white', color: 'var(--dk-text-secondary)', border: '0.5px solid var(--dk-border)' }
-                          }
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {hasFilters && (
-                    <button
-                      onClick={clearFilters}
-                      className="text-xs font-semibold flex items-center gap-1"
-                      style={{ color: 'var(--dk-danger)' }}
-                    >
-                      <X size={12} /> Clear filters
-                    </button>
-                  )}
-                </div>
-              )}
 
               {/* Loading skeletons */}
               {loading ? (
