@@ -564,14 +564,13 @@ export default function SearchPage() {
                               <div className="p-4">
                                 <div className="flex items-start gap-3 mb-3">
                                   <div
-                                    className="w-12 h-12 overflow-hidden flex-shrink-0"
-                                    style={{ borderRadius: '50%', background: 'black' }}
+                                    className="w-12 h-12 overflow-hidden flex-shrink-0 flex items-center justify-center"
+                                    style={{ borderRadius: '50%', background: store.logoUrl ? 'black' : 'var(--dk-surface)', border: '0.5px solid var(--dk-border)' }}
                                   >
-                                    <img
-                                      src={store.logoUrl || '/uploads/default-logo.png'}
-                                      alt={store.storeName}
-                                      className="w-full h-full object-cover"
-                                    />
+                                    {store.logoUrl
+                                      ? <img src={store.logoUrl} alt={store.storeName} className="w-full h-full object-cover" />
+                                      : <span style={{ fontSize: 22 }}>🏪</span>
+                                    }
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <h3
@@ -711,7 +710,7 @@ export default function SearchPage() {
                               {/* Action buttons */}
                               <div className="flex gap-2 px-3 pb-3 pt-1">
                                 <Link
-                                  to={`/chat/${store.userId || product.storeId}`}
+                                  to={`/chat/${store.ownerId}`}
                                   onClick={e => e.stopPropagation()}
                                   className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold"
                                   style={{ background: 'var(--dk-surface)', color: 'var(--dk-text-secondary)', border: '0.5px solid var(--dk-border)' }}

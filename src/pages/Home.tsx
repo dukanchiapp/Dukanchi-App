@@ -168,14 +168,9 @@ export default function HomePage() {
         setPosts(Array.isArray(savedData.posts) ? savedData.posts : []);
       } else {
         let lat = 0, lng = 0;
-        if (locationRange !== 'all' && navigator.geolocation) {
-          try {
-            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 });
-            });
-            lat = pos.coords.latitude;
-            lng = pos.coords.longitude;
-          } catch {}
+        if (locationRange !== 'all' && userLoc) {
+          lat = userLoc.lat;
+          lng = userLoc.lng;
         }
         const postsRes = await fetch(
           `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${lat}&lng=${lng}`,
@@ -197,7 +192,7 @@ export default function HomePage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchFeed(); }, [token, feedType, locationRange]);
+  useEffect(() => { fetchFeed(); }, [token, feedType, locationRange, userLoc]);
 
   // Update top sticky bar height for the tabs to stick just beneath it
   useEffect(() => {

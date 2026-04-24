@@ -1705,7 +1705,14 @@ app.get("/api/search", authenticateToken, async (req, res) => {
         },
         select: {
           id: true, productName: true, brand: true, category: true, price: true,
-          storeId: true, store: { select: { id: true, storeName: true, logoUrl: true } },
+          description: true,
+          storeId: true, store: {
+            select: {
+              id: true, storeName: true, logoUrl: true, category: true, ownerId: true,
+              latitude: true, longitude: true, address: true,
+              openingTime: true, closingTime: true, is24Hours: true, workingDays: true,
+            }
+          },
         },
         take: 20,
         orderBy: { createdAt: 'desc' },
@@ -1724,7 +1731,7 @@ app.get("/api/search", authenticateToken, async (req, res) => {
           ],
         },
         include: {
-          owner: { select: { role: true } },
+          owner: { select: { role: true, id: true } },
         },
         take: 20,
         orderBy: { averageRating: 'desc' },
@@ -1757,9 +1764,16 @@ app.get("/api/search", authenticateToken, async (req, res) => {
             },
             select: {
               id: true, productName: true, brand: true, category: true, price: true,
-              storeId: true, store: { select: { id: true, storeName: true, logoUrl: true } },
+              description: true,
+              storeId: true, store: {
+                select: {
+                  id: true, storeName: true, logoUrl: true, category: true, ownerId: true,
+                  latitude: true, longitude: true, address: true,
+                  openingTime: true, closingTime: true, is24Hours: true, workingDays: true,
+                }
+              },
             }
-          });
+          }) as any[];
 
           const existingIds = new Set(products.map((p: any) => p.id));
           for (const sp of semanticProducts) {
@@ -1855,6 +1869,17 @@ app.get("/api/search/ai", authenticateToken, async (req, res) => {
     : {};
 
   try {
+    const PRODUCT_STORE_SELECT = {
+      id: true, storeName: true, logoUrl: true, category: true, ownerId: true,
+      latitude: true, longitude: true, address: true,
+      openingTime: true, closingTime: true, is24Hours: true, workingDays: true,
+    };
+    const PRODUCT_SELECT = {
+      id: true, productName: true, brand: true, category: true, price: true,
+      description: true,
+      storeId: true, store: { select: PRODUCT_STORE_SELECT },
+    };
+
     const [products, stores] = await Promise.all([
       prisma.product.findMany({
         where: {
@@ -1869,10 +1894,7 @@ app.get("/api/search/ai", authenticateToken, async (req, res) => {
             { description: { contains: searchStr, mode: 'insensitive' } },
           ],
         },
-        select: {
-          id: true, productName: true, brand: true, category: true, price: true,
-          storeId: true, store: { select: { id: true, storeName: true, logoUrl: true } },
-        },
+        select: PRODUCT_SELECT,
         take: 20,
         orderBy: { createdAt: 'desc' },
       }),
@@ -1889,7 +1911,7 @@ app.get("/api/search/ai", authenticateToken, async (req, res) => {
             { manualProductText: { contains: searchStr, mode: 'insensitive' } },
           ],
         },
-        include: { owner: { select: { role: true } } },
+        include: { owner: { select: { role: true, id: true } } },
         take: 20,
         orderBy: { averageRating: 'desc' },
       }),
@@ -1908,10 +1930,7 @@ app.get("/api/search/ai", authenticateToken, async (req, res) => {
               { description: { contains: searchStr, mode: 'insensitive' } },
             ],
           },
-          select: {
-            id: true, productName: true, brand: true, category: true, price: true,
-            storeId: true, store: { select: { id: true, storeName: true, logoUrl: true } },
-          },
+          select: PRODUCT_SELECT,
           take: 20,
           orderBy: { createdAt: 'desc' },
         }),
@@ -1924,7 +1943,7 @@ app.get("/api/search/ai", authenticateToken, async (req, res) => {
               { description: { contains: searchStr, mode: 'insensitive' } },
             ],
           },
-          include: { owner: { select: { role: true } } },
+          include: { owner: { select: { role: true, id: true } } },
           take: 20,
           orderBy: { averageRating: 'desc' },
         }),
