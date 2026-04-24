@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "embed:backfill": "tsx scripts/backfillEmbeddings.ts",
     "dev": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
@@ -13,7 +14,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1030.0",
-    "@google/genai": "^1.29.0",
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
     "@react-google-maps/api": "^2.20.8",
     "@react-oauth/google": "^0.13.4",

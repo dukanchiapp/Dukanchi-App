@@ -20,6 +20,8 @@ import { createClient } from "redis";
 import { Queue, Worker } from "bullmq";
 import IORedis from "ioredis";
 import { validate } from './validators/validate';
+import { expandQuery } from './src/services/aliasDictionary';
+import { generateEmbedding } from './src/services/geminiEmbeddings';
 import {
   signupSchema, loginSchema,
   createPostSchema, updatePostSchema,
@@ -1614,6 +1616,13 @@ app.post("/api/products", authenticateToken, async (req, res) => {
   try {
     const product = await prisma.product.create({ data: req.body });
     res.json(product);
+    
+    // Fire-and-forget semantic embedding generation
+    const textToEmbed = `${product.productName} ${product.category} ${product.description || ''}`.trim();
+    generateEmbedding(textToEmbed).then(async (embedding) => {
+      const vectorString = `[${embedding.join(',')}]`;
+      await prisma.$executeRaw`UPDATE "Product" SET embedding = ${vectorString}::vector WHERE id = ${product.id}`;
+    }).catch(err => console.error(`Failed to generate embedding for new product ${product.id}`, err));
   } catch (error) {
     res.status(500).json({ error: "Failed to create product" });
   }
@@ -1670,16 +1679,21 @@ app.get("/api/search", authenticateToken, async (req, res) => {
   else if (userRole === 'admin') allowedRoles = ['customer', 'retailer', 'supplier', 'manufacturer', 'brand', 'admin'];
 
   try {
-    const [products, stores] = await Promise.all([
+    const expandedQueries = expandQuery(searchStr);
+    const searchConditions = expandedQueries.map(sq => ({
+      OR: [
+        { productName: { contains: sq, mode: 'insensitive' as const } },
+        { brand: { contains: sq, mode: 'insensitive' as const } },
+        { category: { contains: sq, mode: 'insensitive' as const } },
+        { description: { contains: sq, mode: 'insensitive' as const } },
+      ]
+    }));
+
+    let [products, stores] = await Promise.all([
       prisma.product.findMany({
         where: {
           store: { owner: { role: { in: allowedRoles } } },
-          OR: [
-            { productName: { contains: searchStr, mode: 'insensitive' } },
-            { brand: { contains: searchStr, mode: 'insensitive' } },
-            { category: { contains: searchStr, mode: 'insensitive' } },
-            { description: { contains: searchStr, mode: 'insensitive' } },
-          ],
+          OR: searchConditions,
         },
         select: {
           id: true, productName: true, brand: true, category: true, price: true,
@@ -1709,7 +1723,50 @@ app.get("/api/search", authenticateToken, async (req, res) => {
       }),
     ]);
 
-    const result = { products, stores };
+    let source = 'alias';
+
+    // Layer B: Semantic Search Fallback
+    if (products.length < 5 && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
+      try {
+        const embedding = await Promise.race([
+          generateEmbedding(searchStr),
+          new Promise<number[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 500))
+        ]);
+        
+        const vectorString = `[${embedding.join(',')}]`;
+        const semanticProductIds: { id: string }[] = await prisma.$queryRaw`
+          SELECT id FROM "Product"
+          WHERE embedding IS NOT NULL
+          ORDER BY embedding <=> ${vectorString}::vector
+          LIMIT 20
+        `;
+        
+        if (semanticProductIds.length > 0) {
+          const semanticProducts = await prisma.product.findMany({
+            where: {
+              id: { in: semanticProductIds.map(p => p.id) },
+              store: { owner: { role: { in: allowedRoles } } },
+            },
+            select: {
+              id: true, productName: true, brand: true, category: true, price: true,
+              storeId: true, store: { select: { id: true, storeName: true, logoUrl: true } },
+            }
+          });
+
+          const existingIds = new Set(products.map((p: any) => p.id));
+          for (const sp of semanticProducts) {
+            if (!existingIds.has(sp.id)) {
+              products.push(sp);
+            }
+          }
+          if (semanticProducts.length > 0) source = 'both';
+        }
+      } catch (err) {
+        console.warn('[SEARCH] Semantic fallback failed or timed out:', err);
+      }
+    }
+
+    const result = { products, stores, source };
     pubClient.set(searchCacheKey, JSON.stringify(result), { EX: 60 }).catch(() => {});
     res.json(result);
   } catch (error) {
