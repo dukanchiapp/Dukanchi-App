@@ -51,7 +51,10 @@ export class StoreService {
     const skip = (page - 1) * limit;
     const where: any = { owner: { isBlocked: false } };
     if (category) where.category = category;
-    if (excludeOwnerId) where.ownerId = { not: excludeOwnerId };
+    if (excludeOwnerId) {
+      where.ownerId = { not: excludeOwnerId };
+      console.log('[StoreService.getStores] Excluding stores owned by:', excludeOwnerId);
+    }
     const [stores, total] = await Promise.all([
       prisma.store.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
       prisma.store.count({ where }),

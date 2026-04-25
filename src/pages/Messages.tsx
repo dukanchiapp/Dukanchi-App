@@ -26,13 +26,13 @@ export default function MessagesPage() {
   }, [token]);
 
   useEffect(() => {
-    if (authLoading) return; // wait for auth to resolve before fetching
-    const params = new URLSearchParams({ limit: '8' });
-    if (user?.id) params.set('excludeOwnerId', user.id);
-    fetch(`/api/stores?${params}`, { credentials: 'include' })
+    if (authLoading || !user?.id) return;
+    console.log('[Messages] fetching suggestions, excludeOwnerId:', user.id);
+    fetch(`/api/stores?limit=8&excludeOwnerId=${user.id}`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => {
         const all: any[] = Array.isArray(data) ? data : (data.stores ?? []);
+        console.log('[Messages] suggestions received:', all.map((s: any) => ({ id: s.id, ownerId: s.ownerId, name: s.storeName })));
         setSuggestedStores(all.slice(0, 3));
       })
       .catch(() => {});
