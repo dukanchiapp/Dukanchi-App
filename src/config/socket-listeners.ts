@@ -8,7 +8,16 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 
 export function setupSocketListeners(io: Server) {
   io.use((socket: Socket, next) => {
-    const token = socket.handshake.auth.token;
+    let token = socket.handshake.auth?.token;
+    
+    // Fallback to reading from the cookie header if credentials: 'include' is used
+    if (!token && socket.handshake.headers.cookie) {
+      const match = socket.handshake.headers.cookie.match(/dk_token=([^;]+)/);
+      if (match) {
+        token = match[1];
+      }
+    }
+
     if (!token) {
       return next(new Error('Authentication error: Token missing'));
     }
