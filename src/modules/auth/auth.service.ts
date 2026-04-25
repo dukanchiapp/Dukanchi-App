@@ -2,6 +2,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
+import { pubClient } from "../../config/redis";
+
+const ADMIN_STATS_KEY = 'admin:stats';
 
 export class AuthService {
   static async signup(data: any) {
@@ -20,6 +23,8 @@ export class AuthService {
     });
 
     const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' });
+
+    try { await pubClient.del(ADMIN_STATS_KEY); } catch {}
 
     const { password: _, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };

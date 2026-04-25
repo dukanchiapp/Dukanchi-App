@@ -28,6 +28,16 @@ export class MessageController {
     }
   }
 
+  static async getConversations(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user.userId;
+      const convos = await MessageService.getConversations(userId);
+      res.json(convos);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  }
+
   static async sendMessage(req: Request, res: Response) {
     try {
       const senderId = (req as any).user.userId;

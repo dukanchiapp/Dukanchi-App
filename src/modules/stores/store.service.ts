@@ -28,6 +28,7 @@ export class StoreService {
         is24Hours: data.is24Hours || false,
       }
     });
+    try { await pubClient.del(ADMIN_STATS_KEY); } catch {}
     return store;
   }
 

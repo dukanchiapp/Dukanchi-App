@@ -63,9 +63,9 @@ export default function SearchPage() {
 
   const saveSearch = (q: string) => {
     if (!q.trim() || !token) return;
-    fetch('/api/search-history', { credentials: 'include', 
+    fetch('/api/search/history', { credentials: 'include',
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: q.trim() }),
     })
       .then(() => {
@@ -84,10 +84,7 @@ export default function SearchPage() {
   const clearAllHistory = async () => {
     if (!token) return;
     try {
-      await fetch('/api/search-history', { credentials: 'include', 
-        method: 'DELETE',
-        
-      });
+      await fetch('/api/search/history', { credentials: 'include', method: 'DELETE' });
       setSearchHistory([]);
     } catch {}
   };

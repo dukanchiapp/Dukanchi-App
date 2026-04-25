@@ -34,30 +34,23 @@ const teamMemberExists = async (teamMemberId: string): Promise<boolean> => {
   return exists;
 };
 
-export const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  // Read token from cookie, fallback to Authorization header if needed (for backward compatibility if any)
+export const authenticateToken = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = req.cookies?.dk_token || (req.headers['authorization']?.split(' ')[1]);
-  
-  console.log(`[AUTH] Path: ${req.path}, Cookies:`, req.cookies, `AuthHeader:`, req.headers['authorization'], `TokenFound:`, !!token);
-
   if (!token) return res.status(401).json({ error: "Access denied" });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     if (!decoded || !decoded.userId) return res.status(403).json({ error: "Invalid token" });
 
-    // Check team member revocation via Redis cache
-    (async () => {
-      if (decoded.teamMemberId) {
-        if (!(await teamMemberExists(decoded.teamMemberId))) return res.status(403).json({ error: "Access revoked" });
-      }
+    if (decoded.teamMemberId && !(await teamMemberExists(decoded.teamMemberId))) {
+      return res.status(403).json({ error: "Access revoked" });
+    }
+    if (await isUserBlocked(decoded.userId)) {
+      return res.status(403).json({ error: "Account blocked" });
+    }
 
-      // Blocked check via Redis cache
-      if (await isUserBlocked(decoded.userId)) return res.status(403).json({ error: "Account blocked" });
-
-      (req as any).user = decoded;
-      next();
-    })();
+    (req as any).user = decoded;
+    next();
   } catch (error) {
     res.status(403).json({ error: "Invalid token" });
   }

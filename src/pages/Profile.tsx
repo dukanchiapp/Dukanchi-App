@@ -134,16 +134,19 @@ export default function ProfilePage() {
       if (storeData) {
         setStore(storeData);
 
-        const postsRes = await fetch(`/api/stores/${storeData.id}/posts`);
-        if (postsRes.ok) {
-          const postsData = await postsRes.json();
-          setPosts(Array.isArray(postsData) ? postsData : (postsData.posts ?? []));
-        }
+        // Only fetch posts/reviews for real stores (not the placeholder)
+        if (storeData.id !== 'mock-store') {
+          const postsRes = await fetch(`/api/stores/${storeData.id}/posts`);
+          if (postsRes.ok) {
+            const postsData = await postsRes.json();
+            setPosts(Array.isArray(postsData) ? postsData : (postsData.posts ?? []));
+          }
 
-        const reviewsRes = await fetch(`/api/reviews/store/${storeData.id}`);
-        if (reviewsRes.ok) {
-          const revData = await reviewsRes.json();
-          setReviews(Array.isArray(revData) ? revData : (revData.reviews ?? []));
+          const reviewsRes = await fetch(`/api/reviews/store/${storeData.id}`);
+          if (reviewsRes.ok) {
+            const revData = await reviewsRes.json();
+            setReviews(Array.isArray(revData) ? revData : (revData.reviews ?? []));
+          }
         }
       } else {
         setStore(null);
@@ -156,7 +159,7 @@ export default function ProfilePage() {
 
   const fetchChatCount = async () => {
     try {
-      const res = await fetch('/api/conversations', { credentials: 'include',   });
+      const res = await fetch('/api/messages/conversations', { credentials: 'include' });
       if (res.ok) {
         const convos = await res.json();
         setChatCount(convos.length);

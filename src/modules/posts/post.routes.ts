@@ -21,6 +21,6 @@ export const postRoutes = router;
 export const interactionsRouter = Router();
 interactionsRouter.get("/", authenticateToken, PostController.getInteractions);
 
-// /api/stores/:storeId/posts (DELETE) -> Mounted at /api/stores in app.ts or exported here to be mounted
-export const storePostsDeleteRouter = Router({ mergeParams: true });
-storePostsDeleteRouter.delete("/", authenticateToken, PostController.deleteAllStorePosts);
+// DELETE /api/stores/:storeId/posts
+export const storePostsDeleteRouter = Router();
+storePostsDeleteRouter.delete("/:storeId/posts", authenticateToken, PostController.deleteAllStorePosts);

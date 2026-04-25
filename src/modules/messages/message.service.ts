@@ -25,6 +25,36 @@ export class MessageService {
     return { messages, hasMore, nextCursor: hasMore ? messages[0]?.id : null };
   }
 
+  static async getConversations(userId: string) {
+    const messages = await prisma.message.findMany({
+      where: { OR: [{ senderId: userId }, { receiverId: userId }] },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      include: {
+        sender: { select: { id: true, name: true, role: true, stores: { select: { storeName: true, logoUrl: true }, take: 1 } } },
+        receiver: { select: { id: true, name: true, role: true, stores: { select: { storeName: true, logoUrl: true }, take: 1 } } },
+      },
+    });
+
+    const seen = new Map<string, any>();
+    for (const msg of messages) {
+      const otherId = msg.senderId === userId ? msg.receiverId : msg.senderId;
+      if (!seen.has(otherId)) {
+        const other = msg.senderId === userId ? msg.receiver : msg.sender;
+        seen.set(otherId, {
+          userId: otherId,
+          name: other.stores?.[0]?.storeName || other.name,
+          logoUrl: other.stores?.[0]?.logoUrl || null,
+          role: other.role,
+          lastMessage: msg.message,
+          lastImageUrl: msg.imageUrl,
+          timestamp: msg.createdAt,
+        });
+      }
+    }
+    return Array.from(seen.values());
+  }
+
   static async sendMessage(senderId: string, receiverId: string, messageText: string, imageUrl?: string) {
     const sender = await prisma.user.findUnique({ where: { id: senderId } });
     const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
