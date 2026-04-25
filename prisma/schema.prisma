@@ -75,6 +75,7 @@ model Store {
   chatEnabled   Boolean   @default(true)
   is24Hours     Boolean   @default(false)
   logoUrl       String?
+  coverUrl      String?
   postalCode    Int?
   city          String?
   state         String?

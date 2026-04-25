@@ -588,7 +588,9 @@ export default function ProfilePage() {
         {/* ── Cover ── */}
         <div className="relative" style={{ height: 180 }}>
           <div className="absolute inset-0 overflow-hidden">
-            {store.logoUrl ? (
+            {store.coverUrl ? (
+              <img src={store.coverUrl} className="w-full h-full object-cover" alt="" />
+            ) : store.logoUrl ? (
               <img src={store.logoUrl} className="w-full h-full object-cover" style={{ filter: 'blur(14px) brightness(0.5)', transform: 'scale(1.2)' }} alt="" />
             ) : (
               <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF6B35 0%, #FFA94D 100%)' }} />

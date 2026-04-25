@@ -25,7 +25,9 @@ export default function RetailerDashboard() {
   const [mapLat, setMapLat] = useState<number>(0);
   const [mapLng, setMapLng] = useState<number>(0);
   const [logoUrl, setLogoUrl] = useState<string>('');
+  const [coverUrl, setCoverUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('General');
   const [is24Hours, setIs24Hours] = useState(false);
   const [postalCode, setPostalCode] = useState<string>('');
@@ -77,6 +79,7 @@ export default function RetailerDashboard() {
             setSelectedCategory(data.category || 'General');
             setIs24Hours(data.is24Hours || false);
             setLogoUrl(data.logoUrl || '');
+            setCoverUrl(data.coverUrl || '');
             setPostalCode(data.postalCode ? String(data.postalCode) : '');
             setCity(data.city || '');
             setState(data.state || '');
@@ -158,6 +161,7 @@ export default function RetailerDashboard() {
          latitude: mapLat,
          longitude: mapLng,
          logoUrl: logoUrl || null,
+         coverUrl: coverUrl || null,
          postalCode: postalCode ? parseInt(postalCode) : null,
          city: city || null,
          state: state || null,
@@ -247,6 +251,22 @@ export default function RetailerDashboard() {
       if (res.ok) {
         const data = await res.json();
         setLogoUrl(data.url);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        setCoverUrl(data.url);
       }
     } catch (e) {
       console.error(e);
@@ -458,6 +478,31 @@ export default function RetailerDashboard() {
                   <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>{store.averageRating.toFixed(1)} ({store.reviewCount || 0})</span>
                 </div>
               )}
+            </div>
+
+            {/* Cover Photo Upload */}
+            <div className="mb-5 -mx-5 -mt-0">
+              <div
+                className="relative overflow-hidden"
+                style={{ height: 120, background: 'var(--dk-surface)', borderBottom: '0.5px solid var(--dk-border)' }}
+              >
+                {coverUrl ? (
+                  <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center" style={{ background: '#F3F4F6' }}>
+                    <p className="text-xs font-medium" style={{ color: 'var(--dk-text-tertiary)' }}>No cover photo</p>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => coverFileInputRef.current?.click()}
+                  className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: 'rgba(0,0,0,0.6)', color: 'white', backdropFilter: 'blur(4px)' }}
+                >
+                  <Camera size={12} /> {coverUrl ? 'Change Cover' : 'Add Cover Photo'}
+                </button>
+                <input ref={coverFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+              </div>
             </div>
 
             <form className="space-y-4" onSubmit={handleSaveStoreInfo}>

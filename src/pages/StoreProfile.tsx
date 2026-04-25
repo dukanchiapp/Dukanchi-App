@@ -155,9 +155,11 @@ export default function StoreProfilePage() {
 
         {/* ── Cover + Logo ── */}
         <div className="relative" style={{ height: 200 }}>
-          {/* Cover image (blurred logo or gradient) */}
-          <div className="absolute inset-0 overflow-hidden" style={{ borderBottomLeftRadius: 0, borderBottomRightRadius: 0 }}>
-            {store.logoUrl ? (
+          {/* Cover image */}
+          <div className="absolute inset-0 overflow-hidden">
+            {store.coverUrl ? (
+              <img src={store.coverUrl} className="w-full h-full object-cover" alt="" />
+            ) : store.logoUrl ? (
               <img
                 src={store.logoUrl}
                 className="w-full h-full object-cover"
