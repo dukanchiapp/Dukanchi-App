@@ -8,7 +8,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedStores, setSuggestedStores] = useState<any[]>([]);
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,16 +26,15 @@ export default function MessagesPage() {
   }, [token]);
 
   useEffect(() => {
-    const currentUserId = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}')?.id; } catch { return null; } })();
     fetch('/api/stores?limit=8', { credentials: 'include' })
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => {
         const all: any[] = Array.isArray(data) ? data : (data.stores ?? []);
-        const filtered = currentUserId ? all.filter((s: any) => s.ownerId !== currentUserId) : all;
+        const filtered = user?.id ? all.filter((s: any) => s.ownerId !== user.id) : all;
         setSuggestedStores(filtered.slice(0, 3));
       })
       .catch(() => {});
-  }, []);
+  }, [user?.id]);
 
   const filtered = conversations.filter(conv =>
     conv.storeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
