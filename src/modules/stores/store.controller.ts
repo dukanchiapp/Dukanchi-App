@@ -85,8 +85,8 @@ export class StoreController {
 
   static async getStores(req: Request, res: Response) {
     try {
-      const { page = "1", limit = "20", category } = req.query as any;
-      const result = await StoreService.getStores(parseInt(page), parseInt(limit), category);
+      const { page = "1", limit = "20", category, excludeOwnerId } = req.query as any;
+      const result = await StoreService.getStores(parseInt(page), parseInt(limit), category, excludeOwnerId);
       res.json(result);
     } catch {
       res.status(500).json({ error: "Failed to fetch stores" });

@@ -47,10 +47,11 @@ export class StoreService {
     return store;
   }
 
-  static async getStores(page: number, limit: number, category?: string) {
+  static async getStores(page: number, limit: number, category?: string, excludeOwnerId?: string) {
     const skip = (page - 1) * limit;
     const where: any = { owner: { isBlocked: false } };
     if (category) where.category = category;
+    if (excludeOwnerId) where.ownerId = { not: excludeOwnerId };
     const [stores, total] = await Promise.all([
       prisma.store.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
       prisma.store.count({ where }),

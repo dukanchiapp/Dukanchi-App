@@ -8,7 +8,7 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedStores, setSuggestedStores] = useState<any[]>([]);
-  const { token, user } = useAuth();
+  const { token, user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,15 +26,17 @@ export default function MessagesPage() {
   }, [token]);
 
   useEffect(() => {
-    fetch('/api/stores?limit=8', { credentials: 'include' })
+    if (authLoading) return; // wait for auth to resolve before fetching
+    const params = new URLSearchParams({ limit: '8' });
+    if (user?.id) params.set('excludeOwnerId', user.id);
+    fetch(`/api/stores?${params}`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => {
         const all: any[] = Array.isArray(data) ? data : (data.stores ?? []);
-        const filtered = user?.id ? all.filter((s: any) => s.ownerId !== user.id) : all;
-        setSuggestedStores(filtered.slice(0, 3));
+        setSuggestedStores(all.slice(0, 3));
       })
       .catch(() => {});
-  }, [user?.id]);
+  }, [authLoading, user?.id]);
 
   const filtered = conversations.filter(conv =>
     conv.storeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
