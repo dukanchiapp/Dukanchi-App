@@ -54,6 +54,7 @@ Both share a single **Express + TypeScript backend** (`server.ts`).
 | Validation | `zod` |
 | Compression | `compression` (gzip/brotli) |
 | Rate Limiting | `express-rate-limit` + Redis store |
+| Logging | Pino (`pino`, `pino-http`, `pino-pretty`) |
 | Error Tracking | Sentry (`@sentry/node`) |
 | Process Manager | PM2 (cluster mode, all CPU cores) |
 
@@ -160,7 +161,7 @@ Non-customer roles (retailer, supplier, brand, manufacturer) must complete KYC b
 ## Main App — Features
 
 ### Authentication
-- **Phone + password signup/login** — JWT token stored in localStorage
+- **Phone + password signup/login** — JWT token stored in secure `httpOnly` cookie (XSS-proof)
 - **Role selection** at signup (customer / retail shop / supplier / brand / manufacturer)
 - Google OAuth **temporarily removed** (can be re-enabled)
 
@@ -413,6 +414,8 @@ ADMIN_PASSWORD=your-admin-password
 NODE_ENV=production
 PORT=3000
 ALLOWED_ORIGINS=https://yourdomain.com,https://admin.yourdomain.com
+SENTRY_DSN=https://....ingest.sentry.io/...
+LOG_LEVEL=info
 
 # File uploads — only needed for S3 mode
 S3_BUCKET_NAME=your-bucket
@@ -452,7 +455,12 @@ The script installs: Node.js 22, PostgreSQL 14, Redis, Nginx, Certbot (SSL), PM2
 
 ---
 
-*Last updated: 2026-04-22 (Session 4)*
+*Last updated: 2026-04-25 (Session 7)*
 
 ### Architecture Update (2026-04-24)
 The application has been successfully migrated to a Domain-Driven Design (DDD). The monolithic server.ts has been deprecated as a router and now serves strictly as the application entry point. All business logic and routes have been extracted into the `src/modules/` directory, background jobs into `src/workers/`, and real-time events into `src/config/socket-listeners.ts`.
+
+### Session 7 Update (2026-04-25)
+- JWT authentication migrated from `localStorage` to secure `httpOnly` cookies (XSS-proof).
+- Pino structured logging added: pretty-print in dev, JSON in production. Sensitive fields auto-redacted.
+- Sentry fully wired: initialized before any other imports in `server.ts`, request/error handlers in `src/app.ts`.

@@ -46,3 +46,21 @@
 - Replaced the monolithic server.ts with a lightweight entry point connecting all routers in src/app.ts.
 - Verified compilation with tsc --noEmit (Exit code 0).
 - System is fully modularized and testable.
+
+---
+
+## Session 7 — Sentry + Pino Observability (2026-04-25)
+
+### Changes
+- Installed `pino`, `pino-http`, `pino-pretty` for structured logging
+- Created `src/lib/logger.ts`: Pino with pretty-print in dev, JSON in prod, sensitive field redaction (`password`, `token`, `authorization`, `cookie`)
+- Created `src/lib/sentry.ts`: `initSentry()` wrapper — skips gracefully if `SENTRY_DSN` is absent, sets `tracesSampleRate: 0.1` in prod vs `1.0` in dev
+- Wired `initSentry()` as the VERY FIRST call in `server.ts` (before any app imports)
+- Added `pino-http` request logger in `src/app.ts` (after CORS, before body parsers) — never logs request bodies
+- Added `GET /api/debug-sentry` dev-only test route
+- Replaced all `console.log` / `console.error` in `server.ts` with `logger.info` / `logger.error`
+- `Sentry.setupExpressErrorHandler(app)` remains in `src/app.ts` before the global error handler
+
+### Verification
+- `npx tsc --noEmit` → Exit 0
+- `GET /api/debug-sentry` → triggers Sentry event visible in dashboard within ~30s

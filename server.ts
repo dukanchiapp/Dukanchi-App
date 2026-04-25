@@ -1,7 +1,10 @@
+// ⚠️ Sentry MUST be initialized before any other imports of app code
+import { initSentry } from "./src/lib/sentry";
+initSentry();
+
 import path from "path";
 import express from "express";
 import bcrypt from "bcrypt";
-import * as Sentry from "@sentry/node";
 import { createServer as createViteServer } from "vite";
 
 import { createServer } from "http";
@@ -11,6 +14,7 @@ import { prisma } from "./src/config/prisma";
 import { refreshVocabulary } from "./src/services/fuzzySearch";
 import { startNotificationWorker } from "./src/workers/notification.worker";
 import { setupSocketListeners } from "./src/config/socket-listeners";
+import { logger } from "./src/lib/logger";
 
 // Setup HTTP Server & Sockets
 const httpServer = createServer(app);
@@ -27,7 +31,7 @@ async function ensureAdminAccount() {
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
   if (!ADMIN_PHONE || !ADMIN_PASSWORD) {
-    console.warn("WARNING: ADMIN_PHONE or ADMIN_PASSWORD not set in .env — skipping admin account seeding.");
+    logger.warn("ADMIN_PHONE or ADMIN_PASSWORD not set in .env — skipping admin account seeding.");
     return;
   }
 
@@ -55,7 +59,7 @@ async function ensureAdminAccount() {
       });
     }
   } catch (err) {
-    console.error("Failed to ensure admin account:", err);
+    logger.error({ err }, "Failed to ensure admin account");
   }
 }
 
@@ -81,9 +85,11 @@ async function startServer() {
   httpServer.on("request", app);
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    refreshVocabulary(prisma).then(() => console.log('Fuzzy vocabulary loaded')).catch(() => {});
-    setInterval(() => refreshVocabulary(prisma).catch(() => {}), 5 * 60 * 1000);
+    logger.info(`Server running on http://localhost:${PORT}`);
+    refreshVocabulary(prisma)
+      .then(() => logger.info("Fuzzy vocabulary loaded"))
+      .catch((err) => logger.error({ err }, "Failed to load fuzzy vocabulary"));
+    setInterval(() => refreshVocabulary(prisma).catch((err) => logger.error({ err }, "Fuzzy vocabulary refresh failed")), 5 * 60 * 1000);
   });
 }
 
