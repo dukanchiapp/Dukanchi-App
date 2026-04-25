@@ -25,40 +25,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    const storedTeamFlag = localStorage.getItem('isTeamMember');
-
-    if (storedToken && storedUser) {
-      try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-        setIsTeamMember(storedTeamFlag === 'true');
-      } catch (err) {
-        console.error('Failed to parse stored user data', err);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('isTeamMember');
-      }
-    }
-    setIsLoading(false);
+    fetch('/api/me', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data && !data.error) {
+          setUser(data);
+          setToken("cookie"); // dummy token to pass truthiness checks
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = (newUser: User, newToken: string, teamMember: boolean = false) => {
     setUser(newUser);
-    setToken(newToken);
+    setToken("cookie");
     setIsTeamMember(teamMember);
-    localStorage.setItem('user', JSON.stringify(newUser));
-    localStorage.setItem('token', newToken);
     localStorage.setItem('isTeamMember', String(teamMember));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (err) {
+      console.error(err);
+    }
     setUser(null);
     setToken(null);
     setIsTeamMember(false);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
     localStorage.removeItem('isTeamMember');
   };
 

@@ -4,14 +4,12 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
 });
 
-// Helper to get headers with admin token
+// Helper to get headers (no longer needs token, kept for backward compatibility if any callers expect it)
 export const getAdminHeaders = () => {
-  const token = localStorage.getItem('adminToken');
-  return {
-    Authorization: `Bearer ${token}`,
-  };
+  return {};
 };
 
 // Prefix relative /uploads/... paths with the backend origin

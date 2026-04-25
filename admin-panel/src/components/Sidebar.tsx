@@ -8,10 +8,15 @@ interface SidebarProps {
 export default function Sidebar({ onClose }: SidebarProps) {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      const { default: api } = await import('../lib/api');
+      await api.post('/api/auth/logout');
+    } catch (err) {
+      console.error(err);
+    }
+    // Refresh page to clear auth state
+    window.location.href = '/login';
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) =>

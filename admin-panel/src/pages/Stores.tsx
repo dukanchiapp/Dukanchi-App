@@ -64,8 +64,7 @@ export default function Stores() {
   };
 
   const handleExport = () => {
-    const token = localStorage.getItem('adminToken');
-    fetch(`${API_URL}/api/admin/stores/export`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_URL}/api/admin/stores/export`, { credentials: 'include',   })
       .then(r => r.blob())
       .then(blob => {
         const url = URL.createObjectURL(blob);

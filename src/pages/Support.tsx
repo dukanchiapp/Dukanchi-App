@@ -29,7 +29,7 @@ export default function SupportPage() {
     if (description.trim().length < MIN_DESC_LENGTH) return;
     setSubmitting(true);
     try {
-      const res = await fetch('/api/complaints', {
+      const res = await fetch('/api/complaints', { credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ issueType, description: description.trim() })

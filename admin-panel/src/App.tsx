@@ -12,43 +12,43 @@ import Settings from './pages/Settings';
 import StoreMembers from './pages/StoreMembers';
 import { ToastProvider } from './context/ToastContext';
 
-function isTokenValid(token: string | null): boolean {
-  if (!token) return false;
-  try {
-    // Decode payload without verifying signature (server verifies on each request)
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // exp is in seconds; Date.now() in ms
-    return typeof payload.exp === 'number' && payload.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
-}
+import { useState, useEffect } from 'react';
+import api from './lib/api';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('adminToken');
-  if (!isTokenValid(token)) {
-    localStorage.removeItem('adminToken');
-    return <Navigate to="/login" replace />;
-  }
+function ProtectedRoute({ children, isAuthenticated, isLoading }: { children: React.ReactNode, isAuthenticated: boolean, isLoading: boolean }) {
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/api/me')
+      .then(res => {
+        if (res.data && !res.data.error) setIsAuthenticated(true);
+      })
+      .catch(() => setIsAuthenticated(false))
+      .finally(() => setIsLoading(false));
+  }, []);
+
   return (
     <ToastProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
-          <Route path="/stores" element={<ProtectedRoute><Stores /></ProtectedRoute>} />
-          <Route path="/posts" element={<ProtectedRoute><Posts /></ProtectedRoute>} />
-          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-          <Route path="/complaints" element={<ProtectedRoute><Complaints /></ProtectedRoute>} />
-          <Route path="/kyc" element={<ProtectedRoute><KycReview /></ProtectedRoute>} />
-          <Route path="/chats" element={<ProtectedRoute><Chats /></ProtectedRoute>} />
-          <Route path="/store-members" element={<ProtectedRoute><StoreMembers /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={() => setIsAuthenticated(true)} />} />
+          <Route path="/dashboard" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Users /></ProtectedRoute>} />
+          <Route path="/stores" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Stores /></ProtectedRoute>} />
+          <Route path="/posts" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Posts /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Reports /></ProtectedRoute>} />
+          <Route path="/complaints" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Complaints /></ProtectedRoute>} />
+          <Route path="/kyc" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><KycReview /></ProtectedRoute>} />
+          <Route path="/chats" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Chats /></ProtectedRoute>} />
+          <Route path="/store-members" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><StoreMembers /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Settings /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

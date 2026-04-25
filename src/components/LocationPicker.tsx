@@ -44,8 +44,7 @@ export default function LocationPicker({ onClose }: Props) {
       setSearching(true);
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=7`,
-          { headers: { 'Accept-Language': 'en' } }
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=7`, { credentials: 'include',  headers: { 'Accept-Language': 'en' } }
         );
         const data: NominatimResult[] = await res.json();
         setResults(data);

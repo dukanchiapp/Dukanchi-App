@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Lock, Phone, Shield, Loader2 } from 'lucide-react';
 
-export default function Login() {
+export default function Login({ onLogin }: { onLogin?: () => void }) {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,14 +17,13 @@ export default function Login() {
 
     try {
       const API = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const res = await axios.post(`${API}/api/login`, { phone, password });
+      const res = await axios.post(`${API}/api/auth/login`, { phone, password });
 
       if (res.data.user.role !== 'admin') {
         throw new Error('Access denied. Admin accounts only.');
       }
 
-      localStorage.setItem('adminToken', res.data.token);
-      localStorage.setItem('adminUser', JSON.stringify(res.data.user));
+      if (onLogin) onLogin();
       navigate('/dashboard');
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {

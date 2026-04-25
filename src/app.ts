@@ -98,6 +98,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/app-settings', settingsRoutes);
 
 // ── 7. Misc endpoints ─────────────────────────────────────────────────────────
+import { AuthController } from "./modules/auth/auth.controller";
+app.get("/api/me", authenticateToken, AuthController.me);
 app.post("/api/upload", authenticateToken, upload.single("file"), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const url = (req.file as any).location ?? `/uploads/${req.file.filename}`;

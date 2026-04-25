@@ -50,7 +50,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      fetch(`/api/me/interactions`, { headers: { Authorization: `Bearer ${token}` } })
+      fetch(`/api/me/interactions`, { credentials: 'include',   })
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setInteractions(data); })
         .catch(() => {});
@@ -60,13 +60,13 @@ export default function ProfilePage() {
   const toggleLike = async (postId: string) => {
     const isLiked = interactions.likedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, likedPostIds: isLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId] }));
-    try { await fetch(`/api/posts/${postId}/like`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } catch (e) { console.error(e); }
+    try { await fetch(`/api/posts/${postId}/like`, { credentials: 'include',  method: 'POST',  }); } catch (e) { console.error(e); }
   };
 
   const toggleSave = async (postId: string) => {
     const isSaved = interactions.savedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, savedPostIds: isSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId] }));
-    try { await fetch(`/api/posts/${postId}/save`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } }); } catch (e) { console.error(e); }
+    try { await fetch(`/api/posts/${postId}/save`, { credentials: 'include',  method: 'POST',  }); } catch (e) { console.error(e); }
   };
 
   const handleShare = async (post: any) => {
@@ -100,8 +100,8 @@ export default function ProfilePage() {
       // For business users, always check KYC status first
       if (user?.role && user.role !== 'customer') {
         try {
-          const kycRes = await fetch('/api/kyc/status', {
-            headers: { Authorization: `Bearer ${token}` }
+          const kycRes = await fetch('/api/kyc/status', { credentials: 'include', 
+            
           });
           if (kycRes.ok) {
             const kycData = await kycRes.json();
@@ -156,7 +156,7 @@ export default function ProfilePage() {
 
   const fetchChatCount = async () => {
     try {
-      const res = await fetch('/api/conversations', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch('/api/conversations', { credentials: 'include',   });
       if (res.ok) {
         const convos = await res.json();
         setChatCount(convos.length);
@@ -171,7 +171,7 @@ export default function ProfilePage() {
   const confirmDeletePost = async () => {
     if (!postToDelete) return;
     try {
-      const res = await fetch(`/api/posts/${postToDelete}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` }});
+      const res = await fetch(`/api/posts/${postToDelete}`, { credentials: 'include',  method: 'DELETE', });
       if (!res.ok) throw new Error('Failed to delete post');
       setPosts(posts.filter(p => p.id !== postToDelete));
       if (selectedPost?.id === postToDelete) setSelectedPost(null);
@@ -197,7 +197,7 @@ export default function ProfilePage() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+      const res = await fetch('/api/upload', { credentials: 'include',  method: 'POST',  body: formData });
       if (res.ok) {
         const data = await res.json();
         setEditRawImageUrl(data.url);
@@ -210,7 +210,7 @@ export default function ProfilePage() {
     if (!editingPost) return;
     setEditUploading(true);
     try {
-      const res = await fetch(`/api/posts/${editingPost.id}`, {
+      const res = await fetch(`/api/posts/${editingPost.id}`, { credentials: 'include', 
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ caption: editCaption, imageUrl: editImage, price: editPrice || null })
@@ -241,7 +241,7 @@ export default function ProfilePage() {
   const handleTogglePin = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/posts/${postId}/pin`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }});
+      const res = await fetch(`/api/posts/${postId}/pin`, { credentials: 'include',  method: 'POST', });
       if (res.ok) {
         const updated = await res.json();
         setPosts(posts.map(p => p.id === postId ? updated : p));
@@ -265,7 +265,7 @@ export default function ProfilePage() {
     }
     setNewPostUploading(true);
     try {
-      const res = await fetch('/api/posts', {
+      const res = await fetch('/api/posts', { credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ storeId: store.id, caption: newPostCaption, imageUrl: newPostImage, ...(newPostPrice ? { price: parseFloat(newPostPrice) } : {}) })
@@ -292,9 +292,9 @@ export default function ProfilePage() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', {
+      const res = await fetch('/api/upload', { credentials: 'include', 
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        
         body: formData
       });
       if (res.ok) {
@@ -923,9 +923,8 @@ export default function ProfilePage() {
                       const blob = await fetch(croppedDataUrl).then(r => r.blob());
                       const formData = new FormData();
                       formData.append('file', blob, 'cropped-post.jpg');
-                      const res = await fetch('/api/upload', {
+                      const res = await fetch('/api/upload', { credentials: 'include', 
                         method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
                         body: formData
                       });
                       if (res.ok) {
@@ -1015,7 +1014,7 @@ export default function ProfilePage() {
                       const blob = await fetch(croppedDataUrl).then(r => r.blob());
                       const formData = new FormData();
                       formData.append('file', blob, 'edited-post.jpg');
-                      const res = await fetch('/api/upload', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+                      const res = await fetch('/api/upload', { credentials: 'include',  method: 'POST',  body: formData });
                       if (res.ok) { const data = await res.json(); setEditImage(data.url); }
                     } catch {}
                     setEditShowCropper(false);

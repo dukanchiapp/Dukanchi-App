@@ -25,8 +25,7 @@ const STORAGE_KEY = 'dk_user_location';
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en' } }
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`, { credentials: 'include',  headers: { 'Accept-Language': 'en' } }
     );
     const data = await res.json();
     const a = data.address || {};

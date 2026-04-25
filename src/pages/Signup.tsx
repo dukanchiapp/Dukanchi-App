@@ -27,7 +27,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/auth/users', { credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmedName, phone: trimmedPhone, password, role }),

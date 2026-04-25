@@ -10,4 +10,8 @@ router.post("/users", authLimiter, validate(signupSchema), AuthController.signup
 router.post("/login", authLimiter, validate(loginSchema), AuthController.login);
 router.post("/logout", AuthController.logout);
 
+// Import authenticateToken for the /me route
+import { authenticateToken } from "../../middlewares/auth.middleware";
+router.get("/me", authenticateToken, AuthController.me);
+
 export const authRoutes = router;

@@ -13,7 +13,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    fetch('/api/conversations', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/conversations', { credentials: 'include',   })
       .then(res => res.ok ? res.json() : [])
       .then(data => {
         setConversations(data.map((conv: any) => ({
@@ -26,7 +26,7 @@ export default function MessagesPage() {
   }, [token]);
 
   useEffect(() => {
-    fetch('/api/stores?limit=5')
+    fetch('/api/stores?limit=5', { credentials: 'include' })
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => setSuggestedStores((Array.isArray(data) ? data : (data.stores ?? [])).slice(0, 3)))
       .catch(() => {});

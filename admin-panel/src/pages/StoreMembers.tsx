@@ -123,12 +123,11 @@ export default function StoreMembers() {
   };
 
   const handleExport = () => {
-    const token = localStorage.getItem('adminToken');
     const url = `${API_URL}/api/admin/stores/export`;
     const a = document.createElement('a');
     a.href = url;
     // Attach token via a temporary fetch → blob download (CORS-safe)
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(url, { credentials: 'include',   })
       .then(r => r.blob())
       .then(blob => {
         const blobUrl = URL.createObjectURL(blob);

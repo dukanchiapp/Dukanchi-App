@@ -54,7 +54,7 @@ export default function RetailerDashboard() {
   // Fetch KYC status
   useEffect(() => {
     if (user?.id && user?.role !== 'customer' && user?.role !== 'admin') {
-      fetch('/api/kyc/status', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+      fetch('/api/kyc/status', { credentials: 'include',   })
         .then(res => res.json())
         .then(data => {
           setKycStatus(data.kycStatus || 'none');
@@ -86,7 +86,7 @@ export default function RetailerDashboard() {
             setLoading(false);
           } else {
             // New store: Fetch KYC status to pre-fill intended store details
-            fetch('/api/kyc/status', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+            fetch('/api/kyc/status', { credentials: 'include',   })
               .then(res => res.json())
               .then(kycData => {
                 if (kycData.kycStoreName || kycData.kycStorePhoto) {
@@ -163,11 +163,11 @@ export default function RetailerDashboard() {
          state: state || null,
       };
 
-      const res = await fetch(url, {
+      const res = await fetch(url, { credentials: 'include', 
          method,
          headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            
          },
          body: JSON.stringify(bodyData)
       });
@@ -180,9 +180,9 @@ export default function RetailerDashboard() {
           setStoreId(updatedStore.id);
           if (logoUrl) {
             try {
-              await fetch('/api/posts', {
+              await fetch('/api/posts', { credentials: 'include', 
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                   storeId: updatedStore.id, 
                   caption: `Welcome to ${storeName}! We are now open.`, 
@@ -215,9 +215,9 @@ export default function RetailerDashboard() {
 
           if (storeId) {
             try {
-               await fetch(`/api/stores/${storeId}`, {
+               await fetch(`/api/stores/${storeId}`, { credentials: 'include', 
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ latitude: lat, longitude: lng })
                });
                showToast('📍 Location pinned successfully!', { type: 'success' });
@@ -239,9 +239,9 @@ export default function RetailerDashboard() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', {
+      const res = await fetch('/api/upload', { credentials: 'include', 
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        
         body: formData
       });
       if (res.ok) {
@@ -261,9 +261,9 @@ export default function RetailerDashboard() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', {
+      const res = await fetch('/api/upload', { credentials: 'include', 
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        
         body: formData,
       });
       if (res.ok) {
@@ -283,9 +283,9 @@ export default function RetailerDashboard() {
     }
     setKycSubmitting(true);
     try {
-      const res = await fetch('/api/kyc/submit', {
+      const res = await fetch('/api/kyc/submit', { credentials: 'include', 
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           documentUrl: kycDocUrl, 
           selfieUrl: kycSelfieUrl,

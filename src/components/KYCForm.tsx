@@ -19,9 +19,9 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
     formData.append('file', file);
     
     try {
-      const res = await fetch('/api/upload', {
+      const res = await fetch('/api/upload', { credentials: 'include', 
         method: 'POST',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        
         body: formData
       });
       if (res.ok) {
@@ -47,9 +47,9 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
     setLoading(true);
     try {
       // Submit KYC documents and intended store details
-      const kycRes = await fetch('/api/kyc/submit', {
+      const kycRes = await fetch('/api/kyc/submit', { credentials: 'include', 
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           documentUrl: gstBill,
           selfieUrl: selfie,

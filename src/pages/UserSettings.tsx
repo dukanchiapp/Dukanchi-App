@@ -69,27 +69,27 @@ export default function UserSettings() {
     
     if (activeTab === 'following') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/following`, { headers })
+      fetch(`/api/users/${user.id}/following`, { credentials: 'include',  headers })
         .then(r => r.json()).then(setFollowedStores).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'saved') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/saved`, { headers })
+      fetch(`/api/users/${user.id}/saved`, { credentials: 'include',  headers })
         .then(r => r.json()).then(setSavedItems).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'history') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/search-history`, { headers })
+      fetch(`/api/users/${user.id}/search-history`, { credentials: 'include',  headers })
         .then(r => r.json()).then(setSearchHistory).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'locations') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/locations`, { headers })
+      fetch(`/api/users/${user.id}/locations`, { credentials: 'include',  headers })
         .then(r => r.json()).then(setSavedLocations).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'reviews') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/reviews`, { headers })
+      fetch(`/api/users/${user.id}/reviews`, { credentials: 'include',  headers })
         .then(r => r.json()).then(setUserReviews).catch(console.error).finally(() => setCustomerLoading(false));
     }
   }, [activeTab, user, token, isRetailer]);
@@ -112,8 +112,8 @@ export default function UserSettings() {
     setTeamLoading(true);
     setTeamError('');
     try {
-      const res = await fetch(`/api/team/${store.id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`/api/team/${store.id}`, { credentials: 'include', 
+        
       });
       if (res.ok) {
         setTeamMembers(await res.json());
@@ -133,7 +133,7 @@ export default function UserSettings() {
     }
     setTeamError('');
     try {
-      const res = await fetch('/api/team', {
+      const res = await fetch('/api/team', { credentials: 'include', 
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ phone: newMemberPhone, password: newMemberPassword, storeId: store.id, name: newMemberName || 'Team Member' })
@@ -153,9 +153,9 @@ export default function UserSettings() {
     showConfirm('Remove this team member? They will immediately lose access.', {
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/team/${memberId}`, {
+          const res = await fetch(`/api/team/${memberId}`, { credentials: 'include', 
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
+            
           });
           if (res.ok) {
             setTeamMembers(prev => prev.filter(m => m.id !== memberId));
@@ -202,7 +202,7 @@ export default function UserSettings() {
   const handleToggleStoreSetting = async (key: string, value: boolean) => {
       if (!store) return;
       try {
-         const res = await fetch(`/api/stores/${store.id}`, {
+         const res = await fetch(`/api/stores/${store.id}`, { credentials: 'include', 
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ [key]: value })
@@ -218,9 +218,9 @@ export default function UserSettings() {
     formData.append('file', file);
     formData.append('storeId', store.id);
     try {
-      const res = await fetch('/api/products/upload', {
+      const res = await fetch('/api/products/upload', { credentials: 'include', 
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        
         body: formData
       });
       if (res.ok) {
@@ -250,7 +250,7 @@ export default function UserSettings() {
   const confirmDeleteSelectedPosts = async () => {
     try {
       for (const postId of selectedPostIds) {
-        const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`/api/posts/${postId}`, { credentials: 'include',  method: 'DELETE',  });
         if (!res.ok) throw new Error(`Failed to delete post ${postId}`);
       }
       setManagePosts(prev => prev.filter(p => !selectedPostIds.has(p.id)));
@@ -271,7 +271,7 @@ export default function UserSettings() {
   };
   const confirmDeleteAllPosts = async () => {
     try {
-      const res = await fetch(`/api/stores/${store.id}/posts`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/stores/${store.id}/posts`, { credentials: 'include',  method: 'DELETE',  });
       if (!res.ok) throw new Error('Failed to delete all posts');
       setManagePosts([]);
       setSelectedPostIds(new Set());
@@ -290,7 +290,7 @@ export default function UserSettings() {
   };
   const confirmDeleteSinglePost = async (postId: string) => {
     try {
-      const res = await fetch(`/api/posts/${postId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/posts/${postId}`, { credentials: 'include',  method: 'DELETE',  });
       if (!res.ok) throw new Error('Failed to delete post');
       setManagePosts(prev => prev.filter(p => p.id !== postId));
       setSelectedPostIds(prev => {
@@ -394,7 +394,7 @@ export default function UserSettings() {
                       const phone = (document.getElementById('details-phone') as HTMLInputElement).value;
                       const email = (document.getElementById('details-email') as HTMLInputElement).value;
                       try {
-                        const res = await fetch(`/api/users/${user?.id}`, {
+                        const res = await fetch(`/api/users/${user?.id}`, { credentials: 'include', 
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                           body: JSON.stringify({ name, phone, email })
@@ -681,7 +681,7 @@ export default function UserSettings() {
                             const text = (document.getElementById('manualProductText') as HTMLTextAreaElement)?.value || '';
                             if (!store?.id) { showToast('Store not found', { type: 'error' }); return; }
                             try {
-                              const res = await fetch(`/api/stores/${store.id}`, {
+                              const res = await fetch(`/api/stores/${store.id}`, { credentials: 'include', 
                                 method: 'PUT',
                                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                                 body: JSON.stringify({ manualProductText: text })
@@ -749,7 +749,7 @@ export default function UserSettings() {
                         const description = (document.getElementById('report-text') as HTMLTextAreaElement)?.value?.trim();
                         if (!description) { showToast('Please describe the issue.', { type: 'error' }); return; }
                         try {
-                          const res = await fetch('/api/complaints', {
+                          const res = await fetch('/api/complaints', { credentials: 'include', 
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                             body: JSON.stringify({ issueType: 'fake_user', description })
@@ -778,7 +778,7 @@ export default function UserSettings() {
                         const description = (document.getElementById('help-text') as HTMLTextAreaElement)?.value?.trim();
                         if (!description) { showToast('Please enter your message.', { type: 'error' }); return; }
                         try {
-                          const res = await fetch('/api/complaints', {
+                          const res = await fetch('/api/complaints', { credentials: 'include', 
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                             body: JSON.stringify({ issueType: 'feedback', description })

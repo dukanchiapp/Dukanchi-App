@@ -75,7 +75,7 @@ export default function MapPage() {
   });
 
   useEffect(() => {
-    fetch('/api/stores?limit=200')
+    fetch('/api/stores?limit=200', { credentials: 'include' })
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => setStores(Array.isArray(data) ? data : (data.stores ?? [])))
       .catch(() => setStores([]));

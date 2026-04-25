@@ -48,8 +48,8 @@ export default function SearchPage() {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (!user.id) return;
-        const res = await fetch(`/api/users/${user.id}/search-history`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const res = await fetch(`/api/users/${user.id}/search-history`, { credentials: 'include', 
+          
         });
         if (res.ok) {
           const data = await res.json();
@@ -63,7 +63,7 @@ export default function SearchPage() {
 
   const saveSearch = (q: string) => {
     if (!q.trim() || !token) return;
-    fetch('/api/search-history', {
+    fetch('/api/search-history', { credentials: 'include', 
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ query: q.trim() }),
@@ -84,9 +84,9 @@ export default function SearchPage() {
   const clearAllHistory = async () => {
     if (!token) return;
     try {
-      await fetch('/api/search-history', {
+      await fetch('/api/search-history', { credentials: 'include', 
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        
       });
       setSearchHistory([]);
     } catch {}
@@ -99,8 +99,8 @@ export default function SearchPage() {
       return;
     }
     const timer = setTimeout(() => {
-      fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`, { credentials: 'include', 
+        
       })
         .then(res => res.ok ? res.json() : { suggestions: [] })
         .then(data => {
@@ -132,8 +132,8 @@ export default function SearchPage() {
       setLoading(true);
       setShowSuggestions(false);
       saveSearch(query);
-      fetch(`/api/search/ai?q=${encodeURIComponent(query)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetch(`/api/search/ai?q=${encodeURIComponent(query)}`, { credentials: 'include', 
+        
       })
         .then(res => (res.ok ? res.json() : { products: [], stores: [] }))
         .then(data => {
