@@ -142,7 +142,6 @@ export default function StoreProfilePage() {
   const isOwner = store.ownerId === currentUserId;
   const storeStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
   const showReviews = !store.hideRatings;
-  const sinceYear = store.createdAt ? new Date(store.createdAt).getFullYear() : null;
   const sortedPosts = [...posts].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
 
   const tabs = [
@@ -212,9 +211,19 @@ export default function StoreProfilePage() {
           {/* Name + badge */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', lineHeight: '1.2' }}>
-                {store.storeName}
-              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', lineHeight: '1.2' }}>
+                  {store.storeName}
+                </h1>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <StarRating rating={store.averageRating ?? 0} size={16} />
+                  {store.averageRating != null && store.averageRating > 0 && (
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>
+                      {store.averageRating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {store.owner?.role && store.owner.role !== 'customer' && (
                   <span
@@ -224,8 +233,8 @@ export default function StoreProfilePage() {
                     {store.owner.role === 'retailer' ? 'Retail' : store.owner.role}
                   </span>
                 )}
-                {sinceYear && (
-                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>Since {sinceYear}</span>
+                {store.category && (
+                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>{store.category}</span>
                 )}
               </div>
               {store.description && (

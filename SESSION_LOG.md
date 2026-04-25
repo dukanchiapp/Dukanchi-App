@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-04-26 — Session 11 (profile fixes: category, star rating, cover photo upload)
+
+### Commit: fix: show category not year, star rating size, cover photo upload in edit profile
+
+#### src/pages/StoreProfile.tsx
+- Removed `sinceYear` — show `store.category` in badge row instead of "Since YYYY"
+- Added StarRating (size=16) + numeric score directly beside store name (flex row)
+
+#### src/pages/Profile.tsx
+- Already showed category (no change needed for Fix 1)
+- Added StarRating (size=16) + numeric score beside store name (same pattern)
+
+#### Fix 3 (cover photo) — pending schema confirmation
+
+---
+
 ## 2026-04-26 — Session 10 (bug fixes: status, products tab, search, chat suggestions + features: closing countdown, store-only search)
 
 ### Commit: fix: store status, remove products tab, search improvements, chat suggestions
