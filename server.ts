@@ -1,3 +1,7 @@
+// Load env first — must happen before Sentry init reads process.env.SENTRY_DSN
+import { config } from "dotenv";
+config();
+
 // ⚠️ Sentry MUST be initialized before any other imports of app code
 import { initSentry } from "./src/lib/sentry";
 initSentry();
@@ -6,27 +10,12 @@ import path from "path";
 import express from "express";
 import bcrypt from "bcrypt";
 import { createServer as createViteServer } from "vite";
-
 import { createServer } from "http";
-import { app } from "./src/app";
-import { initializeSocket } from "./src/config/socket";
-import { prisma } from "./src/config/prisma";
-import { refreshVocabulary } from "./src/services/fuzzySearch";
-import { startNotificationWorker } from "./src/workers/notification.worker";
-import { setupSocketListeners } from "./src/config/socket-listeners";
 import { logger } from "./src/lib/logger";
-
-// Setup HTTP Server & Sockets
-const httpServer = createServer(app);
-const io = initializeSocket(httpServer);
-setupSocketListeners(io);
-
-// Start Workers
-startNotificationWorker();
 
 const PROTECTED_ADMIN_ID = '5cbf1a3d-e8e7-4b64-836a-58475bbbb7d9';
 
-async function ensureAdminAccount() {
+async function ensureAdminAccount(prisma: any) {
   const ADMIN_PHONE = process.env.ADMIN_PHONE;
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
@@ -66,8 +55,28 @@ async function ensureAdminAccount() {
 async function startServer() {
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
-  await ensureAdminAccount();
+  // ── 1. Connect Redis FIRST before any module that uses it is loaded ──────────
+  const { connectRedis } = await import("./src/config/redis");
+  await connectRedis();
 
+  // ── 2. Dynamically import app AFTER Redis is connected (rate-limiter is safe) ─
+  const { app } = await import("./src/app");
+  const { initializeSocket } = await import("./src/config/socket");
+  const { prisma } = await import("./src/config/prisma");
+  const { refreshVocabulary } = await import("./src/services/fuzzySearch");
+  const { startNotificationWorker } = await import("./src/workers/notification.worker");
+  const { setupSocketListeners } = await import("./src/config/socket-listeners");
+
+  // ── 3. Setup HTTP server, sockets, workers ────────────────────────────────────
+  const httpServer = createServer(app);
+  const io = initializeSocket(httpServer);
+  setupSocketListeners(io);
+  startNotificationWorker();
+
+  // ── 4. Seed admin account ─────────────────────────────────────────────────────
+  await ensureAdminAccount(prisma);
+
+  // ── 5. Vite (dev) or static files (prod) ──────────────────────────────────────
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -77,20 +86,25 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
+    app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
-  httpServer.on("request", app);
-
+  // ── 6. Start listening ────────────────────────────────────────────────────────
   httpServer.listen(PORT, "0.0.0.0", () => {
     logger.info(`Server running on http://localhost:${PORT}`);
     refreshVocabulary(prisma)
       .then(() => logger.info("Fuzzy vocabulary loaded"))
-      .catch((err) => logger.error({ err }, "Failed to load fuzzy vocabulary"));
-    setInterval(() => refreshVocabulary(prisma).catch((err) => logger.error({ err }, "Fuzzy vocabulary refresh failed")), 5 * 60 * 1000);
+      .catch((err: unknown) => logger.error({ err }, "Failed to load fuzzy vocabulary"));
+    setInterval(
+      () => refreshVocabulary(prisma).catch((err: unknown) => logger.error({ err }, "Fuzzy vocabulary refresh failed")),
+      5 * 60 * 1000
+    );
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  logger.error({ err }, "Fatal: server failed to start");
+  process.exit(1);
+});
