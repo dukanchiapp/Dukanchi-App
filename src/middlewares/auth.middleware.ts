@@ -35,8 +35,8 @@ const teamMemberExists = async (teamMemberId: string): Promise<boolean> => {
 };
 
 export const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // Read token from cookie, fallback to Authorization header if needed (for backward compatibility if any)
+  const token = req.cookies?.token || (req.headers['authorization']?.split(' ')[1]);
 
   if (!token) return res.status(401).json({ error: "Access denied" });
 

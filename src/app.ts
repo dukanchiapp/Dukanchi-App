@@ -1,6 +1,7 @@
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import { getAllowedOrigins } from "./config/env";
 import * as Sentry from "@sentry/node";
 
@@ -34,18 +35,25 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
+  } else if (allowedOrigins.length > 0) {
+    // If origin is not strictly matching but we need credentials, we could fallback to the first allowed origin
+    // but typically we only allow explicitly matching origins when credentials: true
+    res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
   }
+  
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(204);
   }
   next();
 });
 
-// JSON Body Parser
+// JSON Body & Cookie Parser
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
 // Mount domains
