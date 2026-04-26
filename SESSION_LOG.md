@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-04-26 — Session 12 (AI features: photo-to-post, voice-to-post, AI store description)
+
+### New Files
+- `src/services/geminiVision.ts` — 3 Gemini 2.0 Flash functions: `analyzeProductImage`, `transcribeAndStructureVoice`, `generateStoreDescription`
+- `src/modules/ai/ai.routes.ts` — `/api/ai/analyze-image`, `/api/ai/transcribe-voice`, `/api/ai/generate-store-description`
+- `src/modules/ai/ai.controller.ts` — Auth-gated controller with per-user in-memory rate limiting (10/min image/voice, 5/min description)
+
+### Modified Files
+- `src/app.ts` — registered `aiRoutes` at `/api/ai`
+- `src/pages/Profile.tsx` — New Post modal: "✨ AI se caption banao" button (photo→AI), voice recording (Mic button → MediaRecorder → transcription), AI suggestion card, imports `Sparkles/Mic/MicOff/useRef`
+- `src/pages/RetailerDashboard.tsx` — Store bio field: "✨ AI se generate karo" button → bio + tagline suggestion card with "Bio use karo" and "Tagline copy karo" actions
+
+### Behaviour
+- All AI calls fire-and-forget; never block post creation
+- Frontend compresses images >1200px via canvas before sending
+- Hindi fallback messages on quota/error: "Thodi der baad try karo"
+- Gemini calls logged with feature name + duration via pino logger
+
+---
+
 ## 2026-04-26 — Session 11 (profile fixes: category, star rating, cover photo upload)
 
 ### Commit: fix: show category not year, star rating size, cover photo upload in edit profile

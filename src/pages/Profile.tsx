@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, Clock, Calendar, MessageCircle, ArrowLeft, Grid, Plus, Settings, LogOut, ChevronRight, History, Star, AlertTriangle, HelpCircle, Bookmark, UserCheck, Pin, X, Image as ImageIcon, Trash2, DollarSign, Navigation, ExternalLink, Store, Heart, Share2, Package, Pencil } from 'lucide-react';
+import { MapPin, Phone, Clock, Calendar, MessageCircle, ArrowLeft, Grid, Plus, Settings, LogOut, ChevronRight, History, Star, AlertTriangle, HelpCircle, Bookmark, UserCheck, Pin, X, Image as ImageIcon, Trash2, DollarSign, Navigation, ExternalLink, Store, Heart, Share2, Package, Pencil, Sparkles, Mic, MicOff } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import ImageCropper from '../components/ImageCropper';
 import { useAuth } from '../context/AuthContext';
@@ -27,6 +27,14 @@ export default function ProfilePage() {
   const [rawImageUrl, setRawImageUrl] = useState('');
   const [chatCount, setChatCount] = useState(0);
   const [newPostPrice, setNewPostPrice] = useState('');
+  // AI features state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{ productName: string; category: string } | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   // Edit post state
   const [editingPost, setEditingPost] = useState<any>(null);
   const [editCaption, setEditCaption] = useState('');
@@ -309,6 +317,120 @@ export default function ProfilePage() {
       console.error(e);
     }
   };
+
+  // ── AI helpers ────────────────────────────────────────────────────────────
+  const compressImageToBase64 = async (url: string): Promise<{ base64: string; mimeType: string }> => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const mimeType = blob.type || 'image/jpeg';
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let { width, height } = img;
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.80);
+        resolve({ base64: dataUrl.split(',')[1], mimeType: 'image/jpeg' });
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(blob);
+    });
+  };
+
+  const handleAiMagic = async () => {
+    if (!newPostImage) return;
+    setAiLoading(true);
+    setAiSuggestion(null);
+    try {
+      const { base64, mimeType } = await compressImageToBase64(newPostImage);
+      const res = await fetch('/api/ai/analyze-image', {
+        credentials: 'include',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: base64, mimeType }),
+      });
+      if (res.status === 429) { showToast('Thodi der baad try karo — AI abhi busy hai', { type: 'warning' }); return; }
+      if (!res.ok) { showToast('AI abhi available nahi, manually bharo', { type: 'error' }); return; }
+      const data = await res.json();
+      if (data.caption) setNewPostCaption(data.caption);
+      if (data.suggestedPrice) setNewPostPrice(String(data.suggestedPrice));
+      if (data.productName || data.category) {
+        setAiSuggestion({ productName: data.productName || '', category: data.category || '' });
+      }
+    } catch {
+      showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+        setRecordingSeconds(0);
+        setIsRecording(false);
+        await processVoice(blob);
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
+    } catch {
+      showToast('Microphone access nahi mila', { type: 'error' });
+    }
+  };
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+  };
+
+  const processVoice = async (blob: Blob) => {
+    setAiLoading(true);
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      const res = await fetch('/api/ai/transcribe-voice', {
+        credentials: 'include',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioBase64: base64, mimeType: 'audio/webm' }),
+      });
+      if (res.status === 429) { showToast('Thodi der baad try karo — AI abhi busy hai', { type: 'warning' }); return; }
+      if (!res.ok) { showToast('AI abhi available nahi, manually bharo', { type: 'error' }); return; }
+      const data = await res.json();
+      if (data.caption) setNewPostCaption(data.caption);
+      if (data.price) setNewPostPrice(String(data.price));
+      if (data.productName || data.category) {
+        setAiSuggestion({ productName: data.productName || '', category: data.category || '' });
+      }
+      showToast('Voice se capture hua — check karo', { type: 'success' });
+    } catch {
+      showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Filter: opening post and pinned posts are exempt from 30-day removal
   const thirtyDaysAgo = new Date();
@@ -983,7 +1105,7 @@ export default function ProfilePage() {
           <div className="w-full max-w-md rounded-t-2xl p-5" style={{ background: 'white' }}>
             <div className="flex items-center justify-between mb-5">
               <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--dk-text-primary)' }}>New Post</h3>
-              <button onClick={() => { setShowNewPostModal(false); setNewPostImage(''); setNewPostCaption(''); setNewPostPrice(''); }}>
+              <button onClick={() => { setShowNewPostModal(false); setNewPostImage(''); setNewPostCaption(''); setNewPostPrice(''); setAiSuggestion(null); }}>
                 <X size={22} style={{ color: 'var(--dk-text-tertiary)' }} />
               </button>
             </div>
@@ -1016,11 +1138,21 @@ export default function ProfilePage() {
               ) : newPostImage ? (
                 <div className="relative">
                   <img src={newPostImage} alt="Preview" className="w-full aspect-[3/4] object-cover rounded-xl" />
-                  <button 
-                    onClick={() => setNewPostImage('')}
+                  <button
+                    onClick={() => { setNewPostImage(''); setAiSuggestion(null); }}
                     className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full"
                   >
                     <X size={14} />
+                  </button>
+                  {/* AI Magic button */}
+                  <button
+                    onClick={handleAiMagic}
+                    disabled={aiLoading}
+                    className="absolute bottom-2 left-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold disabled:opacity-60"
+                    style={{ background: 'var(--dk-accent)', color: 'white' }}
+                  >
+                    <Sparkles size={12} />
+                    {aiLoading ? 'AI soch raha hai...' : '✨ AI se caption banao'}
                   </button>
                 </div>
               ) : (
@@ -1033,15 +1165,44 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Caption */}
-            <textarea
-              className="w-full p-3 rounded-xl text-sm outline-none"
-              style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
-              rows={3}
-              placeholder="Write a caption..."
-              value={newPostCaption}
-              onChange={(e) => setNewPostCaption(e.target.value)}
-            />
+            {/* Caption + Voice button */}
+            <div className="relative">
+              <textarea
+                className="w-full p-3 pr-12 rounded-xl text-sm outline-none"
+                style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
+                rows={3}
+                placeholder="Write a caption..."
+                value={newPostCaption}
+                onChange={(e) => setNewPostCaption(e.target.value)}
+              />
+              {/* Voice record button */}
+              <button
+                type="button"
+                onClick={isRecording ? stopRecording : startRecording}
+                disabled={aiLoading}
+                className="absolute top-2 right-2 p-2 rounded-full disabled:opacity-50"
+                style={{ background: isRecording ? '#EF4444' : 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}
+                title={isRecording ? 'Stop recording' : 'Record voice'}
+              >
+                {isRecording ? <MicOff size={15} color="white" /> : <Mic size={15} style={{ color: 'var(--dk-accent)' }} />}
+              </button>
+            </div>
+            {isRecording && (
+              <p className="text-xs mt-1 font-semibold" style={{ color: '#EF4444' }}>
+                🔴 Recording... {recordingSeconds}s — Stop karne ke liye mic dabao
+              </p>
+            )}
+            {/* AI suggestion info card */}
+            {aiSuggestion && (aiSuggestion.productName || aiSuggestion.category) && (
+              <div className="mt-2 px-3 py-2 rounded-xl flex items-center gap-2" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
+                <Sparkles size={13} style={{ color: 'var(--dk-accent)', flexShrink: 0 }} />
+                <p className="text-xs" style={{ color: 'var(--dk-text-secondary)' }}>
+                  <span className="font-semibold">AI suggestion — aap edit kar sakte ho</span>
+                  {aiSuggestion.productName ? ` · ${aiSuggestion.productName}` : ''}
+                  {aiSuggestion.category ? ` · ${aiSuggestion.category}` : ''}
+                </p>
+              </div>
+            )}
 
             {/* Optional Price */}
             <div className="mt-3">

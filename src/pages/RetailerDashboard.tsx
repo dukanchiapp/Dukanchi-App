@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MapPin, Camera, Navigation, Check, Clock, Shield, Upload, AlertTriangle, Loader2, Store } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, Navigation, Check, Clock, Shield, Upload, AlertTriangle, Loader2, Store, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
@@ -36,6 +36,11 @@ export default function RetailerDashboard() {
   const [cityOptions, setCityOptions] = useState<string[]>([]);
   const [stateOptions, setStateOptions] = useState<string[]>([]);
   const [pincodeLoading, setPincodeLoading] = useState(false);
+
+  // AI store description state
+  const [aiDescLoading, setAiDescLoading] = useState(false);
+  const [aiDescSuggestion, setAiDescSuggestion] = useState<{ bio: string; tagline: string } | null>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const [kycStatus, setKycStatus] = useState<string>('none');
   const [kycNotes, setKycNotes] = useState<string>('');
@@ -270,6 +275,31 @@ export default function RetailerDashboard() {
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleAiGenerateDesc = async () => {
+    const nameEl = document.querySelector<HTMLInputElement>('input[name="storeName"]');
+    const storeName = nameEl?.value?.trim() || store?.storeName || '';
+    if (!storeName) { showToast('Pehle store name bharo', { type: 'warning' }); return; }
+    setAiDescLoading(true);
+    setAiDescSuggestion(null);
+    try {
+      const existingBio = descriptionRef.current?.value?.trim() || '';
+      const res = await fetch('/api/ai/generate-store-description', {
+        credentials: 'include',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storeName, category: selectedCategory, existingBio }),
+      });
+      if (res.status === 429) { showToast('Thodi der baad try karo — AI abhi busy hai', { type: 'warning' }); return; }
+      if (!res.ok) { showToast('AI abhi available nahi, manually bharo', { type: 'error' }); return; }
+      const data = await res.json();
+      if (data.bio || data.tagline) setAiDescSuggestion(data);
+    } catch {
+      showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+    } finally {
+      setAiDescLoading(false);
     }
   };
 
@@ -534,15 +564,71 @@ export default function RetailerDashboard() {
 
               {/* Store Bio */}
               <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>Store Bio</label>
-                <textarea 
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--dk-text-tertiary)' }}>Store Bio</label>
+                  <button
+                    type="button"
+                    onClick={handleAiGenerateDesc}
+                    disabled={aiDescLoading}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold disabled:opacity-50"
+                    style={{ background: 'var(--dk-accent)', color: 'white' }}
+                  >
+                    <Sparkles size={11} />
+                    {aiDescLoading ? 'AI likh raha hai...' : '✨ AI se generate karo'}
+                  </button>
+                </div>
+                <textarea
+                  ref={descriptionRef}
                   name="description"
                   className="w-full p-3 rounded-xl outline-none text-sm leading-relaxed dk-input"
                   rows={3}
                   defaultValue={store?.description || ''}
                   placeholder="Tell customers about your business..."
                   required
-                ></textarea>
+                />
+                {/* AI suggestion card */}
+                {aiDescSuggestion && (
+                  <div className="mt-2 p-3 rounded-xl" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles size={12} style={{ color: 'var(--dk-accent)' }} />
+                      <p className="text-[11px] font-bold" style={{ color: 'var(--dk-accent)' }}>AI SUGGESTION</p>
+                    </div>
+                    {aiDescSuggestion.bio && (
+                      <div className="mb-2">
+                        <p className="text-xs mb-1" style={{ color: 'var(--dk-text-secondary)' }}>{aiDescSuggestion.bio}</p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (descriptionRef.current) descriptionRef.current.value = aiDescSuggestion.bio;
+                            setAiDescSuggestion(prev => prev ? { ...prev, bio: '' } : null);
+                          }}
+                          className="text-[11px] font-semibold px-3 py-1 rounded-full"
+                          style={{ background: 'var(--dk-accent)', color: 'white' }}
+                        >
+                          Bio use karo
+                        </button>
+                      </div>
+                    )}
+                    {aiDescSuggestion.tagline && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs font-medium flex-1" style={{ color: 'var(--dk-text-secondary)', fontStyle: 'italic' }}>
+                          "{aiDescSuggestion.tagline}"
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard?.writeText(aiDescSuggestion.tagline).catch(() => {});
+                            showToast('Tagline copied!', { type: 'success' });
+                          }}
+                          className="text-[11px] font-semibold px-3 py-1 rounded-full flex-shrink-0"
+                          style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
+                        >
+                          Tagline copy karo
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Address */}

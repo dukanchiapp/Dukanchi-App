@@ -18,6 +18,7 @@ import { notificationRoutes } from './modules/notifications/notification.routes'
 import { kycRoutes } from './modules/kyc/kyc.routes';
 import { adminRoutes } from './modules/admin/admin.routes';
 import { complaintRoutes, reportRoutes, reviewRoutes, settingsRoutes } from './modules/misc/misc.routes';
+import { aiRoutes } from './modules/ai/ai.routes';
 
 import { upload } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
@@ -94,6 +95,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/reviews', reviewRoutes);

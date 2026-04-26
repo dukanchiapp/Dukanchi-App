@@ -368,6 +368,33 @@ All routes are prefixed `/api/`. Full list in `server.ts`.
 
 ---
 
+## AI Features (Gemini)
+
+Powered by **Gemini 2.0 Flash** via `@google/genai` SDK. All endpoints require auth. Errors never block core flows — fallback messages shown in Hindi.
+
+### Feature 1 — Photo-to-Post (`POST /api/ai/analyze-image`)
+- Accepts `{ imageBase64, mimeType }` — image compressed to ≤1200px on frontend via canvas API
+- Returns `{ caption, suggestedPrice, category, productName, tags }`
+- Used in the New Post modal: "✨ AI se caption banao" button appears after photo upload
+- Rate limit: 10 requests/min per user (in-memory)
+
+### Feature 2 — Voice-to-Post (`POST /api/ai/transcribe-voice`)
+- Accepts `{ audioBase64, mimeType }` — audio/webm from browser MediaRecorder
+- Returns `{ caption, price, productName, category }`
+- Used in the New Post modal: Mic button starts/stops MediaRecorder recording
+- Rate limit: 10 requests/min per user (in-memory)
+
+### Feature 3 — AI Store Description (`POST /api/ai/generate-store-description`)
+- Accepts `{ storeName, category, existingBio? }`
+- Returns `{ bio, tagline }` — shown as a suggestion card in Edit Profile (RetailerDashboard)
+- "Bio use karo" fills the description textarea; "Tagline copy karo" copies to clipboard
+- Rate limit: 5 requests/min per user (in-memory)
+
+### Logging
+All Gemini calls logged via pino: `{ feature, durationMs, ts }` — useful for cost tracking.
+
+---
+
 ## Rate Limiting
 
 All limits are Redis-backed (survive restarts, shared across cluster workers).
