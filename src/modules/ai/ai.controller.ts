@@ -63,7 +63,7 @@ export class AiController {
       return res.status(429).json(QUOTA_MSG);
     }
 
-    const { storeName, category, existingBio } = req.body;
+    const { storeName, category, userContext } = req.body;
     if (!storeName || typeof storeName !== 'string' || storeName.trim().length === 0) {
       return res.status(400).json({ error: 'storeName is required' });
     }
@@ -71,7 +71,7 @@ export class AiController {
       return res.status(400).json({ error: 'category is required' });
     }
 
-    const result = await generateStoreDescription(storeName.trim(), category.trim(), existingBio?.trim());
+    const result = await generateStoreDescription(storeName.trim(), category.trim(), userContext);
     res.json(result);
   }
 }

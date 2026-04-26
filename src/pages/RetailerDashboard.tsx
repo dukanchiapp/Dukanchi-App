@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MapPin, Camera, Navigation, Check, Clock, Shield, Upload, AlertTriangle, Loader2, Store, Sparkles } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, Navigation, Check, Clock, Shield, Upload, AlertTriangle, Loader2, Store, Sparkles, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
@@ -37,9 +37,14 @@ export default function RetailerDashboard() {
   const [stateOptions, setStateOptions] = useState<string[]>([]);
   const [pincodeLoading, setPincodeLoading] = useState(false);
 
-  // AI store description state
+  // AI bio modal state
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiModalStep, setAiModalStep] = useState<'input' | 'result'>('input');
+  const [aiSells, setAiSells] = useState('');
+  const [aiUniqueness, setAiUniqueness] = useState('');
+  const [aiTone, setAiTone] = useState<'Professional' | 'Friendly' | 'Desi/Casual'>('Friendly');
   const [aiDescLoading, setAiDescLoading] = useState(false);
-  const [aiDescSuggestion, setAiDescSuggestion] = useState<{ bio: string; tagline: string } | null>(null);
+  const [aiDescResult, setAiDescResult] = useState<{ bio: string; tagline: string } | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const [kycStatus, setKycStatus] = useState<string>('none');
@@ -278,24 +283,36 @@ export default function RetailerDashboard() {
     }
   };
 
-  const handleAiGenerateDesc = async () => {
+  const openAiModal = () => {
+    setAiModalStep('input');
+    setAiDescResult(null);
+    setAiSells('');
+    setAiUniqueness('');
+    setAiTone('Friendly');
+    setAiModalOpen(true);
+  };
+
+  const handleAiGenerate = async () => {
     const nameEl = document.querySelector<HTMLInputElement>('input[name="storeName"]');
     const storeName = nameEl?.value?.trim() || store?.storeName || '';
-    if (!storeName) { showToast('Pehle store name bharo', { type: 'warning' }); return; }
+    if (!storeName) { showToast('Pehle store name bharo', { type: 'warning' }); setAiModalOpen(false); return; }
     setAiDescLoading(true);
-    setAiDescSuggestion(null);
     try {
-      const existingBio = descriptionRef.current?.value?.trim() || '';
       const res = await fetch('/api/ai/generate-store-description', {
         credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storeName, category: selectedCategory, existingBio }),
+        body: JSON.stringify({
+          storeName,
+          category: selectedCategory,
+          userContext: { sells: aiSells.trim(), uniqueness: aiUniqueness.trim(), tone: aiTone },
+        }),
       });
       if (res.status === 429) { showToast('Thodi der baad try karo — AI abhi busy hai', { type: 'warning' }); return; }
       if (!res.ok) { showToast('AI abhi available nahi, manually bharo', { type: 'error' }); return; }
       const data = await res.json();
-      if (data.bio || data.tagline) setAiDescSuggestion(data);
+      setAiDescResult(data);
+      setAiModalStep('result');
     } catch {
       showToast('AI abhi available nahi, manually bharo', { type: 'error' });
     } finally {
@@ -568,13 +585,12 @@ export default function RetailerDashboard() {
                   <label className="block text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--dk-text-tertiary)' }}>Store Bio</label>
                   <button
                     type="button"
-                    onClick={handleAiGenerateDesc}
-                    disabled={aiDescLoading}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold disabled:opacity-50"
+                    onClick={openAiModal}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold"
                     style={{ background: 'var(--dk-accent)', color: 'white' }}
                   >
                     <Sparkles size={11} />
-                    {aiDescLoading ? 'AI likh raha hai...' : '✨ AI se generate karo'}
+                    ✨ AI se generate karo
                   </button>
                 </div>
                 <textarea
@@ -586,49 +602,6 @@ export default function RetailerDashboard() {
                   placeholder="Tell customers about your business..."
                   required
                 />
-                {/* AI suggestion card */}
-                {aiDescSuggestion && (
-                  <div className="mt-2 p-3 rounded-xl" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <Sparkles size={12} style={{ color: 'var(--dk-accent)' }} />
-                      <p className="text-[11px] font-bold" style={{ color: 'var(--dk-accent)' }}>AI SUGGESTION</p>
-                    </div>
-                    {aiDescSuggestion.bio && (
-                      <div className="mb-2">
-                        <p className="text-xs mb-1" style={{ color: 'var(--dk-text-secondary)' }}>{aiDescSuggestion.bio}</p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (descriptionRef.current) descriptionRef.current.value = aiDescSuggestion.bio;
-                            setAiDescSuggestion(prev => prev ? { ...prev, bio: '' } : null);
-                          }}
-                          className="text-[11px] font-semibold px-3 py-1 rounded-full"
-                          style={{ background: 'var(--dk-accent)', color: 'white' }}
-                        >
-                          Bio use karo
-                        </button>
-                      </div>
-                    )}
-                    {aiDescSuggestion.tagline && (
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-xs font-medium flex-1" style={{ color: 'var(--dk-text-secondary)', fontStyle: 'italic' }}>
-                          "{aiDescSuggestion.tagline}"
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigator.clipboard?.writeText(aiDescSuggestion.tagline).catch(() => {});
-                            showToast('Tagline copied!', { type: 'success' });
-                          }}
-                          className="text-[11px] font-semibold px-3 py-1 rounded-full flex-shrink-0"
-                          style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
-                        >
-                          Tagline copy karo
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Address */}
@@ -875,6 +848,150 @@ export default function RetailerDashboard() {
         </div>
       </main>
       </div>
+
+      {/* ── AI Bio Modal ── */}
+      {aiModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setAiModalOpen(false); }}
+        >
+          <div className="w-full max-w-[380px] rounded-2xl p-6 shadow-xl" style={{ background: 'white' }}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} style={{ color: 'var(--dk-accent)' }} />
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--dk-accent)' }}>AI Store Description</h3>
+              </div>
+              <button type="button" onClick={() => setAiModalOpen(false)} className="p-1">
+                <X size={18} style={{ color: 'var(--dk-text-tertiary)' }} />
+              </button>
+            </div>
+            <p className="mb-4 text-xs" style={{ color: 'var(--dk-text-tertiary)', lineHeight: 1.5 }}>
+              Thodi information do — AI aapki dukaan ke liye perfect bio likhega
+            </p>
+
+            {aiModalStep === 'input' ? (
+              <div className="space-y-4">
+                {/* Field A */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>
+                    Aapki dukaan kya bechti hai?
+                  </label>
+                  <textarea
+                    className="w-full p-3 rounded-xl outline-none text-sm dk-input"
+                    rows={2}
+                    placeholder="e.g. Mobile phones, accessories, repairs"
+                    value={aiSells}
+                    onChange={(e) => setAiSells(e.target.value)}
+                  />
+                </div>
+                {/* Field B */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>
+                    Koi khaas cheez? <span className="normal-case font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    className="w-full p-3 rounded-xl outline-none text-sm dk-input"
+                    rows={2}
+                    placeholder="e.g. 10 saal ka experience, best price guarantee, free delivery"
+                    value={aiUniqueness}
+                    onChange={(e) => setAiUniqueness(e.target.value)}
+                  />
+                </div>
+                {/* Tone picker */}
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--dk-text-tertiary)' }}>
+                    Tone kaisi chahiye?
+                  </label>
+                  <div className="flex gap-2">
+                    {(['Professional', 'Friendly', 'Desi/Casual'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setAiTone(t)}
+                        className="flex-1 py-1.5 rounded-full text-xs font-semibold"
+                        style={{
+                          background: aiTone === t ? 'var(--dk-accent)' : 'var(--dk-surface)',
+                          color: aiTone === t ? 'white' : 'var(--dk-text-secondary)',
+                          border: '0.5px solid var(--dk-border)',
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {/* Generate button */}
+                <button
+                  type="button"
+                  onClick={handleAiGenerate}
+                  disabled={aiDescLoading}
+                  className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                  style={{ background: 'var(--dk-accent)', color: 'white' }}
+                >
+                  {aiDescLoading ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      AI soch raha hai...
+                    </>
+                  ) : (
+                    <><Sparkles size={14} /> ✨ Generate karo</>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {/* Bio result card */}
+                {aiDescResult?.bio && (
+                  <div className="p-3 rounded-xl" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
+                    <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--dk-text-tertiary)' }}>Bio</p>
+                    <p className="text-sm mb-3" style={{ color: 'var(--dk-text-primary)', lineHeight: 1.55 }}>{aiDescResult.bio}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (descriptionRef.current) descriptionRef.current.value = aiDescResult!.bio;
+                        setAiModalOpen(false);
+                      }}
+                      className="w-full py-2 rounded-xl font-bold text-sm"
+                      style={{ background: 'var(--dk-accent)', color: 'white' }}
+                    >
+                      Bio use karo
+                    </button>
+                  </div>
+                )}
+                {/* Tagline result card */}
+                {aiDescResult?.tagline && (
+                  <div className="p-3 rounded-xl" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
+                    <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--dk-text-tertiary)' }}>Tagline</p>
+                    <p className="text-sm mb-3 font-medium" style={{ color: 'var(--dk-text-primary)', fontStyle: 'italic' }}>"{aiDescResult.tagline}"</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(aiDescResult!.tagline).catch(() => {});
+                        showToast('Tagline copied!', { type: 'success' });
+                      }}
+                      className="w-full py-2 rounded-xl font-bold text-sm"
+                      style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
+                    >
+                      Tagline copy karo
+                    </button>
+                  </div>
+                )}
+                {/* Back link */}
+                <button
+                  type="button"
+                  onClick={() => { setAiModalStep('input'); setAiDescResult(null); }}
+                  className="w-full text-center text-xs font-semibold pt-1"
+                  style={{ color: 'var(--dk-text-tertiary)' }}
+                >
+                  ← Wapas (dobara generate karo)
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

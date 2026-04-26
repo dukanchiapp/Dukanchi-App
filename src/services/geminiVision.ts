@@ -125,15 +125,23 @@ export interface StoreDescriptionResult {
   tagline: string;
 }
 
+export interface UserContext {
+  sells?: string;
+  uniqueness?: string;
+  tone?: string;
+}
+
 export async function generateStoreDescription(
   storeName: string,
   category: string,
-  existingBio?: string,
+  userContext?: UserContext,
 ): Promise<StoreDescriptionResult> {
   const defaults: StoreDescriptionResult = { bio: '', tagline: '' };
   const t0 = Date.now();
   try {
-    const contextLine = existingBio ? `\nExisting bio for reference: ${existingBio}` : '';
+    const sells = userContext?.sells || 'general products';
+    const uniqueness = userContext?.uniqueness || 'quality and trust';
+    const tone = userContext?.tone || 'Friendly';
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash-001',
       contents: [
@@ -141,10 +149,13 @@ export async function generateStoreDescription(
           parts: [
             {
               text: `Generate for an Indian local retail store:
-Store name: ${storeName}, Category: ${category}${contextLine}
+Store name: ${storeName}, Category: ${category}
+What they sell: ${sells}
+What makes them unique: ${uniqueness}
+Tone: ${tone}
 Return ONLY valid JSON:
-- bio: 2-sentence store description in friendly Hinglish, mention local/trusted angle, max 200 chars
-- tagline: catchy 5-7 word Hindi/English tagline`,
+- bio: engaging store bio in Hinglish, ${tone} tone, mention local/trusted angle, max 180 chars
+- tagline: catchy 5-7 word tagline matching the tone`,
             },
           ],
         },
@@ -155,15 +166,10 @@ Return ONLY valid JSON:
     const parsed = safeParseJSON(text);
     if (!parsed) return defaults;
     return {
-      bio: String(parsed.bio || '').slice(0, 200),
+      bio: String(parsed.bio || '').slice(0, 180),
       tagline: String(parsed.tagline || '').slice(0, 80),
     };
   } catch (err: any) {
-    // TEMP DEBUG
-    console.error('[AI DEBUG] generateStoreDescription raw error:', err);
-    console.error('[AI DEBUG] error message:', err?.message);
-    console.error('[AI DEBUG] error status:', err?.status ?? err?.statusCode);
-    console.error('[AI DEBUG] error details:', JSON.stringify(err?.errorDetails ?? err?.details ?? {}));
     logger.error({ err, feature: 'generateStoreDescription' }, '[GEMINI] generateStoreDescription failed');
     return defaults;
   }
