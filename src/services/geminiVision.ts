@@ -12,12 +12,16 @@ function logGeminiCall(feature: string, durationMs: number) {
   logger.info({ feature, durationMs, ts: new Date().toISOString() }, '[GEMINI] API call');
 }
 
-function safeParseJSON(text: string): any | null {
+function safeParseJSON(text: string): any {
+  if (!text) return null;
+  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   try {
-    // Strip markdown fences if model wraps response
-    const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
     return JSON.parse(cleaned);
   } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch { return null; }
+    }
     return null;
   }
 }
@@ -38,7 +42,7 @@ export async function analyzeProductImage(
   const t0 = Date.now();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.5-flash',
       contents: [
         {
           parts: [
@@ -57,6 +61,7 @@ export async function analyzeProductImage(
     });
     logGeminiCall('analyzeProductImage', Date.now() - t0);
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    logger.info({ rawText: text }, '[GEMINI] raw response');
     const parsed = safeParseJSON(text);
     if (!parsed) return defaults;
     return {
@@ -87,7 +92,7 @@ export async function transcribeAndStructureVoice(
   const t0 = Date.now();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.5-flash',
       contents: [
         {
           parts: [
@@ -106,6 +111,7 @@ Extract and return ONLY valid JSON:
     });
     logGeminiCall('transcribeAndStructureVoice', Date.now() - t0);
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    logger.info({ rawText: text }, '[GEMINI] raw response');
     const parsed = safeParseJSON(text);
     if (!parsed) return defaults;
     return {
@@ -135,7 +141,7 @@ export async function generateStoreDescription(
   try {
     const description = userContext?.trim() || 'general store';
     const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.5-flash',
       contents: [
         {
           parts: [
@@ -153,6 +159,7 @@ Return ONLY valid JSON:
     });
     logGeminiCall('generateStoreDescription', Date.now() - t0);
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    logger.info({ rawText: text }, '[GEMINI] raw response');
     const parsed = safeParseJSON(text);
     if (!parsed) return defaults;
     return {
