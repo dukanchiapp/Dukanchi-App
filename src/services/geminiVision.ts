@@ -38,7 +38,7 @@ export async function analyzeProductImage(
   const t0 = Date.now();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-001',
       contents: [
         {
           parts: [
@@ -87,7 +87,7 @@ export async function transcribeAndStructureVoice(
   const t0 = Date.now();
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-001',
       contents: [
         {
           parts: [
@@ -135,7 +135,7 @@ export async function generateStoreDescription(
   try {
     const contextLine = existingBio ? `\nExisting bio for reference: ${existingBio}` : '';
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.0-flash-001',
       contents: [
         {
           parts: [
@@ -159,6 +159,11 @@ Return ONLY valid JSON:
       tagline: String(parsed.tagline || '').slice(0, 80),
     };
   } catch (err: any) {
+    // TEMP DEBUG
+    console.error('[AI DEBUG] generateStoreDescription raw error:', err);
+    console.error('[AI DEBUG] error message:', err?.message);
+    console.error('[AI DEBUG] error status:', err?.status ?? err?.statusCode);
+    console.error('[AI DEBUG] error details:', JSON.stringify(err?.errorDetails ?? err?.details ?? {}));
     logger.error({ err, feature: 'generateStoreDescription' }, '[GEMINI] generateStoreDescription failed');
     return defaults;
   }
