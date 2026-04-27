@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Store, Flag, LogOut, X, Shield, ShieldCheck, MessageSquare, Settings, FileText, AlertTriangle, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Store, Flag, LogOut, X, Shield, ShieldCheck, MessageSquare, Settings, FileText, AlertTriangle, UserCheck, Layout } from 'lucide-react';
 
 interface SidebarProps {
   onClose?: () => void;
@@ -78,6 +78,9 @@ export default function Sidebar({ onClose }: SidebarProps) {
         </NavLink>
 
         <p className="px-4 text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2 mt-5">Configuration</p>
+        <NavLink to="/landing-page" className={navClass} onClick={onClose}>
+          <Layout size={18} /> Landing Page
+        </NavLink>
         <NavLink to="/settings" className={navClass} onClick={onClose}>
           <Settings size={18} /> App Settings
         </NavLink>

@@ -9,6 +9,7 @@ import Complaints from './pages/Complaints';
 import KycReview from './pages/KycReview';
 import Chats from './pages/Chats';
 import Settings from './pages/Settings';
+import LandingPageCMS from './pages/LandingPage';
 import StoreMembers from './pages/StoreMembers';
 import { ToastProvider } from './context/ToastContext';
 
@@ -51,6 +52,7 @@ function App() {
           <Route path="/chats" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Chats /></ProtectedRoute>} />
           <Route path="/store-members" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><StoreMembers /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Settings /></ProtectedRoute>} />
+          <Route path="/landing-page" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><LandingPageCMS /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

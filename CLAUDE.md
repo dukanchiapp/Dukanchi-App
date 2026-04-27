@@ -50,3 +50,4 @@
 - AI Voice-to-Post (geminiVision.ts)
 - AI Store Description modal
 - Ask Nearby (radius search, Yes/No availability, auto chat)
+- Landing Page CMS (admin editable, DB-backed, fallback defaults)

@@ -20,6 +20,7 @@ import { adminRoutes } from './modules/admin/admin.routes';
 import { complaintRoutes, reportRoutes, reviewRoutes, settingsRoutes } from './modules/misc/misc.routes';
 import { aiRoutes } from './modules/ai/ai.routes';
 import { askNearbyRoutes } from './modules/ask-nearby/ask-nearby.routes';
+import { landingPublicRoutes, landingAdminRoutes } from './modules/landing/landing.routes';
 
 import { upload } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
@@ -98,6 +99,8 @@ app.use('/api/kyc', kycRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ask-nearby', askNearbyRoutes);
+app.use('/api', landingPublicRoutes);
+app.use('/api/admin', landingAdminRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/reviews', reviewRoutes);

@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-27 — Session 14 (Landing Page CMS — admin editable content)
+
+### New Files
+- `src/modules/landing/landing.controller.ts` — defaultContent constant, GET /api/landing-content (public), PUT /api/admin/landing-content (admin only), Prisma upsert
+- `src/modules/landing/landing.routes.ts` — landingPublicRoutes + landingAdminRoutes
+- `src/pages/LandingPage.tsx` — Full React landing page, fetches from API on mount, falls back to defaults if API fails
+- `admin-panel/src/pages/LandingPage.tsx` — CMS editor: section sidebar (Nav/Hero/Problem/Hook Cards/Features/How It Works/Illustration/Campaigns/Final CTA/Footer), inline form fields, list editors with add/remove, unsaved indicator, Save + Preview buttons
+- `prisma/migrations/20260427180615_landing_page_content/migration.sql` — LandingPageContent table
+
+### Modified Files
+- `prisma/schema.prisma` — Added `LandingPageContent` model (id="main" singleton, Json content)
+- `src/app.ts` — Registered `/api/landing-content` (public) and `/api/admin/landing-content` (admin)
+- `src/App.tsx` — Added `/landing` route → LandingPage
+- `admin-panel/src/App.tsx` — Added `/landing-page` route → LandingPageCMS
+- `admin-panel/src/components/Sidebar.tsx` — Added "Landing Page" nav item (Layout icon) under Configuration
+
+---
+
 ## 2026-04-27 — Session 13 (Ask Nearby — smart availability broadcast from search)
 
 ### New Files
