@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import HomePage from './pages/Home';
 import SearchPage from './pages/Search';
 import MapPage from './pages/Map';
@@ -24,6 +25,21 @@ import { LocationProvider } from './context/LocationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import { useAuth } from './context/AuthContext';
+
+// FIX 5: Redirect unauthenticated standalone (PWA) users to /signup
+function PWARedirect() {
+  const navigate = useNavigate();
+  const { user, isLoading } = useAuth();
+  useEffect(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true;
+    if (isStandalone && !user && !isLoading) {
+      navigate('/signup', { replace: true });
+    }
+  }, [user, isLoading, navigate]);
+  return null;
+}
 
 export default function App() {
   return (
@@ -32,6 +48,7 @@ export default function App() {
         <ToastProvider>
           <LocationProvider>
           <NotificationProvider>
+            <PWARedirect />
             <div className="min-h-screen pb-16" style={{ background: 'var(--dk-bg)' }}>
               <Routes>
                 <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />

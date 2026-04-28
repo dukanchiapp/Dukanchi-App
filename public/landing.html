@@ -292,6 +292,7 @@ footer strong{color:#9CA3AF}
       </button>
       <p class="desktop-hint hero-hint">Browser mein install icon dhundho &#8599;</p>
     </div>
+    <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
   </div>
 
   <div class="phone-wrap">
@@ -602,6 +603,7 @@ footer strong{color:#9CA3AF}
       </button>
       <p class="desktop-hint cta-hint">Browser mein install icon dhundho &#8599;</p>
     </div>
+    <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
   </div>
   <p class="cta-note" data-content="finalCta.note">Free hai. Hamesha rahega. Proudly Made in India 🇮🇳</p>
 </section>
@@ -656,8 +658,12 @@ document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el)
 // ── Smart PWA Install ──────────────────────────────────────────────────────────
 var deferredPrompt = null;
 var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-var isAndroid = /Android/i.test(navigator.userAgent);
 var isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator.standalone === true);
+
+// FIX 3: If already running in standalone (PWA already installed) — skip landing entirely
+if (isStandalone) {
+  window.location.replace('/signup');
+}
 
 // Set ALL install buttons to a given state + text
 function setInstallState(state, text) {
@@ -676,62 +682,55 @@ function hideDesktopHint() {
   document.querySelectorAll('.desktop-hint').forEach(function(el) { el.classList.remove('visible'); });
 }
 
-function openApp() {
-  window.open('/?source=landing', '_blank');
+// FIX 4: Never use window.open() — always use location.href so context (PWA/browser) is respected
+function redirectToApp() {
+  window.location.href = '/signup';
 }
 
-// On load — already running as PWA?
-if (isStandalone) {
-  setInstallState('open', '✨ App Kholo');
+// Show installed success message then redirect
+function showInstalledAndRedirect() {
+  // Hide all install button wrappers
+  document.querySelectorAll('.btn-install-wrap').forEach(function(el) { el.style.display = 'none'; });
+  // Show success message in both CTA sections
+  document.querySelectorAll('.install-success-msg').forEach(function(el) { el.style.display = 'block'; });
+  // FIX 1: Redirect into app after 1.5s
+  setTimeout(redirectToApp, 1500);
 }
 
 // Android/Chrome: capture install prompt
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredPrompt = e;
-  if (!isStandalone) {
-    setInstallState('default', '⬇ Dukanchi Download Karo — Free');
-    hideDesktopHint();
-  }
 });
 
-// After app successfully installed via browser
+// FIX 1+2: After browser confirms install — auto redirect, no button needed
 window.addEventListener('appinstalled', function() {
   deferredPrompt = null;
-  setInstallState('open', '✨ App Kholo!');
+  var overlay = document.getElementById('install-overlay');
+  overlay.classList.add('success');
+  showInstalledAndRedirect();
 });
 
-// iOS modal: close + transition to "App Kholo" state
+// iOS modal: close + redirect (user has followed steps to install)
 function closeIOSModal() {
   document.getElementById('ios-modal').style.display = 'none';
-  setTimeout(function() { setInstallState('open', '✨ App Kholo'); }, 300);
+  showInstalledAndRedirect();
 }
 
 // Main click handler
 async function handleInstallClick() {
-  var currentlyOpen = !!document.querySelector('.install-btn.state-open');
-
-  // Case 1: Already installed / in standalone mode — open the app
-  if (isStandalone || currentlyOpen) {
-    openApp();
-    return;
-  }
-
-  // Case 2: iOS — show bottom sheet instructions
+  // Case 1: iOS — show step-by-step modal
   if (isIOS) {
     document.getElementById('ios-modal').style.display = 'flex';
     return;
   }
 
-  // Case 3: Android / Chrome — show branding overlay, then trigger native prompt
+  // Case 2: Android / Chrome — show branding overlay, then trigger native prompt
   if (deferredPrompt) {
     var overlay = document.getElementById('install-overlay');
-
-    // Step 1: show overlay immediately
     overlay.classList.remove('success');
     overlay.classList.add('visible');
 
-    // Step 2: wait 800ms for user to see the branding, then show browser prompt
     setTimeout(async function() {
       try {
         deferredPrompt.prompt();
@@ -739,12 +738,11 @@ async function handleInstallClick() {
         deferredPrompt = null;
 
         if (result.outcome === 'accepted') {
-          // Success state — green overlay + tick
+          // Success: green overlay, then redirect (appinstalled may also fire — that's fine)
           overlay.classList.add('success');
           setTimeout(function() {
             overlay.classList.remove('visible', 'success');
-            setInstallState('open', '✨ App Kholo!');
-            setTimeout(openApp, 1500);
+            showInstalledAndRedirect();
           }, 1200);
         } else {
           // Dismissed — hide overlay, reset button
@@ -759,9 +757,9 @@ async function handleInstallClick() {
     return;
   }
 
-  // Case 4: Desktop or no prompt (already installed) — hint + open
+  // Case 3: Desktop / no prompt — hint + navigate directly (may already be installed)
   showDesktopHint();
-  setTimeout(openApp, 400);
+  setTimeout(redirectToApp, 600);
 }
 
 document.querySelectorAll('.install-btn').forEach(function(btn) {
