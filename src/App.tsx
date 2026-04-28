@@ -39,14 +39,8 @@ function FlowController() {
     (window.navigator as any).standalone === true;
 
   useEffect(() => {
-    // /landing is always accessible
-    if (location.pathname.startsWith('/landing')) return;
-
-    // Browser mode → redirect to landing immediately, no need to wait for auth
-    if (!isStandalone) {
-      window.location.replace('/landing');
-      return;
-    }
+    // index.html handles browser→landing redirect before React loads
+    if (!isStandalone) return;
 
     // PWA standalone flow — wait for auth to resolve
     if (isLoading) return;
@@ -63,16 +57,6 @@ function FlowController() {
   return null;
 }
 
-function BrowserGuard({ children }: { children: React.ReactNode }) {
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as any).standalone === true;
-  useEffect(() => {
-    if (!isStandalone) window.location.replace('/landing');
-  }, []);
-  if (!isStandalone) return null;
-  return <>{children}</>;
-}
-
 export default function App() {
   return (
     <Router>
@@ -87,8 +71,8 @@ export default function App() {
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/store/:id" element={<StoreProfilePage />} />
-                <Route path="/signup" element={<BrowserGuard><SignupPage /></BrowserGuard>} />
-                <Route path="/login" element={<BrowserGuard><LoginPage /></BrowserGuard>} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/login" element={<LoginPage />} />
                 <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                 <Route path="/retailer/dashboard" element={<ProtectedRoute><RetailerDashboard /></ProtectedRoute>} />

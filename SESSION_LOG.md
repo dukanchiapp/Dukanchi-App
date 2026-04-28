@@ -6,11 +6,12 @@
 
 ---
 
-## 2026-04-29 — Session 24 (Browser→Landing fix)
+## 2026-04-29 — Session 24 (Pre-React browser guard)
 
-- Fixed `BrowserGuard` in `src/App.tsx`: moved `window.location.replace('/landing')` from render body into `useEffect` — React 19 concurrent mode disallows side effects during render, causing blank white page
-- `Login.tsx` and `Signup.tsx` already had correct `useEffect` pattern — no changes needed
-- Commit: `fix: BrowserGuard useEffect — resolve blank page on browser redirect`
+- `index.html`: added inline IIFE script before `</head>` — checks `isStandalone` and calls `window.location.replace('/landing')` before React loads, eliminating all flash and race conditions
+- `src/App.tsx`: removed `BrowserGuard` component entirely; simplified `FlowController` to PWA-only logic (browser case now handled by index.html)
+- `src/pages/Login.tsx` + `Signup.tsx`: removed all `isStandalone` checks and `useEffect` redirects — redundant after index.html fix
+- Commits: `fix: BrowserGuard useEffect — resolve blank page on browser redirect`, `fix: pre-React browser guard in index.html — zero flash redirect to landing`
 
 ---
 

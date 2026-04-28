@@ -20,6 +20,19 @@
 
     <!-- SEO / social -->
     <meta name="description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo." />
+
+    <!-- Pre-React browser guard: redirect to /landing before React loads — zero flash -->
+    <script>
+      (function() {
+        var isStandalone =
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.navigator.standalone === true;
+        var path = window.location.pathname;
+        if (!isStandalone && path !== '/landing') {
+          window.location.replace('/landing');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
