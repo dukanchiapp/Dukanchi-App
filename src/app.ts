@@ -30,7 +30,14 @@ import { fallthroughErrorHandler } from "./middlewares/error.middleware";
 export const app = express();
 
 // ── 1. Security headers ──────────────────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: false, xFrameOptions: false }));
+app.use(helmet({ 
+  contentSecurityPolicy: false, 
+  crossOriginResourcePolicy: false, 
+  xFrameOptions: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  hsts: false
+}));
 
 // ── 2. Compression ───────────────────────────────────────────────────────────
 app.use(compression());
