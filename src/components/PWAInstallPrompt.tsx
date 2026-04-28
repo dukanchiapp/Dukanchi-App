@@ -16,10 +16,6 @@ export default function PWAInstallPrompt() {
   const { showToast } = useToast();
   const location = useLocation();
 
-  if (['/login', '/signup', '/landing'].includes(location.pathname)) {
-    return null;
-  }
-
   useEffect(() => {
     // Already installed — don't show anything
     if (isInStandaloneMode) return;
@@ -67,6 +63,10 @@ export default function PWAInstallPrompt() {
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
     setShowBanner(false);
   };
+
+  if (['/login', '/signup', '/landing'].includes(location.pathname)) {
+    return null;
+  }
 
   return (
     <>
