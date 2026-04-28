@@ -269,6 +269,17 @@ footer strong{color:#9CA3AF}
   </div>
 </nav>
 
+<!-- PWA INSTALLED BANNER — shown when user already installed the app but opened landing in browser -->
+<div id="pwa-installed-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#FF6B35;padding:12px 20px;align-items:center;justify-content:space-between;gap:12px;">
+  <div style="color:white;">
+    <div style="font-weight:700;font-size:14px;">✨ Dukanchi aapke phone pe installed hai!</div>
+    <div style="font-size:11px;opacity:0.85;margin-top:2px;">PWA mein better experience milega</div>
+  </div>
+  <button onclick="window.location.href='/'" style="background:white;color:#FF6B35;border:none;padding:10px 18px;border-radius:50px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">
+    PWA mein Kholiye →
+  </button>
+</div>
+
 <!-- HERO -->
 <section class="hero">
   <div class="bg-circle-1"></div>
@@ -643,6 +654,16 @@ footer strong{color:#9CA3AF}
 </div>
 
 <script>
+// PWA installed banner — show if user installed app but is in browser
+(function() {
+  var wasInstalled = localStorage.getItem('dukanchi-pwa-installed') === '1';
+  var banner = document.getElementById('pwa-installed-banner');
+  if (wasInstalled && banner) {
+    banner.style.display = 'flex';
+    document.body.style.paddingTop = '60px';
+  }
+})();
+
 // Resolve dot-path from object (supports array indices: "hooks.0.emoji")
 function resolvePath(obj, path) {
   return path.split('.').reduce(function(cur, key) {

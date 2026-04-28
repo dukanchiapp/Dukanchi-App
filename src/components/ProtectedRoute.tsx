@@ -15,10 +15,19 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) {
-    // PWA standalone → login, browser → landing
+    // index.html IIFE already redirected browser users to /landing before React loaded.
+    // If we reach here in browser mode — something went wrong, do a hard redirect.
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone === true;
-    return <Navigate to={isStandalone ? "/login" : "/landing"} state={{ from: location }} replace />;
+
+    if (!isStandalone) {
+      // Hard redirect (not React Router) so Express serves public/landing.html
+      window.location.replace('/landing');
+      return null;
+    }
+
+    // PWA standalone — go to login
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return children;

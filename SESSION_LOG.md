@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-04-29 — Session 25 (Blank page fix + PWA installed banner)
+
+- `ProtectedRoute.tsx`: replaced `<Navigate to="/landing">` (React Router — hits NotFound) with `window.location.replace('/landing')` hard redirect for browser mode; PWA standalone still uses `<Navigate to="/login">`
+- `public/landing.html`: added `#pwa-installed-banner` (orange, fixed top) shown when `localStorage['dukanchi-pwa-installed'] === '1'` — IIFE runs at script start, `appinstalled` listener already sets the flag
+- Commit: `fix: ProtectedRoute hard redirect + PWA installed banner on landing`
+
+---
+
 ## 2026-04-29 — Session 24 (Pre-React browser guard)
 
 - `index.html`: added inline IIFE script before `</head>` — checks `isStandalone` and calls `window.location.replace('/landing')` before React loads, eliminating all flash and race conditions
