@@ -66,10 +66,11 @@ const DEFAULT_CONTENT: any = {
     note: 'Free hai. Hamesha rahega. Proudly Made in India 🇮🇳',
   },
   footer: { sub: 'apna bazaar, apni dukaan', tagline: 'Vocal for Local | Digital Bharat', copyright: '© 2026 Dukanchi. Proudly Supporting Local Retail India.' },
+  pwaBanner: { visible: true, title: '✨ Dukanchi installed hai aapke phone pe!', subtitle: 'Browser se better experience PWA mein milega', buttonText: 'PWA mein Kholiye →', buttonUrl: '/' },
 };
 
 // ── Section list ──────────────────────────────────────────────────────────────
-const SECTIONS = ['Nav', 'Hero', 'Problem', 'Hook Cards', 'Features', 'How It Works', 'Illustration', 'Campaigns', 'Final CTA', 'Footer'] as const;
+const SECTIONS = ['Nav', 'Hero', 'Problem', 'Hook Cards', 'Features', 'How It Works', 'Illustration', 'Campaigns', 'Final CTA', 'Footer', 'PWA Banner'] as const;
 type Section = typeof SECTIONS[number];
 
 // ── Reusable field components ─────────────────────────────────────────────────
@@ -448,6 +449,33 @@ export default function LandingPageCMS() {
             <Field label="Logo Subtitle" value={g('footer.sub')} onChange={v => update('footer.sub', v)} />
             <Field label="Tagline" value={g('footer.tagline')} onChange={v => update('footer.tagline', v)} />
             <Field label="Copyright Text" value={g('footer.copyright')} onChange={v => update('footer.copyright', v)} />
+          </>
+        );
+
+      case 'PWA Banner':
+        return (
+          <>
+            <SectionDivider title="PWA Install Banner" />
+            <div className="mb-4 p-3 bg-orange-50 border border-orange-100 rounded-lg text-xs text-orange-700">
+              This banner appears at the bottom of the landing page when the user has already installed the PWA. Toggle it off to hide it entirely.
+            </div>
+            <div className="mb-4 flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+              <span className="text-sm font-semibold text-gray-700">Banner Visible</span>
+              <button
+                onClick={() => update('pwaBanner.visible', !(ct.pwaBanner?.visible ?? true))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  (ct.pwaBanner?.visible ?? true) ? 'bg-orange-500' : 'bg-gray-300'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  (ct.pwaBanner?.visible ?? true) ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+            </div>
+            <Field label="Title" value={g('pwaBanner.title')} onChange={v => update('pwaBanner.title', v)} maxLen={80} />
+            <Field label="Subtitle" value={g('pwaBanner.subtitle')} onChange={v => update('pwaBanner.subtitle', v)} />
+            <Field label="Button Text" value={g('pwaBanner.buttonText')} onChange={v => update('pwaBanner.buttonText', v)} />
+            <Field label="Button URL" value={g('pwaBanner.buttonUrl')} onChange={v => update('pwaBanner.buttonUrl', v)} />
           </>
         );
 

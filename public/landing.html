@@ -32,6 +32,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 24px;display:fl
 .nav-cta{background:var(--orange);color:white;padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;text-decoration:none;transition:all 0.2s}
 .nav-cta:hover{background:var(--orange-dark);transform:translateY(-1px)}
 
+/* PWA BANNER */
+#pwa-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--black);color:white;padding:14px 20px;flex-direction:column;gap:6px;box-shadow:0 -4px 24px rgba(0,0,0,0.3)}
+#pwa-banner.visible{display:flex}
+#pwa-banner-title{font-size:14px;font-weight:700}
+#pwa-banner-subtitle{font-size:12px;color:#9CA3AF}
+#pwa-banner-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#pwa-banner-btn{background:var(--orange);color:white;border:none;padding:10px 18px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;white-space:nowrap}
+#pwa-banner-close{background:transparent;border:none;color:#6B7280;font-size:20px;cursor:pointer;line-height:1;padding:0 4px}
+
 /* HERO */
 .hero{min-height:100vh;padding:100px 24px 60px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;background:var(--white);overflow:hidden}
 .hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--orange-light);border:1px solid rgba(255,107,53,0.2);padding:8px 18px;border-radius:50px;font-size:12px;font-weight:600;color:var(--orange);margin-bottom:28px;animation:fadeUp 0.6s ease both}
@@ -592,7 +601,7 @@ footer strong{color:#9CA3AF}
 <section class="final-cta" id="signup">
   <h2>
     <span data-content="finalCta.h2Normal">Jo chahiye, jab chahiye —</span><br>
-    bas <span data-content="finalCta.h2Accent">chat karo.</span>
+    bas <span id="finalCta-h2Accent" data-content="finalCta.h2Accent">chat karo.</span>
   </h2>
   <p data-content="finalCta.subtitle">Na 4 din ka wait. Na expensive delivery. Seedha apne aas-paas ki dukaan se connect karo — free mein.</p>
   <div class="cta-btns" style="flex-direction:column;align-items:center">
@@ -619,6 +628,20 @@ footer strong{color:#9CA3AF}
   <p style="margin-top:8px;font-size:11px;color:#374151" data-content="footer.copyright">© 2026 Dukanchi. Proudly Supporting Local Retail India.</p>
 </footer>
 
+<!-- PWA INSTALLED BANNER -->
+<div id="pwa-banner">
+  <div id="pwa-banner-row">
+    <div style="flex:1;min-width:0">
+      <div id="pwa-banner-title" data-content="pwaBanner.title">✨ Dukanchi installed hai aapke phone pe!</div>
+      <div id="pwa-banner-subtitle" data-content="pwaBanner.subtitle">Browser se better experience PWA mein milega</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <button id="pwa-banner-btn" data-content="pwaBanner.buttonText">PWA mein Kholiye →</button>
+      <button id="pwa-banner-close" aria-label="Close">×</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Resolve dot-path from object (supports array indices: "hooks.0.emoji")
 function resolvePath(obj, path) {
@@ -641,7 +664,23 @@ function applyContent(content) {
 // Fetch from API; fall back to hardcoded defaults already in HTML
 fetch('/api/landing-content')
   .then(function(r) { return r.ok ? r.json() : null; })
-  .then(function(data) { if (data && data.content) applyContent(data.content); })
+  .then(function(data) {
+    if (data && data.content) {
+      applyContent(data.content);
+      // PWA Banner special handling
+      var b = data.content.pwaBanner;
+      if (b) {
+        var btn = document.getElementById('pwa-banner-btn');
+        if (btn && b.buttonUrl) {
+          btn.onclick = function() { window.location.href = b.buttonUrl || '/'; };
+        }
+        if (!b.visible) {
+          // Admin turned it off — never show
+          document.getElementById('pwa-banner')._forcedHidden = true;
+        }
+      }
+    }
+  })
   .catch(function() { /* defaults already rendered */ });
 
 // Scroll reveal
@@ -663,6 +702,20 @@ var isStandalone = window.matchMedia('(display-mode: standalone)').matches || (n
 if (isStandalone) {
   window.location.replace('/signup');
 }
+
+// Show PWA banner if user has installed the app but is browsing in regular browser
+(function() {
+  var banner = document.getElementById('pwa-banner');
+  if (!banner || isStandalone) return;
+  var installed = localStorage.getItem('dukanchi-pwa-installed');
+  if (installed === '1') {
+    setTimeout(function() {
+      if (!banner._forcedHidden) banner.classList.add('visible');
+    }, 200);
+  }
+  var closeBtn = document.getElementById('pwa-banner-close');
+  if (closeBtn) closeBtn.onclick = function() { banner.classList.remove('visible'); };
+})();
 
 // Set ALL install buttons to a given state + text
 function setInstallState(state, text) {
@@ -705,6 +758,7 @@ window.addEventListener('beforeinstallprompt', function(e) {
 // FIX 1+2: After browser confirms install — auto redirect, no button needed
 window.addEventListener('appinstalled', function() {
   deferredPrompt = null;
+  localStorage.setItem('dukanchi-pwa-installed', '1');
   var overlay = document.getElementById('install-overlay');
   overlay.classList.add('success');
   showInstalledAndRedirect();

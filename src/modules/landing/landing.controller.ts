@@ -163,6 +163,13 @@ export const defaultContent = {
     tagline: 'Vocal for Local | Digital Bharat',
     copyright: '© 2026 Dukanchi. Proudly Supporting Local Retail India.',
   },
+  pwaBanner: {
+    visible: true,
+    title: '✨ Dukanchi installed hai aapke phone pe!',
+    subtitle: 'Browser se better experience PWA mein milega',
+    buttonText: 'PWA mein Kholiye →',
+    buttonUrl: '/',
+  },
 };
 
 export class LandingController {
