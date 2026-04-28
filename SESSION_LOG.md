@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-28 — Session 16 (PWA — installable app from landing page)
+
+### New Files
+- `public/manifest.json` — full PWA manifest (name, short_name, icons, start_url, display:standalone, hi-IN, categories)
+- `public/sw.js` — service worker: cache-first static, network-first /api/*, push notifications, notificationclick
+- `public/icons/` — 8 icon sizes (72–512px) generated via scripts/generateIcons.cjs (canvas, orange rounded rect + white "द")
+- `scripts/generateIcons.cjs` — Node script to regenerate icons (run: `node scripts/generateIcons.cjs`)
+- `src/components/PWAInstallPrompt.tsx` — orange bottom banner captures beforeinstallprompt; iOS modal with Share instructions; 3-day localStorage dismiss; success toast
+
+### Modified Files
+- `index.html` — added PWA meta tags (manifest, theme-color, apple-mobile-web-app-*, apple-touch-icon, mobile-web-app-capable, description)
+- `src/main.tsx` — navigator.serviceWorker.register('/sw.js') on load
+- `src/App.tsx` — PWAInstallPrompt rendered globally
+- `public/landing.html` — install-btn / install-btn-cta → deferredPrompt.prompt(); iOS modal with step-by-step instructions
+- `vite.config.ts` — VitePWA plugin with workbox glob caching + Google Fonts CacheFirst
+
+---
+
 ## 2026-04-28 — Session 15 (Landing Page CMS — image upload + live preview)
 
 ### Modified Files
