@@ -1,19 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Phone, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DukanchiLogo from '../components/DukanchiLogo';
+
 export default function LoginPage() {
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as any).standalone === true;
-
-  useEffect(() => {
-    if (!isStandalone) window.location.replace('/landing');
-  }, []);
-
-  if (!isStandalone) return null;
-
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,7 +20,7 @@ export default function LoginPage() {
     try {
       const body = { phone, password };
 
-      const response = await fetch('/api/auth/login', { credentials: 'include', 
+      const response = await fetch('/api/auth/login', { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -55,7 +46,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] relative overflow-hidden">
       <div className="w-full max-w-md px-6 py-12 relative z-10">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
-          
+
           <div className="flex flex-col items-center text-center mb-8">
             <div className="flex items-center gap-3 mb-4">
               <DukanchiLogo />

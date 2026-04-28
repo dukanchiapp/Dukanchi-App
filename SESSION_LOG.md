@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-04-29 — Session 27 (Hooks violation fix + correct BrowserGuard)
+
+- `Login.tsx` + `Signup.tsx`: removed all `isStandalone` checks — plain components, no browser detection (hooks violation: `useState` was called after conditional `return null`)
+- `src/App.tsx`: added correct `BrowserGuard` component — `useEffect` called unconditionally before any `return`, then `return null` after; wraps `/login` and `/signup` routes
+- `ProtectedRoute.tsx`: already correct — uses `window.location.replace('/landing')`
+- Commit: `fix: hooks violation — clean Login/Signup + correct BrowserGuard in App.tsx`
+
+---
+
 ## 2026-04-29 — Session 26 (Triple-layer browser guard)
 
 - `Login.tsx` + `Signup.tsx`: restored `isStandalone` check — `return null` + `useEffect` redirect to `/landing` for browser mode

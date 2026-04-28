@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
 import HomePage from './pages/Home';
 import SearchPage from './pages/Search';
 import MapPage from './pages/Map';
@@ -29,6 +29,23 @@ import PWARefreshButton from './components/PWARefreshButton';
 import { useAuth } from './context/AuthContext';
 
 import { useLocation } from 'react-router-dom';
+
+function BrowserGuard({ children }: { children: React.ReactNode }) {
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
+
+  // Hook called unconditionally before any return — Rules of Hooks satisfied ✅
+  useEffect(() => {
+    if (!isStandalone) {
+      window.location.replace('/landing');
+    }
+  }, [isStandalone]);
+
+  if (!isStandalone) return null;
+
+  return <>{children}</>;
+}
 
 function FlowController() {
   const navigate = useNavigate();
@@ -71,8 +88,8 @@ export default function App() {
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/store/:id" element={<StoreProfilePage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<BrowserGuard><SignupPage /></BrowserGuard>} />
+                <Route path="/login" element={<BrowserGuard><LoginPage /></BrowserGuard>} />
                 <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                 <Route path="/retailer/dashboard" element={<ProtectedRoute><RetailerDashboard /></ProtectedRoute>} />

@@ -1,19 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Phone, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DukanchiLogo from '../components/DukanchiLogo';
+
 export default function SignupPage() {
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as any).standalone === true;
-
-  useEffect(() => {
-    if (!isStandalone) window.location.replace('/landing');
-  }, []);
-
-  if (!isStandalone) return null;
-
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +29,7 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/auth/users', { credentials: 'include', 
+      const response = await fetch('/api/auth/users', { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: trimmedName, phone: trimmedPhone, password, role }),
@@ -66,7 +57,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] relative overflow-hidden">
       <div className="w-full max-w-md px-6 py-12 relative z-10">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
-          
+
           <div className="flex flex-col items-center text-center mb-10">
             <div className="flex items-center gap-3 mb-4">
               <DukanchiLogo />
@@ -102,7 +93,7 @@ export default function SignupPage() {
                 <option value="manufacturer">Manufacturer</option>
               </select>
             </div>
-            
+
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
                   <User size={20} />
