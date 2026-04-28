@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 
 const DISMISS_KEY = 'pwa-dismissed';
@@ -13,6 +14,11 @@ export default function PWAInstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
   const [showIOSModal, setShowIOSModal] = useState(false);
   const { showToast } = useToast();
+  const location = useLocation();
+
+  if (['/login', '/signup', '/landing'].includes(location.pathname)) {
+    return null;
+  }
 
   useEffect(() => {
     // Already installed — don't show anything

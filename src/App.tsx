@@ -28,17 +28,31 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import PWARefreshButton from './components/PWARefreshButton';
 import { useAuth } from './context/AuthContext';
 
-// FIX 5: Redirect unauthenticated standalone (PWA) users to /signup
-function PWARedirect() {
+import { useLocation } from 'react-router-dom';
+
+function FlowController() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoading } = useAuth();
+
   useEffect(() => {
+    if (isLoading) return;
+
+    if (location.pathname.startsWith('/landing')) return;
+
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
-    if (isStandalone && !user && !isLoading) {
-      navigate('/signup', { replace: true });
+    const isLoggedIn = !!user;
+
+    if (!isStandalone && !isLoggedIn) {
+      window.location.href = '/landing';
+    } else if (isStandalone && !isLoggedIn) {
+      if (location.pathname !== '/login' && location.pathname !== '/signup') {
+        navigate('/signup', { replace: true });
+      }
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, location.pathname, navigate]);
+
   return null;
 }
 
@@ -49,7 +63,7 @@ export default function App() {
         <ToastProvider>
           <LocationProvider>
           <NotificationProvider>
-            <PWARedirect />
+            <FlowController />
             <div className="min-h-screen pb-16" style={{ background: 'var(--dk-bg)' }}>
               <Routes>
                 <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />

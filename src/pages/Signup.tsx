@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User, Phone, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import DukanchiLogo from '../components/DukanchiLogo';
 export default function SignupPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -52,19 +53,19 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
-      <div className="absolute top-0 -left-4 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-blob"></div>
-      <div className="absolute top-0 -right-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-blob animation-delay-2000"></div>
-      <div className="absolute -bottom-8 left-20 w-72 h-72 bg-blue-300 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-blob animation-delay-4000"></div>
-
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] relative overflow-hidden">
       <div className="w-full max-w-md px-6 py-12 relative z-10">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
           
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
-              Create an account
+          <div className="flex flex-col items-center text-center mb-10">
+            <div className="flex items-center gap-3 mb-4">
+              <DukanchiLogo />
+              <span className="text-xl font-bold tracking-tight text-gray-900">Dukanchi</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-1.5">
+              Shuru karte hain!
             </h1>
-            <p className="text-gray-500 text-sm">Join the Local Retail Platform today</p>
+            <p className="text-gray-500 text-sm">Aapka local market, ab aapke haath mein</p>
           </div>
 
           {error && (
@@ -82,7 +83,7 @@ export default function SignupPage() {
                 id="account-type"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none text-sm text-gray-900"
+                className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent transition-all outline-none text-sm text-gray-900"
               >
                 <option value="customer">Customer</option>
                 <option value="retailer">Retail Shop</option>
@@ -138,7 +139,7 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center bg-gray-900 text-white font-medium py-3.5 rounded-xl hover:bg-gray-800 disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 transition-all duration-200 shadow-lg shadow-gray-900/20 group"
+              className="w-full flex items-center justify-center bg-[#FF6B35] text-white font-medium py-3.5 rounded-full hover:bg-[#E85D2A] disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF6B35] transition-all duration-200 shadow-lg shadow-[#FF6B35]/20 group"
             >
               {isLoading ? 'Signing Up...' : 'Sign Up'}
               {!isLoading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
@@ -147,7 +148,7 @@ export default function SignupPage() {
 
           <p className="mt-8 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+            <Link to="/login" className="font-semibold text-[#FF6B35] hover:text-[#E85D2A] transition-colors">
               Log in
             </Link>
           </p>
