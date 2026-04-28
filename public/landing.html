@@ -247,7 +247,7 @@ footer strong{color:#9CA3AF}
   </div>
 
   <div class="hero-btns">
-    <a href="/signup" class="btn-primary">&#11088; <span data-content="hero.cta1">App Download Karo — Free</span></a>
+    <button id="install-btn" class="btn-primary" style="cursor:pointer;border:none">&#11088; <span data-content="hero.cta1">App Download Karo — Free</span></button>
     <a href="/login" class="btn-secondary" data-content="hero.cta2">Login / Sign Up</a>
   </div>
 
@@ -553,7 +553,7 @@ footer strong{color:#9CA3AF}
   </h2>
   <p data-content="finalCta.subtitle">Na 4 din ka wait. Na expensive delivery. Seedha apne aas-paas ki dukaan se connect karo — free mein.</p>
   <div class="cta-btns">
-    <a href="/signup" class="btn-primary" style="font-size:16px;padding:18px 36px">&#11088; <span data-content="finalCta.cta1">App Download Karo — Free</span></a>
+    <button id="install-btn-cta" class="btn-primary" style="cursor:pointer;border:none;font-size:16px;padding:18px 36px">&#11088; <span data-content="finalCta.cta1">App Download Karo — Free</span></button>
     <a href="/login" class="btn-secondary" style="font-size:16px;padding:18px 36px" data-content="finalCta.cta2">Login / Sign Up</a>
   </div>
   <p class="cta-note" data-content="finalCta.note">Free hai. Hamesha rahega. Proudly Made in India 🇮🇳</p>
@@ -605,6 +605,55 @@ var observer = new IntersectionObserver(function(entries) {
   });
 }, { threshold: 0.1 });
 document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+
+// ── PWA Install ────────────────────────────────────────────────────────────────
+var deferredPrompt = null;
+var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+var isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredPrompt = e;
+});
+
+async function handleInstallClick() {
+  if (isStandalone) { window.location.href = '/'; return; }
+  if (isIOS) { document.getElementById('ios-modal').style.display = 'flex'; return; }
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    var result = await deferredPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      var btn = document.getElementById('install-btn');
+      if (btn) btn.innerHTML = '&#10003; Installing...';
+      var btn2 = document.getElementById('install-btn-cta');
+      if (btn2) btn2.innerHTML = '&#10003; Installing...';
+    }
+    deferredPrompt = null;
+  } else {
+    // No prompt available (already installed or desktop) — go to app
+    window.location.href = '/';
+  }
+}
+
+document.getElementById('install-btn').addEventListener('click', handleInstallClick);
+document.getElementById('install-btn-cta').addEventListener('click', handleInstallClick);
 </script>
+
+<!-- iOS Install Modal -->
+<div id="ios-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);align-items:flex-end;justify-content:center;padding:0 16px 32px">
+  <div style="background:white;border-radius:20px;padding:28px 24px;text-align:center;max-width:340px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <p style="font-size:36px;margin-bottom:12px">📱</p>
+    <h3 style="font-size:17px;font-weight:700;margin-bottom:8px;color:#0D0D0D">iOS pe install karo</h3>
+    <p style="font-size:13px;color:#6B7280;margin-bottom:12px">Apne iPhone mein Safari open karo, phir:</p>
+    <div style="background:#F9F6F2;border-radius:12px;padding:14px 16px;margin-bottom:16px;text-align:left">
+      <p style="font-size:14px;color:#374151;margin-bottom:6px"><span style="font-weight:700;color:#FF6B35;margin-right:8px">1.</span>Neeche Share button tap karo ⎙</p>
+      <p style="font-size:14px;color:#374151;margin-bottom:6px"><span style="font-weight:700;color:#FF6B35;margin-right:8px">2.</span>"Add to Home Screen" select karo</p>
+      <p style="font-size:14px;color:#374151;margin:0"><span style="font-weight:700;color:#FF6B35;margin-right:8px">3.</span>"Add" tap karo — ho gaya!</p>
+    </div>
+    <button onclick="document.getElementById('ios-modal').style.display='none'" style="width:100%;background:#FF6B35;color:white;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif">
+      Samajh gaya ✓
+    </button>
+  </div>
+</div>
 </body>
 </html>

@@ -23,6 +23,7 @@ import { ToastProvider } from './context/ToastContext';
 import { LocationProvider } from './context/LocationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
               <BottomNav />
+              <PWAInstallPrompt />
             </div>
           </NotificationProvider>
           </LocationProvider>
