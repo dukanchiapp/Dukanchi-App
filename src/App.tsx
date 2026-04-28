@@ -39,6 +39,8 @@ function FlowController() {
     if (isLoading) return;
 
     if (location.pathname.startsWith('/landing')) return;
+    if (location.pathname.startsWith('/signup')) return;
+    if (location.pathname.startsWith('/login')) return;
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
