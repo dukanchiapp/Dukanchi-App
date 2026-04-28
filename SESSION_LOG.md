@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-04-29 — Session 26 (Triple-layer browser guard)
+
+- `Login.tsx` + `Signup.tsx`: restored `isStandalone` check — `return null` + `useEffect` redirect to `/landing` for browser mode
+- `public/sw.js`: bumped `CACHE_NAME` `dukanchi-v1` → `dukanchi-v2` to force all browsers to evict old SW cache and pick up new `index.html` with IIFE
+- Belt-and-suspenders: `index.html` IIFE + component guard + `ProtectedRoute` all active
+- Commit: `fix: triple-layer browser guard — Login/Signup isStandalone + SW cache bust`
+
+---
+
 ## 2026-04-29 — Session 25 (Blank page fix + PWA installed banner)
 
 - `ProtectedRoute.tsx`: replaced `<Navigate to="/landing">` (React Router — hits NotFound) with `window.location.replace('/landing')` hard redirect for browser mode; PWA standalone still uses `<Navigate to="/login">`
