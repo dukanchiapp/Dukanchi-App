@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-04-28 — Session 15 (Landing Page CMS — image upload + live preview)
+
+### Modified Files
+- `admin-panel/src/pages/LandingPage.tsx` — ImageField component (upload via /api/admin/settings/upload + paste URL + remove); heroImage field in Hero section; Live Preview toggle button opens side-by-side iframe that reloads after each save; "Open" external link button
+- `src/pages/LandingPage.tsx` — Renders hero.heroImage (optional app screenshot) below CTAs if set; added heroImage to DEFAULT
+
+---
+
 ## 2026-04-27 — Session 14 (Landing Page CMS — admin editable content)
 
 ### New Files
