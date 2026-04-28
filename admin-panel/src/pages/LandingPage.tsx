@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { Save, ExternalLink, Plus, Trash2 } from 'lucide-react';
+import { Save, ExternalLink, Plus, Trash2, Upload, PanelRight, X } from 'lucide-react';
 import api from '../lib/api';
 import { useToast } from '../context/ToastContext';
 
@@ -13,6 +13,7 @@ const DEFAULT_CONTENT: any = {
     subtitle: 'Na 4 din ka wait. Na expensive delivery fees. Seedha apne ghar ke paas ki real dukaan se connect karo.',
     hookAccent1: 'Quick Commerce se sasta.', hookAccent2: 'Trust se better.',
     cta1: 'App Download Karo — Free', cta2: 'Login / Sign Up',
+    heroImage: '',
   },
   problem: {
     tag: 'Sachchi Baat', h2Normal: '10 minute delivery ne', h2Bold: 'aapko loot liya',
@@ -143,6 +144,64 @@ function SectionDivider({ title }: { title: string }) {
   );
 }
 
+function ImageField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      const res = await api.post('/api/admin/settings/upload', fd);
+      onChange(res.data.imageUrl || res.data.url || '');
+      showToast('Image uploaded', { type: 'success' });
+    } catch {
+      showToast('Upload failed', { type: 'error' });
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1">{label}</label>
+      {value && (
+        <div className="relative mb-2 group">
+          <img src={value} alt="" className="w-full max-h-40 object-cover rounded-lg border border-gray-200" />
+          <button
+            onClick={() => onChange('')}
+            className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={value || ''}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Paste image URL or upload..."
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+        />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center gap-1.5 px-3 py-2 bg-orange-50 text-orange-600 rounded-lg text-sm font-semibold border border-orange-200 hover:bg-orange-100 disabled:opacity-60"
+        >
+          <Upload size={13} /> {uploading ? '...' : 'Upload'}
+        </button>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function LandingPageCMS() {
   const [content, setContent] = useState<any>(DEFAULT_CONTENT);
@@ -150,6 +209,8 @@ export default function LandingPageCMS() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [activeSection, setActiveSection] = useState<Section>('Hero');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
   const { showToast } = useToast();
 
   const fetchContent = useCallback(async () => {
@@ -214,6 +275,7 @@ export default function LandingPageCMS() {
     try {
       await api.put('/api/admin/landing-content', { content });
       setDirty(false);
+      setIframeKey(k => k + 1);
       showToast('Content saved! Landing page updated.', { type: 'success' });
     } catch (err) {
       console.error('[LandingCMS] save failed:', err);
@@ -250,6 +312,8 @@ export default function LandingPageCMS() {
             <Field label="Hook Accent 2 (orange)" value={g('hero.hookAccent2')} onChange={v => update('hero.hookAccent2', v)} />
             <Field label="Primary CTA Button" value={g('hero.cta1')} onChange={v => update('hero.cta1', v)} />
             <Field label="Secondary CTA Button" value={g('hero.cta2')} onChange={v => update('hero.cta2', v)} />
+            <SectionDivider title="Hero Image (optional app screenshot)" />
+            <ImageField label="Hero Image" value={g('hero.heroImage')} onChange={v => update('hero.heroImage', v)} />
           </>
         );
 
@@ -409,13 +473,19 @@ export default function LandingPageCMS() {
           )}
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => setPreviewOpen(p => !p)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${previewOpen ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}`}
+          >
+            <PanelRight size={15} /> {previewOpen ? 'Hide Preview' : 'Live Preview'}
+          </button>
           <a
             href="http://localhost:3000/landing"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
           >
-            <ExternalLink size={15} /> Preview
+            <ExternalLink size={15} /> Open
           </a>
           <button
             onClick={handleSave}
@@ -448,9 +518,28 @@ export default function LandingPageCMS() {
         </div>
 
         {/* Form panel */}
-        <div className="flex-1 bg-white rounded-xl border border-gray-100 p-6 min-w-0 overflow-y-auto">
+        <div className={`${previewOpen ? 'w-80 flex-shrink-0' : 'flex-1'} bg-white rounded-xl border border-gray-100 p-6 min-w-0 overflow-y-auto`}>
           {renderSection()}
         </div>
+
+        {/* Live preview iframe */}
+        {previewOpen && (
+          <div className="flex-1 min-w-0 rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex flex-col">
+            <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Preview (saves reflected here)</span>
+              <a href="http://localhost:3000/landing" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline flex items-center gap-1">
+                <ExternalLink size={11} /> Full screen
+              </a>
+            </div>
+            <iframe
+              key={iframeKey}
+              src="http://localhost:3000/landing"
+              className="flex-1 w-full border-0"
+              style={{ minHeight: 600 }}
+              title="Landing Page Preview"
+            />
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

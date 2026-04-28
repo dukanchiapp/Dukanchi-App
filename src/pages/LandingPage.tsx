@@ -9,6 +9,7 @@ const DEFAULT: any = {
     subtitle: 'Na 4 din ka wait. Na expensive delivery fees. Seedha apne ghar ke paas ki real dukaan se connect karo.',
     hookAccent1: 'Quick Commerce se sasta.', hookAccent2: 'Trust se better.',
     cta1: 'App Download Karo — Free', cta2: 'Login / Sign Up',
+    heroImage: '',
   },
   problem: {
     tag: 'Sachchi Baat', h2Normal: '10 minute delivery ne', h2Bold: 'aapko loot liya',
@@ -129,6 +130,13 @@ export default function LandingPage() {
             {c(d, 'hero.cta2')}
           </Link>
         </div>
+        {d.hero?.heroImage && (
+          <img
+            src={d.hero.heroImage}
+            alt="App screenshot"
+            style={{ width: '100%', maxWidth: 320, margin: '28px auto 0', display: 'block', borderRadius: 20, border: '1px solid #222', boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }}
+          />
+        )}
       </section>
 
       {/* ── PROBLEM ── */}
