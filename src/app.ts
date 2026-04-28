@@ -1,3 +1,4 @@
+import path from "path";
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
@@ -115,7 +116,12 @@ app.post("/api/upload", authenticateToken, upload.single("file"), (req: any, res
   res.json({ url });
 });
 
-// ── 8. Debug/test routes (dev only) ──────────────────────────────────────────
+// ── 8. Static landing page — served before Vite middleware so it bypasses the SPA ─
+app.get('/landing', (_req, res) => {
+  res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
+});
+
+// ── 9. Debug/test routes (dev only) ──────────────────────────────────────────────
 if (process.env.NODE_ENV !== "production") {
   app.get("/api/debug-sentry", (_req, _res) => {
     throw new Error("Sentry test — intentional error from /api/debug-sentry");
@@ -123,8 +129,8 @@ if (process.env.NODE_ENV !== "production") {
   logger.info("Debug route /api/debug-sentry enabled (dev only)");
 }
 
-// ── 9. Sentry error handler — must be BEFORE any other error middleware ───────
+// ── 10. Sentry error handler — must be BEFORE any other error middleware ──────
 Sentry.setupExpressErrorHandler(app);
 
-// ── 10. Global fallthrough error handler ──────────────────────────────────────
+// ── 11. Global fallthrough error handler ─────────────────────────────────────
 app.use(fallthroughErrorHandler);

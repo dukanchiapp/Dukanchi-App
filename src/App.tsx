@@ -17,7 +17,6 @@ import LoginPage from './pages/Login';
 import UserSettings from './pages/UserSettings';
 import SupportPage from './pages/Support';
 import NotFoundPage from './pages/NotFound';
-import LandingPage from './pages/LandingPage';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -46,7 +45,6 @@ export default function App() {
                 <Route path="/chat/:userId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
                 <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
-                <Route path="/landing" element={<LandingPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
               <BottomNav />
