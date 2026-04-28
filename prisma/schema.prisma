@@ -97,8 +97,8 @@ model Follow {
   storeId   String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
-  store     Store    @relation(fields: [storeId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storeId])
   @@index([storeId])
@@ -108,7 +108,7 @@ model Follow {
 model Product {
   id              String   @id @default(uuid())
   storeId         String
-  store           Store    @relation(fields: [storeId], references: [id])
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   productName     String
   brand           String?
   category        String
@@ -130,9 +130,9 @@ model Product {
 model Post {
   id         String   @id @default(uuid())
   storeId    String
-  store      Store    @relation(fields: [storeId], references: [id])
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   productId  String?
-  product    Product? @relation(fields: [productId], references: [id])
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   imageUrl   String
   caption    String?
   price      Float?
@@ -150,9 +150,9 @@ model Post {
 model Message {
   id         String   @id @default(uuid())
   senderId   String
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   receiverId String
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   message    String
   imageUrl   String?
   createdAt  DateTime @default(now())
@@ -174,13 +174,13 @@ model Review {
   createdAt DateTime @default(now())
 
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   storeId   String?
-  store     Store?   @relation(fields: [storeId], references: [id])
+  store     Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   productId String?
-  product   Product? @relation(fields: [productId], references: [id])
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   // A review must belong to either a store OR a product, enforced via logic
 }
@@ -194,7 +194,7 @@ model Notification {
   createdAt   DateTime @default(now())
 
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([userId, createdAt(sort: Desc)])
@@ -203,7 +203,7 @@ model Notification {
 model SavedItem {
   id          String   @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        String   // 'post' or 'store'
   referenceId String   // ID of the post or store
   createdAt   DateTime @default(now())
@@ -215,7 +215,7 @@ model SavedItem {
 model SearchHistory {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   query     String
   createdAt DateTime @default(now())
 
@@ -225,7 +225,7 @@ model SearchHistory {
 model SavedLocation {
   id           String   @id @default(uuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   locationName String
   latitude     Float
   longitude    Float
@@ -235,7 +235,7 @@ model SavedLocation {
 model TeamMember {
   id             String   @id @default(uuid())
   storeId        String
-  store          Store    @relation(fields: [storeId], references: [id])
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   phone          String   @unique
   passwordHash   String
   name           String   @default("Team Member")
@@ -246,11 +246,11 @@ model TeamMember {
 model Report {
   id                String   @id @default(uuid())
   reportedUserId    String?
-  reportedUser      User?    @relation("ReportsReceived", fields: [reportedUserId], references: [id])
+  reportedUser      User?    @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
   reportedStoreId   String?
-  reportedStore     Store?   @relation("ReportedStores", fields: [reportedStoreId], references: [id])
+  reportedStore     Store?   @relation("ReportedStores", fields: [reportedStoreId], references: [id], onDelete: Cascade)
   reportedByUserId  String
-  reportedByUser    User     @relation("ReportsMade", fields: [reportedByUserId], references: [id])
+  reportedByUser    User     @relation("ReportsMade", fields: [reportedByUserId], references: [id], onDelete: Cascade)
   reason            String
   createdAt         DateTime @default(now())
 
@@ -260,9 +260,9 @@ model Report {
 model Like {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   postId    String
-  post      Post     @relation(fields: [postId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([userId, postId])
@@ -283,7 +283,7 @@ model AppSettings {
 model Complaint {
   id          String   @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   issueType   String   // "store_issue", "bug", "spam", "account", "other"
   description String
   status      String   @default("open") // "open", "in_progress", "resolved", "dismissed"
@@ -309,7 +309,7 @@ model AskNearbyRequest {
   areaLabel  String?
   createdAt  DateTime            @default(now())
   responses  AskNearbyResponse[]
-  customer   User                @relation("AskNearbyCustomer", fields: [customerId], references: [id])
+  customer   User                @relation("AskNearbyCustomer", fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId])
 }
@@ -322,8 +322,8 @@ model AskNearbyResponse {
   status         String           @default("pending")
   conversationId String?
   respondedAt    DateTime?
-  request        AskNearbyRequest @relation(fields: [requestId], references: [id])
-  store          Store            @relation(fields: [storeId], references: [id])
+  request        AskNearbyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  store          Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([requestId])
   @@index([ownerId])

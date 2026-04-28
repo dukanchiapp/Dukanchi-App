@@ -3,8 +3,9 @@ import jwt from "jsonwebtoken";
 import { prisma } from "./prisma";
 import { canChat } from "../middlewares/auth.middleware";
 import { notificationQueue } from "./bullmq";
+import { env } from "./env";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret';
+const JWT_SECRET = env.JWT_SECRET;
 
 export function setupSocketListeners(io: Server) {
   io.use((socket: Socket, next) => {

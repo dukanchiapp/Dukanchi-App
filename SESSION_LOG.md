@@ -6,6 +6,46 @@
 
 ---
 
+## 2026-04-28 — Session 21 (Critical security + data integrity audit fixes)
+
+### Features & Fixes
+
+#### 1. Global rate limiter applied
+**File:** `src/app.ts`
+- `generalLimiter` was defined but never mounted → now applied to all `/api` routes
+- `uploadLimiter` added to `POST /api/upload` endpoint
+
+#### 2. Duplicate `/api/me` route removed
+**File:** `src/app.ts`
+- Removed standalone `app.get("/api/me")` (used `authenticateToken` only) — the canonical route in `auth.routes.ts` uses `authenticateAny` for both app + admin cookies
+
+#### 3. `toggleFollow` auth bypass fixed
+**Files:** `src/modules/stores/store.controller.ts`, `src/pages/Home.tsx`, `src/pages/StoreProfile.tsx`
+- Previously read `userId` from `req.body` → any user could follow/unfollow on behalf of others
+- Now uses `(req as any).user.userId` from JWT
+- Frontend updated to stop sending `userId` in body
+
+#### 4. `createProduct` ownership check added
+**File:** `src/modules/stores/store.controller.ts`
+- Previously any authenticated user could create products in any store
+- Now verifies `store.ownerId === req.user.userId` before allowing creation
+
+#### 5. Cascade deletes on all FK relations
+**File:** `prisma/schema.prisma`
+- Added `onDelete: Cascade` to 17 foreign key relations (Follow, Product, Post, Message, Review, Notification, SavedItem, SearchHistory, SavedLocation, TeamMember, Report, Like, Complaint, AskNearbyRequest, AskNearbyResponse)
+- Post→Product uses `onDelete: SetNull` (preserve post if product is deleted)
+- **Migration:** `20260428135155_cascade_deletes`
+
+#### 6. Socket JWT secret hardening
+**File:** `src/config/socket-listeners.ts`
+- Replaced dangerous `process.env.JWT_SECRET || 'secret'` fallback with validated `env.JWT_SECRET` import
+
+#### 7. Health check endpoint added
+**File:** `src/app.ts`
+- Added `GET /health` returning `{ status: 'ok', timestamp }` for load balancer/monitoring probes
+
+---
+
 ## 2026-04-28 — Session 20 (Authentication Flow, UI Redesign, and Security Fixes)
 
 ### Features & Fixes

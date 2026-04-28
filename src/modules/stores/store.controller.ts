@@ -133,7 +133,7 @@ export class StoreController {
 
   static async toggleFollow(req: Request, res: Response) {
     try {
-      const { userId } = req.body;
+      const userId = (req as any).user.userId; // Always use JWT identity, never trust body
       const storeId = req.params.id;
       const result = await StoreService.toggleFollow(userId, storeId);
       res.json(result);
@@ -154,6 +154,16 @@ export class StoreController {
 
   static async createProduct(req: Request, res: Response) {
     try {
+      const userId = (req as any).user.userId;
+      const { storeId } = req.body;
+
+      // Verify the caller owns this store
+      if (storeId) {
+        const store = await prisma.store.findUnique({ where: { id: storeId }, select: { ownerId: true } });
+        if (!store) return res.status(404).json({ error: "Store not found" });
+        if (store.ownerId !== userId) return res.status(403).json({ error: "Not your store" });
+      }
+
       const product = await StoreService.createProduct(req.body);
       res.json(product);
     } catch (error) {

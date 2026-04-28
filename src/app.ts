@@ -26,6 +26,7 @@ import { landingPublicRoutes, landingAdminRoutes } from './modules/landing/landi
 import { upload } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
 import { fallthroughErrorHandler } from "./middlewares/error.middleware";
+import { generalLimiter, uploadLimiter } from "./middlewares/rate-limiter.middleware";
 
 export const app = express();
 
@@ -89,7 +90,10 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
-// ── 6. Domain routes ──────────────────────────────────────────────────────────
+// ── 6. Global rate limiter — all /api routes ─────────────────────────────────
+app.use('/api', generalLimiter);
+
+// ── 7. Domain routes ──────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/me/interactions', interactionsRouter);
@@ -114,21 +118,23 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/app-settings', settingsRoutes);
 
-// ── 7. Misc endpoints ─────────────────────────────────────────────────────────
-import { AuthController } from "./modules/auth/auth.controller";
-app.get("/api/me", authenticateToken, AuthController.me);
-app.post("/api/upload", authenticateToken, upload.single("file"), (req: any, res) => {
+// ── 8. Misc endpoints ─────────────────────────────────────────────────────────
+// NOTE: /api/me is handled by auth.routes.ts (uses authenticateAny for both app + admin cookies)
+app.post("/api/upload", authenticateToken, uploadLimiter, upload.single("file"), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const url = (req.file as any).location ?? `/uploads/${req.file.filename}`;
   res.json({ url });
 });
 
-// ── 8. Static landing page — served before Vite middleware so it bypasses the SPA ─
+// ── 9. Static landing page — served before Vite middleware so it bypasses the SPA ─
 app.get('/landing', (_req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
-// ── 9. Debug/test routes (dev only) ──────────────────────────────────────────────
+// ── 10. Health check ─────────────────────────────────────────────────────────
+app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
+// ── 11. Debug/test routes (dev only) ──────────────────────────────────────────────
 if (process.env.NODE_ENV !== "production") {
   app.get("/api/debug-sentry", (_req, _res) => {
     throw new Error("Sentry test — intentional error from /api/debug-sentry");
@@ -136,8 +142,8 @@ if (process.env.NODE_ENV !== "production") {
   logger.info("Debug route /api/debug-sentry enabled (dev only)");
 }
 
-// ── 10. Sentry error handler — must be BEFORE any other error middleware ──────
+// ── 12. Sentry error handler — must be BEFORE any other error middleware ──────
 Sentry.setupExpressErrorHandler(app);
 
-// ── 11. Global fallthrough error handler ─────────────────────────────────────
+// ── 13. Global fallthrough error handler ─────────────────────────────────────
 app.use(fallthroughErrorHandler);

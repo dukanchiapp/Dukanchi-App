@@ -243,8 +243,7 @@ export default function HomePage() {
     try {
       await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', 
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ userId: user?.id }),
+        headers: { 'Content-Type': 'application/json' },
       });
     } catch {}
   };
