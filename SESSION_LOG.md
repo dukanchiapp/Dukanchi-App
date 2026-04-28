@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-04-28 — Session 20 (Authentication Flow, UI Redesign, and Security Fixes)
+
+### Features & Fixes
+- **Routing**: Replaced `PWARedirect` with `FlowController` in `src/App.tsx`. Browser users without sessions are redirected to the landing page. PWA users are correctly routed to auth flows.
+- **Auth UI Redesign**: Removed purple gradients and applied Dukanchi's core orange theme (`#FF6B35`) to `Login.tsx` and `Signup.tsx`, including customized Hindi copy.
+- **Install Prompt**: Updated `PWAInstallPrompt.tsx` to hide on auth routes. Fixed a critical "Rules of Hooks" crash by ensuring early returns are placed after the `useEffect` hook.
+- **Admin Panel Preview**: Changed the Landing Page iframe `src` to `127.0.0.1` in `admin-panel/src/pages/LandingPage.tsx` to bypass strict HSTS caching issues on Chrome. Also disabled `hsts`, `crossOriginOpenerPolicy`, and `crossOriginEmbedderPolicy` in `src/app.ts`.
+
+---
+
 ## 2026-04-28 — Session 19 (Admin Panel iframe preview fix)
 
 ### Modified Files

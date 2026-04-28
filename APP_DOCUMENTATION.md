@@ -519,7 +519,7 @@ The script installs: Node.js 22, PostgreSQL 14, Redis, Nginx, Certbot (SSL), PM2
 
 ---
 
-*Last updated: 2026-04-28 (Session 19)*
+*Last updated: 2026-04-28 (Session 20)*
 
 ### Architecture Update (2026-04-24)
 The application has been successfully migrated to a Domain-Driven Design (DDD). The monolithic server.ts has been deprecated as a router and now serves strictly as the application entry point. All business logic and routes have been extracted into the `src/modules/` directory, background jobs into `src/workers/`, and real-time events into `src/config/socket-listeners.ts`.
@@ -535,3 +535,9 @@ The application has been successfully migrated to a Domain-Driven Design (DDD). 
 
 ### Session 19 Update (2026-04-28)
 - Disabled `xFrameOptions` in the backend `helmet` middleware (`src/app.ts`) to fix a cross-origin iframe issue, allowing the Admin Panel (port 5173) to render the landing page Live Preview (port 3000) properly.
+
+### Session 20 Update (2026-04-28)
+- **Routing**: Deprecated `PWARedirect` for `FlowController`. Browser users lacking sessions are correctly funneled to `/landing`, while standalone users are correctly funneled to auth (`/signup` / `/login`).
+- **Auth UI**: Modernized `Login.tsx` and `Signup.tsx` by removing generic background blobs and incorporating Dukanchi's core orange theme, hindi copy, and branding.
+- **PWA Prompt**: Fixed a critical Hooks rendering crash in `PWAInstallPrompt.tsx` that occurred on login by moving early returns. Also hid the prompt from Auth routes entirely.
+- **Admin Preview Fix**: Altered `admin-panel/src/pages/LandingPage.tsx` iframe `src` to `127.0.0.1` and disabled HSTS and COOP headers in `src/app.ts` to bypass persistent browser security blocks on localhost cross-origin embeds.
