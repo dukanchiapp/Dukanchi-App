@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-04-28 — Session 19 (Admin Panel iframe preview fix)
+
+### Modified Files
+- `src/app.ts` — Disabled `xFrameOptions` in `helmet` middleware (`xFrameOptions: false`) to allow the admin panel (running on port 5173) to load the backend's landing page (running on port 3000) within an iframe for live preview.
+
+---
+
 ## 2026-04-28 — Session 18 (Landing page CTA removal and PWA refresh button)
 
 ### New Files

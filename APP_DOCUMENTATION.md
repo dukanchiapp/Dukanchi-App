@@ -519,7 +519,7 @@ The script installs: Node.js 22, PostgreSQL 14, Redis, Nginx, Certbot (SSL), PM2
 
 ---
 
-*Last updated: 2026-04-28 (Session 18)*
+*Last updated: 2026-04-28 (Session 19)*
 
 ### Architecture Update (2026-04-24)
 The application has been successfully migrated to a Domain-Driven Design (DDD). The monolithic server.ts has been deprecated as a router and now serves strictly as the application entry point. All business logic and routes have been extracted into the `src/modules/` directory, background jobs into `src/workers/`, and real-time events into `src/config/socket-listeners.ts`.
@@ -532,3 +532,6 @@ The application has been successfully migrated to a Domain-Driven Design (DDD). 
 ### Session 18 Update (2026-04-28)
 - PWA landing page (`public/landing.html`) updated to automatically redirect to `/signup` after successful installation, and CTA button removed from navigation.
 - Added a floating `PWARefreshButton` component that appears globally in the bottom-right corner, only when the app is running in PWA (standalone) mode.
+
+### Session 19 Update (2026-04-28)
+- Disabled `xFrameOptions` in the backend `helmet` middleware (`src/app.ts`) to fix a cross-origin iframe issue, allowing the Admin Panel (port 5173) to render the landing page Live Preview (port 3000) properly.
