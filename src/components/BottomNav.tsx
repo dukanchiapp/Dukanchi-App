@@ -15,7 +15,8 @@ export default function BottomNav() {
   if (
     location.pathname.startsWith('/chat/') ||
     location.pathname === '/signup' ||
-    location.pathname === '/login'
+    location.pathname === '/login' ||
+    location.pathname === '/landing'
   ) {
     return null;
   }
