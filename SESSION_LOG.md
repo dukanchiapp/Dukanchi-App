@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-04-29 — Session 30 (Vite 6 host validation fix)
+
+- `server.ts`: `allowedHosts: true` in `createViteServer` — disables Vite 6 host header validation that was blocking ngrok requests before Express ran
+- `vite.config.ts`: same `allowedHosts: true` for `vite` CLI mode
+- Root cause: Vite 6 security feature rejects requests with unrecognised `Host` headers; fix is `true` not string `'all'` (TypeScript enforces `true | string[]`)
+- Commit: `fix: Vite 6 allowedHosts true — unblock ngrok testing`
+
+---
+
 ## 2026-04-29 — Session 29 (ngrok CORS fix)
 
 - `src/config/env.ts`: added `isNgrokOrigin()` helper — returns true for `*.ngrok-free.dev`, `*.ngrok.io`, `*.ngrok.app` origins in dev mode
