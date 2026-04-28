@@ -66,10 +66,10 @@ function FlowController() {
 function BrowserGuard({ children }: { children: React.ReactNode }) {
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
     (window.navigator as any).standalone === true;
-  if (!isStandalone) {
-    window.location.replace('/landing');
-    return null;
-  }
+  useEffect(() => {
+    if (!isStandalone) window.location.replace('/landing');
+  }, []);
+  if (!isStandalone) return null;
   return <>{children}</>;
 }
 

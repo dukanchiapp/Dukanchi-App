@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-04-29 — Session 24 (Browser→Landing fix)
+
+- Fixed `BrowserGuard` in `src/App.tsx`: moved `window.location.replace('/landing')` from render body into `useEffect` — React 19 concurrent mode disallows side effects during render, causing blank white page
+- `Login.tsx` and `Signup.tsx` already had correct `useEffect` pattern — no changes needed
+- Commit: `fix: BrowserGuard useEffect — resolve blank page on browser redirect`
+
+---
+
 ## 2026-04-28 — Session 23 (Architecture + UX/Performance improvements)
 
 ### Architecture Fixes
