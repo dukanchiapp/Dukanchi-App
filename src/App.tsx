@@ -35,32 +35,42 @@ function FlowController() {
   const location = useLocation();
   const { user, isLoading } = useAuth();
 
-  useEffect(() => {
-    if (isLoading) return;
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
 
+  useEffect(() => {
     // /landing is always accessible
     if (location.pathname.startsWith('/landing')) return;
 
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-      (window.navigator as any).standalone === true;
-    const isLoggedIn = !!user;
-
-    // Logged in → no redirect needed
-    if (isLoggedIn) return;
-
-    // Browser + not logged in → always go to /landing (no exceptions)
+    // Browser mode → redirect to landing immediately, no need to wait for auth
     if (!isStandalone) {
-      window.location.href = '/landing';
+      window.location.replace('/landing');
       return;
     }
 
-    // Standalone (PWA) + not logged in → go to /signup unless already on auth page
+    // PWA standalone flow — wait for auth to resolve
+    if (isLoading) return;
+
+    // Logged in → no redirect needed
+    if (!!user) return;
+
+    // Standalone + not logged in → go to /signup unless already on auth page
     if (location.pathname !== '/login' && location.pathname !== '/signup') {
       navigate('/signup', { replace: true });
     }
-  }, [user, isLoading, location.pathname, navigate]);
+  }, [user, isLoading, location.pathname, navigate, isStandalone]);
 
   return null;
+}
+
+function BrowserGuard({ children }: { children: React.ReactNode }) {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+    (window.navigator as any).standalone === true;
+  if (!isStandalone) {
+    window.location.replace('/landing');
+    return null;
+  }
+  return <>{children}</>;
 }
 
 export default function App() {
@@ -77,8 +87,8 @@ export default function App() {
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/store/:id" element={<StoreProfilePage />} />
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<BrowserGuard><SignupPage /></BrowserGuard>} />
+                <Route path="/login" element={<BrowserGuard><LoginPage /></BrowserGuard>} />
                 <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                 <Route path="/retailer/dashboard" element={<ProtectedRoute><RetailerDashboard /></ProtectedRoute>} />
