@@ -64,6 +64,29 @@ h1 .accent{color:var(--orange);display:inline-block}
 @keyframes pulse-install{0%,100%{box-shadow:0 10px 30px rgba(255,107,53,0.45)}50%{box-shadow:0 10px 40px rgba(255,107,53,0.85),0 0 0 10px rgba(255,107,53,0.12)}}
 @keyframes success-flash{0%{transform:scale(1)}25%{transform:scale(1.07);box-shadow:0 0 0 14px rgba(22,163,74,0.18)}65%{transform:scale(0.98)}100%{transform:scale(1)}}
 
+/* PRE-INSTALL OVERLAY */
+#install-overlay{position:fixed;inset:0;z-index:10000;background:#FF6B35;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;opacity:0;pointer-events:none;transition:opacity 0.3s ease}
+#install-overlay.visible{opacity:1;pointer-events:all}
+#install-overlay.success{background:#16A34A;transition:background 0.4s ease}
+.overlay-logo-icon{width:80px;height:80px;background:rgba(255,255,255,0.2);border-radius:22px;display:flex;align-items:center;justify-content:center;font-family:'Kalam',cursive;font-size:48px;color:white;font-weight:700;margin-bottom:20px;animation:overlayPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
+.overlay-app-name{font-size:32px;font-weight:800;color:white;letter-spacing:-1px;margin-bottom:6px}
+.overlay-app-sub{font-size:16px;color:rgba(255,255,255,0.8);font-weight:300;margin-bottom:32px}
+.overlay-divider{width:48px;height:2px;background:rgba(255,255,255,0.3);border-radius:1px;margin-bottom:24px}
+.overlay-tagline{font-size:14px;color:rgba(255,255,255,0.9);margin-bottom:36px;text-align:center;line-height:1.5}
+.overlay-dots{display:flex;gap:8px}
+.overlay-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.6)}
+.overlay-dots span:nth-child(1){animation:dotBounce 1.2s 0s ease-in-out infinite}
+.overlay-dots span:nth-child(2){animation:dotBounce 1.2s 0.2s ease-in-out infinite}
+.overlay-dots span:nth-child(3){animation:dotBounce 1.2s 0.4s ease-in-out infinite}
+.overlay-success-icon{font-size:72px;display:none;animation:overlayPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
+#install-overlay.success .overlay-dots{display:none}
+#install-overlay.success .overlay-tagline{display:none}
+#install-overlay.success .overlay-divider{display:none}
+#install-overlay.success .overlay-success-icon{display:block}
+#install-overlay.success .overlay-app-sub{content:'Install ho gaya!'}
+@keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:0.6}40%{transform:translateY(-10px);opacity:1}}
+@keyframes overlayPop{from{opacity:0;transform:scale(0.7)}to{opacity:1;transform:scale(1)}}
+
 /* PHONE MOCKUP */
 .phone-wrap{animation:fadeUp 0.8s 0.4s ease both;position:relative;display:flex;justify-content:center}
 .phone{width:260px;background:#0D0D0D;border-radius:36px;padding:12px;box-shadow:0 40px 80px rgba(0,0,0,0.25),0 0 0 1px rgba(255,255,255,0.1);position:relative}
@@ -700,25 +723,39 @@ async function handleInstallClick() {
     return;
   }
 
-  // Case 3: Android / Chrome — trigger native install prompt
+  // Case 3: Android / Chrome — show branding overlay, then trigger native prompt
   if (deferredPrompt) {
-    setInstallState('loading', '⏳ Install ho raha hai...');
-    try {
-      deferredPrompt.prompt();
-      var result = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      if (result.outcome === 'accepted') {
-        setInstallState('success', '✅ Install ho gaya!');
-        setTimeout(function() {
-          setInstallState('open', '✨ App Kholo!');
-          setTimeout(openApp, 1500);
-        }, 900);
-      } else {
+    var overlay = document.getElementById('install-overlay');
+
+    // Step 1: show overlay immediately
+    overlay.classList.remove('success');
+    overlay.classList.add('visible');
+
+    // Step 2: wait 800ms for user to see the branding, then show browser prompt
+    setTimeout(async function() {
+      try {
+        deferredPrompt.prompt();
+        var result = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+
+        if (result.outcome === 'accepted') {
+          // Success state — green overlay + tick
+          overlay.classList.add('success');
+          setTimeout(function() {
+            overlay.classList.remove('visible', 'success');
+            setInstallState('open', '✨ App Kholo!');
+            setTimeout(openApp, 1500);
+          }, 1200);
+        } else {
+          // Dismissed — hide overlay, reset button
+          overlay.classList.remove('visible', 'success');
+          setInstallState('default', '⬇ Dukanchi Download Karo — Free');
+        }
+      } catch(err) {
+        overlay.classList.remove('visible', 'success');
         setInstallState('default', '⬇ Dukanchi Download Karo — Free');
       }
-    } catch(err) {
-      setInstallState('default', '⬇ Dukanchi Download Karo — Free');
-    }
+    }, 800);
     return;
   }
 
@@ -731,6 +768,19 @@ document.querySelectorAll('.install-btn').forEach(function(btn) {
   btn.addEventListener('click', handleInstallClick);
 });
 </script>
+
+<!-- Pre-install branding overlay -->
+<div id="install-overlay">
+  <div class="overlay-logo-icon">द</div>
+  <p class="overlay-app-name">Dukanchi</p>
+  <p class="overlay-app-sub">apna bazaar, apni dukaan</p>
+  <div class="overlay-divider"></div>
+  <p class="overlay-tagline">Free install — phone pe hamesha available</p>
+  <div class="overlay-dots">
+    <span></span><span></span><span></span>
+  </div>
+  <div class="overlay-success-icon">✅</div>
+</div>
 
 <!-- iOS Install Bottom Sheet -->
 <div id="ios-modal" onclick="if(event.target===this)closeIOSModal()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:flex-end;justify-content:center;padding:0 12px 24px">
