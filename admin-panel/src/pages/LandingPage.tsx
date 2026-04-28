@@ -480,7 +480,7 @@ export default function LandingPageCMS() {
             <PanelRight size={15} /> {previewOpen ? 'Hide Preview' : 'Live Preview'}
           </button>
           <a
-            href="http://localhost:3000/landing"
+            href="http://127.0.0.1:3000/landing"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -527,13 +527,13 @@ export default function LandingPageCMS() {
           <div className="flex-1 min-w-0 rounded-xl border border-gray-100 overflow-hidden bg-gray-50 flex flex-col">
             <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-100">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Live Preview (saves reflected here)</span>
-              <a href="http://localhost:3000/landing" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline flex items-center gap-1">
+              <a href="http://127.0.0.1:3000/landing" target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:underline flex items-center gap-1">
                 <ExternalLink size={11} /> Full screen
               </a>
             </div>
             <iframe
               key={iframeKey}
-              src="http://localhost:3000/landing"
+              src="http://127.0.0.1:3000/landing"
               className="flex-1 w-full border-0"
               style={{ minHeight: 600 }}
               title="Landing Page Preview"
