@@ -6,6 +6,37 @@
 
 ---
 
+## 2026-04-28 — Session 22 (Security hardening — helmet, CORS, ownership, auth routes)
+
+### Features & Fixes
+
+#### 1. Environment-conditional Helmet
+**File:** `src/app.ts`
+- Production: full helmet protection (HSTS, X-Frame-Options, etc.) — only CSP disabled (handled by Nginx)
+- Development: relaxed for iframe previews and local testing
+
+#### 2. CORS origin hardening
+**File:** `src/config/env.ts`
+- Production fallback returns empty list (must be explicitly configured via ALLOWED_ORIGINS)
+- Dev fallback includes `localhost:3000`, `localhost:5173`, `127.0.0.1` variants
+
+#### 3. `updateStore` ownership check added
+**File:** `src/modules/stores/store.controller.ts`
+- Previously any authenticated user could update any store
+- Now verifies `store.ownerId === req.user.userId` before allowing updates
+
+#### 4. Authenticated all data read routes
+**File:** `src/modules/stores/store.routes.ts`
+- `GET /stores`, `GET /stores/:id`, `GET /stores/:id/posts`, `GET /products` now require `authenticateToken`
+- Prevents unauthenticated data scraping / enumeration
+
+#### 5. Fixed missing `credentials: 'include'` across frontend
+**Files:** `StoreProfile.tsx`, `Profile.tsx`, `UserSettings.tsx`
+- All `fetch()` calls to protected endpoints now send auth cookies
+- Prevents 401 errors from newly-protected routes
+
+---
+
 ## 2026-04-28 — Session 21 (Critical security + data integrity audit fixes)
 
 ### Features & Fixes

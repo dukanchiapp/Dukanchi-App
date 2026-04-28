@@ -60,8 +60,10 @@ export class StoreController {
 
   static async updateStore(req: Request, res: Response) {
     try {
+      const userId = (req as any).user.userId;
       const existingStore = await prisma.store.findUnique({ where: { id: req.params.id } });
       if (!existingStore) return res.status(404).json({ error: "Store not found" });
+      if (existingStore.ownerId !== userId) return res.status(403).json({ error: "Not your store" });
 
       if (req.body.phone && req.body.phone !== existingStore.phone) {
         const owner = await prisma.user.findUnique({ where: { id: existingStore.ownerId } });

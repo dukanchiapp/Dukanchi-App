@@ -45,7 +45,7 @@ export default function UserSettings() {
 
   useEffect(() => {
      if (isRetailer && user?.id) {
-        fetch(`/api/users/${user.id}/store`)
+        fetch(`/api/users/${user.id}/store`, { credentials: 'include' })
            .then(res => res.json())
            .then(data => { if (data) setStore(data); })
            .catch(console.error);
@@ -98,7 +98,7 @@ export default function UserSettings() {
     if (!store) return;
     setLoadingPosts(true);
     try {
-      const res = await fetch(`/api/stores/${store.id}/posts?limit=100`);
+      const res = await fetch(`/api/stores/${store.id}/posts?limit=100`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setManagePosts(Array.isArray(data) ? data : (data.posts ?? []));

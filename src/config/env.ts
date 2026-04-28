@@ -28,7 +28,12 @@ if (!_env.success) {
 export const env = _env.data;
 
 export const getAllowedOrigins = (): string[] => {
-  return env.ALLOWED_ORIGINS
-    ? env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : ['http://localhost:5173', 'http://localhost:3000'];
+  if (env.ALLOWED_ORIGINS) {
+    return env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
+  }
+  // No env override: safe defaults by environment
+  if (env.NODE_ENV === 'production') {
+    return []; // Must be explicitly configured in production
+  }
+  return ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
 };

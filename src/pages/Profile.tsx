@@ -120,7 +120,7 @@ export default function ProfilePage() {
         } catch {}
       }
 
-      const storeRes = await fetch(`/api/users/${currentUserId}/store`);
+      const storeRes = await fetch(`/api/users/${currentUserId}/store`, { credentials: 'include' });
       let storeData = await storeRes.json();
 
       if (!storeData && user?.role === 'retailer') {
@@ -144,13 +144,13 @@ export default function ProfilePage() {
 
         // Only fetch posts/reviews for real stores (not the placeholder)
         if (storeData.id !== 'mock-store') {
-          const postsRes = await fetch(`/api/stores/${storeData.id}/posts`);
+          const postsRes = await fetch(`/api/stores/${storeData.id}/posts`, { credentials: 'include' });
           if (postsRes.ok) {
             const postsData = await postsRes.json();
             setPosts(Array.isArray(postsData) ? postsData : (postsData.posts ?? []));
           }
 
-          const reviewsRes = await fetch(`/api/reviews/store/${storeData.id}`);
+          const reviewsRes = await fetch(`/api/reviews/store/${storeData.id}`, { credentials: 'include' });
           if (reviewsRes.ok) {
             const revData = await reviewsRes.json();
             setReviews(Array.isArray(revData) ? revData : (revData.reviews ?? []));

@@ -81,21 +81,21 @@ export default function StoreProfilePage() {
 
   const fetchStoreData = async () => {
     try {
-      const storeRes = await fetch(`/api/stores/${id}?userId=${currentUserId}`);
+      const storeRes = await fetch(`/api/stores/${id}?userId=${currentUserId}`, { credentials: 'include' });
       const storeData = await storeRes.json();
       setStore(storeData);
       setIsFollowing(storeData.followers?.length > 0);
       setFollowersCount(storeData._count?.followers || 0);
 
-      const productsRes = await fetch(`/api/products?storeId=${id}`);
+      const productsRes = await fetch(`/api/products?storeId=${id}`, { credentials: 'include' });
       const productsData = await productsRes.json();
       setProducts(Array.isArray(productsData) ? productsData : (productsData.products ?? []));
 
-      const postsRes = await fetch(`/api/stores/${id}/posts`);
+      const postsRes = await fetch(`/api/stores/${id}/posts`, { credentials: 'include' });
       const postsData = await postsRes.json();
       setPosts(Array.isArray(postsData) ? postsData : (postsData.posts ?? []));
 
-      const reviewsRes = await fetch(`/api/reviews/store/${id}`);
+      const reviewsRes = await fetch(`/api/reviews/store/${id}`, { credentials: 'include' });
       const reviewsData = await reviewsRes.json();
       setReviews(Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews ?? []));
 

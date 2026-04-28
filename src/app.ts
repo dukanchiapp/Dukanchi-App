@@ -5,7 +5,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
-import { getAllowedOrigins } from "./config/env";
+import { env, getAllowedOrigins } from "./config/env";
 import { logger } from "./lib/logger";
 
 import { authRoutes } from './modules/auth/auth.routes';
@@ -31,14 +31,20 @@ import { generalLimiter, uploadLimiter } from "./middlewares/rate-limiter.middle
 export const app = express();
 
 // ── 1. Security headers ──────────────────────────────────────────────────────
-app.use(helmet({ 
-  contentSecurityPolicy: false, 
-  crossOriginResourcePolicy: false, 
-  xFrameOptions: false,
-  crossOriginOpenerPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  hsts: false
-}));
+if (env.NODE_ENV === 'production') {
+  // Production: full helmet protection (CSP still off — handled by Nginx)
+  app.use(helmet({ contentSecurityPolicy: false }));
+} else {
+  // Dev: relaxed for iframe previews, local testing
+  app.use(helmet({ 
+    contentSecurityPolicy: false, 
+    crossOriginResourcePolicy: false, 
+    xFrameOptions: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    hsts: false
+  }));
+}
 
 // ── 2. Compression ───────────────────────────────────────────────────────────
 app.use(compression());
