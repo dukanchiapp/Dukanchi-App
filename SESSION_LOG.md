@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-04-28 — Session 17 (PWA landing page — static HTML, smart button, redirect fixes)
+
+### New Files
+- `public/landing.html` — full standalone HTML landing page (Sora font, phone mockup, SVG sketch illustrations, comparison table, scroll-reveal); served by Express at GET /landing before Vite middleware; data-content attributes on all CMS text; fetches /api/landing-content on load
+
+### Modified Files
+- `src/app.ts` — added `import path`, `app.get('/landing', res.sendFile('public/landing.html'))` before Vite middleware
+- `src/App.tsx` — removed React LandingPage import + route (Express now owns /landing); added `PWARedirect` component (standalone + !user + !isLoading → navigate('/signup', replace)); added `useAuth` import
+- `src/components/BottomNav.tsx` — added `/landing` to exclusion list (no bottom nav on landing page)
+- `public/landing.html` (iterative improvements):
+  - Smart single PWA button: removed all Login/Signup secondary buttons; 4 states (default/loading/success/open); `setInstallState()` updates all buttons in sync
+  - Pre-install branding overlay: full-screen orange overlay with "द" logo, bounce-dot animation, 800ms delay before `deferredPrompt.prompt()`; on accept → green success state
+  - PWA redirect fixes: `isStandalone` on load → `window.location.replace('/signup')` immediately; `appinstalled` event → `showInstalledAndRedirect()` (hides buttons, shows green pill, `window.location.href = '/signup'` after 1.5s); removed all `window.open()` calls; iOS modal close → same redirect flow
+  - `.install-success-msg` element in hero + final CTA sections
+- `package.json` / `package-lock.json` — added `canvas` + `vite-plugin-pwa` dev dependencies
+
+---
+
 ## 2026-04-28 — Session 16 (PWA — installable app from landing page)
 
 ### New Files

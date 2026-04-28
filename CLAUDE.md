@@ -51,3 +51,6 @@
 - AI Store Description modal
 - Ask Nearby (radius search, Yes/No availability, auto chat)
 - Landing Page CMS (admin editable, DB-backed, fallback defaults)
+- Static HTML Landing Page (public/landing.html, served by Express GET /landing, data-content CMS fetch)
+- PWA (manifest, service worker, 8 icon sizes, install prompt banner, offline cache)
+- Smart PWA install button (pre-install branding overlay, standalone redirect, appinstalled → auto /signup)
