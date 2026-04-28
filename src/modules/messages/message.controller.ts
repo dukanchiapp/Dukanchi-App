@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { MessageService } from "./message.service";
 import { prisma } from "../../config/prisma";
 import { canChat } from "../../middlewares/auth.middleware";
+import { logger } from "../../lib/logger";
 
 export class MessageController {
   static async getMessages(req: Request, res: Response) {
@@ -23,7 +24,7 @@ export class MessageController {
       const result = await MessageService.getMessages(userId, otherUserId, before, parseInt(limit));
       res.json(result);
     } catch (error) {
-      console.error("Failed to fetch messages:", error);
+      logger.error({ err: error }, "Failed to fetch messages");
       res.status(500).json({ error: "Failed to fetch messages" });
     }
   }
@@ -49,7 +50,7 @@ export class MessageController {
       if (error.message === "User not found") return res.status(404).json({ error: "User not found" });
       if (error.message === "Chat not permitted between these roles") return res.status(403).json({ error: "Chat not permitted between these roles" });
       
-      console.error("Failed to send message:", error);
+      logger.error({ err: error }, "Failed to send message");
       res.status(500).json({ error: "Failed to send message" });
     }
   }

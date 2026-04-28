@@ -96,7 +96,10 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
-// ── 6. Global rate limiter — all /api routes ─────────────────────────────────
+// ── 6. Health check (before rate limiter — no auth needed) ───────────────────
+app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
+// ── 7. Global rate limiter — all /api routes ─────────────────────────────────
 app.use('/api', generalLimiter);
 
 // ── 7. Domain routes ──────────────────────────────────────────────────────────

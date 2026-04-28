@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PostService } from "./post.service";
 import { pubClient } from "../../config/redis";
+import { logger } from "../../lib/logger";
 
 export class PostController {
   static async createPost(req: Request, res: Response) {
@@ -8,7 +9,7 @@ export class PostController {
       const post = await PostService.createPost(req.body);
       res.json(post);
     } catch (error) {
-      console.error("Failed to create post:", error);
+      logger.error({ err: error }, "Failed to create post");
       res.status(500).json({ error: "Failed to create post" });
     }
   }

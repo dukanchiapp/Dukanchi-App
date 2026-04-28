@@ -336,6 +336,7 @@ export default function HomePage() {
                     key={i}
                     src={img.startsWith('http') ? img : img}
                     alt={`Banner ${i + 1}`}
+                    loading={i === carouselIdx ? 'eager' : 'lazy'}
                     style={{
                       width: '100%',
                       height: '100%',

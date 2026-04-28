@@ -6,6 +6,25 @@
 
 ---
 
+## 2026-04-28 — Session 23 (Architecture + UX/Performance improvements)
+
+### Architecture Fixes
+
+1. **Graceful shutdown** (`server.ts`) — Added SIGTERM/SIGINT handlers that close HTTP server, disconnect Prisma, and quit Redis pub/sub clients
+2. **Health check endpoint** (`app.ts`) — `GET /health` returns `{ status: 'ok', timestamp }` for readiness probes (placed before rate limiter)
+3. **Structured logging migration** — Replaced 14 `console.error` calls with Pino `logger.error` across 6 backend controllers:
+   - `auth.controller.ts`, `post.controller.ts`, `message.controller.ts`
+   - `misc.controller.ts`, `search.controller.ts`, `store.controller.ts`, `store.service.ts`
+4. **Dead code removal** (`Search.tsx`) — Removed TODO mic button that logged to console and did nothing
+
+### UX/Performance Improvements
+
+5. **ProtectedRoute PWA-aware redirect** (`ProtectedRoute.tsx`) — Browser users → `/landing`, PWA standalone → `/login` (eliminates login page flash)
+6. **Carousel lazy loading** (`Home.tsx`) — Non-active slides use `loading="lazy"`, active slide uses `loading="eager"` for better LCP
+7. **Store 404 page** (`StoreProfile.tsx`) — Invalid store links now show a proper 404 with icon, message, and Go Back button instead of blank page
+
+---
+
 ## 2026-04-28 — Session 22 (Security hardening — helmet, CORS, ownership, auth routes)
 
 ### Features & Fixes

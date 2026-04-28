@@ -102,6 +102,24 @@ async function startServer() {
       5 * 60 * 1000
     );
   });
+
+  // ── 7. Graceful shutdown ──────────────────────────────────────────────────────
+  const shutdown = async (signal: string) => {
+    logger.info(`${signal} received — shutting down gracefully`);
+    httpServer.close(() => {
+      logger.info("HTTP server closed");
+    });
+    try { await prisma.$disconnect(); logger.info("Prisma disconnected"); } catch {}
+    try {
+      const { pubClient, subClient } = await import("./src/config/redis");
+      await pubClient.quit();
+      await subClient.quit();
+      logger.info("Redis disconnected");
+    } catch {}
+    process.exit(0);
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 startServer().catch((err) => {

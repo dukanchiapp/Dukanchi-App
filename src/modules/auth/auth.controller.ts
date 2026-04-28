@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { AuthService } from "./auth.service";
+import { logger } from "../../lib/logger";
 
 export class AuthController {
   static async signup(req: Request, res: Response) {
@@ -20,7 +21,7 @@ export class AuthController {
       if (error.message === "This phone number already exists") {
         return res.status(400).json({ error: error.message });
       }
-      console.error("Signup error:", error);
+      logger.error({ err: error }, "Signup error");
       res.status(500).json({ error: "Failed to create user" });
     }
   }
@@ -54,7 +55,7 @@ export class AuthController {
       if (error.message.includes("blocked")) {
         return res.status(403).json({ error: error.message });
       }
-      console.error("Login error:", error);
+      logger.error({ err: error }, "Login error");
       res.status(500).json({ error: "Login failed" });
     }
   }
@@ -73,7 +74,7 @@ export class AuthController {
       const { password, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
     } catch (error) {
-      console.error("Me route error:", error);
+      logger.error({ err: error }, "Me route error");
       res.status(500).json({ error: "Failed to fetch user profile" });
     }
   }

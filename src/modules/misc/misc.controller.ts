@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { MiscService } from "./misc.service";
+import { logger } from "../../lib/logger";
 
 export class MiscController {
   static async submitComplaint(req: Request, res: Response) {
@@ -9,7 +10,7 @@ export class MiscController {
       const complaint = await MiscService.submitComplaint(userId, issueType, description);
       res.json(complaint);
     } catch (error) {
-      console.error("Failed to create complaint:", error);
+      logger.error({ err: error }, "Failed to create complaint");
       res.status(500).json({ error: "Failed to submit complaint" });
     }
   }
@@ -24,7 +25,7 @@ export class MiscController {
       if (error.message === "reportedUserId or reportedStoreId is required") {
         return res.status(400).json({ error: error.message });
       }
-      console.error("Failed to create report:", error);
+      logger.error({ err: error }, "Failed to create report");
       res.status(500).json({ error: "Failed to submit report" });
     }
   }
@@ -60,7 +61,7 @@ export class MiscController {
       if (error.message === "Must review either a store or a product" || error.message === "Cannot review both store and product at once") {
         return res.status(400).json({ error: error.message });
       }
-      console.error("Failed to post review:", error);
+      logger.error({ err: error }, "Failed to post review");
       res.status(500).json({ error: "Failed to save review" });
     }
   }

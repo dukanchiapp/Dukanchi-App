@@ -82,6 +82,7 @@ export default function StoreProfilePage() {
   const fetchStoreData = async () => {
     try {
       const storeRes = await fetch(`/api/stores/${id}?userId=${currentUserId}`, { credentials: 'include' });
+      if (!storeRes.ok) { setStore(null); setLoading(false); return; }
       const storeData = await storeRes.json();
       setStore(storeData);
       setIsFollowing(storeData.followers?.length > 0);
@@ -135,7 +136,24 @@ export default function StoreProfilePage() {
   }
 
   if (!store) {
-    return <div className="p-4 text-center" style={{ color: 'var(--dk-text-secondary)' }}>Store not found</div>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center" style={{ background: 'var(--dk-bg)' }}>
+        <div className="flex items-center justify-center mb-4" style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--dk-surface)', border: '1px solid var(--dk-border)' }}>
+          <Package size={32} style={{ color: 'var(--dk-text-tertiary)' }} />
+        </div>
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', marginBottom: 6 }}>Store not found</h2>
+        <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', marginBottom: 24, maxWidth: 280 }}>
+          This store may have been removed or the link is invalid.
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm"
+          style={{ background: 'var(--dk-accent)', color: 'white' }}
+        >
+          <ArrowLeft size={16} /> Go Back
+        </button>
+      </div>
+    );
   }
 
   const isOwner = store.ownerId === currentUserId;

@@ -319,11 +319,7 @@ export default function SearchPage() {
                   <button onClick={() => { setQuery(''); setSuggestions([]); setCorrectedQuery(null); }}>
                     <X size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
                   </button>
-                ) : (
-                  <button onClick={() => console.log('TODO: mic input')}>
-                    <Mic size={18} style={{ color: 'var(--dk-accent)' }} />
-                  </button>
-                )}
+                ) : null}
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}

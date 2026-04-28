@@ -53,7 +53,7 @@ export class StoreController {
       const store = await StoreService.createStore(storeData);
       res.json(store);
     } catch (error) {
-      console.error("Failed to create store:", error);
+      logger.error({ err: error }, "Failed to create store");
       res.status(500).json({ error: "Failed to create store" });
     }
   }
@@ -80,7 +80,7 @@ export class StoreController {
       const store = await StoreService.updateStore(req.params.id, req.body);
       res.json(store);
     } catch (error) {
-      console.error("Failed to update store:", error);
+      logger.error({ err: error }, "Failed to update store");
       res.status(500).json({ error: "Failed to update store" });
     }
   }
@@ -116,7 +116,7 @@ export class StoreController {
         res.status(404).json({ error: "Pincode not found" });
       }
     } catch (error) {
-      console.error("Pincode lookup error:", error);
+      logger.error({ err: error }, "Pincode lookup error");
       res.status(500).json({ error: "Failed to look up pincode" });
     }
   }

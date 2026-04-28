@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 import { generateEmbedding } from "../../services/geminiEmbeddings";
+import { logger } from "../../lib/logger";
 
 const ADMIN_STATS_KEY = 'admin:stats';
 
@@ -119,7 +120,7 @@ export class StoreService {
     generateEmbedding(textToEmbed).then(async (embedding) => {
       const vectorString = `[${embedding.join(',')}]`;
       await prisma.$executeRaw`UPDATE "Product" SET embedding = ${vectorString}::vector WHERE id = ${product.id}`;
-    }).catch(err => console.error(`Failed to generate embedding for new product ${product.id}`, err));
+    }).catch(err => logger.error({ err }, `Failed to generate embedding for new product ${product.id}`));
 
     return product;
   }

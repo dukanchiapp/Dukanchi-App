@@ -38,7 +38,9 @@
 - Strip markdown from responses before JSON.parse
 
 ## Active Issues (update this section as things get fixed)
-- None
+- Home feed needs infinite scroll / cursor-based pagination
+- Silent catch {} blocks on frontend interactions (like/save/follow) — should show toast on error
+- Login/Signup forms need visible loading spinner
 
 ## Completed Features
 - JWT httpOnly cookies auth

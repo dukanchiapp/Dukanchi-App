@@ -15,11 +15,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user) {
-    // Redirect them to the /login page, but save the current location they were
-    // trying to go to when they were redirected. This allows us to send them
-    // along to that page after they login, which is a nicer user experience
-    // than dropping them off on the home page.
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // PWA standalone → login, browser → landing
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      || (window.navigator as any).standalone === true;
+    return <Navigate to={isStandalone ? "/login" : "/landing"} state={{ from: location }} replace />;
   }
 
   return children;

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { SearchService } from "./search.service";
+import { logger } from "../../lib/logger";
 
 export class SearchController {
   private static getAllowedRoles(userRole: string): string[] {
@@ -47,7 +48,7 @@ export class SearchController {
       const result = await SearchService.performAISearch(String(q).trim(), allowedRoles);
       res.json(result);
     } catch (error) {
-      console.error("AI search error:", error);
+      logger.error({ err: error }, "AI search error");
       res.status(500).json({ error: "Failed to perform search" });
     }
   }
