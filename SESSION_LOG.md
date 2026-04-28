@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-04-29 — Session 29 (ngrok CORS fix)
+
+- `src/config/env.ts`: added `isNgrokOrigin()` helper — returns true for `*.ngrok-free.dev`, `*.ngrok.io`, `*.ngrok.app` origins in dev mode
+- `src/app.ts`: CORS middleware uses `isNgrokOrigin()` to allow any ngrok tunnel without hardcoding the URL; added `ngrok-skip-browser-warning` to allowed headers
+- `.env`: added `NGROK_URL=https://recollect-clay-defame.ngrok-free.dev` (update manually when ngrok restarts)
+- Commit: `fix: allow ngrok origins in dev CORS — enable phone testing`
+
+---
+
 ## 2026-04-29 — Session 27 (Hooks violation fix + correct BrowserGuard)
 
 - `Login.tsx` + `Signup.tsx`: removed all `isStandalone` checks — plain components, no browser detection (hooks violation: `useState` was called after conditional `return null`)

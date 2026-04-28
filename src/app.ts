@@ -5,7 +5,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
-import { env, getAllowedOrigins } from "./config/env";
+import { env, getAllowedOrigins, isNgrokOrigin } from "./config/env";
 import { logger } from "./lib/logger";
 
 import { authRoutes } from './modules/auth/auth.routes';
@@ -51,19 +51,18 @@ app.use(compression());
 
 // ── 3. CORS — must be before everything else ─────────────────────────────────
 app.use((req, res, next) => {
+  const origin = req.headers.origin || '';
   const allowedOrigins = getAllowedOrigins();
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
+
+  if (isNgrokOrigin(origin) || (origin && allowedOrigins.includes(origin))) {
     res.header('Access-Control-Allow-Origin', origin);
   } else if (allowedOrigins.length > 0) {
     res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
   }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, ngrok-skip-browser-warning');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 

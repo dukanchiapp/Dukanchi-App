@@ -37,3 +37,13 @@ export const getAllowedOrigins = (): string[] => {
   }
   return ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
 };
+
+// Returns true if origin is an ngrok tunnel (dev only)
+export const isNgrokOrigin = (origin: string): boolean => {
+  if (process.env.NODE_ENV === 'production') return false;
+  return (
+    origin.includes('.ngrok-free.dev') ||
+    origin.includes('.ngrok.io') ||
+    origin.includes('.ngrok.app')
+  );
+};
