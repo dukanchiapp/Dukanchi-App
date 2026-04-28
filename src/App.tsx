@@ -38,20 +38,25 @@ function FlowController() {
   useEffect(() => {
     if (isLoading) return;
 
+    // /landing is always accessible
     if (location.pathname.startsWith('/landing')) return;
-    if (location.pathname.startsWith('/signup')) return;
-    if (location.pathname.startsWith('/login')) return;
 
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
     const isLoggedIn = !!user;
 
-    if (!isStandalone && !isLoggedIn) {
+    // Logged in → no redirect needed
+    if (isLoggedIn) return;
+
+    // Browser + not logged in → always go to /landing (no exceptions)
+    if (!isStandalone) {
       window.location.href = '/landing';
-    } else if (isStandalone && !isLoggedIn) {
-      if (location.pathname !== '/login' && location.pathname !== '/signup') {
-        navigate('/signup', { replace: true });
-      }
+      return;
+    }
+
+    // Standalone (PWA) + not logged in → go to /signup unless already on auth page
+    if (location.pathname !== '/login' && location.pathname !== '/signup') {
+      navigate('/signup', { replace: true });
     }
   }, [user, isLoading, location.pathname, navigate]);
 
