@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-04-28 — Session 18 (Landing page CTA removal and PWA refresh button)
+
+### New Files
+- `src/components/PWARefreshButton.tsx` — floating refresh button for standalone mode
+
+### Modified Files
+- `public/landing.html` — removed "Free mein Join Karo" nav CTA button
+- `src/App.tsx` — added `PWARefreshButton` globally
+
+---
+
 ## 2026-04-28 — Session 17 (PWA landing page — static HTML, smart button, redirect fixes)
 
 ### New Files

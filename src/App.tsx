@@ -25,6 +25,7 @@ import { LocationProvider } from './context/LocationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import PWARefreshButton from './components/PWARefreshButton';
 import { useAuth } from './context/AuthContext';
 
 // FIX 5: Redirect unauthenticated standalone (PWA) users to /signup
@@ -67,6 +68,7 @@ export default function App() {
               </Routes>
               <BottomNav />
               <PWAInstallPrompt />
+              <PWARefreshButton />
             </div>
           </NotificationProvider>
           </LocationProvider>

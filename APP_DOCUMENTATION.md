@@ -519,7 +519,7 @@ The script installs: Node.js 22, PostgreSQL 14, Redis, Nginx, Certbot (SSL), PM2
 
 ---
 
-*Last updated: 2026-04-25 (Session 9)*
+*Last updated: 2026-04-28 (Session 18)*
 
 ### Architecture Update (2026-04-24)
 The application has been successfully migrated to a Domain-Driven Design (DDD). The monolithic server.ts has been deprecated as a router and now serves strictly as the application entry point. All business logic and routes have been extracted into the `src/modules/` directory, background jobs into `src/workers/`, and real-time events into `src/config/socket-listeners.ts`.
@@ -528,3 +528,7 @@ The application has been successfully migrated to a Domain-Driven Design (DDD). 
 - JWT authentication migrated from `localStorage` to secure `httpOnly` cookies (XSS-proof).
 - Pino structured logging added: pretty-print in dev, JSON in production. Sensitive fields auto-redacted.
 - Sentry fully wired: initialized before any other imports in `server.ts`, request/error handlers in `src/app.ts`.
+
+### Session 18 Update (2026-04-28)
+- PWA landing page (`public/landing.html`) updated to automatically redirect to `/signup` after successful installation, and CTA button removed from navigation.
+- Added a floating `PWARefreshButton` component that appears globally in the bottom-right corner, only when the app is running in PWA (standalone) mode.
