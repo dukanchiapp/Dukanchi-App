@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-04-29 — Session 34 (Critical chat fix + refresh buttons)
+
+- `Chat.tsx`: replaced `localStorage.getItem('user')` with `useAuth()` — `currentUserId` was always `''` causing messages to never show/send
+- `RefreshButton.tsx`: new reusable component (black pill, SVG icon + "Refresh" text)
+- `Messages.tsx`: RefreshButton replaces decorative MessageCircle button in header
+- `StoreProfile.tsx`: RefreshButton added to floating header (between back and share)
+- `Profile.tsx`: RefreshButton added to profile header (before NotificationBell)
+- User routes `/:id` and `/:id/store` already existed — no changes needed
+
+---
+
 ## 2026-04-29 — Session 33 (7 phone testing fixes)
 
 - `StoreProfile.tsx`: Direction button — black prominent style with shadow

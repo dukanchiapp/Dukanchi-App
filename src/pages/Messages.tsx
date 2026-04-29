@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import RefreshButton from '../components/RefreshButton';
 import { MessageCircle, Search, X, ChevronRight } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
@@ -125,16 +126,7 @@ export default function MessagesPage() {
             <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
               Messages
             </h1>
-            <button
-              className="flex items-center justify-center"
-              style={{
-                width: 38, height: 38, borderRadius: '50%',
-                background: 'var(--dk-bg-soft)',
-                border: '0.5px solid var(--dk-border)',
-              }}
-            >
-              <MessageCircle size={18} style={{ color: 'var(--dk-accent)' }} />
-            </button>
+            <RefreshButton />
           </div>
 
           {/* Search */}

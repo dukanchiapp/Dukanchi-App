@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MapPin, Phone, Clock, MessageCircle, ArrowLeft, Navigation, UserPlus, UserCheck, Share2, X, Star, Heart, Package, ExternalLink } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import ReviewModal from '../components/ReviewModal';
+import RefreshButton from '../components/RefreshButton';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useToast } from '../context/ToastContext';
 
@@ -188,7 +189,7 @@ export default function StoreProfilePage() {
             )}
           </div>
 
-          {/* Floating back + share */}
+          {/* Floating back + refresh + share */}
           <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-12 z-10">
             <button
               onClick={() => navigate(-1)}
@@ -197,17 +198,20 @@ export default function StoreProfilePage() {
             >
               <ArrowLeft size={18} color="white" />
             </button>
-            <button
-              onClick={() => {
-                const url = `${window.location.origin}/store/${store.id}`;
-                if (navigator.share) navigator.share({ title: store.storeName, url });
-                else { navigator.clipboard.writeText(url); showToast('Link copied!', { type: 'success' }); }
-              }}
-              className="flex items-center justify-center"
-              style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
-            >
-              <Share2 size={18} color="white" />
-            </button>
+            <div className="flex items-center gap-2">
+              <RefreshButton />
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/store/${store.id}`;
+                  if (navigator.share) navigator.share({ title: store.storeName, url });
+                  else { navigator.clipboard.writeText(url); showToast('Link copied!', { type: 'success' }); }
+                }}
+                className="flex items-center justify-center"
+                style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
+              >
+                <Share2 size={18} color="white" />
+              </button>
+            </div>
           </div>
 
           {/* Logo overlapping cover bottom */}

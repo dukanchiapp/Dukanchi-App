@@ -9,6 +9,7 @@ import KYCForm from '../components/KYCForm';
 import StarRating from '../components/StarRating';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useToast } from '../context/ToastContext';
+import RefreshButton from '../components/RefreshButton';
 
 export default function ProfilePage() {
   const [store, setStore] = useState<any>(null);
@@ -473,7 +474,8 @@ export default function ProfilePage() {
           <div className="sticky top-0 z-20 px-4 pt-5 pb-3" style={{ background: 'white' }}>
             <div className="flex items-center justify-between">
               <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Profile</h1>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <RefreshButton />
                 <NotificationBell />
                 <Link to="/settings">
                   <Settings size={20} style={{ color: 'var(--dk-text-primary)' }} />

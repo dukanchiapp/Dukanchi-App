@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle, ShoppingBag, Tag } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
@@ -126,6 +127,8 @@ function ReferredPostBanner({ post, onDismiss }: {
 export default function ChatPage() {
   const { userId } = useParams();
   const location = useLocation();
+  const { user } = useAuth();
+  const currentUserId = user?.id || '';
   const referredPostFromState = (location.state as any)?.referredPost ?? null;
   const userNameFromState = (location.state as any)?.userName ?? '';
 
@@ -144,9 +147,6 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const userStr = localStorage.getItem('user');
-  const currentUser = userStr ? JSON.parse(userStr) : null;
-  const currentUserId = currentUser?.id || '';
 
   // Fetch receiver info once
   useEffect(() => {
