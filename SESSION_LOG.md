@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-04-30 — Session 37 (Smart feed ranking + unified categories)
+
+- `post.service.ts`: `haversineKm()` helper added; `getFeed` now fetches `limit * 3` candidates, scores each post (freshness 40% + distance 25% + engagement 20% + follow 15% + opening post +5%), sorts by score, returns top `limit` — replaces pure chronological feed
+- `src/constants/categories.ts`: new single source of truth — `CATEGORIES` array with `value/label/fullLabel/emoji/color/aliases`, `matchCategory()` fuzzy helper, `CATEGORY_CHIPS` for UI
+- `Map.tsx`: removed local CATEGORY_CHIPS + CATEGORY_COLORS; imports from constants; filter uses `matchCategory()`; markers use `catDef.color` + `catDef.emoji`
+- `Search.tsx`: removed local CATEGORIES array; imports `ALL_CATEGORIES` from constants + local `CATEGORY_BG` color map for grid UI; filter uses `matchCategory()`; filter panel chips now cover all 11 categories
+- `RetailerDashboard.tsx`: removed 29-item STORE_CATEGORIES array; select now maps from `CATEGORIES` using `fullLabel` as display text
+- `public/sw.js`: `dukanchi-v4` → `dukanchi-v5` (cache bust for category changes)
+
+---
+
 ## 2026-04-29 — Session 36 (Remove PWARefreshButton, chat fix, no translate)
 
 - `PWARefreshButton.tsx`: deleted; removed import + JSX from `App.tsx` (superseded by per-page `RefreshButton`)

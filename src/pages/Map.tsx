@@ -13,6 +13,7 @@ import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation } from '../context/LocationContext';
+import { CATEGORIES, CATEGORY_CHIPS, matchCategory } from '../constants/categories';
 
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
@@ -28,27 +29,6 @@ const MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'water', stylers: [{ color: '#c9e8f5' }] },
 ];
 
-const CATEGORY_CHIPS = [
-  { label: 'All', emoji: '', value: '' },
-  { label: 'Food', emoji: '🍕', value: 'Food' },
-  { label: 'Electronics', emoji: '📱', value: 'Electronics' },
-  { label: 'Fashion', emoji: '👕', value: 'Fashion' },
-  { label: 'Grocery', emoji: '🛒', value: 'Grocery' },
-  { label: 'Beauty', emoji: '💄', value: 'Beauty' },
-  { label: 'Sports', emoji: '⚽', value: 'Sports' },
-  { label: 'Health', emoji: '💊', value: 'Health' },
-];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Food: '#FF6B35',
-  Electronics: '#4F46E5',
-  Fashion: '#EC4899',
-  Grocery: '#10B981',
-  Beauty: '#F59E0B',
-  Sports: '#3B82F6',
-  Health: '#06B6D4',
-  General: '#6B7280',
-};
 
 export default function MapPage() {
   const [stores, setStores] = useState<any[]>([]);
@@ -110,7 +90,7 @@ export default function MapPage() {
   };
 
   const filteredStores = stores.filter(s => {
-    if (selectedCategory && s.category?.toLowerCase() !== selectedCategory.toLowerCase()) return false;
+    if (!matchCategory(s.category, selectedCategory)) return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -238,9 +218,9 @@ export default function MapPage() {
 
                 {/* Store markers */}
                 {validStores.map(store => {
-                  const pinColor = CATEGORY_COLORS[store.category] || '#FF6B35';
-                  const catChip = CATEGORY_CHIPS.find(c => c.value === store.category);
-                  const emoji = catChip?.emoji || '🏪';
+                  const catDef = CATEGORIES.find(c => matchCategory(store.category, c.value));
+                  const pinColor = catDef?.color || '#FF6B35';
+                  const emoji = catDef?.emoji || '🏪';
                   return (
                     <Marker
                       key={store.id}
@@ -456,7 +436,7 @@ export default function MapPage() {
                     {validStores.slice(0, 8).map(store => {
                       const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : null;
                       const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
-                      const catChip = CATEGORY_CHIPS.find(c => c.value && store.category?.toLowerCase().includes(c.value.toLowerCase()));
+                      const catDef2 = CATEGORIES.find(c => matchCategory(store.category, c.value));
                       return (
                         <button key={store.id} onClick={() => flyToStore(store)} className="flex-shrink-0 text-left overflow-hidden" style={{ width: 145, background: 'var(--dk-bg)', borderRadius: 14, border: selectedStore?.id === store.id ? '1.5px solid var(--dk-accent)' : '0.5px solid var(--dk-border)' }}>
                           <div style={{ width: '100%', height: 56, background: 'var(--dk-surface)', position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden' }}>
@@ -468,7 +448,7 @@ export default function MapPage() {
                               <span style={{ width: 6, height: 6, borderRadius: '50%', background: sStatus ? statusColor(sStatus.color) : '#EF4444', flexShrink: 0 }} />
                               <span style={{ fontSize: 10, fontWeight: 600, color: sStatus ? statusColor(sStatus.color) : '#EF4444' }}>{sStatus?.label ?? 'Closed'}</span>
                             </div>
-                            <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>{dist}{catChip ? ` · ${catChip.emoji} ${store.category}` : ''}</p>
+                            <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>{dist}{catDef2 ? ` · ${catDef2.emoji} ${catDef2.label}` : ''}</p>
                           </div>
                         </button>
                       );

@@ -2,6 +2,14 @@ import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 import { notificationQueue } from "../../config/bullmq";
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export class PostService {
   static async createPost(data: any) {
     const postData: any = {
@@ -34,6 +42,8 @@ export class PostService {
   static async getFeed(userId: string, userRole: string, options: any) {
     const { feedType, locationRange, lat, lng, page, limit } = options;
     const skip = (page - 1) * limit;
+    const userLat = lat ? parseFloat(lat) : null;
+    const userLng = lng ? parseFloat(lng) : null;
 
     let allowedRoles: string[] = [];
     if (userRole === 'customer') allowedRoles = ['retailer'];
@@ -43,10 +53,8 @@ export class PostService {
 
     let storeFilter: any = { owner: { role: { in: allowedRoles }, isBlocked: false } };
 
-    if (locationRange && locationRange !== 'all' && lat && lng) {
+    if (locationRange && locationRange !== 'all' && userLat && userLng) {
       const rangeKm = parseFloat(locationRange);
-      const userLat = parseFloat(lat);
-      const userLng = parseFloat(lng);
       const latDelta = rangeKm / 111;
       const lngDelta = rangeKm / (111 * Math.cos(userLat * Math.PI / 180));
       storeFilter = {
@@ -58,12 +66,15 @@ export class PostService {
 
     let whereClause: any = { store: storeFilter };
 
+    // Fetch follows once — used both for filtering (following tab) and scoring
+    const follows = await prisma.follow.findMany({ where: { userId }, select: { storeId: true } });
+    const followedStoreIds = new Set(follows.map(f => f.storeId));
+
     if (feedType === 'following') {
-      const follows = await prisma.follow.findMany({ where: { userId }, select: { storeId: true } });
       whereClause.storeId = { in: follows.map(f => f.storeId) };
     }
 
-    const [total, posts] = await Promise.all([
+    const [total, rawPosts] = await Promise.all([
       prisma.post.count({ where: whereClause }),
       prisma.post.findMany({
         where: whereClause,
@@ -75,9 +86,29 @@ export class PostService {
         },
         orderBy: { createdAt: 'desc' },
         skip,
-        take: limit,
+        take: limit * 3,
       }),
     ]);
+
+    // Score and rank: freshness(40%) + distance(25%) + engagement(20%) + follow(15%) + opening bonus(+5%)
+    const now = Date.now();
+    const scored = rawPosts.map(p => {
+      const ageHours = (now - new Date(p.createdAt).getTime()) / 3_600_000;
+      const freshness = Math.max(0, 1 - ageHours / 168); // decays over 7 days
+
+      let distScore = 0;
+      if (userLat && userLng && p.store.latitude && p.store.longitude) {
+        distScore = Math.max(0, 1 - haversineKm(userLat, userLng, p.store.latitude, p.store.longitude) / 20);
+      }
+
+      const engagement = Math.min(1, p._count.likes / 50);
+      const isFollowed = followedStoreIds.has(p.storeId) ? 1 : 0;
+      const openingBonus = p.isOpeningPost ? 0.05 : 0;
+      const score = freshness * 0.40 + distScore * 0.25 + engagement * 0.20 + isFollowed * 0.15 + openingBonus;
+      return { ...p, _score: score };
+    });
+    scored.sort((a, b) => b._score - a._score);
+    const posts = scored.slice(0, limit);
 
     return {
       posts: posts.map(p => ({ ...p, isOwnPost: p.store.ownerId === userId })),

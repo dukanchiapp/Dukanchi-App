@@ -7,18 +7,20 @@ import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation, reverseGeocode } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 
+import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
+
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
 
-const CATEGORIES = [
-  { label: 'Electronics', emoji: '📱', bg: '#FFF1E6', color: '#7A3810' },
-  { label: 'Fashion', emoji: '👕', bg: '#E1F5EE', color: '#0F6E56' },
-  { label: 'Beauty', emoji: '💄', bg: '#FBEAF0', color: '#72243E' },
-  { label: 'Grocery', emoji: '🛒', bg: '#EAF3DE', color: '#27500A' },
-  { label: 'Food', emoji: '🍕', bg: '#FAEEDA', color: '#633806' },
-  { label: 'Home', emoji: '🏠', bg: '#E6F1FB', color: '#0C447C' },
-  { label: 'Health', emoji: '💊', bg: '#EEEDFE', color: '#3C3489' },
-  { label: 'Jewellery', emoji: '💍', bg: '#FCEBEB', color: '#791F1F' },
-];
+const CATEGORY_BG: Record<string, { bg: string; color: string }> = {
+  Electronics: { bg: '#FFF1E6', color: '#7A3810' },
+  Fashion:     { bg: '#E1F5EE', color: '#0F6E56' },
+  Beauty:      { bg: '#FBEAF0', color: '#72243E' },
+  Grocery:     { bg: '#EAF3DE', color: '#27500A' },
+  Food:        { bg: '#FAEEDA', color: '#633806' },
+  Home:        { bg: '#E6F1FB', color: '#0C447C' },
+  Health:      { bg: '#EEEDFE', color: '#3C3489' },
+  Jewellery:   { bg: '#FCEBEB', color: '#791F1F' },
+};
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
@@ -161,8 +163,7 @@ export default function SearchPage() {
 
   const filteredStores = results.stores
     .filter(s => {
-      if (selectedCategory && s.category?.toLowerCase() !== selectedCategory.toLowerCase())
-        return false;
+      if (!matchCategory(s.category, selectedCategory)) return false;
       return true;
     })
     .sort((a, b) => {
@@ -407,18 +408,18 @@ export default function SearchPage() {
               {/* Category */}
               <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--dk-text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Category</p>
               <div className="flex flex-wrap gap-2 mb-4">
-                {['Electronics', 'Fashion', 'Grocery', 'Food', 'Beauty', 'Health', 'Jewellery'].map(cat => (
+                {ALL_CATEGORIES.map(cat => (
                   <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(selectedCategory === cat ? '' : cat)}
+                    key={cat.value}
+                    onClick={() => setSelectedCategory(selectedCategory === cat.value ? '' : cat.value)}
                     className="px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={{
-                      background: selectedCategory === cat ? 'var(--dk-accent)' : 'var(--dk-surface)',
-                      color: selectedCategory === cat ? 'white' : 'var(--dk-text-secondary)',
+                      background: selectedCategory === cat.value ? 'var(--dk-accent)' : 'var(--dk-surface)',
+                      color: selectedCategory === cat.value ? 'white' : 'var(--dk-text-secondary)',
                       border: '0.5px solid var(--dk-border)',
                     }}
                   >
-                    {cat}
+                    {cat.emoji} {cat.label}
                   </button>
                 ))}
               </div>
@@ -482,14 +483,14 @@ export default function SearchPage() {
                   Browse by category
                 </p>
                 <div className="grid grid-cols-4 gap-2">
-                  {CATEGORIES.map(cat => (
+                  {ALL_CATEGORIES.filter(c => CATEGORY_BG[c.value]).map(cat => (
                     <button
-                      key={cat.label}
+                      key={cat.value}
                       onClick={() => setQuery(cat.label)}
                       className="flex flex-col items-center justify-center gap-1 p-3 transition-opacity active:opacity-70"
                       style={{
-                        background: cat.bg,
-                        color: cat.color,
+                        background: CATEGORY_BG[cat.value].bg,
+                        color: CATEGORY_BG[cat.value].color,
                         borderRadius: 14,
                       }}
                     >

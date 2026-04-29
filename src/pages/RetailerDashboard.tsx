@@ -5,14 +5,7 @@ import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import StarRating from '../components/StarRating';
-
-const STORE_CATEGORIES = [
-  'General', 'Electronics', 'Fashion', 'Grocery', 'Home & Garden', 'Sports', 'Beauty',
-  'Vehicles', 'Jewellery', 'Entertainment', 'Health & Wellness', 'Education', 'Services',
-  'Food & Restaurant', 'Furniture', 'Hardware', 'Pharmacy', 'Stationery', 'Toys',
-  'Mobile & Accessories', 'Clothing', 'Footwear', 'Books', 'Pet Supplies', 'Optical',
-  'Building Materials', 'Auto Parts', 'Agricultural', 'Other'
-];
+import { CATEGORIES } from '../constants/categories';
 
 export default function RetailerDashboard() {
   const [loading, setLoading] = useState(true);
@@ -629,8 +622,8 @@ export default function RetailerDashboard() {
                   onChange={(e) => setSelectedCategory(e.target.value)}
                   className="w-full p-3 rounded-xl outline-none text-sm font-medium dk-input"
                 >
-                  {STORE_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.fullLabel}</option>
                   ))}
                 </select>
               </div>
