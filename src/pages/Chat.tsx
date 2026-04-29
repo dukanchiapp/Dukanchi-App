@@ -176,7 +176,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!currentUserId || !userId) return;
 
-    fetch(`/api/messages/${currentUserId}/${userId}`, { credentials: 'include', 
+    fetch(`/api/messages/${userId}`, { credentials: 'include',
       
     })
       .then(res => res.ok ? res.json() : { messages: [] })

@@ -1,3 +1,8 @@
+// GOOGLE MAPS SETUP: To fix "This page didn't load Google Maps correctly" / map blank on phone:
+// 1. Go to console.cloud.google.com → APIs & Services → Credentials → your Maps JS API key
+// 2. Under "Application restrictions" → HTTP referrers, add:
+//    localhost:3000/*  |  localhost:5173/*  |  192.168.1.*/*  |  *.ngrok-free.dev/*  |  *.ngrok.io/*
+// OR: Set restriction to "None" for development (re-restrict before production)
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerComponent } from '@react-google-maps/api';
 
@@ -193,8 +198,13 @@ export default function MapPage() {
                 style={{ background: 'var(--dk-surface)' }}
               >
                 <div className="text-center px-4">
-                  <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', fontWeight: 600 }}>Map load karne mein error</p>
-                  <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Google Maps API key check karein</p>
+                  <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', fontWeight: 600 }}>Map load nahi hua</p>
+                  <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>
+                    Google Maps API key configure karein — console.cloud.google.com
+                  </p>
+                  <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>
+                    HTTP referrers mein apna domain add karein
+                  </p>
                 </div>
               </div>
             ) : isLoaded && userLocation ? (

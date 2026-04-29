@@ -1,31 +1,23 @@
 import { Request, Response } from "express";
 import { MessageService } from "./message.service";
-import { prisma } from "../../config/prisma";
-import { canChat } from "../../middlewares/auth.middleware";
 import { logger } from "../../lib/logger";
 
 export class MessageController {
   static async getMessages(req: Request, res: Response) {
     try {
-      const { userId, otherUserId } = req.params;
       const authenticatedUserId = (req as any).user.userId;
-      const authenticatedUserRole = (req as any).user.role;
-
-      if (authenticatedUserId !== userId && authenticatedUserId !== otherUserId) {
-        return res.status(403).json({ error: "Unauthorized access to these messages" });
-      }
-
-      const otherUser = await prisma.user.findUnique({ where: { id: otherUserId } });
-      if (!otherUser || !canChat(authenticatedUserRole, otherUser.role)) {
-        return res.status(403).json({ error: "Role permissions do not allow chatting with this user" });
-      }
-
-      const { before, limit = "100" } = req.query as any;
-      const result = await MessageService.getMessages(userId, otherUserId, before, parseInt(limit));
+      const { otherUserId } = req.params;
+      const { before, limit = '100' } = req.query as any;
+      const result = await MessageService.getMessages(
+        authenticatedUserId,
+        otherUserId,
+        before,
+        parseInt(limit)
+      );
       res.json(result);
     } catch (error) {
-      logger.error({ err: error }, "Failed to fetch messages");
-      res.status(500).json({ error: "Failed to fetch messages" });
+      logger.error({ err: error }, 'Failed to fetch messages');
+      res.status(500).json({ error: 'Failed to fetch messages' });
     }
   }
 

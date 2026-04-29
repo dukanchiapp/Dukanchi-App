@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-04-29 — Session 32 (Chat fix + refresh btn + maps note)
+
+- `message.controller.ts`: `getMessages` uses `authenticatedUserId` from token, removes strict URL param check that caused 403
+- `message.routes.ts`: simplified `/:userId/:otherUserId` → `/:otherUserId`
+- `Chat.tsx`: updated fetch URL from `/api/messages/${myId}/${otherId}` → `/api/messages/${otherId}`
+- `AppHeader.tsx`: refresh button (circular, SVG icon) added before NotificationBell
+- `Map.tsx`: documented Google API key HTTP referrer steps as top comment; improved loadError UI
+
+---
+
 ## 2026-04-29 — Session 31 (Phone testing bug fixes)
 
 - `store.service.ts`: `toggleFollow` uses composite key `userId_storeId` for delete (was using `.id` which doesn't exist on Follow model)

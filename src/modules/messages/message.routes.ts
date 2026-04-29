@@ -9,7 +9,7 @@ const router = Router();
 
 // /api/messages
 router.get("/conversations", authenticateToken, MessageController.getConversations);
-router.get("/:userId/:otherUserId", authenticateToken, MessageController.getMessages);
+router.get("/:otherUserId", authenticateToken, MessageController.getMessages);
 router.post("/", authenticateToken, messageLimiter, validate(sendMessageSchema), MessageController.sendMessage);
 
 export const messageRoutes = router;
