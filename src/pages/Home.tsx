@@ -64,6 +64,12 @@ export default function HomePage() {
   const { location: userLocCtx } = useUserLocation();
   const userLoc = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
   
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
   // Sticky bar height calculation
   const topBarRef = useRef<HTMLDivElement>(null);
   const [topBarHeight, setTopBarHeight] = useState(0);
@@ -149,49 +155,76 @@ export default function HomePage() {
   const isOwnPost = (post: any) => post.isOwnPost === true;
   const getStoreLink = (post: any) => (isOwnPost(post) ? '/profile' : `/store/${post.storeId}`);
 
-  const fetchFeed = async () => {
+  const fetchFeed = async (pageNum = 1) => {
     if (!token) return;
-    setLoading(true);
+    if (pageNum === 1) setLoading(true);
+    else setLoadingMore(true);
     try {
-      const intRes = await fetch('/api/me/interactions', { credentials: 'include', 
-        
-      });
+      const intRes = await fetch('/api/me/interactions', { credentials: 'include' });
       if (intRes.status === 401 || intRes.status === 403) { logout(); return; }
       setInteractions(await intRes.json());
 
       if (feedType === 'saved') {
-        const savedRes = await fetch(`/api/users/${user?.id}/saved`, { credentials: 'include', 
-          
-        });
+        const savedRes = await fetch(`/api/users/${user?.id}/saved`, { credentials: 'include' });
         if (savedRes.status === 401 || savedRes.status === 403) { logout(); return; }
         const savedData = await savedRes.json();
         setPosts(Array.isArray(savedData.posts) ? savedData.posts : []);
-      } else {
-        let lat = 0, lng = 0;
-        if (locationRange !== 'all' && userLoc) {
-          lat = userLoc.lat;
-          lng = userLoc.lng;
-        }
-        const postsRes = await fetch(
-          `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${lat}&lng=${lng}`, { credentials: 'include',   }
-        );
-        if (postsRes.status === 401 || postsRes.status === 403) { logout(); return; }
-        const postsData = await postsRes.json();
-        setPosts(
-          Array.isArray(postsData.posts)
-            ? postsData.posts
-            : Array.isArray(postsData)
-            ? postsData
-            : []
-        );
+        setHasMore(false);
+        return;
       }
+
+      let lat = 0, lng = 0;
+      if (locationRange !== 'all' && userLoc) {
+        lat = userLoc.lat;
+        lng = userLoc.lng;
+      }
+      const postsRes = await fetch(
+        `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${lat}&lng=${lng}&page=${pageNum}&limit=15`,
+        { credentials: 'include' }
+      );
+      if (postsRes.status === 401 || postsRes.status === 403) { logout(); return; }
+      const postsData = await postsRes.json();
+      const newPosts = Array.isArray(postsData.posts) ? postsData.posts : [];
+
+      if (pageNum === 1) {
+        setPosts(newPosts);
+      } else {
+        setPosts(prev => {
+          const existingIds = new Set(prev.map((p: any) => p.id));
+          return [...prev, ...newPosts.filter((p: any) => !existingIds.has(p.id))];
+        });
+      }
+      setHasMore(pageNum < (postsData.pagination?.totalPages || 1));
     } catch {
-      setPosts([]);
+      if (pageNum === 1) setPosts([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
     }
-    setLoading(false);
   };
 
-  useEffect(() => { fetchFeed(); }, [token, feedType, locationRange, userLocCtx?.lat, userLocCtx?.lng]);
+  useEffect(() => {
+    setPage(1);
+    setHasMore(true);
+    fetchFeed(1);
+  }, [token, feedType, locationRange, userLocCtx?.lat, userLocCtx?.lng]);
+
+  // IntersectionObserver — triggers next page load when sentinel comes into view
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    observerRef.current?.disconnect();
+
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchFeed(nextPage);
+      }
+    }, { threshold: 0.5 });
+
+    observerRef.current.observe(sentinelRef.current);
+    return () => observerRef.current?.disconnect();
+  }, [hasMore, loadingMore, loading, page, feedType, locationRange]);
 
   // Update top sticky bar height for the tabs to stick just beneath it
   useEffect(() => {
@@ -776,6 +809,37 @@ export default function HomePage() {
                 </div>
               );
             })
+          )}
+
+          {/* Infinite scroll sentinel */}
+          <div ref={sentinelRef} style={{ height: 1 }} />
+
+          {/* Loading more indicator */}
+          {loadingMore && (
+            <div className="flex justify-center py-6">
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                {[0, 1, 2].map(i => (
+                  <div
+                    key={i}
+                    style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: 'var(--dk-accent)',
+                      animation: 'pulse 1.2s ease-in-out infinite',
+                      animationDelay: `${i * 0.2}s`,
+                      opacity: 0.7,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* End of feed */}
+          {!hasMore && posts.length > 0 && !loadingMore && (
+            <div className="flex flex-col items-center py-8 gap-1">
+              <span style={{ fontSize: 20 }}>🎉</span>
+              <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>Sab posts dekh liye!</p>
+            </div>
           )}
         </main>
       </div>

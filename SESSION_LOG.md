@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-04-30 — Session 39 (Infinite scroll home feed)
+
+- `Home.tsx`: IntersectionObserver infinite scroll — sentinel div at bottom of feed
+- `fetchFeed(pageNum)`: accepts page number, appends posts on scroll, deduplicates by id, sets `hasMore` from `pagination.totalPages`
+- `loadingMore` state drives 3-dot bounce indicator while fetching next page
+- End-of-feed "Sab posts dekh liye!" message when `!hasMore && posts.length > 0`
+- Reset to page 1 whenever feedType / locationRange / location changes
+
+---
+
 ## 2026-04-30 — Session 38 (Web Push Notifications)
 
 - `npm install web-push @types/web-push`
