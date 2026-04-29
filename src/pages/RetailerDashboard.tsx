@@ -49,6 +49,7 @@ export default function RetailerDashboard() {
   const aiAudioChunksRef = useRef<Blob[]>([]);
   const aiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [descriptionValue, setDescriptionValue] = useState('');
 
   const [kycStatus, setKycStatus] = useState<string>('none');
   const [kycNotes, setKycNotes] = useState<string>('');
@@ -87,6 +88,7 @@ export default function RetailerDashboard() {
           if (data && data.id) {
             setStoreId(data.id);
             setStore(data);
+            setDescriptionValue(data.description || '');
             setMapLat(data.latitude || 0);
             setMapLng(data.longitude || 0);
             setSelectedCategory(data.category || 'General');
@@ -653,9 +655,14 @@ export default function RetailerDashboard() {
                   className="w-full p-3 rounded-xl outline-none text-sm leading-relaxed dk-input"
                   rows={3}
                   defaultValue={store?.description || ''}
+                  maxLength={350}
                   placeholder="Tell customers about your business..."
                   required
+                  onChange={(e) => setDescriptionValue(e.target.value)}
                 />
+                <span style={{ fontSize: 11, color: descriptionValue.length > 320 ? '#EF4444' : '#888', textAlign: 'right', display: 'block', marginTop: 2 }}>
+                  {descriptionValue.length}/350
+                </span>
               </div>
 
               {/* Address */}
@@ -991,6 +998,7 @@ export default function RetailerDashboard() {
                       type="button"
                       onClick={() => {
                         if (descriptionRef.current) descriptionRef.current.value = aiDescResult!.bio;
+                        setDescriptionValue(aiDescResult!.bio);
                         setAiModalOpen(false);
                       }}
                       className="w-full py-2 rounded-xl font-bold text-sm"

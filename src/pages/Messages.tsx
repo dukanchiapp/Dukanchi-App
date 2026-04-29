@@ -242,6 +242,7 @@ export default function MessagesPage() {
               <Link
                 key={conv.id}
                 to={`/chat/${conv.userId}`}
+                state={{ userName: conv.name }}
                 className="flex items-center gap-3 p-3 bg-white rounded-xl"
                 style={{ border: '0.5px solid var(--dk-border)' }}
               >

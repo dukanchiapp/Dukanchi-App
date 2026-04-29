@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-04-29 — Session 33 (7 phone testing fixes)
+
+- `StoreProfile.tsx`: Direction button — black prominent style with shadow
+- `Messages.tsx`: passes `state={{ userName: conv.name }}` to `/chat/:id` navigation
+- `Chat.tsx`: reads `userNameFromState` from `location.state` for immediate name display — no more "Loading..."
+- `AppHeader.tsx`: refresh button → black pill with "Refresh" text
+- `geminiVision.ts`: bio prompt "STRICTLY under 320 chars, complete sentence"; slice 180→350
+- `RetailerDashboard.tsx`: description textarea `maxLength={350}` + char counter (red at 320+)
+- `Map.tsx`: height 300→380, removed `mt-3` gap below map
+- `index.html`: `user-scalable=no, maximum-scale=1.0` — no pinch zoom
+
+---
+
 ## 2026-04-29 — Session 32 (Chat fix + refresh btn + maps note)
 
 - `message.controller.ts`: `getMessages` uses `authenticatedUserId` from token, removes strict URL param check that caused 403

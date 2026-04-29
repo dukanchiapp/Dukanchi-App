@@ -150,7 +150,7 @@ export async function generateStoreDescription(
 Store name: ${storeName}, Category: ${category}
 User description: ${description}
 Return ONLY valid JSON:
-- bio: engaging store bio in Hinglish, friendly tone, mention local/trusted angle, max 180 chars
+- bio: engaging store bio in Hinglish, friendly tone, mention local/trusted angle, STRICTLY under 320 characters, complete sentence, no cutoff
 - tagline: catchy 5-7 word Hindi/English tagline`,
             },
           ],
@@ -163,7 +163,7 @@ Return ONLY valid JSON:
     const parsed = safeParseJSON(text);
     if (!parsed) return defaults;
     return {
-      bio: String(parsed.bio || '').slice(0, 180),
+      bio: String(parsed.bio || '').slice(0, 350),
       tagline: String(parsed.tagline || '').slice(0, 80),
     };
   } catch (err: any) {

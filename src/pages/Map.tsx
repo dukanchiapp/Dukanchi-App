@@ -190,7 +190,7 @@ export default function MapPage() {
         <div className="px-4">
           <div
             className="relative overflow-hidden"
-            style={{ borderRadius: 20, height: 300 }}
+            style={{ borderRadius: 20, height: 380 }}
           >
             {loadError ? (
               <div
@@ -303,7 +303,7 @@ export default function MapPage() {
 
         {/* ── Selected store card ── */}
         {selectedStore && (
-          <div className="px-4 mt-3">
+          <div className="px-4 mt-0">
             <div
               className="rounded-2xl p-4"
               style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}

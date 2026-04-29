@@ -352,10 +352,23 @@ export default function StoreProfilePage() {
                 href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl mt-1"
-                style={{ background: 'rgba(255,107,53,0.1)', color: 'var(--dk-accent)', fontWeight: 600, fontSize: 13 }}
+                style={{
+                  background: '#1A1A1A',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  borderRadius: 14,
+                  padding: '12px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                  marginTop: 8,
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+                }}
               >
-                <Navigation size={14} />
+                <Navigation size={16} />
                 Direction to Store
               </a>
             )}

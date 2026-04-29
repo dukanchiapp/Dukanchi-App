@@ -127,6 +127,7 @@ export default function ChatPage() {
   const { userId } = useParams();
   const location = useLocation();
   const referredPostFromState = (location.state as any)?.referredPost ?? null;
+  const userNameFromState = (location.state as any)?.userName ?? '';
 
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -134,8 +135,8 @@ export default function ChatPage() {
   const [imagePreview, setImagePreview] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const [receiverName, setReceiverName] = useState('');
-  const [receiverInitial, setReceiverInitial] = useState('');
+  const [receiverName, setReceiverName] = useState(userNameFromState);
+  const [receiverInitial, setReceiverInitial] = useState(userNameFromState.charAt(0).toUpperCase());
   const [receiverLogo, setReceiverLogo] = useState('');
   // Referred post stays visible until first message is sent (then it becomes part of history)
   const [referredPost, setReferredPost] = useState<typeof referredPostFromState>(referredPostFromState);
