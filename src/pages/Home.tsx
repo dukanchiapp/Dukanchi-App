@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useUserLocation } from '../context/LocationContext';
 import LocationPicker from '../components/LocationPicker';
+import { PostCardSkeleton } from '../components/Skeleton';
 
 const renderCaption = (caption: string) => {
   const m = caption.match(/^([^.!?]+[.!?])([\s\S]*)$/);
@@ -512,30 +513,8 @@ export default function HomePage() {
         {/* ── Feed ── */}
         <main className="px-4 pt-4 space-y-4">
           {loading ? (
-            <div className="space-y-4">
-              {[1, 2].map(i => (
-                <div
-                  key={i}
-                  className="bg-white overflow-hidden animate-pulse"
-                  style={{
-                    border: '0.5px solid var(--dk-border)',
-                    borderRadius: 'var(--dk-radius-xl)',
-                  }}
-                >
-                  <div className="p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex-shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 bg-gray-200 rounded w-1/3" />
-                      <div className="h-2 bg-gray-200 rounded w-1/4" />
-                    </div>
-                  </div>
-                  <div style={{ aspectRatio: '4/5', background: '#e5e7eb' }} />
-                  <div className="p-3 space-y-2">
-                    <div className="h-5 bg-gray-200 rounded w-full" />
-                    <div className="h-3 bg-gray-200 rounded w-3/4" />
-                  </div>
-                </div>
-              ))}
+            <div style={{ paddingTop: 8 }}>
+              {[1, 2, 3].map(i => <PostCardSkeleton key={i} />)}
             </div>
           ) : posts.length === 0 ? (
             <div className="text-center py-16">

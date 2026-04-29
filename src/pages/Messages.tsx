@@ -5,6 +5,7 @@ import { MessageCircle, Search, X, ChevronRight } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { ConversationSkeleton } from '../components/Skeleton';
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<any[]>([]);
@@ -157,20 +158,8 @@ export default function MessagesPage() {
 
         {/* ── Loading skeletons ── */}
         {loading && (
-          <div className="px-4 space-y-2 mt-2">
-            {[1, 2, 3].map(i => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-3 animate-pulse bg-white rounded-xl"
-                style={{ border: '0.5px solid var(--dk-border)' }}
-              >
-                <div className="w-12 h-12 bg-gray-200 rounded-xl flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-1/3" />
-                  <div className="h-2 bg-gray-200 rounded w-2/3" />
-                </div>
-              </div>
-            ))}
+          <div>
+            {[1, 2, 3, 4, 5].map(i => <ConversationSkeleton key={i} />)}
           </div>
         )}
 

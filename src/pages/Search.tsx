@@ -8,6 +8,7 @@ import { useUserLocation, reverseGeocode } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
+import { StoreCardSkeleton } from '../components/Skeleton';
 
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
 
@@ -557,24 +558,8 @@ export default function SearchPage() {
 
               {/* Loading skeletons */}
               {loading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => (
-                    <div
-                      key={i}
-                      className="bg-white p-4 flex gap-4 animate-pulse"
-                      style={{ borderRadius: 'var(--dk-radius-lg)', border: '0.5px solid var(--dk-border)' }}
-                    >
-                      <div
-                        className="w-16 h-16 bg-gray-200 flex-shrink-0"
-                        style={{ borderRadius: 'var(--dk-radius-md)' }}
-                      />
-                      <div className="flex-1 space-y-2 py-1">
-                        <div className="h-3 bg-gray-200 rounded w-3/4" />
-                        <div className="h-2 bg-gray-200 rounded w-1/2" />
-                        <div className="h-3 bg-gray-200 rounded w-1/4 mt-3" />
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ paddingTop: 4 }}>
+                  {[1, 2, 3, 4].map(i => <StoreCardSkeleton key={i} />)}
                 </div>
               ) : hasResults ? (
                 <div className="space-y-6">

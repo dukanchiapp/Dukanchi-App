@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-04-30 — Session 40 (Shimmer skeleton loaders)
+
+- `src/components/Skeleton.tsx`: new file — injects `@keyframes shimmer` CSS once via `document.head`; exports `ShimmerBox`, `PostCardSkeleton`, `ConversationSkeleton`, `StoreCardSkeleton`
+- `Home.tsx`: replaced 2-card `animate-pulse` block with 3× `PostCardSkeleton`
+- `Messages.tsx`: replaced 3-row gray box skeleton with 5× `ConversationSkeleton`
+- `Search.tsx`: replaced 3-card `animate-pulse` block with 4× `StoreCardSkeleton`
+
+---
+
 ## 2026-04-30 — Session 39 (Infinite scroll home feed)
 
 - `Home.tsx`: IntersectionObserver infinite scroll — sentinel div at bottom of feed
