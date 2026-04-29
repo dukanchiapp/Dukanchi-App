@@ -224,14 +224,19 @@ export default function ChatPage() {
   };
 
   const sendRaw = async (body: object) => {
-    const res = await fetch('/api/messages', { credentials: 'include', 
+    const res = await fetch('/api/messages', {
+      credentials: 'include',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     if (res.ok) {
       const saved = await res.json();
-      setMessages(prev => prev.some(m => m.id === saved.id) ? prev : [...prev, saved]);
+      const msg = { ...saved, senderId: saved.senderId || currentUserId };
+      setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      console.error('Send failed:', res.status, err);
     }
   };
 

@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-04-29 — Session 36 (Remove PWARefreshButton, chat fix, no translate)
+
+- `PWARefreshButton.tsx`: deleted; removed import + JSX from `App.tsx` (superseded by per-page `RefreshButton`)
+- `Chat.tsx` `sendRaw`: fallback `senderId: saved.senderId || currentUserId` ensures bubble renders on right side even if API omits field; added error logging
+- `index.html`: `lang="en" translate="no"` + `<meta name="google" content="notranslate">` — suppresses Chrome/browser translation prompt
+
+---
+
 ## 2026-04-29 — Session 35 (Desktop install hint + SW cache bust)
 
 - `public/landing.html`: desktop install button now shows `#desktop-install-hint` div (orange bordered, instructions) instead of redirecting — fixes reload loop on Mac/Chrome

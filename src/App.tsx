@@ -25,7 +25,6 @@ import { LocationProvider } from './context/LocationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
-import PWARefreshButton from './components/PWARefreshButton';
 import { useAuth } from './context/AuthContext';
 
 import { useLocation } from 'react-router-dom';
@@ -100,7 +99,6 @@ export default function App() {
               </Routes>
               <BottomNav />
               <PWAInstallPrompt />
-              <PWARefreshButton />
             </div>
           </NotificationProvider>
           </LocationProvider>
