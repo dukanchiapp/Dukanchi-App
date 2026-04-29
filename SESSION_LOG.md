@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-04-29 — Session 35 (Desktop install hint + SW cache bust)
+
+- `public/landing.html`: desktop install button now shows `#desktop-install-hint` div (orange bordered, instructions) instead of redirecting — fixes reload loop on Mac/Chrome
+- `public/sw.js`: `dukanchi-v2` → `dukanchi-v3` — forces phone PWA to evict old cache and fetch latest code
+
+---
+
 ## 2026-04-29 — Session 34 (Critical chat fix + refresh buttons)
 
 - `Chat.tsx`: replaced `localStorage.getItem('user')` with `useAuth()` — `currentUserId` was always `''` causing messages to never show/send

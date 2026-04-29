@@ -310,6 +310,11 @@ footer strong{color:#9CA3AF}
         <span class="install-btn-text">&#11015; Dukanchi Download Karo — Free</span>
       </button>
       <p class="desktop-hint hero-hint">Browser mein install icon dhundho &#8599;</p>
+      <div id="desktop-install-hint" style="display:none;margin-top:16px;background:#FFF3EE;border:1.5px solid #FF6B35;border-radius:14px;padding:14px 18px;max-width:380px;text-align:left;">
+        <p style="font-weight:700;font-size:14px;color:#FF6B35;margin:0 0 6px;">💻 Desktop pe install kaise karein?</p>
+        <p style="font-size:13px;color:#444;margin:0 0 4px;">Chrome address bar ke right mein <strong>⊕</strong> ya computer icon dhundho</p>
+        <p style="font-size:13px;color:#444;margin:0;">"Install Dukanchi" pe click karo → Done! ✅</p>
+      </div>
     </div>
     <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
   </div>
@@ -831,9 +836,14 @@ async function handleInstallClick() {
     return;
   }
 
-  // Case 3: Desktop / no prompt — hint + navigate directly (may already be installed)
-  showDesktopHint();
-  setTimeout(redirectToApp, 600);
+  // Case 3: Desktop Chrome — show install hint, do NOT redirect
+  var hint = document.getElementById('desktop-install-hint');
+  if (hint) {
+    hint.style.display = 'block';
+    hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    alert('Chrome mein install karne ke liye:\nAddress bar ke right side mein ⊕ ya computer icon click karein → "Install Dukanchi"');
+  }
 }
 
 document.querySelectorAll('.install-btn').forEach(function(btn) {
