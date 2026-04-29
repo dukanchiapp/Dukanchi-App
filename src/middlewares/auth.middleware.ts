@@ -13,10 +13,10 @@ const isUserBlocked = async (userId: string): Promise<boolean> => {
   try {
     const cached = await pubClient.get(key);
     if (cached !== null) return cached === '1';
-  } catch {}
+  } catch { /* Redis unavailable — fall through to DB */ }
   const row = await prisma.user.findUnique({ where: { id: userId }, select: { isBlocked: true } });
   const blocked = row?.isBlocked ?? false;
-  try { await pubClient.set(key, blocked ? '1' : '0', { EX: BLOCKED_TTL }); } catch {}
+  try { await pubClient.set(key, blocked ? '1' : '0', { EX: BLOCKED_TTL }); } catch { /* Redis unavailable — non-fatal */ }
   return blocked;
 };
 
@@ -27,10 +27,10 @@ const teamMemberExists = async (teamMemberId: string): Promise<boolean> => {
   try {
     const cached = await pubClient.get(key);
     if (cached !== null) return cached === '1';
-  } catch {}
+  } catch { /* Redis unavailable — fall through to DB */ }
   const member = await prisma.teamMember.findUnique({ where: { id: teamMemberId }, select: { id: true } });
   const exists = !!member;
-  try { await pubClient.set(key, exists ? '1' : '0', { EX: TEAM_MEMBER_TTL }); } catch {}
+  try { await pubClient.set(key, exists ? '1' : '0', { EX: TEAM_MEMBER_TTL }); } catch { /* Redis unavailable — non-fatal */ }
   return exists;
 };
 

@@ -58,7 +58,9 @@ export default function StoreProfilePage() {
     try {
       if (navigator.share) await navigator.share({ title: store?.storeName, text: post.caption || '', url });
       else { await navigator.clipboard.writeText(url); showToast('Link copied to clipboard!', { type: 'success' }); }
-    } catch (e) {}
+    } catch (err) {
+      console.error('handleShare failed:', err);
+    }
   };
 
   const getLikeCount = (post: any) => {
@@ -102,24 +104,31 @@ export default function StoreProfilePage() {
       setReviews(Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews ?? []));
 
       setLoading(false);
-    } catch {
+    } catch (err) {
+      console.error('fetchStoreData failed:', err);
       setLoading(false);
     }
   };
 
   const toggleFollow = async () => {
+    const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setFollowersCount(prev => !wasFollowing ? prev + 1 : Math.max(0, prev - 1));
     try {
-      const res = await fetch(`/api/stores/${id}/follow`, { credentials: 'include', 
+      const res = await fetch(`/api/stores/${id}/follow`, { credentials: 'include',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });
-      if (!res.ok) return;
+      if (!res.ok) throw new Error(`Follow failed: ${res.status}`);
       const data = await res.json();
       if (typeof data.following === 'boolean') {
         setIsFollowing(data.following);
-        setFollowersCount(prev => data.following ? prev + 1 : Math.max(0, prev - 1));
       }
-    } catch {}
+    } catch (err) {
+      console.error('toggleFollow failed:', err);
+      setIsFollowing(wasFollowing);
+      setFollowersCount(prev => wasFollowing ? prev + 1 : Math.max(0, prev - 1));
+    }
   };
 
   const filteredProducts = products.filter(p =>

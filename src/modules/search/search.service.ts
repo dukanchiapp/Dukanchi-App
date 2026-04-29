@@ -11,7 +11,7 @@ export class SearchService {
     try {
       const cached = await pubClient.get(searchCacheKey);
       if (cached) return JSON.parse(cached.toString());
-    } catch {}
+    } catch { /* Redis unavailable — fall through to DB */ }
 
     const expandedQueries = expandQuery(searchStr);
     const searchConditions = expandedQueries.map(sq => ({
@@ -150,7 +150,7 @@ export class SearchService {
     if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
       try {
         const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`, { credentials: 'include', 
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, { credentials: 'include',
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

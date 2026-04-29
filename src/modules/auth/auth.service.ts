@@ -24,7 +24,7 @@ export class AuthService {
 
     const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' });
 
-    try { await pubClient.del(ADMIN_STATS_KEY); } catch {}
+    try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
 
     const { password: _, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, token };

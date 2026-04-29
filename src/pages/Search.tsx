@@ -70,7 +70,9 @@ export default function SearchPage() {
           const unique = [...new Set(data.map((d: any) => d.query))] as string[];
           setSearchHistory(unique.slice(0, 8));
         }
-      } catch {}
+      } catch (err) {
+        console.error('fetchSearchHistory failed:', err);
+      }
     };
     fetchHistory();
   }, [token]);
@@ -100,7 +102,9 @@ export default function SearchPage() {
     try {
       await fetch('/api/search/history', { credentials: 'include', method: 'DELETE' });
       setSearchHistory([]);
-    } catch {}
+    } catch (err) {
+      console.error('clearAllHistory failed:', err);
+    }
   };
 
   // Fetch autocomplete suggestions

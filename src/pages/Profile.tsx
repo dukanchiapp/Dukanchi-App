@@ -87,7 +87,9 @@ export default function ProfilePage() {
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(shareData.url); showToast('Link copied to clipboard!', { type: 'success' }); }
-    } catch (e) {}
+    } catch (err) {
+      console.error('handleShare failed:', err);
+    }
   };
 
   const getLikeCount = (post: any) => {
@@ -118,7 +120,9 @@ export default function ProfilePage() {
             setKycNotes(kycData.kycNotes || '');
             setKycStoreName(kycData.kycStoreName || '');
           }
-        } catch {}
+        } catch (err) {
+          console.error('fetchKycStatus failed:', err);
+        }
       }
 
       const storeRes = await fetch(`/api/users/${currentUserId}/store`, { credentials: 'include' });
@@ -215,7 +219,9 @@ export default function ProfilePage() {
         setEditRawImageUrl(data.url);
         setEditShowCropper(true);
       }
-    } catch {}
+    } catch (err) {
+      console.error('handleImageChange upload failed:', err);
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -1255,7 +1261,9 @@ export default function ProfilePage() {
                       formData.append('file', blob, 'edited-post.jpg');
                       const res = await fetch('/api/upload', { credentials: 'include',  method: 'POST',  body: formData });
                       if (res.ok) { const data = await res.json(); setEditImage(data.url); }
-                    } catch {}
+                    } catch (err) {
+                      console.error('cropper upload failed:', err);
+                    }
                     setEditShowCropper(false);
                     setEditRawImageUrl('');
                   }}

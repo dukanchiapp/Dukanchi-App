@@ -47,7 +47,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   const setLocation = (loc: UserLocation) => {
     setLocationState(loc);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(loc)); } catch {}
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(loc)); } catch { /* localStorage unavailable — non-fatal */ }
   };
 
   const detectCurrentLocation = async () => {

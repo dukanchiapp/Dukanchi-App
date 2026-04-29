@@ -27,6 +27,7 @@ import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { useAuth } from './context/AuthContext';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import { useLocation } from 'react-router-dom';
 
@@ -77,6 +78,7 @@ function FlowController() {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <Router>
       <AuthProvider>
         <ToastProvider>
@@ -107,5 +109,6 @@ export default function App() {
         </ToastProvider>
       </AuthProvider>
     </Router>
+    </ErrorBoundary>
   );
 }

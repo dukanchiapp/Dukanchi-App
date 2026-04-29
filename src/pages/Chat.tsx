@@ -165,7 +165,9 @@ export default function ChatPage() {
               setReceiverLogo(storeData.logoUrl || '');
               return;
             }
-          } catch {}
+          } catch (err) {
+            console.error('fetchReceiverStore failed:', err);
+          }
         }
         setReceiverName(userData.name || 'User');
         setReceiverInitial((userData.name || 'U').charAt(0));

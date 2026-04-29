@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-04-30 — Session 41 (SPRINT 1: Production Readiness)
+
+- Fix 1: Gemini model corrected in `search.service.ts` + `bulkImport.service.ts` → `gemini-2.5-flash` (was `gemini-1.5-flash-latest`); verified 0 old model strings remain
+- Fix 2: `vite.config.ts` — `build.minify: 'terser'` with `pure_funcs: ['console.log', 'console.debug', 'console.info']`; production strips debug logs, keeps `console.error/warn`; installed `terser` dev dep
+- Fix 3: All silent `catch {}` blocks replaced — frontend action handlers now log + rollback; backend Redis catches annotated; verified 0 empty catches remain
+- Fix 4: `src/components/ErrorBoundary.tsx` — class component error boundary with Hinglish UI (😅 "Kuch toot gaya"), dev shows error message, prod shows refresh/home buttons; wired into `App.tsx` wrapping `<Router>`; installed `@types/react@^19` + `@types/react-dom@^19` (required for class component types)
+- Fix 5: `toggleLike/toggleSave/toggleFollow` in `Home.tsx` — optimistic update + rollback on `!res.ok`; `toggleFollow` in `StoreProfile.tsx` — made optimistic with rollback
+
+---
+
 ## 2026-04-30 — Session 40 (Shimmer skeleton loaders)
 
 - `src/components/Skeleton.tsx`: new file — injects `@keyframes shimmer` CSS once via `document.head`; exports `ShimmerBox`, `PostCardSkeleton`, `ConversationSkeleton`, `StoreCardSkeleton`

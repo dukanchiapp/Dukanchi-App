@@ -233,7 +233,9 @@ export default function RetailerDashboard() {
                   body: JSON.stringify({ latitude: lat, longitude: lng })
                });
                showToast('📍 Location pinned successfully!', { type: 'success' });
-            } catch(e) {}
+            } catch (err) {
+              console.error('pin location save failed:', err);
+            }
           } else {
             showToast('📍 Location captured! It will be saved when you submit the form.', { type: 'info' });
           }

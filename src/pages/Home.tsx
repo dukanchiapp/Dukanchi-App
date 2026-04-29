@@ -238,48 +238,54 @@ export default function HomePage() {
     const isLiked = interactions.likedPostIds.includes(postId);
     setInteractions(prev => ({
       ...prev,
-      likedPostIds: isLiked
-        ? prev.likedPostIds.filter(id => id !== postId)
-        : [...prev.likedPostIds, postId],
+      likedPostIds: isLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId],
     }));
     try {
-      await fetch(`/api/posts/${postId}/like`, { credentials: 'include', 
-        method: 'POST',
-        
-      });
-    } catch {}
+      const res = await fetch(`/api/posts/${postId}/like`, { credentials: 'include', method: 'POST' });
+      if (!res.ok) throw new Error(`Like failed: ${res.status}`);
+    } catch (err) {
+      console.error('toggleLike failed:', err);
+      setInteractions(prev => ({
+        ...prev,
+        likedPostIds: isLiked ? [...prev.likedPostIds, postId] : prev.likedPostIds.filter(id => id !== postId),
+      }));
+    }
   };
 
   const toggleSave = async (postId: string) => {
     const isSaved = interactions.savedPostIds.includes(postId);
     setInteractions(prev => ({
       ...prev,
-      savedPostIds: isSaved
-        ? prev.savedPostIds.filter(id => id !== postId)
-        : [...prev.savedPostIds, postId],
+      savedPostIds: isSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId],
     }));
     try {
-      await fetch(`/api/posts/${postId}/save`, { credentials: 'include', 
-        method: 'POST',
-        
-      });
-    } catch {}
+      const res = await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' });
+      if (!res.ok) throw new Error(`Save failed: ${res.status}`);
+    } catch (err) {
+      console.error('toggleSave failed:', err);
+      setInteractions(prev => ({
+        ...prev,
+        savedPostIds: isSaved ? [...prev.savedPostIds, postId] : prev.savedPostIds.filter(id => id !== postId),
+      }));
+    }
   };
 
   const toggleFollow = async (storeId: string) => {
     const isFollowed = interactions.followedStoreIds.includes(storeId);
     setInteractions(prev => ({
       ...prev,
-      followedStoreIds: isFollowed
-        ? prev.followedStoreIds.filter(id => id !== storeId)
-        : [...prev.followedStoreIds, storeId],
+      followedStoreIds: isFollowed ? prev.followedStoreIds.filter(id => id !== storeId) : [...prev.followedStoreIds, storeId],
     }));
     try {
-      await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', 
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-    } catch {}
+      const res = await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (!res.ok) throw new Error(`Follow failed: ${res.status}`);
+    } catch (err) {
+      console.error('toggleFollow failed:', err);
+      setInteractions(prev => ({
+        ...prev,
+        followedStoreIds: isFollowed ? [...prev.followedStoreIds, storeId] : prev.followedStoreIds.filter(id => id !== storeId),
+      }));
+    }
   };
 
   const handleShare = async (post: any) => {
@@ -295,7 +301,9 @@ export default function HomePage() {
         await navigator.clipboard.writeText(shareData.url);
         showToast('Link copied to clipboard!', { type: 'success' });
       }
-    } catch {}
+    } catch (err) {
+      console.error('handleShare failed:', err);
+    }
   };
 
   const getLikeCount = (post: any) => {

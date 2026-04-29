@@ -30,7 +30,7 @@ export class PostController {
         try {
           const cached = await pubClient.get(cacheKey);
           if (cached) return res.json(JSON.parse(cached as string));
-        } catch {}
+        } catch { /* Redis unavailable — fall through */ }
       }
 
       const result = await PostService.getFeed(userId, userRole, {
