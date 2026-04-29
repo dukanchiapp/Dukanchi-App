@@ -26,6 +26,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { useAuth } from './context/AuthContext';
+import { usePushNotifications } from './hooks/usePushNotifications';
 
 import { useLocation } from 'react-router-dom';
 
@@ -50,6 +51,7 @@ function FlowController() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading } = useAuth();
+  usePushNotifications();
 
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
     (window.navigator as any).standalone === true;

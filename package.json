@@ -55,6 +55,7 @@
     "socket.io-client": "^4.8.3",
     "tailwind-merge": "^3.5.0",
     "vite": "^6.2.0",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
   },
@@ -66,6 +67,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^22.14.0",
+    "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.4.21",
     "canvas": "^3.2.3",
     "prisma": "^5.22.0",

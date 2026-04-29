@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-04-30 — Session 38 (Web Push Notifications)
+
+- `npm install web-push @types/web-push`
+- VAPID keys generated and added to `.env`; `src/config/env.ts` extended with `VAPID_PUBLIC_KEY/PRIVATE_KEY/MAILTO`
+- `prisma/schema.prisma`: `PushSubscription` model added; `User.pushSubscriptions` relation wired; `npx prisma db push` applied
+- `src/services/push.service.ts`: `sendPushToUser()` — fetches all subs for user, sends via web-push, auto-removes expired (410/404) subscriptions
+- `src/modules/push/push.routes.ts`: `GET /vapid-public-key`, `POST /subscribe` (upsert), `DELETE /unsubscribe`
+- `src/app.ts`: `app.use('/api/push', pushRoutes)` registered
+- `src/modules/messages/message.service.ts`: fire-and-forget `sendPushToUser()` call after saving message — receiver gets push notification with sender name + message preview
+- `src/hooks/usePushNotifications.ts`: React hook — waits 3s after login, fetches VAPID key, subscribes browser, POSTs subscription to backend
+- `src/App.tsx`: `usePushNotifications()` called inside `FlowController` (within AuthProvider)
+
+---
+
 ## 2026-04-30 — Session 37 (Smart feed ranking + unified categories)
 
 - `post.service.ts`: `haversineKm()` helper added; `getFeed` now fetches `limit * 3` candidates, scores each post (freshness 40% + distance 25% + engagement 20% + follow 15% + opening post +5%), sorts by score, returns top `limit` — replaces pure chronological feed

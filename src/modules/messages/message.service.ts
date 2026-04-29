@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { getIO } from "../../config/socket";
 import { canChat } from "../../middlewares/auth.middleware";
+import { sendPushToUser } from "../../services/push.service";
 
 export class MessageService {
   static async getMessages(userId: string, otherUserId: string, before?: string, limit: number = 100) {
@@ -73,6 +74,14 @@ export class MessageService {
     } catch (err) {
       console.warn("Socket.io emit failed (might not be initialized in this context)", err);
     }
+
+    // Fire-and-forget push notification to receiver
+    const bodyText = messageText.length > 80 ? messageText.slice(0, 77) + '...' : messageText;
+    sendPushToUser(receiverId, {
+      title: sender.name || 'Naya message',
+      body: bodyText || '📷 Image',
+      url: `/chat/${senderId}`,
+    }).catch(() => {});
 
     return savedMessage;
   }

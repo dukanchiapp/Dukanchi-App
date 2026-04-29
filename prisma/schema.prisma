@@ -44,6 +44,7 @@ model User {
   reportsReceived  Report[] @relation("ReportsReceived")
   complaints       Complaint[]
   askNearbyRequests AskNearbyRequest[] @relation("AskNearbyCustomer")
+  pushSubscriptions PushSubscription[]
 }
 
 model Store {
@@ -297,6 +298,18 @@ model LandingPageContent {
   content   Json
   updatedAt DateTime @updatedAt
   updatedBy String?
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model AskNearbyRequest {
