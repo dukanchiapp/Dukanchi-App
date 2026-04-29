@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-04-29 — Session 31 (Phone testing bug fixes)
+
+- `store.service.ts`: `toggleFollow` uses composite key `userId_storeId` for delete (was using `.id` which doesn't exist on Follow model)
+- `store.controller.ts`: proper 404 for store-not-found in follow handler
+- `auth.middleware.ts`: `canChat` now returns `true` for all roles — open marketplace
+- `messages.tsx`: fixed field mapping — was reading `conv.storeName`, API returns `conv.name`
+- `map.tsx`: added `loadError` handling from `useJsApiLoader` with user-friendly error UI
+- Commit: `fix: follow 500, canChat 403, messages name, map loadError`
+
+---
+
 ## 2026-04-29 — Session 30 (Vite 6 host validation fix)
 
 - `server.ts`: `allowedHosts: true` in `createViteServer` — disables Vite 6 host header validation that was blocking ngrok requests before Express ran

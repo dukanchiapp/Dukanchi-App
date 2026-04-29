@@ -139,8 +139,9 @@ export class StoreController {
       const storeId = req.params.id;
       const result = await StoreService.toggleFollow(userId, storeId);
       res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to toggle follow" });
+    } catch (error: any) {
+      if (error.message === 'Store not found') return res.status(404).json({ error: 'Store not found' });
+      res.status(500).json({ error: error.message || 'Failed to toggle follow' });
     }
   }
 

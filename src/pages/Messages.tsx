@@ -106,7 +106,7 @@ export default function MessagesPage() {
   };
 
   const filtered = conversations.filter(conv =>
-    conv.storeName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    conv.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     conv.lastMessage?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -257,7 +257,7 @@ export default function MessagesPage() {
                         className="w-full h-full flex items-center justify-center font-bold text-lg"
                         style={{ color: 'var(--dk-accent)' }}
                       >
-                        {conv.storeName?.charAt(0)}
+                        {conv.name?.charAt(0)}
                       </div>
                     )}
                   </div>
@@ -273,7 +273,7 @@ export default function MessagesPage() {
                       className="font-semibold truncate"
                       style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}
                     >
-                      {conv.storeName}
+                      {conv.name}
                     </h3>
                     <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', flexShrink: 0, marginLeft: 8 }}>
                       {conv.timestamp}

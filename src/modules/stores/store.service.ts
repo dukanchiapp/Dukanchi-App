@@ -80,16 +80,23 @@ export class StoreService {
   }
 
   static async toggleFollow(userId: string, storeId: string) {
-    const existingFollow = await prisma.follow.findUnique({
-      where: { userId_storeId: { userId, storeId } }
-    });
+    try {
+      const existingFollow = await prisma.follow.findUnique({
+        where: { userId_storeId: { userId, storeId } }
+      });
 
-    if (existingFollow) {
-      await prisma.follow.delete({ where: { id: existingFollow.id } });
-      return { following: false };
-    } else {
-      await prisma.follow.create({ data: { userId, storeId } });
-      return { following: true };
+      if (existingFollow) {
+        await prisma.follow.delete({ where: { userId_storeId: { userId, storeId } } });
+        return { following: false };
+      } else {
+        const store = await prisma.store.findUnique({ where: { id: storeId } });
+        if (!store) throw new Error('Store not found');
+        await prisma.follow.create({ data: { userId, storeId } });
+        return { following: true };
+      }
+    } catch (error: any) {
+      if (error.message === 'Store not found') throw error;
+      throw new Error(`Follow operation failed: ${error.message}`);
     }
   }
 

@@ -69,7 +69,7 @@ export default function MapPage() {
     return d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)} km`;
   };
 
-  const { isLoaded } = useJsApiLoader({
+  const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     id: 'google-map-script',
   });
@@ -187,7 +187,17 @@ export default function MapPage() {
             className="relative overflow-hidden"
             style={{ borderRadius: 20, height: 300 }}
           >
-            {isLoaded && userLocation ? (
+            {loadError ? (
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{ background: 'var(--dk-surface)' }}
+              >
+                <div className="text-center px-4">
+                  <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', fontWeight: 600 }}>Map load karne mein error</p>
+                  <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Google Maps API key check karein</p>
+                </div>
+              </div>
+            ) : isLoaded && userLocation ? (
               <GoogleMap
                 mapContainerStyle={MAP_CONTAINER_STYLE}
                 center={userLocation}
