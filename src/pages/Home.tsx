@@ -1,54 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, MessageCircle, Store as StoreIcon, Heart, Bookmark, Share2, SlidersHorizontal, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Store as StoreIcon, SlidersHorizontal, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import AppHeader from '../components/AppHeader';
-import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useUserLocation } from '../context/LocationContext';
 import LocationPicker from '../components/LocationPicker';
 import { PostCardSkeleton } from '../components/Skeleton';
-
-const renderCaption = (caption: string) => {
-  const m = caption.match(/^([^.!?]+[.!?])([\s\S]*)$/);
-  if (!m) return <strong style={{ fontWeight: 600 }}>{caption}</strong>;
-  return (
-    <>
-      <strong style={{ fontWeight: 600 }}>{m[1]}</strong>
-      {m[2]}
-    </>
-  );
-};
-
-/**
- * Returns canvas/image styles based on the natural dimensions of the loaded image.
- *
- * Portrait  (ratio < 0.9)  → fixed 4:5 canvas, object-fit:contain, black bg
- * Square    (0.9–1.1)      → 1:1 canvas,        object-fit:cover
- * Landscape (ratio > 1.1)  → natural ratio canvas, object-fit:cover
- */
-function getImageStyles(naturalRatio: number | undefined): {
-  canvasStyle: React.CSSProperties;
-  imgStyle: React.CSSProperties;
-} {
-  if (!naturalRatio || naturalRatio < 0.9) {
-    return {
-      canvasStyle: { aspectRatio: '4/5', background: 'black', overflow: 'hidden', position: 'relative' },
-      imgStyle: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
-    };
-  }
-  if (naturalRatio <= 1.1) {
-    return {
-      canvasStyle: { aspectRatio: '1/1', background: 'black', overflow: 'hidden', position: 'relative' },
-      imgStyle: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
-    };
-  }
-  // Landscape: let the image's own ratio define the canvas height
-  return {
-    canvasStyle: { aspectRatio: String(naturalRatio), background: 'black', overflow: 'hidden', position: 'relative' },
-    imgStyle: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
-  };
-}
+import { PostCard } from '../components/PostCard';
 
 export default function HomePage() {
   const [posts, setPosts] = useState<any[]>([]);
@@ -145,16 +103,9 @@ export default function HomePage() {
     return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
   };
 
-  const handleImgLoad =
-    (postId: string) => (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const { naturalWidth, naturalHeight } = e.currentTarget;
-      if (naturalWidth > 0 && naturalHeight > 0) {
-        setImgRatios(prev => ({ ...prev, [postId]: naturalWidth / naturalHeight }));
-      }
-    };
-
-  const isOwnPost = (post: any) => post.isOwnPost === true;
-  const getStoreLink = (post: any) => (isOwnPost(post) ? '/profile' : `/store/${post.storeId}`);
+  const handleImgLoad = useCallback((postId: string, ratio: number) => {
+    setImgRatios(prev => ({ ...prev, [postId]: ratio }));
+  }, []);
 
   const fetchFeed = async (pageNum = 1) => {
     if (!token) return;
@@ -234,12 +185,15 @@ export default function HomePage() {
     }
   }, [userLoc, feedType, locationRange]); // Re-calculate if anything layout-changing happens in top bar
 
-  const toggleLike = async (postId: string) => {
-    const isLiked = interactions.likedPostIds.includes(postId);
-    setInteractions(prev => ({
-      ...prev,
-      likedPostIds: isLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId],
-    }));
+  const toggleLike = useCallback(async (postId: string) => {
+    let wasLiked = false;
+    setInteractions(prev => {
+      wasLiked = prev.likedPostIds.includes(postId);
+      return {
+        ...prev,
+        likedPostIds: wasLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId],
+      };
+    });
     try {
       const res = await fetch(`/api/posts/${postId}/like`, { credentials: 'include', method: 'POST' });
       if (!res.ok) throw new Error(`Like failed: ${res.status}`);
@@ -247,17 +201,20 @@ export default function HomePage() {
       console.error('toggleLike failed:', err);
       setInteractions(prev => ({
         ...prev,
-        likedPostIds: isLiked ? [...prev.likedPostIds, postId] : prev.likedPostIds.filter(id => id !== postId),
+        likedPostIds: wasLiked ? [...prev.likedPostIds, postId] : prev.likedPostIds.filter(id => id !== postId),
       }));
     }
-  };
+  }, []);
 
-  const toggleSave = async (postId: string) => {
-    const isSaved = interactions.savedPostIds.includes(postId);
-    setInteractions(prev => ({
-      ...prev,
-      savedPostIds: isSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId],
-    }));
+  const toggleSave = useCallback(async (postId: string) => {
+    let wasSaved = false;
+    setInteractions(prev => {
+      wasSaved = prev.savedPostIds.includes(postId);
+      return {
+        ...prev,
+        savedPostIds: wasSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId],
+      };
+    });
     try {
       const res = await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
@@ -265,17 +222,20 @@ export default function HomePage() {
       console.error('toggleSave failed:', err);
       setInteractions(prev => ({
         ...prev,
-        savedPostIds: isSaved ? [...prev.savedPostIds, postId] : prev.savedPostIds.filter(id => id !== postId),
+        savedPostIds: wasSaved ? [...prev.savedPostIds, postId] : prev.savedPostIds.filter(id => id !== postId),
       }));
     }
-  };
+  }, []);
 
-  const toggleFollow = async (storeId: string) => {
-    const isFollowed = interactions.followedStoreIds.includes(storeId);
-    setInteractions(prev => ({
-      ...prev,
-      followedStoreIds: isFollowed ? prev.followedStoreIds.filter(id => id !== storeId) : [...prev.followedStoreIds, storeId],
-    }));
+  const toggleFollow = useCallback(async (storeId: string) => {
+    let wasFollowed = false;
+    setInteractions(prev => {
+      wasFollowed = prev.followedStoreIds.includes(storeId);
+      return {
+        ...prev,
+        followedStoreIds: wasFollowed ? prev.followedStoreIds.filter(id => id !== storeId) : [...prev.followedStoreIds, storeId],
+      };
+    });
     try {
       const res = await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) throw new Error(`Follow failed: ${res.status}`);
@@ -283,12 +243,12 @@ export default function HomePage() {
       console.error('toggleFollow failed:', err);
       setInteractions(prev => ({
         ...prev,
-        followedStoreIds: isFollowed ? [...prev.followedStoreIds, storeId] : prev.followedStoreIds.filter(id => id !== storeId),
+        followedStoreIds: wasFollowed ? [...prev.followedStoreIds, storeId] : prev.followedStoreIds.filter(id => id !== storeId),
       }));
     }
-  };
+  }, []);
 
-  const handleShare = async (post: any) => {
+  const handleShare = useCallback(async (post: any) => {
     const shareData = {
       title: post.store?.storeName || 'Check this out!',
       text: post.caption || `See this post from ${post.store?.storeName}`,
@@ -304,7 +264,7 @@ export default function HomePage() {
     } catch (err) {
       console.error('handleShare failed:', err);
     }
-  };
+  }, [showToast]);
 
   const getLikeCount = (post: any) => {
     const total = post._count?.likes ?? post.likes?.length ?? 0;
@@ -541,261 +501,23 @@ export default function HomePage() {
               </p>
             </div>
           ) : (
-            posts.map(post => {
-              const isLiked = interactions.likedPostIds.includes(post.id);
-              const isSaved = interactions.savedPostIds.includes(post.id);
-              const isFollowed = interactions.followedStoreIds.includes(post.storeId);
-              const likeCount = getLikeCount(post);
-              const distance = getDistance(post.store?.latitude, post.store?.longitude);
-              const status = getStoreStatus(
-                post.store?.openingTime,
-                post.store?.closingTime,
-                post.store?.is24Hours,
-                post.store?.workingDays
-              );
-              const { canvasStyle, imgStyle } = getImageStyles(imgRatios[post.id]);
-
-              return (
-                <div
-                  key={post.id}
-                  className="bg-white overflow-hidden"
-                  style={{
-                    border: '0.5px solid var(--dk-border)',
-                    borderRadius: 'var(--dk-radius-xl)',
-                  }}
-                >
-                  {/* ── Card header ── */}
-                  <div className="p-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Link to={getStoreLink(post)} className="flex-shrink-0">
-                        <img
-                          src={post.store?.logoUrl || '/uploads/default-logo.png'}
-                          alt={post.store?.storeName}
-                          style={{
-                            width: 38,
-                            height: 38,
-                            borderRadius: '50%',
-                            border: '2px solid var(--dk-accent)',
-                            objectFit: 'cover',
-                          }}
-                        />
-                      </Link>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1">
-                          <Link to={getStoreLink(post)}>
-                            <span
-                              style={{
-                                fontSize: 14,
-                                fontWeight: 500,
-                                color: 'var(--dk-text-primary)',
-                                lineHeight: '1.3',
-                              }}
-                            >
-                              {post.store?.storeName}
-                            </span>
-                          </Link>
-                          {post.store?.isVerified && (
-                            <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                              <circle cx="6.5" cy="6.5" r="6.5" fill="var(--dk-success)" />
-                              <path
-                                d="M3.5 6.5l2 2 4-4"
-                                stroke="white"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          )}
-                        </div>
-                        {/* Status row — single line: open/closed · distance · category */}
-                        <div
-                          className="flex items-center gap-1 flex-wrap"
-                          style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}
-                        >
-                          <span
-                            style={{
-                              color: status ? statusColor(status.color) : 'var(--dk-success)',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {status ? `● ${status.label}` : '● Open'}
-                          </span>
-                          {distance && (
-                            <>
-                              <span style={{ color: 'var(--dk-border-strong)' }}>·</span>
-                              <span>{distance}</span>
-                            </>
-                          )}
-                          {post.store?.category && (
-                            <>
-                              <span style={{ color: 'var(--dk-border-strong)' }}>·</span>
-                              <span>{post.store.category}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    {!isOwnPost(post) && (
-                      <button
-                        onClick={() => toggleFollow(post.storeId)}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-full transition-colors flex-shrink-0 ml-2"
-                        style={
-                          isFollowed
-                            ? { background: 'var(--dk-surface)', color: 'var(--dk-text-secondary)' }
-                            : { background: 'var(--dk-accent)', color: 'white' }
-                        }
-                      >
-                        {isFollowed ? 'Following' : 'Follow'}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* ── Image canvas ─ aspect ratio adapts to photo dimensions ── */}
-                  <div style={canvasStyle}>
-                    <img
-                      src={post.imageUrl || `https://picsum.photos/seed/${post.id}/800/800`}
-                      alt={post.product?.productName || 'Post'}
-                      style={imgStyle}
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      onLoad={handleImgLoad(post.id)}
-                    />
-                    {post.price && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: 12,
-                          left: 12,
-                          background: 'rgba(0,0,0,0.7)',
-                          color: 'white',
-                          padding: '4px 10px',
-                          borderRadius: 8,
-                          fontSize: 14,
-                          fontWeight: 700,
-                          backdropFilter: 'blur(4px)',
-                        }}
-                      >
-                        ₹{Number(post.price).toLocaleString()}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* ── Action bar + caption ── */}
-                  <div className="px-4 pt-3 pb-3">
-                    <div className="flex items-center" style={{ gap: 16 }}>
-                      {/* Like */}
-                      <button
-                        onClick={() => toggleLike(post.id)}
-                        className="flex items-center gap-1"
-                      >
-                        <Heart
-                          size={21}
-                          fill={isLiked ? '#FF4444' : 'none'}
-                          color={isLiked ? '#FF4444' : 'var(--dk-text-primary)'}
-                          strokeWidth={2}
-                        />
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: 'var(--dk-text-secondary)',
-                          }}
-                        >
-                          {likeCount}
-                        </span>
-                      </button>
-
-                      {/* Chat */}
-                      {!isOwnPost(post) && post.store?.chatEnabled !== false && (
-                        <Link
-                          to={`/chat/${post.store?.ownerId}`}
-                          state={{
-                            referredPost: {
-                              id: post.id,
-                              imageUrl: post.imageUrl,
-                              caption: post.caption,
-                              price: post.price,
-                            },
-                          }}
-                          className="flex items-center gap-1"
-                        >
-                          <MessageCircle
-                            size={21}
-                            fill="none"
-                            color="var(--dk-text-primary)"
-                            strokeWidth={2}
-                          />
-                          <span style={{ fontSize: 13, color: 'var(--dk-text-primary)' }}>
-                            Chat
-                          </span>
-                        </Link>
-                      )}
-
-                      {/* Share */}
-                      <button
-                        onClick={() => handleShare(post)}
-                        className="flex items-center gap-1"
-                      >
-                        <Share2
-                          size={19}
-                          fill="none"
-                          color="var(--dk-text-primary)"
-                          strokeWidth={2}
-                        />
-                        <span style={{ fontSize: 13, color: 'var(--dk-text-primary)' }}>
-                          Share
-                        </span>
-                      </button>
-
-                      <div style={{ flex: 1 }} />
-
-                      {/* Save */}
-                      <button onClick={() => toggleSave(post.id)}>
-                        <Bookmark
-                          size={21}
-                          fill={isSaved ? 'var(--dk-text-primary)' : 'none'}
-                          color="var(--dk-text-primary)"
-                          strokeWidth={2}
-                        />
-                      </button>
-                    </div>
-
-                    {/* Product name + price */}
-                    {post.product && (
-                      <div className="flex items-center justify-between mt-2">
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: 'var(--dk-text-primary)',
-                          }}
-                        >
-                          {post.product.productName}
-                        </span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-accent)' }}>
-                          ₹{post.product.price?.toLocaleString()}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Caption */}
-                    {post.caption && (
-                      <p
-                        className="line-clamp-3"
-                        style={{
-                          fontSize: 13,
-                          color: 'var(--dk-text-primary)',
-                          lineHeight: '1.45',
-                          marginTop: 6,
-                        }}
-                      >
-                        {renderCaption(post.caption)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })
+            posts.map(post => (
+              <PostCard
+                key={post.id}
+                post={post}
+                isLiked={interactions.likedPostIds.includes(post.id)}
+                isSaved={interactions.savedPostIds.includes(post.id)}
+                isFollowed={interactions.followedStoreIds.includes(post.storeId)}
+                likeCount={getLikeCount(post)}
+                distance={getDistance(post.store?.latitude, post.store?.longitude)}
+                imgRatio={imgRatios[post.id]}
+                onLike={toggleLike}
+                onSave={toggleSave}
+                onFollow={toggleFollow}
+                onShare={handleShare}
+                onImgLoad={handleImgLoad}
+              />
+            ))
           )}
 
           {/* Infinite scroll sentinel */}

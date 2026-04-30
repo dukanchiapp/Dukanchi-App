@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-04-30 — Session 42 (SPRINT 2A: Performance & Polish)
+
+- WIN 1: `src/App.tsx` — replaced 10 eager page imports with `React.lazy()`; kept Login/Signup/NotFound eager; wrapped `<Routes>` in `<Suspense>` spinner; chunks now load on demand
+- WIN 2: `src/components/PostCard.tsx` — new file, extracted post card JSX from `Home.tsx`; `React.memo` with custom equality (compares isLiked/isSaved/isFollowed/likeCount/distance/imgRatio); moved `renderCaption` + `getImageStyles` helpers into component; `Home.tsx` handlers wrapped in `useCallback` with functional-updater pattern so callbacks are stable (no interactions dependency)
+- WIN 3: `src/pages/Search.tsx` — replaced two separate debounce timers (150ms suggestions + 500ms main search) with a single `debouncedQuery` state updated after 300ms; both effects now depend on `debouncedQuery`
+- WIN 4: `loading="lazy" decoding="async"` added to below-fold `<img>` tags in `Home.tsx` (via PostCard), `StoreProfile.tsx`, `Profile.tsx`, `Search.tsx`, `Map.tsx`; above-fold hero/cover images unchanged
+- WIN 5: `filteredStores` + `validStores` in `Map.tsx` wrapped in `useMemo`; `filteredStores` in `Search.tsx` wrapped in `useMemo`
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-04-30 — Session 41 (SPRINT 1: Production Readiness)
 
 - Fix 1: Gemini model corrected in `search.service.ts` + `bulkImport.service.ts` → `gemini-2.5-flash` (was `gemini-1.5-flash-latest`); verified 0 old model strings remain

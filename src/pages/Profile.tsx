@@ -939,7 +939,7 @@ export default function ProfilePage() {
                     style={{ background: 'var(--dk-surface)' }}
                     onClick={() => setSelectedPost(post)}
                   >
-                    <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     {post.isOpeningPost && (
                       <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded" style={{ background: 'rgba(0,0,0,0.6)', fontSize: 8, fontWeight: 700, color: 'white', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Store</div>
                     )}
@@ -1032,7 +1032,7 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-between px-3 py-2.5">
                       <div className="flex items-center gap-2">
                         <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--dk-accent)' }}>
-                          <img src={store.logoUrl} className="w-full h-full object-cover" alt="store" />
+                          <img src={store.logoUrl} className="w-full h-full object-cover" alt="store" loading="lazy" decoding="async" />
                         </div>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{store.storeName}</p>
@@ -1068,7 +1068,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                     <div style={{ background: 'black' }}>
-                      <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-auto max-h-[500px] object-contain" referrerPolicy="no-referrer" />
+                      <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-auto max-h-[500px] object-contain" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     </div>
                     <div className="px-4 py-3">
                       <div className="flex items-center justify-between mb-2">

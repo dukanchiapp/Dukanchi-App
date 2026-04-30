@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, Mic, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
@@ -25,6 +25,7 @@ const CATEGORY_BG: Record<string, { bg: string; color: string }> = {
 
 export default function SearchPage() {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<{ products: any[]; stores: any[] }>({
     products: [],
     stores: [],
@@ -107,24 +108,23 @@ export default function SearchPage() {
     }
   };
 
+  // Single 300ms debounce for all search operations
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
   // Fetch autocomplete suggestions
   useEffect(() => {
-    if (query.length < 1 || !token) {
+    if (debouncedQuery.length < 1 || !token) {
       setSuggestions([]);
       return;
     }
-    const timer = setTimeout(() => {
-      fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`, { credentials: 'include', 
-        
-      })
-        .then(res => res.ok ? res.json() : { suggestions: [] })
-        .then(data => {
-          setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
-        })
-        .catch(() => setSuggestions([]));
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [query, token]);
+    fetch(`/api/search/suggestions?q=${encodeURIComponent(debouncedQuery)}`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : { suggestions: [] })
+      .then(data => setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []))
+      .catch(() => setSuggestions([]));
+  }, [debouncedQuery, token]);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -138,44 +138,38 @@ export default function SearchPage() {
   }, []);
 
   useEffect(() => {
-    if (query.length < 2) {
+    if (debouncedQuery.length < 2) {
       setResults({ products: [], stores: [] });
       setCorrectedQuery(null);
       return;
     }
-    const timer = setTimeout(() => {
-      setLoading(true);
-      setShowSuggestions(false);
-      saveSearch(query);
-      fetch(`/api/search/ai?q=${encodeURIComponent(query)}`, { credentials: 'include', 
-        
+    setLoading(true);
+    setShowSuggestions(false);
+    saveSearch(debouncedQuery);
+    fetch(`/api/search/ai?q=${encodeURIComponent(debouncedQuery)}`, { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : { products: [], stores: [] }))
+      .then(data => {
+        setResults({
+          products: Array.isArray(data.products) ? data.products : [],
+          stores: Array.isArray(data.stores) ? data.stores : [],
+        });
+        setCorrectedQuery(data.correctedQuery || null);
+        setLoading(false);
       })
-        .then(res => (res.ok ? res.json() : { products: [], stores: [] }))
-        .then(data => {
-          setResults({
-            products: Array.isArray(data.products) ? data.products : [],
-            stores: Array.isArray(data.stores) ? data.stores : [],
-          });
-          setCorrectedQuery(data.correctedQuery || null);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [query]);
+      .catch(() => setLoading(false));
+  }, [debouncedQuery]);
 
   const hasResults = results.stores.length > 0;
 
-  const filteredStores = results.stores
-    .filter(s => {
-      if (!matchCategory(s.category, selectedCategory)) return false;
-      return true;
-    })
+  const filteredStores = useMemo(() => results.stores
+    .filter(s => matchCategory(s.category, selectedCategory))
     .sort((a, b) => {
       const aOpen = getStoreStatus(a.openingTime, a.closingTime, a.is24Hours, a.workingDays)?.isOpen ? 0 : 1;
       const bOpen = getStoreStatus(b.openingTime, b.closingTime, b.is24Hours, b.workingDays)?.isOpen ? 0 : 1;
       return aOpen - bOpen;
-    });
+    }),
+    [results.stores, selectedCategory]
+  );
 
   const hasFilters = selectedCategory || sortBy !== 'relevance';
   const clearFilters = () => { setSelectedCategory(''); setSortBy('relevance'); };
@@ -593,7 +587,7 @@ export default function SearchPage() {
                                     style={{ borderRadius: '50%', background: store.logoUrl ? 'black' : 'var(--dk-surface)', border: '0.5px solid var(--dk-border)' }}
                                   >
                                     {store.logoUrl
-                                      ? <img src={store.logoUrl} alt={store.storeName} className="w-full h-full object-cover" />
+                                      ? <img src={store.logoUrl} alt={store.storeName} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                       : <span style={{ fontSize: 22 }}>🏪</span>
                                     }
                                   </div>

@@ -492,6 +492,8 @@ export default function StoreProfilePage() {
                     alt={post.caption || 'Post'}
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
+                    loading="lazy"
+                    decoding="async"
                   />
                   {post.isPinned && (
                     <div
@@ -607,7 +609,7 @@ export default function StoreProfilePage() {
                     {/* Post header */}
                     <div className="flex items-center gap-3 p-3">
                       <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--dk-accent)', flexShrink: 0 }}>
-                        <img src={store.logoUrl} className="w-full h-full object-cover" alt="store" />
+                        <img src={store.logoUrl} className="w-full h-full object-cover" alt="store" loading="lazy" decoding="async" />
                       </div>
                       <div className="flex-1">
                         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{store.storeName}</p>
@@ -617,7 +619,7 @@ export default function StoreProfilePage() {
 
                     {/* Image */}
                     <div style={{ background: 'black' }}>
-                      <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-auto max-h-[500px] object-contain" referrerPolicy="no-referrer" />
+                      <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-auto max-h-[500px] object-contain" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     </div>
 
                     {/* Actions */}

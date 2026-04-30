@@ -3,7 +3,7 @@
 // 2. Under "Application restrictions" → HTTP referrers, add:
 //    localhost:3000/*  |  localhost:5173/*  |  192.168.1.*/*  |  *.ngrok-free.dev/*  |  *.ngrok.io/*
 // OR: Set restriction to "None" for development (re-restrict before production)
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerComponent } from '@react-google-maps/api';
 
 const GoogleMap = GoogleMapComponent as any;
@@ -89,7 +89,7 @@ export default function MapPage() {
     }
   };
 
-  const filteredStores = stores.filter(s => {
+  const filteredStores = useMemo(() => stores.filter(s => {
     if (!matchCategory(s.category, selectedCategory)) return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -98,15 +98,17 @@ export default function MapPage() {
       s.category?.toLowerCase().includes(q) ||
       s.address?.toLowerCase().includes(q)
     );
-  });
+  }), [stores, selectedCategory, searchQuery]);
 
-  const validStores = filteredStores
+  const validStores = useMemo(() => filteredStores
     .filter(s => s.latitude && s.longitude && s.latitude !== 0)
     .sort((a, b) => {
       if (!userLocation) return 0;
       return getDistanceKm(userLocation.lat, userLocation.lng, a.latitude, a.longitude)
         - getDistanceKm(userLocation.lat, userLocation.lng, b.latitude, b.longitude);
-    });
+    }),
+    [filteredStores, userLocation]
+  );
 
   const selectedStoreDistance = selectedStore && userLocation
     ? getDistance(userLocation.lat, userLocation.lng, selectedStore.latitude, selectedStore.longitude)
@@ -294,7 +296,7 @@ export default function MapPage() {
                   style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--dk-surface)' }}
                 >
                   {selectedStore.logoUrl ? (
-                    <img src={selectedStore.logoUrl} className="w-full h-full object-cover" alt="logo" />
+                    <img src={selectedStore.logoUrl} className="w-full h-full object-cover" alt="logo" loading="lazy" decoding="async" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: 'var(--dk-accent)' }}>
                       {selectedStore.storeName?.charAt(0)}
@@ -400,7 +402,7 @@ export default function MapPage() {
                             <button onClick={() => { flyToStore(store); setListExpanded(false); }} className="w-full text-left p-3">
                               <div className="flex items-center gap-3">
                                 <div className="flex-shrink-0 overflow-hidden" style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--dk-surface)' }}>
-                                  {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} /> : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 20 }}>🏪</div>}
+                                  {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} loading="lazy" decoding="async" /> : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 20 }}>🏪</div>}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="font-semibold truncate" style={{ fontSize: 14, color: '#1A1A1A' }}>{store.storeName}</p>
@@ -440,7 +442,7 @@ export default function MapPage() {
                       return (
                         <button key={store.id} onClick={() => flyToStore(store)} className="flex-shrink-0 text-left overflow-hidden" style={{ width: 145, background: 'var(--dk-bg)', borderRadius: 14, border: selectedStore?.id === store.id ? '1.5px solid var(--dk-accent)' : '0.5px solid var(--dk-border)' }}>
                           <div style={{ width: '100%', height: 56, background: 'var(--dk-surface)', position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden' }}>
-                            {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} /> : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 24 }}>🏪</div>}
+                            {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} loading="lazy" decoding="async" /> : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 24 }}>🏪</div>}
                           </div>
                           <div className="px-2.5 py-2">
                             <p className="truncate font-bold" style={{ fontSize: 12, color: '#1A1A1A' }}>{store.storeName}</p>

@@ -3,21 +3,22 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import HomePage from './pages/Home';
-import SearchPage from './pages/Search';
-import MapPage from './pages/Map';
-import MessagesPage from './pages/Messages';
-import ProfilePage from './pages/Profile';
-import StoreProfilePage from './pages/StoreProfile';
-import RetailerDashboard from './pages/RetailerDashboard';
-import ChatPage from './pages/Chat';
 import SignupPage from './pages/Signup';
 import LoginPage from './pages/Login';
-import UserSettings from './pages/UserSettings';
-import SupportPage from './pages/Support';
 import NotFoundPage from './pages/NotFound';
+
+const HomePage = lazy(() => import('./pages/Home'));
+const SearchPage = lazy(() => import('./pages/Search'));
+const MapPage = lazy(() => import('./pages/Map'));
+const MessagesPage = lazy(() => import('./pages/Messages'));
+const ProfilePage = lazy(() => import('./pages/Profile'));
+const StoreProfilePage = lazy(() => import('./pages/StoreProfile'));
+const RetailerDashboard = lazy(() => import('./pages/RetailerDashboard'));
+const ChatPage = lazy(() => import('./pages/Chat'));
+const UserSettings = lazy(() => import('./pages/UserSettings'));
+const SupportPage = lazy(() => import('./pages/Support'));
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -86,6 +87,11 @@ export default function App() {
           <NotificationProvider>
             <FlowController />
             <div className="min-h-screen pb-16" style={{ background: 'var(--dk-bg)' }}>
+              <Suspense fallback={
+                <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--dk-border)', borderTopColor: 'var(--dk-accent)', borderRadius: '50%' }} />
+                </div>
+              }>
               <Routes>
                 <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
                 <Route path="/search" element={<SearchPage />} />
@@ -101,6 +107,7 @@ export default function App() {
                 <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
+              </Suspense>
               <BottomNav />
               <PWAInstallPrompt />
             </div>
