@@ -4,12 +4,14 @@ import RefreshButton from '../components/RefreshButton';
 import { MessageCircle, Search, X, ChevronRight } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { useToast } from '../context/ToastContext';
 import { ConversationSkeleton } from '../components/Skeleton';
 import ConversationRow from '../components/ConversationRow';
 import { Conversation } from '../types';
 
 export default function MessagesPage() {
+  usePageMeta({ title: 'Messages' });
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext';
 
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { StoreCardSkeleton } from '../components/Skeleton';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
 
@@ -24,6 +25,7 @@ const CATEGORY_BG: Record<string, { bg: string; color: string }> = {
 };
 
 export default function SearchPage() {
+  usePageMeta({ title: 'Search' });
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<{ products: any[]; stores: any[] }>({

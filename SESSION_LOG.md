@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-04-30 — Session 44 (MEGA SPRINT: map skeleton, SEO meta, Profile+Dashboard split)
+
+- TASK 1: `Map.tsx` — added `storesLoading` state; horizontal store card carousel shows 3 shimmer skeleton cards while stores are fetching
+- TASK 2: `src/hooks/usePageMeta.ts` — per-page document.title + og:title + meta description via direct DOM; added to Home, Search, Map, Messages, Profile, StoreProfile (dynamic storeName)
+- TASK 3: Profile.tsx split (1342 → 435 lines): extracted `src/components/profile/StoreInfoCard.tsx` (store address/phone/hours/directions), `PostsGrid.tsx` (full posts management: grid + selected post view + new post modal + edit modal + delete confirm; self-contained AI/voice state), `ReviewsTab.tsx` (reviews list)
+- TASK 4: RetailerDashboard.tsx split (1163 → 355 lines): extracted `src/components/dashboard/AiBioModal.tsx` (self-contained AI bio generation with voice recording), `StoreFormFields.tsx` (pure UI form fields with logo/cover upload), `KycUploadForm.tsx` (moved existing inline sub-component to own file)
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-04-30 — Session 43 (SPRINT 2B: Type safety + architecture)
 
 - WIN 1: `src/types/index.ts` — central type definitions (User/Store/Product/Post/Message/Conversation/Interactions/FeedResponse/ApiPagination); fields matched to actual Prisma schema

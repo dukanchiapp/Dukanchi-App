@@ -8,9 +8,11 @@ import LocationPicker from '../components/LocationPicker';
 import { PostCardSkeleton } from '../components/Skeleton';
 import { PostCard } from '../components/PostCard';
 import { useFeed } from '../hooks/useFeed';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 
 export default function HomePage() {
+  usePageMeta({ title: 'Home' });
   const [feedType, setFeedType] = useState('global');
   const [locationRange, setLocationRange] = useState('all');
   const [showFilters, setShowFilters] = useState(false);

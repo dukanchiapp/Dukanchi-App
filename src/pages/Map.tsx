@@ -4,6 +4,8 @@
 //    localhost:3000/*  |  localhost:5173/*  |  192.168.1.*/*  |  *.ngrok-free.dev/*  |  *.ngrok.io/*
 // OR: Set restriction to "None" for development (re-restrict before production)
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { ShimmerBox } from '../components/Skeleton';
+import { usePageMeta } from '../hooks/usePageMeta';
 import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerComponent } from '@react-google-maps/api';
 
 const GoogleMap = GoogleMapComponent as any;
@@ -31,7 +33,9 @@ const MAP_STYLES: google.maps.MapTypeStyle[] = [
 
 
 export default function MapPage() {
+  usePageMeta({ title: 'Map' });
   const [stores, setStores] = useState<any[]>([]);
+  const [storesLoading, setStoresLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -60,10 +64,12 @@ export default function MapPage() {
   });
 
   useEffect(() => {
+    setStoresLoading(true);
     fetch('/api/stores?limit=200', { credentials: 'include' })
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => setStores(Array.isArray(data) ? data : (data.stores ?? [])))
-      .catch(() => setStores([]));
+      .catch(() => setStores([]))
+      .finally(() => setStoresLoading(false));
   }, []);
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -435,7 +441,18 @@ export default function MapPage() {
                   </button>
 
                   <div className="flex gap-3 overflow-x-auto py-3 px-3" style={{ scrollbarWidth: 'none' }}>
-                    {validStores.slice(0, 8).map(store => {
+                    {storesLoading ? (
+                      [1, 2, 3].map(i => (
+                        <div key={i} className="flex-shrink-0" style={{ width: 160, borderRadius: 14, overflow: 'hidden', border: '0.5px solid #f0f0f0' }}>
+                          <ShimmerBox width="100%" height={56} radius={0} />
+                          <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                            <ShimmerBox width="80%" height={12} />
+                            <ShimmerBox width="55%" height={10} />
+                            <ShimmerBox width="65%" height={10} />
+                          </div>
+                        </div>
+                      ))
+                    ) : validStores.slice(0, 8).map(store => {
                       const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : null;
                       const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
                       const catDef2 = CATEGORIES.find(c => matchCategory(store.category, c.value));

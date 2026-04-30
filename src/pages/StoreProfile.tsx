@@ -6,12 +6,14 @@ import ReviewModal from '../components/ReviewModal';
 import RefreshButton from '../components/RefreshButton';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useToast } from '../context/ToastContext';
+import { usePageMeta } from '../hooks/usePageMeta';
 
 export default function StoreProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [store, setStore] = useState<any>(null);
+  usePageMeta({ title: store?.storeName || 'Store' });
   const [products, setProducts] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
