@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-04-30 — Session 45 (UserSettings split)
+
+- `src/pages/UserSettings.tsx` split (863 → 648 lines): extracted 3 components under `src/components/settings/`
+- `ManagePostsTab.tsx` — manage posts tab (post list, bulk/single delete, selection); React.memo
+- `ManageTeamTab.tsx` — manage team tab (owner card, member list, add member modal with form); React.memo; `handleToggleAddForm` + `handleTeamFieldChange` in parent
+- `CustomerDataTabs.tsx` — all 5 customer tabs (following, saved, locations, history, reviews); React.memo
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-04-30 — Session 44 (MEGA SPRINT: map skeleton, SEO meta, Profile+Dashboard split)
 
 - TASK 1: `Map.tsx` — added `storesLoading` state; horizontal store card carousel shows 3 shimmer skeleton cards while stores are fetching
