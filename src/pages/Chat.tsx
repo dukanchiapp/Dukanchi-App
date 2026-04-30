@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle, ShoppingBag, Tag } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import { Message } from '../types';
 
 const POST_REF_PREFIX = '__POST_REF__:';
 
@@ -132,7 +133,7 @@ export default function ChatPage() {
   const referredPostFromState = (location.state as any)?.referredPost ?? null;
   const userNameFromState = (location.state as any)?.userName ?? '';
 
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -183,13 +184,13 @@ export default function ChatPage() {
       
     })
       .then(res => res.ok ? res.json() : { messages: [] })
-      .then(data => setMessages(Array.isArray(data) ? data : (data.messages ?? [])))
+      .then(data => setMessages((Array.isArray(data) ? data : (data.messages ?? [])) as Message[]))
       .catch(() => {});
 
     const socket = io('/', { withCredentials: true, transports: ['websocket'] });
     socketRef.current = socket;
 
-    socket.on('newMessage', (msg: any) => {
+    socket.on('newMessage', (msg: Message) => {
       const belongs =
         (msg.senderId === currentUserId && msg.receiverId === userId) ||
         (msg.senderId === userId && msg.receiverId === currentUserId);
@@ -225,7 +226,7 @@ export default function ChatPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const sendRaw = async (body: object) => {
+  const sendRaw = async (body: { receiverId?: string; message?: string; imageUrl?: string }) => {
     const res = await fetch('/api/messages', {
       credentials: 'include',
       method: 'POST',
@@ -233,8 +234,8 @@ export default function ChatPage() {
       body: JSON.stringify(body),
     });
     if (res.ok) {
-      const saved = await res.json();
-      const msg = { ...saved, senderId: saved.senderId || currentUserId };
+      const saved: Message = await res.json();
+      const msg: Message = { ...saved, senderId: saved.senderId || currentUserId };
       setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
     } else {
       const err = await res.json().catch(() => ({}));
@@ -335,7 +336,7 @@ export default function ChatPage() {
                   : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-tl-sm'
               } ${isPostRef ? 'px-2 py-2' : ''}`}>
                 {isPostRef ? (
-                  <PostRefCard text={msg.message} onTap={setPreviewPost} />
+                  <PostRefCard text={msg.message!} onTap={setPreviewPost} />
                 ) : (
                   <>
                     {msg.imageUrl && (

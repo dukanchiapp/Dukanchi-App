@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-04-30 — Session 43 (SPRINT 2B: Type safety + architecture)
+
+- WIN 1: `src/types/index.ts` — central type definitions (User/Store/Product/Post/Message/Conversation/Interactions/FeedResponse/ApiPagination); fields matched to actual Prisma schema
+- WIN 2: Replaced `any` in 4 critical files: `PostCard.tsx` (post: Post, onShare: Post), `Home.tsx` (Post[], Interactions, getLikeCount/handleShare typed), `Messages.tsx` (Conversation[], formatConversations helper), `Chat.tsx` (Message[], sendRaw body typed, socket handler typed)
+- WIN 3: `src/hooks/useFeed.ts` — custom hook extracts feed pagination from Home.tsx; handles global/following; returns posts/loading/loadingMore/hasMore/loadMore; Home.tsx now uses useFeed + separate effect for saved tab; ~70 lines removed from Home.tsx
+- WIN 4: `src/components/ConversationRow.tsx` — memoized with custom equality (userId+lastMessage+unread); Messages.tsx uses ConversationRow + useCallback handleOpenChat; 3 duplicate `fetch('/api/conversations')` blocks consolidated into `refreshConversations()`
+- Profile/RetailerDashboard/UserSettings `any` deferred to Sprint 3
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-04-30 — Session 42 (SPRINT 2A: Performance & Polish)
 
 - WIN 1: `src/App.tsx` — replaced 10 eager page imports with `React.lazy()`; kept Login/Signup/NotFound eager; wrapped `<Routes>` in `<Suspense>` spinner; chunks now load on demand

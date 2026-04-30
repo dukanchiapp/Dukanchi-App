@@ -7,57 +7,86 @@ import { useUserLocation } from '../context/LocationContext';
 import LocationPicker from '../components/LocationPicker';
 import { PostCardSkeleton } from '../components/Skeleton';
 import { PostCard } from '../components/PostCard';
+import { useFeed } from '../hooks/useFeed';
+import { Post, Interactions } from '../types';
 
 export default function HomePage() {
-  const [posts, setPosts] = useState<any[]>([]);
-  const [interactions, setInteractions] = useState<{
-    likedPostIds: string[];
-    savedPostIds: string[];
-    followedStoreIds: string[];
-  }>({ likedPostIds: [], savedPostIds: [], followedStoreIds: [] });
-  const [loading, setLoading] = useState(true);
   const [feedType, setFeedType] = useState('global');
   const [locationRange, setLocationRange] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const { location: userLocCtx } = useUserLocation();
   const userLoc = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
-  
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  // Sticky bar height calculation
   const topBarRef = useRef<HTMLDivElement>(null);
   const [topBarHeight, setTopBarHeight] = useState(0);
-  // naturalWidth / naturalHeight ratio for each post's image
   const [imgRatios, setImgRatios] = useState<Record<string, number>>({});
-  // Carousel
+
   const [carouselImages, setCarouselImages] = useState<string[]>([]);
   const [carouselIdx, setCarouselIdx] = useState(0);
   const carouselTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
   const { showToast } = useToast();
 
+  // Interactions state — managed here, updated optimistically by handlers
+  const [interactions, setInteractions] = useState<Interactions>({
+    likedPostIds: [], savedPostIds: [], followedStoreIds: [],
+  });
 
-  // Fetch carousel images from admin settings
+  // Saved tab state — separate from paginated feed
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+
+  // Feed hook — handles global/following pagination
+  const { posts: feedPosts, loading: feedLoading, loadingMore, hasMore, loadMore } = useFeed({
+    feedType,
+    locationRange,
+    lat: userLocCtx?.lat,
+    lng: userLocCtx?.lng,
+    enabled: !!token && feedType !== 'saved',
+  });
+
+  // Derived: use saved posts when on saved tab
+  const posts = feedType === 'saved' ? savedPosts : feedPosts;
+  const loading = feedType === 'saved' ? savedLoading : feedLoading;
+
+  // Fetch interactions once when token is available
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/me/interactions', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setInteractions(data as Interactions); })
+      .catch(() => {});
+  }, [token]);
+
+  // Fetch saved posts when saved tab is active
+  useEffect(() => {
+    if (feedType !== 'saved' || !user?.id || !token) return;
+    setSavedLoading(true);
+    fetch(`/api/users/${user.id}/saved`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { posts: [] })
+      .then(data => setSavedPosts((Array.isArray(data.posts) ? data.posts : []) as Post[]))
+      .catch(() => setSavedPosts([]))
+      .finally(() => setSavedLoading(false));
+  }, [feedType, user?.id, token]);
+
+  // Carousel
   useEffect(() => {
     fetch('/api/app-settings', { credentials: 'include' })
       .then(r => r.json())
       .then(data => {
-        if (data.carouselImages && data.carouselImages.length > 0) {
-          setCarouselImages(data.carouselImages);
-        } else {
-          // Fallback banners when admin hasn't set any
-          setCarouselImages([
-            'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800&h=400&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop&q=80',
-          ]);
-        }
+        setCarouselImages(
+          data.carouselImages?.length > 0
+            ? data.carouselImages
+            : [
+                'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=400&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=800&h=400&fit=crop&q=80',
+                'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&h=400&fit=crop&q=80',
+              ]
+        );
       })
       .catch(() => {
         setCarouselImages([
@@ -68,7 +97,6 @@ export default function HomePage() {
       });
   }, []);
 
-  // Auto-slide carousel
   useEffect(() => {
     if (carouselImages.length <= 1) return;
     carouselTimer.current = setInterval(() => {
@@ -89,7 +117,24 @@ export default function HomePage() {
     }, 4000);
   }, [carouselImages]);
 
-  const getDistance = (lat?: number, lng?: number): string | null => {
+  // Sticky top bar height
+  useEffect(() => {
+    if (topBarRef.current) setTopBarHeight(topBarRef.current.offsetHeight);
+  }, [userLoc, feedType, locationRange]);
+
+  // IntersectionObserver — calls loadMore from useFeed when sentinel enters view
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    observerRef.current?.disconnect();
+    observerRef.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadMore();
+    }, { threshold: 0.5 });
+    observerRef.current.observe(sentinel);
+    return () => observerRef.current?.disconnect();
+  }, [loadMore]);
+
+  const getDistance = (lat?: number | null, lng?: number | null): string | null => {
     if (!userLoc || !lat || !lng) return null;
     const R = 6371;
     const dLat = (lat - userLoc.lat) * (Math.PI / 180);
@@ -106,84 +151,6 @@ export default function HomePage() {
   const handleImgLoad = useCallback((postId: string, ratio: number) => {
     setImgRatios(prev => ({ ...prev, [postId]: ratio }));
   }, []);
-
-  const fetchFeed = async (pageNum = 1) => {
-    if (!token) return;
-    if (pageNum === 1) setLoading(true);
-    else setLoadingMore(true);
-    try {
-      const intRes = await fetch('/api/me/interactions', { credentials: 'include' });
-      if (intRes.status === 401 || intRes.status === 403) { logout(); return; }
-      setInteractions(await intRes.json());
-
-      if (feedType === 'saved') {
-        const savedRes = await fetch(`/api/users/${user?.id}/saved`, { credentials: 'include' });
-        if (savedRes.status === 401 || savedRes.status === 403) { logout(); return; }
-        const savedData = await savedRes.json();
-        setPosts(Array.isArray(savedData.posts) ? savedData.posts : []);
-        setHasMore(false);
-        return;
-      }
-
-      let lat = 0, lng = 0;
-      if (locationRange !== 'all' && userLoc) {
-        lat = userLoc.lat;
-        lng = userLoc.lng;
-      }
-      const postsRes = await fetch(
-        `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${lat}&lng=${lng}&page=${pageNum}&limit=15`,
-        { credentials: 'include' }
-      );
-      if (postsRes.status === 401 || postsRes.status === 403) { logout(); return; }
-      const postsData = await postsRes.json();
-      const newPosts = Array.isArray(postsData.posts) ? postsData.posts : [];
-
-      if (pageNum === 1) {
-        setPosts(newPosts);
-      } else {
-        setPosts(prev => {
-          const existingIds = new Set(prev.map((p: any) => p.id));
-          return [...prev, ...newPosts.filter((p: any) => !existingIds.has(p.id))];
-        });
-      }
-      setHasMore(pageNum < (postsData.pagination?.totalPages || 1));
-    } catch {
-      if (pageNum === 1) setPosts([]);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  useEffect(() => {
-    setPage(1);
-    setHasMore(true);
-    fetchFeed(1);
-  }, [token, feedType, locationRange, userLocCtx?.lat, userLocCtx?.lng]);
-
-  // IntersectionObserver — triggers next page load when sentinel comes into view
-  useEffect(() => {
-    if (!sentinelRef.current) return;
-    observerRef.current?.disconnect();
-
-    observerRef.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasMore && !loadingMore && !loading) {
-        const nextPage = page + 1;
-        setPage(nextPage);
-        fetchFeed(nextPage);
-      }
-    }, { threshold: 0.5 });
-
-    observerRef.current.observe(sentinelRef.current);
-    return () => observerRef.current?.disconnect();
-  }, [hasMore, loadingMore, loading, page, feedType, locationRange]);
-
-  // Update top sticky bar height for the tabs to stick just beneath it
-  useEffect(() => {
-    if (topBarRef.current) {
-      setTopBarHeight(topBarRef.current.offsetHeight);
-    }
-  }, [userLoc, feedType, locationRange]); // Re-calculate if anything layout-changing happens in top bar
 
   const toggleLike = useCallback(async (postId: string) => {
     let wasLiked = false;
@@ -248,7 +215,7 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleShare = useCallback(async (post: any) => {
+  const handleShare = useCallback(async (post: Post) => {
     const shareData = {
       title: post.store?.storeName || 'Check this out!',
       text: post.caption || `See this post from ${post.store?.storeName}`,
@@ -266,7 +233,7 @@ export default function HomePage() {
     }
   }, [showToast]);
 
-  const getLikeCount = (post: any) => {
+  const getLikeCount = (post: Post) => {
     const total = post._count?.likes ?? post.likes?.length ?? 0;
     const initiallyLiked = (post.likes?.length ?? 0) > 0;
     const currentlyLiked = interactions.likedPostIds.includes(post.id);
@@ -288,8 +255,6 @@ export default function HomePage() {
         {/* ── Sticky top block (Header + Location) ── */}
         <div ref={topBarRef} className="sticky top-0 z-30" style={{ background: 'var(--dk-bg)' }}>
           <AppHeader />
-
-          {/* Location bar */}
           <div
             className="px-4 py-2 flex items-center justify-between"
             style={{ background: 'var(--dk-bg-soft)' }}
@@ -324,7 +289,6 @@ export default function HomePage() {
                 background: '#e5e7eb',
               }}
             >
-              {/* Images */}
               <div
                 style={{
                   display: 'flex',
@@ -336,21 +300,15 @@ export default function HomePage() {
                 {carouselImages.map((img, i) => (
                   <img
                     key={i}
-                    src={img.startsWith('http') ? img : img}
+                    src={img}
                     alt={`Banner ${i + 1}`}
                     loading={i === carouselIdx ? 'eager' : 'lazy'}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      flexShrink: 0,
-                    }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', flexShrink: 0 }}
                     draggable={false}
                   />
                 ))}
               </div>
 
-              {/* Prev / Next buttons */}
               {carouselImages.length > 1 && (
                 <>
                   <button
@@ -380,7 +338,6 @@ export default function HomePage() {
                 </>
               )}
 
-              {/* Dots */}
               {carouselImages.length > 1 && (
                 <div
                   style={{
@@ -414,69 +371,66 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Tabs + distance filter */}
+        {/* ── Tabs + distance filter ── */}
         <div
           className="sticky z-20 px-4 py-2.5 flex items-center justify-between"
           style={{ top: topBarHeight, background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}
         >
-            <div
-              className="flex p-0.5 rounded-full gap-0.5"
-              style={{ background: 'var(--dk-surface)' }}
-            >
-              {tabs.map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setFeedType(tab.key)}
-                  className="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
-                  style={
-                    feedType === tab.key
-                      ? { background: '#1A1A1A', color: 'white' }
-                      : { background: 'transparent', color: '#555' }
-                  }
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            <div className="relative">
+          <div className="flex p-0.5 rounded-full gap-0.5" style={{ background: 'var(--dk-surface)' }}>
+            {tabs.map(tab => (
               <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="p-1.5 rounded-full"
-                style={{ color: 'var(--dk-text-secondary)' }}
+                key={tab.key}
+                onClick={() => setFeedType(tab.key)}
+                className="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
+                style={
+                  feedType === tab.key
+                    ? { background: '#1A1A1A', color: 'white' }
+                    : { background: 'transparent', color: '#555' }
+                }
               >
-                <SlidersHorizontal size={16} />
+                {tab.label}
               </button>
-              {showFilters && (
-                <div
-                  className="absolute right-0 top-9 w-44 bg-white shadow-xl rounded-xl py-2 z-30"
-                  style={{ border: '1px solid var(--dk-border)' }}
-                >
-                  <div
-                    className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: 'var(--dk-text-tertiary)' }}
-                  >
-                    Distance
-                  </div>
-                  {[
-                    { key: 'all', label: 'Global' },
-                    { key: '3', label: 'Within 3 km' },
-                  ].map(opt => (
-                    <button
-                      key={opt.key}
-                      onClick={() => { setLocationRange(opt.key); setShowFilters(false); }}
-                      className="w-full text-left px-4 py-2 text-sm flex justify-between items-center hover:bg-gray-50"
-                      style={{ color: 'var(--dk-text-primary)' }}
-                    >
-                      {opt.label}
-                      {locationRange === opt.key && (
-                        <Check size={14} style={{ color: 'var(--dk-accent)' }} />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            ))}
           </div>
+          <div className="relative">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="p-1.5 rounded-full"
+              style={{ color: 'var(--dk-text-secondary)' }}
+            >
+              <SlidersHorizontal size={16} />
+            </button>
+            {showFilters && (
+              <div
+                className="absolute right-0 top-9 w-44 bg-white shadow-xl rounded-xl py-2 z-30"
+                style={{ border: '1px solid var(--dk-border)' }}
+              >
+                <div
+                  className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: 'var(--dk-text-tertiary)' }}
+                >
+                  Distance
+                </div>
+                {[
+                  { key: 'all', label: 'Global' },
+                  { key: '3', label: 'Within 3 km' },
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => { setLocationRange(opt.key); setShowFilters(false); }}
+                    className="w-full text-left px-4 py-2 text-sm flex justify-between items-center hover:bg-gray-50"
+                    style={{ color: 'var(--dk-text-primary)' }}
+                  >
+                    {opt.label}
+                    {locationRange === opt.key && (
+                      <Check size={14} style={{ color: 'var(--dk-accent)' }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* ── Feed ── */}
         <main className="px-4 pt-4 space-y-4">
@@ -486,11 +440,7 @@ export default function HomePage() {
             </div>
           ) : posts.length === 0 ? (
             <div className="text-center py-16">
-              <StoreIcon
-                className="mx-auto mb-3"
-                size={44}
-                style={{ color: 'var(--dk-border-strong)' }}
-              />
+              <StoreIcon className="mx-auto mb-3" size={44} style={{ color: 'var(--dk-border-strong)' }} />
               <p className="text-sm font-medium" style={{ color: 'var(--dk-text-secondary)' }}>
                 {feedType === 'saved' ? 'No saved posts yet.' : 'No posts found.'}
               </p>
@@ -523,7 +473,6 @@ export default function HomePage() {
           {/* Infinite scroll sentinel */}
           <div ref={sentinelRef} style={{ height: 1 }} />
 
-          {/* Loading more indicator */}
           {loadingMore && (
             <div className="flex justify-center py-6">
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -543,7 +492,6 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* End of feed */}
           {!hasMore && posts.length > 0 && !loadingMore && (
             <div className="flex flex-col items-center py-8 gap-1">
               <span style={{ fontSize: 20 }}>🎉</span>

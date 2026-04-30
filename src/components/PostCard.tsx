@@ -2,9 +2,10 @@ import React, { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Bookmark, Share2, MessageCircle } from 'lucide-react';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
+import { Post } from '../types';
 
 export interface PostCardProps {
-  post: any;
+  post: Post;
   isLiked: boolean;
   isSaved: boolean;
   isFollowed: boolean;
@@ -14,7 +15,7 @@ export interface PostCardProps {
   onLike: (postId: string) => void;
   onSave: (postId: string) => void;
   onFollow: (storeId: string) => void;
-  onShare: (post: any) => void;
+  onShare: (post: Post) => void;
   onImgLoad: (postId: string, ratio: number) => void;
 }
 
@@ -51,20 +52,7 @@ function getImageStyles(naturalRatio: number | undefined): {
   };
 }
 
-function PostCardInner({
-  post,
-  isLiked,
-  isSaved,
-  isFollowed,
-  likeCount,
-  distance,
-  imgRatio,
-  onLike,
-  onSave,
-  onFollow,
-  onShare,
-  onImgLoad,
-}: PostCardProps) {
+function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance, imgRatio, onLike, onSave, onFollow, onShare, onImgLoad }: PostCardProps) {
   const isOwnPost = post.isOwnPost === true;
   const storeLink = isOwnPost ? '/profile' : `/store/${post.storeId}`;
   const status = getStoreStatus(

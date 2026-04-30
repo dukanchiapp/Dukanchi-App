@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import RefreshButton from '../components/RefreshButton';
 import { MessageCircle, Search, X, ChevronRight } from 'lucide-react';
@@ -6,9 +6,11 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { ConversationSkeleton } from '../components/Skeleton';
+import ConversationRow from '../components/ConversationRow';
+import { Conversation } from '../types';
 
 export default function MessagesPage() {
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedStores, setSuggestedStores] = useState<any[]>([]);
@@ -19,19 +21,31 @@ export default function MessagesPage() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const formatConversations = (data: Conversation[]): Conversation[] =>
+    data.map(conv => ({
+      ...conv,
+      timestamp: new Date(conv.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }));
+
+  const refreshConversations = useCallback(() => {
+    fetch('/api/conversations', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setConversations(formatConversations(data as Conversation[])))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    fetch('/api/conversations', { credentials: 'include',   })
+    fetch('/api/conversations', { credentials: 'include' })
       .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        setConversations(data.map((conv: any) => ({
-          ...conv,
-          timestamp: new Date(conv.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        })));
-      })
+      .then(data => setConversations(formatConversations(data as Conversation[])))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [token]);
+
+  const handleOpenChat = useCallback((userId: string, name: string) => {
+    navigate(`/chat/${userId}`, { state: { userName: name } });
+  }, [navigate]);
 
   useEffect(() => {
     if (authLoading || !user?.id) return;
@@ -60,16 +74,9 @@ export default function MessagesPage() {
       });
     });
 
-    socket.on('ask_nearby_confirmed', (data: any) => {
+    socket.on('ask_nearby_confirmed', (data: { storeName: string }) => {
       showToast(`🎉 '${data.storeName}' ke paas stock hai! Chat mein jaao`);
-      // Refresh conversations so new chat appears
-      fetch('/api/conversations', { credentials: 'include' })
-        .then(r => r.ok ? r.json() : [])
-        .then(list => setConversations(list.map((c: any) => ({
-          ...c,
-          timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        }))))
-        .catch(() => {});
+      refreshConversations();
     });
 
     return () => { socket.disconnect(); socketRef.current = null; };
@@ -91,14 +98,7 @@ export default function MessagesPage() {
       setAskNearbyCards(prev => prev.filter(c => c.responseId !== responseId));
       if (answer === 'yes') {
         showToast('Chat shuru ho gayi! Customer ab aapko message kar sakta hai.');
-        // Refresh conversations
-        fetch('/api/conversations', { credentials: 'include' })
-          .then(r => r.ok ? r.json() : [])
-          .then(list => setConversations(list.map((c: any) => ({
-            ...c,
-            timestamp: new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          }))))
-          .catch(() => {});
+        refreshConversations();
       }
     } catch {
       showToast('Network error');
@@ -220,59 +220,11 @@ export default function MessagesPage() {
         {!loading && filtered.length > 0 && (
           <div className="px-4 space-y-2">
             {filtered.map(conv => (
-              <Link
-                key={conv.id}
-                to={`/chat/${conv.userId}`}
-                state={{ userName: conv.name }}
-                className="flex items-center gap-3 p-3 bg-white rounded-xl"
-                style={{ border: '0.5px solid var(--dk-border)' }}
-              >
-                <div className="relative flex-shrink-0">
-                  <div
-                    className="overflow-hidden"
-                    style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--dk-surface)' }}
-                  >
-                    {conv.logoUrl ? (
-                      <img src={conv.logoUrl} className="w-full h-full object-cover" alt="logo" />
-                    ) : (
-                      <div
-                        className="w-full h-full flex items-center justify-center font-bold text-lg"
-                        style={{ color: 'var(--dk-accent)' }}
-                      >
-                        {conv.name?.charAt(0)}
-                      </div>
-                    )}
-                  </div>
-                  {conv.unread > 0 && (
-                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
-                      {conv.unread}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline">
-                    <h3
-                      className="font-semibold truncate"
-                      style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}
-                    >
-                      {conv.name}
-                    </h3>
-                    <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', flexShrink: 0, marginLeft: 8 }}>
-                      {conv.timestamp}
-                    </span>
-                  </div>
-                  <p
-                    className="truncate mt-0.5"
-                    style={{
-                      fontSize: 12,
-                      color: conv.unread > 0 ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)',
-                      fontWeight: conv.unread > 0 ? 600 : 400,
-                    }}
-                  >
-                    {conv.lastMessage}
-                  </p>
-                </div>
-              </Link>
+              <ConversationRow
+                key={conv.userId}
+                conversation={conv}
+                onClick={handleOpenChat}
+              />
             ))}
           </div>
         )}
