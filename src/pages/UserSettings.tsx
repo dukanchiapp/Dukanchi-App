@@ -337,6 +337,22 @@ export default function UserSettings() {
                 searchHistory={searchHistory}
                 userReviews={userReviews}
                 loading={customerLoading}
+                onUnfollow={async (storeId) => {
+                  await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', method: 'POST' });
+                  setFollowedStores(prev => prev.filter(s => s.id !== storeId));
+                }}
+                onUnsave={async (postId) => {
+                  await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' });
+                  setSavedItems(prev => ({
+                    ...prev,
+                    posts: prev.posts.filter(p => p.id !== postId),
+                    saved: prev.saved.filter(s => s.postId !== postId),
+                  }));
+                }}
+                onClearHistory={async () => {
+                  await fetch('/api/me/search-history', { credentials: 'include', method: 'DELETE' });
+                  setSearchHistory([]);
+                }}
               />
             )}
 

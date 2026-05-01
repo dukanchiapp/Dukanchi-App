@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-05-01 — Session 47 (FINAL LAUNCH AUDIT)
+
+- `CustomerDataTabs.tsx`: added `onUnfollow`, `onUnsave`, `onClearHistory` props + action buttons (Unfollow/Remove/Clear All)
+- `UserSettings.tsx`: wired the 3 handlers (toggle-follow/toggle-save/delete-history API calls + optimistic state updates)
+- `tsconfig.json`: added `include`/`exclude` — frontend-only TS check; backend files excluded
+- `public/sw.js`: CACHE_NAME bumped `dukanchi-v5` → `dukanchi-v6`
+- Flow audit (8 paths): Profile, RetailerDashboard, UserSettings, useFeed, PostCard, App, AuthContext, SW — all ✓
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-01 — Session 46 (UserSettings split — completed)
 
 - `src/pages/UserSettings.tsx` split (863 → 391 lines): 6 components under `src/components/settings/`

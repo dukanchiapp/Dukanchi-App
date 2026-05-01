@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Store, Bookmark, MapPin, History, Star, ChevronRight } from 'lucide-react';
+import { Store, Bookmark, MapPin, History, Star } from 'lucide-react';
 import StarRating from '../StarRating';
 
 interface CustomerDataTabsProps {
@@ -11,6 +11,9 @@ interface CustomerDataTabsProps {
   searchHistory: any[];
   userReviews: any[];
   loading: boolean;
+  onUnfollow: (storeId: string) => void;
+  onUnsave: (postId: string) => void;
+  onClearHistory: () => void;
 }
 
 const SkeletonList = () => (
@@ -29,6 +32,7 @@ const SkeletonList = () => (
 
 export const CustomerDataTabs = React.memo(function CustomerDataTabs({
   activeTab, followedStores, savedItems, savedLocations, searchHistory, userReviews, loading,
+  onUnfollow, onUnsave, onClearHistory,
 }: CustomerDataTabsProps) {
   return (
     <>
@@ -36,11 +40,21 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
         loading ? <SkeletonList /> : followedStores.length > 0 ? (
           <div className="space-y-2">
             {followedStores.map(s => (
-              <Link key={s.id} to={`/store/${s.id}`} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center space-x-3 hover:bg-gray-50 transition-colors block">
-                <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold">{s.storeName?.charAt(0)}</div>
-                <div className="flex-1"><h3 className="font-semibold text-sm text-gray-900">{s.storeName}</h3><p className="text-xs text-gray-500">{s.category}</p></div>
-                <ChevronRight size={16} className="text-gray-400" />
-              </Link>
+              <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center space-x-3">
+                <Link to={`/store/${s.id}`} className="flex items-center space-x-3 flex-1 min-w-0">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex-shrink-0 flex items-center justify-center text-indigo-600 font-bold">{s.storeName?.charAt(0)}</div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm text-gray-900">{s.storeName}</h3>
+                    <p className="text-xs text-gray-500">{s.category}</p>
+                  </div>
+                </Link>
+                <button
+                  onClick={() => onUnfollow(s.id)}
+                  style={{ padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: '1px solid #FFE4D6', background: 'white', color: '#FF6B35', cursor: 'pointer', flexShrink: 0 }}
+                >
+                  Unfollow
+                </button>
+              </div>
             ))}
           </div>
         ) : (
@@ -57,7 +71,13 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
             {savedItems.posts.map(p => (
               <div key={p.id} className="aspect-square relative rounded-lg overflow-hidden">
                 <img src={p.imageUrl} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
-                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-medium truncate max-w-[90%]">{p.store?.storeName}</div>
+                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded font-medium truncate max-w-[70%]">{p.store?.storeName}</div>
+                <button
+                  onClick={() => onUnsave(p.id || p.postId)}
+                  style={{ position: 'absolute', top: 4, right: 4, padding: '4px 8px', borderRadius: 12, fontSize: 10, fontWeight: 600, border: '1px solid #eee', background: 'white', color: '#666', cursor: 'pointer' }}
+                >
+                  Remove
+                </button>
               </div>
             ))}
           </div>
@@ -90,6 +110,11 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
       {activeTab === 'history' && (
         loading ? <SkeletonList /> : searchHistory.length > 0 ? (
           <div className="space-y-2">
+            <div className="flex justify-end">
+              <button onClick={onClearHistory} style={{ fontSize: 12, color: '#FF6B35', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                Clear All
+              </button>
+            </div>
             {searchHistory.map(h => (
               <div key={h.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center space-x-3">
                 <History size={16} className="text-gray-400 flex-shrink-0" />
