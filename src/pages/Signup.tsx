@@ -35,7 +35,11 @@ export default function SignupPage() {
         body: JSON.stringify({ name: trimmedName, phone: trimmedPhone, password, role }),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch {
+        throw new Error('Server se connect nahi ho pa raha — internet check karein aur dobara try karein');
+      }
 
       if (!response.ok) {
         if (data.issues && data.issues.length > 0) {
@@ -142,8 +146,14 @@ export default function SignupPage() {
               disabled={isLoading}
               className="w-full flex items-center justify-center bg-[#FF6B35] text-white font-medium py-3.5 rounded-full hover:bg-[#E85D2A] disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF6B35] transition-all duration-200 shadow-lg shadow-[#FF6B35]/20 group"
             >
-              {isLoading ? 'Signing Up...' : 'Sign Up'}
-              {!isLoading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
+              {isLoading ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" />
+                  Signing Up...
+                </>
+              ) : (
+                <>Sign Up <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" /></>
+              )}
             </button>
           </form>
 

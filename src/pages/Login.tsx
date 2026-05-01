@@ -26,7 +26,11 @@ export default function LoginPage() {
         body: JSON.stringify(body),
       });
 
-      const data = await response.json();
+      const text = await response.text();
+      let data: any;
+      try { data = JSON.parse(text); } catch {
+        throw new Error('Server se connect nahi ho pa raha — internet check karein aur dobara try karein');
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
@@ -95,8 +99,14 @@ export default function LoginPage() {
               disabled={isLoading}
               className="w-full flex items-center justify-center bg-[#FF6B35] text-white font-medium py-3.5 rounded-full hover:bg-[#E85D2A] disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF6B35] transition-all duration-200 shadow-lg shadow-[#FF6B35]/20 group"
             >
-              {isLoading ? 'Logging in...' : 'Log In'}
-              {!isLoading && <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />}
+              {isLoading ? (
+                <>
+                  <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" />
+                  Logging in...
+                </>
+              ) : (
+                <>Log In <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" /></>
+              )}
             </button>
           </form>
 
