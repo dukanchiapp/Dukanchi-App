@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-01 — Session 48 (GOD-LEVEL LANDING FIX)
+
+- `src/App.tsx`: removed `BrowserGuard` component entirely — React no longer redirects browser users
+- `src/components/ProtectedRoute.tsx`: removed `isStandalone` check + `window.location.replace('/landing')` — auth-only logic
+- `public/landing.html`: replaced install script with 3-state system (installed/ready/waiting); `INSTALLED_KEY = 'dukanchi-pwa-v1'`; `appinstalled` → redirects to `/`; added `showInstalledState()`, `showInstallReadyState()`, `showWaitingState()`, `resetInstall()`, `openApp()`
+- `public/landing.html`: added `open-app-wrap` divs (hidden by default) after each `.btn-install-wrap` — shown when app already installed
+- `public/landing.html`: added "Dobara download?" link in hero + CTA open-app sections; "Dobara download?" span in `#pwa-installed-banner`
+- Single source of truth: `index.html` IIFE handles all browser→landing redirects; React only handles auth; landing.html handles its own PWA install state
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-01 — Session 47 (FINAL LAUNCH AUDIT)
 
 - `CustomerDataTabs.tsx`: added `onUnfollow`, `onUnsave`, `onClearHistory` props + action buttons (Unfollow/Remove/Clear All)

@@ -278,6 +278,7 @@ footer strong{color:#9CA3AF}
   <button onclick="window.location.href='/'" style="background:white;color:#FF6B35;border:none;padding:10px 18px;border-radius:50px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">
     PWA mein Kholiye →
   </button>
+  <span onclick="resetInstall()" style="font-size:11px;color:white;opacity:0.7;cursor:pointer;text-decoration:underline;margin-left:8px;">Dobara download?</span>
 </div>
 
 <!-- HERO -->
@@ -315,6 +316,17 @@ footer strong{color:#9CA3AF}
         <p style="font-size:13px;color:#444;margin:0 0 4px;">Chrome address bar ke right mein <strong>⊕</strong> ya computer icon dhundho</p>
         <p style="font-size:13px;color:#444;margin:0;">"Install Dukanchi" pe click karo → Done! ✅</p>
       </div>
+    </div>
+    <div class="open-app-wrap" style="display:none; text-align:center;">
+      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(255,107,53,0.4);">
+        🚀 Dukanchi Kholiye
+      </button>
+      <p style="margin-top:12px;font-size:13px;color:#888;">
+        App already installed hai aapke phone pe ✅<br>
+        <a href="#" id="pwa-download-again" style="color:#FF6B35;font-size:11px;text-decoration:underline;">
+          App delete kar diya? Dobara download karein
+        </a>
+      </p>
     </div>
     <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
   </div>
@@ -627,6 +639,17 @@ footer strong{color:#9CA3AF}
       </button>
       <p class="desktop-hint cta-hint">Browser mein install icon dhundho &#8599;</p>
     </div>
+    <div class="open-app-wrap" style="display:none; text-align:center;">
+      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(255,107,53,0.4);">
+        🚀 Dukanchi Kholiye
+      </button>
+      <p style="margin-top:12px;font-size:13px;color:#888;">
+        App already installed hai aapke phone pe ✅<br>
+        <a href="#" id="pwa-download-again-cta" style="color:#FF6B35;font-size:11px;text-decoration:underline;">
+          App delete kar diya? Dobara download karein
+        </a>
+      </p>
+    </div>
     <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
   </div>
   <p class="cta-note" data-content="finalCta.note">Free hai. Hamesha rahega. Proudly Made in India 🇮🇳</p>
@@ -719,136 +742,159 @@ var observer = new IntersectionObserver(function(entries) {
 }, { threshold: 0.1 });
 document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
 
-// ── Smart PWA Install ──────────────────────────────────────────────────────────
+
+</script>
+
+<script>
+// ── Dukanchi PWA — Single Source of Truth ──────────────────
+
+var INSTALLED_KEY = 'dukanchi-pwa-v1';
 var deferredPrompt = null;
 var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-var isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator.standalone === true);
 
-// FIX 3: If already running in standalone (PWA already installed) — skip landing entirely
+// If already running as PWA — go straight to app
+var isStandalone = window.matchMedia('(display-mode: standalone)').matches
+  || navigator.standalone === true;
 if (isStandalone) {
-  window.location.replace('/signup');
+  window.location.replace('/');
 }
 
-// Show PWA banner if user has installed the app but is browsing in regular browser
-(function() {
-  var banner = document.getElementById('pwa-banner');
-  if (!banner || isStandalone) return;
-  var installed = localStorage.getItem('dukanchi-pwa-installed');
-  if (installed === '1') {
-    setTimeout(function() {
-      if (!banner._forcedHidden) banner.classList.add('visible');
-    }, 200);
-  }
-  var closeBtn = document.getElementById('pwa-banner-close');
-  if (closeBtn) closeBtn.onclick = function() { banner.classList.remove('visible'); };
-})();
+// ── 3 States ──────────────────────────────────────────────
 
-// Set ALL install buttons to a given state + text
-function setInstallState(state, text) {
+// STATE A: Already installed (localStorage flag exists)
+function showInstalledState() {
+  document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('.open-app-wrap').forEach(function(el) {
+    el.style.display = 'block';
+  });
+  var banner = document.getElementById('pwa-installed-banner');
+  if (banner) banner.style.display = 'flex';
+}
+
+// STATE B: Ready to install (deferredPrompt available / iOS)
+function showInstallReadyState() {
   document.querySelectorAll('.install-btn').forEach(function(btn) {
-    btn.classList.remove('state-default', 'state-loading', 'state-success', 'state-open');
-    btn.classList.add('state-' + state);
-    btn.querySelector('.install-btn-text').textContent = text;
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    var t = btn.querySelector('.install-btn-text');
+    if (t) t.textContent = '⬇ Dukanchi Download Karo — Free';
   });
 }
 
-// Show/hide desktop hint
-function showDesktopHint() {
-  document.querySelectorAll('.desktop-hint').forEach(function(el) { el.classList.add('visible'); });
-}
-function hideDesktopHint() {
-  document.querySelectorAll('.desktop-hint').forEach(function(el) { el.classList.remove('visible'); });
-}
-
-// FIX 4: Never use window.open() — always use location.href so context (PWA/browser) is respected
-function redirectToApp() {
-  window.location.href = '/signup';
+// STATE C: Waiting (browser hasn't offered install yet)
+function showWaitingState() {
+  document.querySelectorAll('.install-btn').forEach(function(btn) {
+    btn.disabled = false;
+  });
 }
 
-// Show installed success message then redirect
-function showInstalledAndRedirect() {
-  // Hide all install button wrappers
-  document.querySelectorAll('.btn-install-wrap').forEach(function(el) { el.style.display = 'none'; });
-  // Show success message in both CTA sections
-  document.querySelectorAll('.install-success-msg').forEach(function(el) { el.style.display = 'block'; });
-  // FIX 1: Redirect into app after 1.5s
-  setTimeout(redirectToApp, 1500);
-}
+// ── On page load — check which state ─────────────────────
 
-// Android/Chrome: capture install prompt
+window.addEventListener('DOMContentLoaded', function() {
+  if (localStorage.getItem(INSTALLED_KEY) === '1') {
+    showInstalledState();
+  } else {
+    showWaitingState();
+  }
+});
+
+// ── Browser signals app is installable ───────────────────
+
 window.addEventListener('beforeinstallprompt', function(e) {
   e.preventDefault();
   deferredPrompt = e;
+  showInstallReadyState();
 });
 
-// FIX 1+2: After browser confirms install — auto redirect, no button needed
+// ── App was installed ─────────────────────────────────────
+
 window.addEventListener('appinstalled', function() {
   deferredPrompt = null;
-  localStorage.setItem('dukanchi-pwa-installed', '1');
-  var overlay = document.getElementById('install-overlay');
-  overlay.classList.add('success');
-  showInstalledAndRedirect();
+  localStorage.setItem(INSTALLED_KEY, '1');
+  document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
+    el.innerHTML = '<div style="text-align:center;padding:16px 0;color:#FF6B35;font-weight:700;font-size:16px;">✅ App install ho gayi! Khul rahi hai...</div>';
+  });
+  setTimeout(function() {
+    window.location.replace('/');
+  }, 1500);
 });
 
-// iOS modal: close + redirect (user has followed steps to install)
-function closeIOSModal() {
-  document.getElementById('ios-modal').style.display = 'none';
-  showInstalledAndRedirect();
-}
+// ── Main button click ─────────────────────────────────────
 
-// Main click handler
 async function handleInstallClick() {
-  // Case 1: iOS — show step-by-step modal
   if (isIOS) {
-    document.getElementById('ios-modal').style.display = 'flex';
+    var modal = document.getElementById('ios-modal');
+    if (modal) modal.style.display = 'flex';
     return;
   }
 
-  // Case 2: Android / Chrome — show branding overlay, then trigger native prompt
   if (deferredPrompt) {
-    var overlay = document.getElementById('install-overlay');
-    overlay.classList.remove('success');
-    overlay.classList.add('visible');
-
-    setTimeout(async function() {
-      try {
-        deferredPrompt.prompt();
-        var result = await deferredPrompt.userChoice;
-        deferredPrompt = null;
-
-        if (result.outcome === 'accepted') {
-          // Success: green overlay, then redirect (appinstalled may also fire — that's fine)
-          overlay.classList.add('success');
-          setTimeout(function() {
-            overlay.classList.remove('visible', 'success');
-            showInstalledAndRedirect();
-          }, 1200);
-        } else {
-          // Dismissed — hide overlay, reset button
-          overlay.classList.remove('visible', 'success');
-          setInstallState('default', '⬇ Dukanchi Download Karo — Free');
-        }
-      } catch(err) {
-        overlay.classList.remove('visible', 'success');
-        setInstallState('default', '⬇ Dukanchi Download Karo — Free');
+    try {
+      deferredPrompt.prompt();
+      var result = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if (result.outcome !== 'accepted') {
+        var hint = document.getElementById('desktop-install-hint');
+        if (hint) { hint.style.display = 'block'; }
       }
-    }, 800);
+    } catch(err) {
+      console.warn('Install prompt error:', err);
+    }
     return;
   }
 
-  // Case 3: Desktop Chrome — show install hint, do NOT redirect
   var hint = document.getElementById('desktop-install-hint');
   if (hint) {
     hint.style.display = 'block';
     hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else {
-    alert('Chrome mein install karne ke liye:\nAddress bar ke right side mein ⊕ ya computer icon click karein → "Install Dukanchi"');
   }
 }
 
+// ── "Open App" button (installed state) ──────────────────
+
+function openApp() {
+  window.location.href = '/';
+}
+
+// ── "Download Again" link (user may have deleted app) ────
+
+function resetInstall() {
+  localStorage.removeItem(INSTALLED_KEY);
+  document.querySelectorAll('.open-app-wrap').forEach(function(el) {
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
+    el.style.display = 'block';
+  });
+  var banner = document.getElementById('pwa-installed-banner');
+  if (banner) banner.style.display = 'none';
+  if (deferredPrompt) {
+    showInstallReadyState();
+  } else {
+    showWaitingState();
+  }
+}
+
+// iOS modal close
+function closeIOSModal() {
+  var modal = document.getElementById('ios-modal');
+  if (modal) modal.style.display = 'none';
+  localStorage.setItem(INSTALLED_KEY, '1');
+  showInstalledState();
+}
+
+// Wire up install buttons
 document.querySelectorAll('.install-btn').forEach(function(btn) {
   btn.addEventListener('click', handleInstallClick);
 });
+
+// PWA installed banner — "Download again" link
+var downloadAgainBtn = document.getElementById('pwa-download-again');
+if (downloadAgainBtn) downloadAgainBtn.onclick = resetInstall;
+var downloadAgainBtnCta = document.getElementById('pwa-download-again-cta');
+if (downloadAgainBtnCta) downloadAgainBtnCta.onclick = resetInstall;
 </script>
 
 <!-- Pre-install branding overlay -->
