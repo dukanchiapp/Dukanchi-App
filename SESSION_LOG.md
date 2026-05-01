@@ -6,12 +6,15 @@
 
 ---
 
-## 2026-04-30 — Session 45 (UserSettings split)
+## 2026-05-01 — Session 46 (UserSettings split — completed)
 
-- `src/pages/UserSettings.tsx` split (863 → 648 lines): extracted 3 components under `src/components/settings/`
+- `src/pages/UserSettings.tsx` split (863 → 391 lines): 6 components under `src/components/settings/`
 - `ManagePostsTab.tsx` — manage posts tab (post list, bulk/single delete, selection); React.memo
-- `ManageTeamTab.tsx` — manage team tab (owner card, member list, add member modal with form); React.memo; `handleToggleAddForm` + `handleTeamFieldChange` in parent
+- `ManageTeamTab.tsx` — manage team tab (owner card, member list, add member modal with form); React.memo
 - `CustomerDataTabs.tsx` — all 5 customer tabs (following, saved, locations, history, reviews); React.memo
+- `AccountDetailsTab.tsx` — personal/sign-up details form; uses useAuth + useToast internally; React.memo
+- `BulkUploadTab.tsx` — Excel/CSV import + manual product text; owns importLoading/importResult state; React.memo
+- `BusinessSettingsTabs.tsx` — visibility, chat, subscription, marketing, report, help tabs; owns handleToggleSetting; React.memo
 - `npx tsc --noEmit` → 0 errors
 
 ---
