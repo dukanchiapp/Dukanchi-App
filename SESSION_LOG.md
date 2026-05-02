@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-05-02 — Session 51 (PWA flow — Play Store style, FINAL)
+
+- `index.html` IIFE: simple matchMedia check, removed all sessionStorage logic
+- `src/App.tsx` FlowController: same simple `isStandalone` check (matchMedia standalone/minimal-ui + iOS standalone + Android TWA referrer)
+- `public/landing.html` top script: simple matchMedia, no leak risk; only redirects PWA windows away from landing
+- `localStorage.dukanchi-pwa-v1` is the source of truth for "is installed" — set on `appinstalled`, cleared by user via reset link
+- "Open App" button enhanced: larger, with helper text ("Button kaam nahi kiya? Home screen se app icon click karein") and separate reset link
+- Both `.open-app-wrap` blocks updated (preserved unique IDs `pwa-download-again` / `pwa-download-again-cta` so existing reset wiring keeps working)
+- `public/sw.js`: bumped `dukanchi-v9` → `dukanchi-v10`
+- Browser AFTER install → Landing with prominent "Open App" button (via existing `showInstalledState()`)
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-02 — Session 50 (PWA detection leak fix)
 
 - Removed `?source=pwa` URL param as authoritative signal — was leaking PWA detection to plain browser tabs (shared links carried the param)

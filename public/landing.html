@@ -4,21 +4,13 @@
 <meta charset="UTF-8">
 <script>
   (function() {
-    var isStandaloneNow =
+    var isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.navigator.standalone === true ||
       document.referrer.indexOf('android-app://') === 0;
 
-    var sessionFlag = false;
-    try { sessionFlag = sessionStorage.getItem('dk-is-pwa') === '1'; } catch (e) {}
-
-    // Only persist flag when matchMedia confirms (authoritative)
-    if (isStandaloneNow) {
-      try { sessionStorage.setItem('dk-is-pwa', '1'); } catch (e) {}
-    }
-
-    if (isStandaloneNow || sessionFlag) {
+    if (isStandalone) {
       window.location.replace('/');
     }
   })();
@@ -339,11 +331,16 @@ footer strong{color:#9CA3AF}
       </div>
     </div>
     <div class="open-app-wrap" style="display:none; text-align:center;">
-      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(255,107,53,0.4);">
-        🚀 Dukanchi Kholiye
+      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(255,107,53,0.4);display:inline-flex;align-items:center;justify-content:center;gap:10px;">
+        🚀 Dukanchi App Kholiye
       </button>
-      <p style="margin-top:12px;font-size:13px;color:#888;">
-        App already installed hai aapke phone pe ✅<br>
+      <p style="margin-top:14px;font-size:13px;color:#666;line-height:1.5;">
+        App already installed hai aapke device pe ✅<br>
+        <span style="font-size:11px;color:#999;">
+          Button kaam nahi kiya? Home screen se app icon click karein
+        </span>
+      </p>
+      <p style="margin-top:8px;">
         <a href="#" id="pwa-download-again" style="color:#FF6B35;font-size:11px;text-decoration:underline;">
           App delete kar diya? Dobara download karein
         </a>
@@ -661,11 +658,16 @@ footer strong{color:#9CA3AF}
       <p class="desktop-hint cta-hint">Browser mein install icon dhundho &#8599;</p>
     </div>
     <div class="open-app-wrap" style="display:none; text-align:center;">
-      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:16px 40px;border-radius:50px;font-size:16px;font-weight:700;cursor:pointer;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(255,107,53,0.4);">
-        🚀 Dukanchi Kholiye
+      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(255,107,53,0.4);display:inline-flex;align-items:center;justify-content:center;gap:10px;">
+        🚀 Dukanchi App Kholiye
       </button>
-      <p style="margin-top:12px;font-size:13px;color:#888;">
-        App already installed hai aapke phone pe ✅<br>
+      <p style="margin-top:14px;font-size:13px;color:#666;line-height:1.5;">
+        App already installed hai aapke device pe ✅<br>
+        <span style="font-size:11px;color:#999;">
+          Button kaam nahi kiya? Home screen se app icon click karein
+        </span>
+      </p>
+      <p style="margin-top:8px;">
         <a href="#" id="pwa-download-again-cta" style="color:#FF6B35;font-size:11px;text-decoration:underline;">
           App delete kar diya? Dobara download karein
         </a>

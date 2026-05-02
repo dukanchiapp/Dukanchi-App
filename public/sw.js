@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dukanchi-v9';
+const CACHE_NAME = 'dukanchi-v10';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
