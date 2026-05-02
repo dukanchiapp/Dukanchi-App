@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import SignupPage from './pages/Signup';
 import LoginPage from './pages/Login';
@@ -40,6 +40,10 @@ function FlowController() {
   usePushNotifications();
 
   const isStandalone = (() => {
+    try {
+      if (localStorage.getItem('dk-browser-mode') === '1') return true;
+    } catch(e) {}
+
     const matchStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true ||
@@ -76,6 +80,43 @@ function FlowController() {
   return null;
 }
 
+function BrowserModeBanner() {
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    try {
+      const isBrowserMode = localStorage.getItem('dk-browser-mode') === '1';
+      const isDismissed = sessionStorage.getItem('dk-banner-dismissed') === '1';
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      setShow(isBrowserMode && !isStandalone && !isDismissed);
+    } catch(e) {}
+  }, []);
+
+  if (!show) return null;
+
+  return (
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 50,
+      background: '#FFF4ED', borderBottom: '1px solid #FFE4D6',
+      padding: '8px 12px', display: 'flex',
+      alignItems: 'center', justifyContent: 'space-between',
+      fontSize: 12,
+    }}>
+      <span style={{ color: '#666' }}>💡 App install karein better experience ke liye</span>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <a href="/landing" style={{ color: '#FF6B35', fontWeight: 600, textDecoration: 'none' }}>Install</a>
+        <button
+          onClick={() => {
+            try { sessionStorage.setItem('dk-banner-dismissed', '1'); } catch(e) {}
+            setShow(false);
+          }}
+          style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: 18, padding: 0, lineHeight: 1 }}
+        >×</button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -86,6 +127,7 @@ export default function App() {
           <NotificationProvider>
             <FlowController />
             <div className="min-h-screen pb-16" style={{ background: 'var(--dk-bg)' }}>
+              <BrowserModeBanner />
               <Suspense fallback={
                 <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--dk-border)', borderTopColor: 'var(--dk-accent)', borderRadius: '50%' }} />

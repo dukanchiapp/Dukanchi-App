@@ -12,12 +12,19 @@
     var stickyFlag = false;
     try { stickyFlag = sessionStorage.getItem('dk-pwa') === '1'; } catch(e) {}
 
-    // Set sticky flag only when matchMedia confirms
     if (matchStandalone) {
       try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
     }
 
     if (matchStandalone || stickyFlag) {
+      window.location.replace('/');
+      return;
+    }
+
+    // Browser-mode user revisiting /landing — skip back to app
+    var browserMode = false;
+    try { browserMode = localStorage.getItem('dk-browser-mode') === '1'; } catch(e) {}
+    if (browserMode) {
       window.location.replace('/');
     }
   })();
@@ -336,6 +343,9 @@ footer strong{color:#9CA3AF}
         <p style="font-size:13px;color:#444;margin:0 0 4px;">Chrome address bar ke right mein <strong>⊕</strong> ya computer icon dhundho</p>
         <p style="font-size:13px;color:#444;margin:0;">"Install Dukanchi" pe click karo → Done! ✅</p>
       </div>
+      <a href="#" onclick="continueInBrowser(); return false;" style="display:block;text-align:center;margin-top:16px;color:#888;font-size:13px;text-decoration:underline;padding:8px;">
+        Browser mein continue karein →
+      </a>
     </div>
     <div class="open-app-wrap" style="display:none; text-align:center;">
       <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(255,107,53,0.4);display:inline-flex;align-items:center;justify-content:center;gap:10px;">
@@ -663,6 +673,9 @@ footer strong{color:#9CA3AF}
         <span class="install-btn-text">&#11015; Dukanchi Download Karo — Free</span>
       </button>
       <p class="desktop-hint cta-hint">Browser mein install icon dhundho &#8599;</p>
+      <a href="#" onclick="continueInBrowser(); return false;" style="display:block;text-align:center;margin-top:16px;color:#888;font-size:13px;text-decoration:underline;padding:8px;">
+        Browser mein continue karein →
+      </a>
     </div>
     <div class="open-app-wrap" style="display:none; text-align:center;">
       <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(255,107,53,0.4);display:inline-flex;align-items:center;justify-content:center;gap:10px;">
@@ -843,6 +856,8 @@ window.addEventListener('beforeinstallprompt', function(e) {
 window.addEventListener('appinstalled', function() {
   deferredPrompt = null;
   localStorage.setItem(INSTALLED_KEY, '1');
+  // Clear browser-mode flag — user now has the actual PWA
+  try { localStorage.removeItem('dk-browser-mode'); } catch(e) {}
   document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
     el.innerHTML = '<div style="text-align:center;padding:16px 0;color:#FF6B35;font-weight:700;font-size:16px;">✅ App install ho gayi! Khul rahi hai...</div>';
   });
@@ -925,6 +940,13 @@ var downloadAgainBtn = document.getElementById('pwa-download-again');
 if (downloadAgainBtn) downloadAgainBtn.onclick = resetInstall;
 var downloadAgainBtnCta = document.getElementById('pwa-download-again-cta');
 if (downloadAgainBtnCta) downloadAgainBtnCta.onclick = resetInstall;
+
+// ── Continue in Browser ───────────────────────────────────
+
+function continueInBrowser() {
+  try { localStorage.setItem('dk-browser-mode', '1'); } catch(e) {}
+  window.location.replace('/');
+}
 </script>
 
 <!-- Pre-install branding overlay -->

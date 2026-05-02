@@ -27,17 +27,17 @@
       (function() {
         var path = window.location.pathname;
 
-        // PRIMARY: matchMedia (authoritative, but has race condition on PWA refresh)
+        var browserMode = false;
+        try { browserMode = localStorage.getItem('dk-browser-mode') === '1'; } catch(e) {}
+
         var matchStandalone =
           window.matchMedia('(display-mode: standalone)').matches ||
           window.navigator.standalone === true ||
           document.referrer.indexOf('android-app://') === 0;
 
-        // SECONDARY: sessionStorage flag (per-window, survives refresh, cannot leak to browser tabs)
         var stickyFlag = false;
         try { stickyFlag = sessionStorage.getItem('dk-pwa') === '1'; } catch(e) {}
 
-        // Set sticky flag ONLY when matchMedia confirms — never trust other signals
         if (matchStandalone) {
           try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
         }
@@ -50,8 +50,14 @@
           return;
         }
 
-        // Browser on app routes → go to landing
-        if (!isStandalone && path !== '/landing') {
+        // Browser-mode user on /landing → bounce to app root
+        if (browserMode && path === '/landing') {
+          window.location.replace('/');
+          return;
+        }
+
+        // Browser user (not browser-mode) on app routes → go to landing
+        if (!isStandalone && !browserMode && path !== '/landing') {
           window.location.replace('/landing');
         }
       })();

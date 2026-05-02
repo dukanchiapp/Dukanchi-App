@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-02 — Session 63 (Continue in Browser option)
+- Landing page: "Browser mein continue karein" link below download button (hero + final CTA)
+- localStorage 'dk-browser-mode' flag bypasses /landing redirect
+- index.html IIFE + FlowController both respect browser-mode flag
+- BrowserModeBanner in App.tsx — dismissible, encourages PWA install
+- 'appinstalled' clears dk-browser-mode flag when user upgrades to PWA
+- Works on iOS Safari, Firefox, all browsers (no API dependency)
+
+---
+
 ## 2026-05-02 — Session 61 (Phone PWA login on ngrok HTTPS)
 - app.set('trust proxy', 1) — Express reads X-Forwarded-Proto correctly
 - Cookie secure flag follows actual request protocol (not NODE_ENV)
