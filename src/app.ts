@@ -129,7 +129,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/app-settings', settingsRoutes);
 
 // ── 8. Misc endpoints ─────────────────────────────────────────────────────────
-// NOTE: /api/me is handled by auth.routes.ts (uses authenticateAny for both app + admin cookies)
+// NOTE: /api/auth/me is the correct endpoint (auth.routes.ts, uses authenticateAny for both app + admin cookies)
 app.post("/api/upload", authenticateToken, uploadLimiter, upload.single("file"), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const url = (req.file as any).location ?? `/uploads/${req.file.filename}`;

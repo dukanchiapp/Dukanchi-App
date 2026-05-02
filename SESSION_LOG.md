@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-05-02 — Session 58 (CRITICAL FIX — wrong /me URL)
+
+- `AuthContext` was calling `/api/me` which does not exist
+- Real endpoint is `/api/auth/me` (mounted via `app.use('/api/auth', authRoutes)`, `router.get('/me')`)
+- Express returned HTML for non-existent route → JSON parse failed on every refresh
+- Every refresh broke auth → forced `/login` redirect
+- Fixed: `src/context/AuthContext.tsx` `/api/me` → `/api/auth/me`
+- Fixed misleading comment in `src/app.ts`
+
+---
+
 ## 2026-05-02 — Session 56 (PWA refresh bug — sessionStorage sticky flag)
 
 - Chrome `matchMedia` race condition on PWA refresh fixed with `sessionStorage` sticky flag
