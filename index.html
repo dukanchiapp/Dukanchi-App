@@ -26,8 +26,8 @@
     <script>
       (function() {
         var path = window.location.pathname;
-        var search = window.location.search;
 
+        // matchMedia is the authoritative source — never trust URL param alone
         var isStandaloneNow =
           window.matchMedia('(display-mode: standalone)').matches ||
           window.matchMedia('(display-mode: minimal-ui)').matches ||
@@ -35,18 +35,17 @@
           window.navigator.standalone === true ||
           document.referrer.indexOf('android-app://') === 0;
 
-        var hasSourcePwa = search.indexOf('source=pwa') !== -1;
-
         var sessionFlag = false;
         try {
           sessionFlag = sessionStorage.getItem('dk-is-pwa') === '1';
         } catch (e) {}
 
-        var isPWA = isStandaloneNow || hasSourcePwa || sessionFlag;
-
-        if (isPWA) {
+        // Only persist flag when matchMedia EXPLICITLY confirms standalone
+        if (isStandaloneNow) {
           try { sessionStorage.setItem('dk-is-pwa', '1'); } catch (e) {}
         }
+
+        var isPWA = isStandaloneNow || sessionFlag;
 
         // PWA on /landing → force to app root (stale start_url recovery)
         if (isPWA && path === '/landing') {

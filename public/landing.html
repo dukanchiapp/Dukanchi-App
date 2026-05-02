@@ -4,19 +4,21 @@
 <meta charset="UTF-8">
 <script>
   (function() {
-    var isStandalone =
+    var isStandaloneNow =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.navigator.standalone === true ||
       document.referrer.indexOf('android-app://') === 0;
 
-    var hasSourcePwa = window.location.search.indexOf('source=pwa') !== -1;
-
     var sessionFlag = false;
     try { sessionFlag = sessionStorage.getItem('dk-is-pwa') === '1'; } catch (e) {}
 
-    if (isStandalone || hasSourcePwa || sessionFlag) {
+    // Only persist flag when matchMedia confirms (authoritative)
+    if (isStandaloneNow) {
       try { sessionStorage.setItem('dk-is-pwa', '1'); } catch (e) {}
+    }
+
+    if (isStandaloneNow || sessionFlag) {
       window.location.replace('/');
     }
   })();

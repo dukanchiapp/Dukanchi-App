@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-05-02 — Session 50 (PWA detection leak fix)
+
+- Removed `?source=pwa` URL param as authoritative signal — was leaking PWA detection to plain browser tabs (shared links carried the param)
+- `sessionStorage['dk-is-pwa']` now ONLY set when `matchMedia(display-mode: standalone)` (or iOS/TWA equivalent) explicitly confirms standalone — single source of truth
+- `index.html` IIFE: `isPWA = matchMedia OR sessionFlag`; `?source=pwa` no longer trusted alone
+- `src/App.tsx` FlowController: same authoritative pattern — direct check first, then sessionStorage fallback
+- `public/landing.html`: same pattern in top-of-`<head>` redirect script
+- `public/sw.js`: bumped `dukanchi-v8` → `dukanchi-v9`
+- Browser tabs cannot inherit PWA detection: per-tab sessionStorage + matchMedia=false → always redirects to `/landing`
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-02 — Session 49 (PWA refresh redirect bug fix)
 
 - Bulletproof PWA detection: matchMedia + URL param + sessionStorage
