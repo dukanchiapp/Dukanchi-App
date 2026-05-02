@@ -275,9 +275,10 @@ export function PostsGrid({
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <>
-      {/* Action button */}
-      <div className="px-4 pb-2 pt-1">
+      {/* Action button — hidden, triggered via data-new-post-trigger from Profile */}
+      <div className="px-4 pb-2 pt-1" style={{ display: 'none' }}>
         <button
+          data-new-post-trigger
           onClick={() => setShowNewPostModal(true)}
           className="flex items-center gap-1.5 px-4 py-2 rounded-xl font-semibold text-sm"
           style={{ background: '#1A1A1A', color: 'white' }}

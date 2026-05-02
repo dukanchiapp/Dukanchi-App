@@ -6,6 +6,13 @@
 
 ---
 
+## 2026-05-02 — Session 59 (KYC approval flow + button layout)
+- Profile.tsx: Empty store + KYC approved → forced "KYC Approved! 🎉" screen with "Complete Your Store Profile" button
+- Profile.tsx: Edit Profile + New Post buttons now in same flex row
+- PostsGrid.tsx: New Post button hidden (display:none), triggered via data-new-post-trigger from Profile
+
+---
+
 ## 2026-05-02 — Session 58 (CRITICAL FIX — wrong /me URL)
 
 - `AuthContext` was calling `/api/me` which does not exist

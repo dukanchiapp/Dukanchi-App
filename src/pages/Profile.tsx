@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Clock, ArrowLeft, Grid as GridIcon, Plus, Settings, LogOut, ChevronRight, History, Star, AlertTriangle, HelpCircle, Bookmark, UserCheck, Store, Heart, Share2, Package, X } from 'lucide-react';
+import { MapPin, Clock, Settings, LogOut, ChevronRight, History, Star, AlertTriangle, HelpCircle, Bookmark, UserCheck, Store } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -277,6 +277,35 @@ export default function ProfilePage() {
   const completionPct = Math.round((completedFields / profileCompletionFields.length) * 100);
   const storeStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
 
+  const isProfileEmpty = !store.storeName || store.storeName === '' ||
+    !store.description || store.description === '';
+
+  if (isProfileEmpty && kycStatus === 'approved') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md px-6 py-12 text-center">
+          <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <Store size={40} className="text-emerald-600" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">KYC Approved! 🎉</h2>
+          <p className="text-gray-500 mb-8 text-sm px-4">
+            Aapka business verify ho gaya hai. Ab apna store profile complete karein
+            taaki customers aapko dhund saken.
+          </p>
+          <button
+            onClick={() => navigate('/retailer/dashboard')}
+            className="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg"
+          >
+            Complete Your Store Profile
+          </button>
+          <p className="text-xs text-gray-400 mt-4">
+            Profile complete karne ke baad aap posts daal sakte hain
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const recentPosts = posts.filter(p => p.isOpeningPost || p.isPinned || new Date(p.createdAt || new Date()) >= thirtyDaysAgo);
@@ -371,7 +400,7 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          {/* Edit profile button */}
+          {/* Edit profile + New Post buttons */}
           <div className="flex gap-2 mt-4">
             <Link
               to="/retailer/dashboard"
@@ -380,6 +409,16 @@ export default function ProfilePage() {
             >
               Edit Profile
             </Link>
+            <button
+              onClick={() => {
+                const btn = document.querySelector('[data-new-post-trigger]') as HTMLButtonElement;
+                if (btn) btn.click();
+              }}
+              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm"
+              style={{ background: '#1A1A1A', color: 'white' }}
+            >
+              + New Post
+            </button>
           </div>
         </div>
 
