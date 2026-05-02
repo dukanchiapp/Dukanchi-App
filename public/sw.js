@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dukanchi-v6';
+const CACHE_NAME = 'dukanchi-v7';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -23,6 +23,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // /landing — never cache; PWA users should never see it
+  if (event.request.url.includes('/landing')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   // API calls — network first, no cache
   if (event.request.url.includes('/api/')) {
     event.respondWith(

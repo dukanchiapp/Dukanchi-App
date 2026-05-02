@@ -29,6 +29,14 @@
           window.matchMedia('(display-mode: standalone)').matches ||
           window.navigator.standalone === true;
         var path = window.location.pathname;
+
+        // PWA on /landing → force to app root (stale start_url recovery)
+        if (isStandalone && path === '/landing') {
+          window.location.replace('/');
+          return;
+        }
+
+        // Browser on app routes → go to landing
         if (!isStandalone && path !== '/landing') {
           window.location.replace('/landing');
         }

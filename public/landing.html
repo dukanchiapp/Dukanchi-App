@@ -2,6 +2,18 @@
 <html lang="hi">
 <head>
 <meta charset="UTF-8">
+<script>
+  (function() {
+    var isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.matchMedia('(display-mode: minimal-ui)').matches ||
+      window.navigator.standalone === true ||
+      document.referrer.indexOf('android-app://') === 0;
+    if (isStandalone) {
+      window.location.replace('/');
+    }
+  })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dukanchi — Ab Aapki Local Market Aapke Phone Par</title>
 <link rel="manifest" href="/manifest.json">

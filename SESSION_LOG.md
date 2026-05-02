@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-02 — Session 48 (PWA install URL bug fix)
+
+- `public/landing.html`: synchronous standalone check at TOP of `<head>` (right after `<meta charset>`) — fires before any CSS/JS so PWA users never see a flicker
+- `public/manifest.json`: `start_url` → `/?source=pwa`, added `scope: "/"` — PWA always launches at root regardless of which URL user installed from
+- `public/sw.js`: bumped `dukanchi-v6` → `dukanchi-v7`; `/landing` requests bypass cache (network-only) so stale landing never served to PWA
+- `index.html`: pre-React IIFE now also handles PWA-on-`/landing` → redirects to `/` (recovers from stale install start_url)
+- Detection covers: Android Chrome (`display-mode: standalone`), Android variants (`minimal-ui`), iOS Safari (`navigator.standalone`), Android TWA (`document.referrer` `android-app://`)
+- USER ACTION REQUIRED: uninstall current PWA → hard refresh (Cmd/Ctrl+Shift+R) → visit landing → click "Download Karo" → reinstall fresh to clear stale `start_url`
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-01 — Session 48 (GOD-LEVEL LANDING FIX)
 
 - `src/App.tsx`: removed `BrowserGuard` component entirely — React no longer redirects browser users
