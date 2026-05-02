@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-02 — Session 54 (FINAL: SW disabled in dev mode)
+
+- `src/main.tsx`: SW only registers in `import.meta.env.PROD`
+- Dev mode automatically unregisters existing SW + clears all caches
+- This fixes: stale HTML caching, IIFE redirect failures, JSON parse errors from SW serving cached HTML as API responses
+- Production builds still get full SW + offline support
+- `index.html` IIFE verified correct — no changes needed
+
+---
+
 ## 2026-05-02 — Session 53 (SW HTML cache fix)
 
 - `public/sw.js` rewritten: navigation requests + `/`, `/landing`, `*.html` → **always network, never cached**; only static assets (icons, manifest) use cache-first
