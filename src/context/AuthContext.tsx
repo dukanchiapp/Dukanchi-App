@@ -22,19 +22,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isTeamMember, setIsTeamMember] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     fetch('/api/me', { credentials: 'include' })
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data && !data.error) {
+        if (cancelled) return;
+        if (data && !data.error && data.id) {
           setUser(data);
-          setToken("cookie"); // dummy token to pass truthiness checks
+          setToken("cookie");
+          const wasTeamMember = localStorage.getItem('isTeamMember') === 'true';
+          setIsTeamMember(wasTeamMember);
         }
       })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+      .catch(err => {
+        if (!cancelled) console.error('[AUTH] /me failed:', err);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true);
+      });
+
+    return () => { cancelled = true; };
   }, []);
 
   const login = (newUser: User, newToken: string, teamMember: boolean = false) => {
@@ -42,14 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken("cookie");
     setIsTeamMember(teamMember);
     localStorage.setItem('isTeamMember', String(teamMember));
+    setAuthChecked(true);
   };
 
-  const logout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (err) {
-      console.error(err);
-    }
+  const logout = () => {
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
     setUser(null);
     setToken(null);
     setIsTeamMember(false);
@@ -57,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isTeamMember, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, token, isTeamMember, login, logout, isLoading: !authChecked }}>
       {children}
     </AuthContext.Provider>
   );
