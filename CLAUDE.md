@@ -5,7 +5,7 @@
 - Stack: Express + TypeScript + Prisma + PostgreSQL + pgvector + Redis + Socket.IO + React 19 + Vite + Tailwind
 - Structure: DDD modules in src/modules/, React pages in src/pages/, components in src/components/
 - Admin panel: separate Vite app in admin-panel/
-- GitHub: manmohanbakshi211/G-ai
+- GitHub: dukanchiapp/Dukanchi-App
 
 ## Rules (follow always)
 1. Run npx tsc --noEmit before every commit
