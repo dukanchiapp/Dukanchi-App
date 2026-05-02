@@ -4,13 +4,20 @@
 <meta charset="UTF-8">
 <script>
   (function() {
-    // Only true PWA signals — minimal-ui can false-positive in DevTools
-    var isStandalone =
+    var matchStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true ||
       document.referrer.indexOf('android-app://') === 0;
 
-    if (isStandalone) {
+    var stickyFlag = false;
+    try { stickyFlag = sessionStorage.getItem('dk-pwa') === '1'; } catch(e) {}
+
+    // Set sticky flag only when matchMedia confirms
+    if (matchStandalone) {
+      try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
+    }
+
+    if (matchStandalone || stickyFlag) {
       window.location.replace('/');
     }
   })();

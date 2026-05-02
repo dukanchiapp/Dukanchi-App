@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-02 — Session 56 (PWA refresh bug — sessionStorage sticky flag)
+
+- Chrome `matchMedia` race condition on PWA refresh fixed with `sessionStorage` sticky flag
+- `sessionStorage` flag (`dk-pwa`) set ONLY when `matchMedia` confirms standalone — never from URL or other signals
+- Per-window `sessionStorage` cannot leak to browser tabs (unlike `localStorage`)
+- `index.html` IIFE, `src/App.tsx` FlowController, `public/landing.html` all use same logic
+- Refresh in PWA now stays on current path instead of wrongly redirecting to `/landing`
+
+---
+
 ## 2026-05-02 — Session 55 (PWA detection fix — minimal-ui false positive)
 
 - Removed `minimal-ui` and `fullscreen` from standalone detection in `index.html` IIFE, `src/App.tsx` FlowController, and `public/landing.html`

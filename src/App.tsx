@@ -39,10 +39,23 @@ function FlowController() {
   const { user, isLoading } = useAuth();
   usePushNotifications();
 
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as any).standalone === true ||
-    document.referrer.indexOf('android-app://') === 0;
+  const isStandalone = (() => {
+    const matchStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true ||
+      document.referrer.indexOf('android-app://') === 0;
+
+    if (matchStandalone) {
+      try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
+      return true;
+    }
+
+    try {
+      if (sessionStorage.getItem('dk-pwa') === '1') return true;
+    } catch(e) {}
+
+    return false;
+  })();
 
   useEffect(() => {
     // index.html handles browser→landing redirect before React loads
