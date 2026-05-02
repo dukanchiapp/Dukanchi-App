@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-02 — Session 53 (SW HTML cache fix)
+
+- `public/sw.js` rewritten: navigation requests + `/`, `/landing`, `*.html` → **always network, never cached**; only static assets (icons, manifest) use cache-first
+- Old SW (v10) was caching `index.html`, so even after the IIFE was updated browsers kept getting the stale pre-redirect HTML and stayed on `/login` instead of bouncing to `/landing`
+- `CACHE_NAME` bumped `dukanchi-v10` → `dukanchi-v11`
+- `activate` now wraps cache-purge + `clients.claim()` in `Promise.all` so the new SW immediately controls open tabs
+- API requests (`/api/*`) bypass SW entirely (`return;` without `respondWith`)
+- USER ACTION: DevTools → Application → Service Workers → **Unregister** old `dukanchi-v*`; → Storage → **Clear site data**; close all Dukanchi tabs; reopen → `/login` should bounce to `/landing`
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-02 — Session 51 (PWA flow — Play Store style, FINAL)
 
 - `index.html` IIFE: simple matchMedia check, removed all sessionStorage logic
