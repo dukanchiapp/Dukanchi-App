@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-03 — Session 64 (Neon DB Production Setup)
+- Migrated from local SQLite to Neon Postgres (Singapore region, AWS ap-southeast-1)
+- All schema tables pushed via `prisma db push --accept-data-loss` (20 models total)
+- Models: User, Store, Post, Product, Message, Category, Review, Notification, SavedItem, SearchHistory, SavedLocation, TeamMember, Report, Like, AppSettings, Complaint, LandingPageContent, PushSubscription, AskNearbyRequest, AskNearbyResponse
+- pgvector extension enabled — Product.embedding column (vector type) confirmed live
+- Prisma 5.22.0 used (NOT global npx which had Prisma 7.x causing schema errors)
+- DATABASE_URL configured in .env (gitignored, neon.tech Singapore endpoint)
+- npx tsc --noEmit passes (exit 0)
+- App now connects to production-grade managed PostgreSQL on Neon
+
+---
+
 ## 2026-05-02 — Session 63 (Continue in Browser option)
 - Landing page: "Browser mein continue karein" link below download button (hero + final CTA)
 - localStorage 'dk-browser-mode' flag bypasses /landing redirect
