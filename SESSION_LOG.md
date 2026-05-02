@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-02 — Session 49 (PWA refresh redirect bug fix)
+
+- Bulletproof PWA detection: matchMedia + URL param + sessionStorage
+- `index.html` IIFE: persists PWA detection across refreshes (`sessionStorage['dk-is-pwa']`)
+- `src/App.tsx` FlowController: same multi-layer detection (matchMedia standalone/minimal-ui, iOS standalone, Android TWA referrer, sessionStorage flag)
+- `public/landing.html`: same logic for redirect-out check; sets sessionStorage flag whenever PWA detected so subsequent navigations stick
+- `public/sw.js`: bumped `dukanchi-v7` → `dukanchi-v8`
+- Fixes: PWA refresh after signup/KYC was redirecting to `/landing` because Chrome's `display-mode: standalone` matchMedia intermittently returns false on refresh inside PWA window
+- `npx tsc --noEmit` → 0 errors
+
+---
+
 ## 2026-05-02 — Session 48 (PWA install URL bug fix)
 
 - `public/landing.html`: synchronous standalone check at TOP of `<head>` (right after `<meta charset>`) — fires before any CSS/JS so PWA users never see a flicker

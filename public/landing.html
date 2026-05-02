@@ -9,7 +9,14 @@
       window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.navigator.standalone === true ||
       document.referrer.indexOf('android-app://') === 0;
-    if (isStandalone) {
+
+    var hasSourcePwa = window.location.search.indexOf('source=pwa') !== -1;
+
+    var sessionFlag = false;
+    try { sessionFlag = sessionStorage.getItem('dk-is-pwa') === '1'; } catch (e) {}
+
+    if (isStandalone || hasSourcePwa || sessionFlag) {
+      try { sessionStorage.setItem('dk-is-pwa', '1'); } catch (e) {}
       window.location.replace('/');
     }
   })();

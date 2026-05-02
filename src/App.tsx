@@ -39,8 +39,16 @@ function FlowController() {
   const { user, isLoading } = useAuth();
   usePushNotifications();
 
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-    (window.navigator as any).standalone === true;
+  const isStandalone = (() => {
+    if (window.matchMedia('(display-mode: standalone)').matches) return true;
+    if (window.matchMedia('(display-mode: minimal-ui)').matches) return true;
+    if ((window.navigator as any).standalone === true) return true;
+    if (document.referrer.indexOf('android-app://') === 0) return true;
+    try {
+      if (sessionStorage.getItem('dk-is-pwa') === '1') return true;
+    } catch (e) {}
+    return false;
+  })();
 
   useEffect(() => {
     // index.html handles browser→landing redirect before React loads
