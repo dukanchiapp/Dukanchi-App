@@ -30,6 +30,7 @@ import { fallthroughErrorHandler } from "./middlewares/error.middleware";
 import { generalLimiter, uploadLimiter } from "./middlewares/rate-limiter.middleware";
 
 export const app = express();
+app.set('trust proxy', 1);
 
 // ── 1. Security headers ──────────────────────────────────────────────────────
 if (env.NODE_ENV === 'production') {

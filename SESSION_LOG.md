@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-05-02 — Session 61 (Phone PWA login on ngrok HTTPS)
+- app.set('trust proxy', 1) — Express reads X-Forwarded-Proto correctly
+- Cookie secure flag follows actual request protocol (not NODE_ENV)
+- sameSite='none' for HTTPS — required for PWA cookies on ngrok
+- Phone PWA login/signup + logout now work via ngrok URL
+
+---
+
 ## 2026-05-02 — Session 59 (KYC approval flow + button layout)
 - Profile.tsx: Empty store + KYC approved → forced "KYC Approved! 🎉" screen with "Complete Your Store Profile" button
 - Profile.tsx: Edit Profile + New Post buttons now in same flex row

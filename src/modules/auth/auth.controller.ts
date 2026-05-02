@@ -7,11 +7,13 @@ export class AuthController {
     try {
       const result = await AuthService.signup(req.body);
       
-      const isProduction = process.env.NODE_ENV === 'production';
+      const isHttps = req.secure ||
+        req.headers['x-forwarded-proto'] === 'https' ||
+        (req.get('host') || '').includes('ngrok');
       res.cookie('dk_token', result.token, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
+        secure: isHttps,
+        sameSite: isHttps ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         path: '/'
       });
@@ -30,11 +32,13 @@ export class AuthController {
     try {
       const result = await AuthService.login(req.body);
 
-      const isProduction = process.env.NODE_ENV === 'production';
+      const isHttps = req.secure ||
+        req.headers['x-forwarded-proto'] === 'https' ||
+        (req.get('host') || '').includes('ngrok');
       const cookieOptions = {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax' as const,
+        secure: isHttps,
+        sameSite: (isHttps ? 'none' : 'lax') as 'none' | 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000,
         path: '/',
       };
@@ -61,8 +65,12 @@ export class AuthController {
   }
 
   static async logout(req: Request, res: Response) {
-    res.clearCookie('dk_token', { path: '/' });
-    res.clearCookie('dk_admin_token', { path: '/' });
+    const isHttps = req.secure ||
+      req.headers['x-forwarded-proto'] === 'https' ||
+      (req.get('host') || '').includes('ngrok');
+    const clearOpts = { httpOnly: true, secure: isHttps, sameSite: (isHttps ? 'none' : 'lax') as 'none' | 'lax', path: '/' };
+    res.clearCookie('dk_token', clearOpts);
+    res.clearCookie('dk_admin_token', clearOpts);
     res.json({ ok: true });
   }
 
