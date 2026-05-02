@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { AdminService } from "./admin.service";
+import { getUploadedFileUrl } from "../../middlewares/upload.middleware";
 
 export class AdminController {
   static async getStats(req: Request, res: Response) {
@@ -188,7 +189,7 @@ export class AdminController {
     try {
       const file = req.file as any;
       if (!file) return res.status(400).json({ error: "No file uploaded" });
-      const imageUrl = file.location || `/uploads/${file.filename}`;
+      const imageUrl = getUploadedFileUrl(file);
       res.json({ url: imageUrl });
     } catch (error) {
       res.status(500).json({ error: "Failed to upload image" });

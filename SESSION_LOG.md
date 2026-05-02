@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-05-03 — Session 65 (Cloudflare R2 Storage Integration)
+- Migrated file storage to Cloudflare R2 (S3-compatible, zero egress fees)
+- Bucket: dukanchi-prod (Asia Pacific region)
+- S3Client config: endpoint (S3_ENDPOINT env), region "auto", forcePathStyle: true
+- Fixed long-standing bug: env schema had AWS_S3_BUCKET but .env used S3_BUCKET_NAME — R2 branch was never triggering
+- Added getUploadedFileUrl() helper in upload.middleware.ts — uses R2_PUBLIC_URL+key for CDN URL, falls back to .location or /uploads/ path
+- app.ts /api/upload and admin.controller.ts uploadSettingsImage both updated to use helper
+- Added S3_ENDPOINT and R2_PUBLIC_URL to .env.example (empty placeholders, no secrets)
+- npx tsc --noEmit passes (exit 0)
+- Files changed: src/config/env.ts, src/middlewares/upload.middleware.ts, src/app.ts, src/modules/admin/admin.controller.ts, .env.example
+
+---
+
 ## 2026-05-03 — Session 64 (Neon DB Production Setup)
 - Migrated from local SQLite to Neon Postgres (Singapore region, AWS ap-southeast-1)
 - All schema tables pushed via `prisma db push --accept-data-loss` (20 models total)
