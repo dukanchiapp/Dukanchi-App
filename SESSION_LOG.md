@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-02 — Session 55 (PWA detection fix — minimal-ui false positive)
+
+- Removed `minimal-ui` and `fullscreen` from standalone detection in `index.html` IIFE, `src/App.tsx` FlowController, and `public/landing.html`
+- These were triggering false-positive PWA detection in DevTools responsive/fullscreen mode
+- Now only true PWA signals: `display-mode:standalone`, iOS `navigator.standalone`, `android-app://` referrer
+- Browser `localhost:3000` now correctly redirects to `/landing`
+- Removed debug console.log added in Session 54
+
+---
+
 ## 2026-05-02 — Session 54 (FINAL: SW disabled in dev mode)
 
 - `src/main.tsx`: SW only registers in `import.meta.env.PROD`

@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <script>
   (function() {
+    // Only true PWA signals — minimal-ui can false-positive in DevTools
     var isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
-      window.matchMedia('(display-mode: minimal-ui)').matches ||
       window.navigator.standalone === true ||
       document.referrer.indexOf('android-app://') === 0;
 

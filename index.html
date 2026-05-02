@@ -27,10 +27,9 @@
       (function() {
         var path = window.location.pathname;
 
+        // Only true PWA signals — minimal-ui/fullscreen can false-positive in DevTools
         var isStandalone =
           window.matchMedia('(display-mode: standalone)').matches ||
-          window.matchMedia('(display-mode: minimal-ui)').matches ||
-          window.matchMedia('(display-mode: fullscreen)').matches ||
           window.navigator.standalone === true ||
           document.referrer.indexOf('android-app://') === 0;
 
