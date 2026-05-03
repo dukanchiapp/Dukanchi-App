@@ -18,6 +18,8 @@ const envSchema = z.object({
   S3_BUCKET_NAME: z.string().optional(),
   S3_ENDPOINT: z.string().url().optional(),
   R2_PUBLIC_URL: z.string().url().optional(),
+  GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY is required'),
+  SENTRY_DSN: z.string().url().optional(),
   VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_MAILTO: z.string().optional(),

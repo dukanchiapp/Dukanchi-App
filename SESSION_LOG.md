@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-05-04 — Session 71 (Audit Batch 1: quick wins)
+- PERF-005: geminiEmbeddings.ts now uses shared Prisma singleton (was creating a second connection pool)
+- SEC-005: GEMINI_API_KEY added to Zod envSchema (was unvalidated, app started silently without it)
+- SEC-012: Removed credentials:'include' from server-side fetch calls in geminiEmbeddings.ts and search.service.ts (browser-only option, no-op in Node)
+- All 4 process.env.GEMINI_API_KEY! usages replaced with env.GEMINI_API_KEY across geminiEmbeddings, geminiVision, search.service, bulkImport.service
+- SENTRY_DSN added to envSchema (optional)
+- INFRA-001: HEALTHCHECK added to Dockerfile (curl installed, 30s interval, 30s start-period)
+- INFRA-004: healthcheckPath + healthcheckTimeout added to railway.json
+- RELIABILITY-005: Duplicate GET /health at app.ts:153 removed (line 101 kept — before rate limiter)
+- tsc --noEmit passes (exit 0)
+
+---
+
 ## 2026-05-03 — Session 70 (Admin panel: build + serve + token fix)
 - Admin panel was a separate Vite app (admin-panel/) never built in Dockerfile — now fixed
 - Dockerfile: cd admin-panel && npm install && npm run build (produces admin-panel/dist/)

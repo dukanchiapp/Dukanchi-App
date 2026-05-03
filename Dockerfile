@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     librsvg2-dev \
     openssl \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -33,6 +34,9 @@ RUN npm run build
 RUN cd admin-panel && npm install && npm run build
 
 EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:3000/health || exit 1
 
 # Use tsx to run TypeScript server directly (no separate TS compilation step)
 CMD ["node_modules/.bin/tsx", "server.ts"]

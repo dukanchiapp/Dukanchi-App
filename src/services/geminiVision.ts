@@ -1,7 +1,8 @@
 import { GoogleGenAI } from '@google/genai';
 import { logger } from '../lib/logger';
+import { env } from '../config/env';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
 
 const CATEGORIES = [
   'Electronics', 'Fashion', 'Food', 'Beauty', 'Grocery', 'Home', 'Health',

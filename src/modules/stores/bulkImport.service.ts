@@ -3,6 +3,7 @@ import { prisma } from '../../config/prisma';
 import { pubClient } from '../../config/redis';
 import { embedProductBatch } from '../../services/geminiEmbeddings';
 import { logger } from '../../lib/logger';
+import { env } from '../../config/env';
 
 export interface ColumnMapping {
   productName: string;
@@ -75,7 +76,7 @@ Example: {"productName":"Item Name","price":"MRP","category":"Category"}
 If a field cannot be mapped, omit it. productName must always be included.`;
 
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

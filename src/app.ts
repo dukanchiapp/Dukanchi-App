@@ -149,10 +149,7 @@ app.get('/admin-panel/*splat', (_req, res) => {
   res.sendFile(path.join(adminDistPath, 'index.html'));
 });
 
-// ── 10. Health check ─────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
-
-// ── 11. Debug/test routes (dev only) ──────────────────────────────────────────────
+// ── 10. Debug/test routes (dev only) ──────────────────────────────────────────────
 if (process.env.NODE_ENV !== "production") {
   app.get("/api/debug-sentry", (_req, _res) => {
     throw new Error("Sentry test — intentional error from /api/debug-sentry");

@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../config/prisma';
+import { env } from '../config/env';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-const prisma = new PrismaClient();
+const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function generateEmbedding(text: string, retries = 3, delay = 1000): Promise<number[]> {
   try {
     const startTime = Date.now();
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${process.env.GEMINI_API_KEY}`, { credentials: 'include', 
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
