@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-03 — Session 69 (Production Live on Railway)
+- Railway deployment fully active — all 3 services online: Dukanchi-App, Redis, redis-volume
+- Public URL: https://dukanchi-app-production.up.railway.app
+- Redis added with private networking — REDIS_URL set via Railway reference variable
+- Environment: NODE_ENV=production, PORT=3000 explicitly set
+- Final production stack confirmed: Neon DB (Singapore) + Cloudflare R2 + Railway (Sydney) + Redis
+- Issues resolved this session: Alpine→Debian Prisma/OpenSSL fix, graceful Redis fallback, proper Redis service wiring
+
+---
+
 ## 2026-05-03 — Session 68 (Deploy fixes: Debian Dockerfile + Prisma binaryTargets + graceful Redis)
 - ISSUE 1: Prisma Alpine+OpenSSL mismatch — switched Dockerfile from node:22-alpine to node:22-bookworm-slim (Debian)
 - Dockerfile now uses apt-get: build-essential, python3, pkg-config, libcairo2-dev, libpango1.0-dev, libjpeg-dev, libgif-dev, librsvg2-dev, openssl, ca-certificates
