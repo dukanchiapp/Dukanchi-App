@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { Users, Store, FileText, Star, Flag, TrendingUp, Clock, UserPlus, Store as StoreIcon } from 'lucide-react';
+import { Users, Store, FileText, Star, Flag, TrendingUp, Clock, UserPlus } from 'lucide-react';
 import api, { getAdminHeaders } from '../lib/api';
 
 interface RecentUser {

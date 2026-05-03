@@ -26,8 +26,11 @@ COPY . .
 # Generate Prisma client (debian-openssl-3.0.x binary)
 RUN node_modules/.bin/prisma generate
 
-# Build frontend (Vite)
+# Build main frontend (Vite)
 RUN npm run build
+
+# Build admin panel
+RUN cd admin-panel && npm install && npm run build
 
 EXPOSE 3000
 

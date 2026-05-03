@@ -13,11 +13,12 @@ export const getAdminHeaders = () => {
   return {};
 };
 
-// For image URLs we still need the absolute backend origin
+// For image URLs — use same origin in production, localhost:3000 in dev
 export const imgUrl = (path?: string | null): string => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
-  return `http://localhost:3000${path}`;
+  const base = import.meta.env.PROD ? '' : 'http://localhost:3000';
+  return `${base}${path}`;
 };
 
 export default api;

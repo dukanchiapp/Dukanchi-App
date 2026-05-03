@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { Search, Trash2, MessageSquare, Clock, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight, User, Filter } from 'lucide-react';
+import { Trash2, MessageSquare, Clock, CheckCircle, XCircle, AlertTriangle, ChevronLeft, ChevronRight, User } from 'lucide-react';
 import api, { getAdminHeaders } from '../lib/api';
 import { useToast } from '../context/ToastContext';
 

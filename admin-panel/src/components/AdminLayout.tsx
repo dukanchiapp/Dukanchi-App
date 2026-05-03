@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import Sidebar from './Sidebar';
 import { Menu } from 'lucide-react';
 
@@ -10,7 +9,6 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, title }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const navigate = useNavigate();
 
   // Auth check is handled by App.tsx ProtectedRoute
 

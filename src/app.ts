@@ -142,6 +142,13 @@ app.get('/landing', (_req, res) => {
   res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
+// ── 9b. Admin panel — static files + SPA fallback ────────────────────────────
+const adminDistPath = path.resolve(process.cwd(), 'admin-panel', 'dist');
+app.use('/admin-panel', express.static(adminDistPath));
+app.get('/admin-panel/*splat', (_req, res) => {
+  res.sendFile(path.join(adminDistPath, 'index.html'));
+});
+
 // ── 10. Health check ─────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 

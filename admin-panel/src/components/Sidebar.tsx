@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Store, Flag, LogOut, X, Shield, ShieldCheck, MessageSquare, Settings, FileText, AlertTriangle, UserCheck, Layout } from 'lucide-react';
 
 interface SidebarProps {
@@ -6,8 +6,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ onClose }: SidebarProps) {
-  const navigate = useNavigate();
-
   const handleLogout = async () => {
     try {
       const { default: api } = await import('../lib/api');
@@ -15,8 +13,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
     } catch (err) {
       console.error(err);
     }
-    // Refresh page to clear auth state
-    window.location.href = '/login';
+    window.location.href = '/admin-panel/login';
   };
 
   const navClass = ({ isActive }: { isActive: boolean }) =>

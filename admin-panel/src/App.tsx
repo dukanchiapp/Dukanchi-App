@@ -39,7 +39,7 @@ function App() {
 
   return (
     <ToastProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/admin-panel">
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login onLogin={() => setIsAuthenticated(true)} />} />
           <Route path="/dashboard" element={<ProtectedRoute isLoading={isLoading} isAuthenticated={isAuthenticated}><Dashboard /></ProtectedRoute>} />

@@ -6,6 +6,21 @@
 
 ---
 
+## 2026-05-03 — Session 70 (Admin panel: build + serve + token fix)
+- Admin panel was a separate Vite app (admin-panel/) never built in Dockerfile — now fixed
+- Dockerfile: cd admin-panel && npm install && npm run build (produces admin-panel/dist/)
+- admin-panel/vite.config.ts: added base: '/admin-panel/' so all assets resolve correctly
+- admin-panel/src/App.tsx: added basename="/admin-panel" to BrowserRouter for React Router
+- src/app.ts: serve admin-panel/dist at /admin-panel + SPA fallback for deep routes
+- admin-panel/src/components/Sidebar.tsx: logout now redirects to /admin-panel/login (not /login)
+- admin-panel/src/lib/api.ts: imgUrl() no longer hardcodes localhost:3000 in production
+- Fixed 6 unused import TS errors blocking admin-panel build (AdminLayout, Sidebar, Toast, Complaints, Dashboard, Posts)
+- Token flow confirmed correct: auth.controller.ts already sets dk_admin_token for admin role
+- Admin panel now accessible at /admin-panel/ after deploy
+- tsc --noEmit passes (exit 0) on both main app and admin panel
+
+---
+
 ## 2026-05-03 — Session 69 (Production Live on Railway)
 - Railway deployment fully active — all 3 services online: Dukanchi-App, Redis, redis-volume
 - Public URL: https://dukanchi-app-production.up.railway.app
