@@ -6,6 +6,15 @@
 
 ---
 
+## 2026-05-03 — Session 66 (Railway deployment — canvas build fix)
+- Project deployed to Railway from GitHub (auto-deploy enabled)
+- First build failed: canvas library needed native deps (Cairo, Pango, etc.) not in Railway's default env
+- Added nixpacks.toml with system packages: pkg-config, cairo, pango, libpng, giflib, librsvg, pixman, libjpeg
+- Note: canvas has no imports in src/ — it may be an unused or transitive dep; safe to remove in a future cleanup
+- Build retry should now succeed
+
+---
+
 ## 2026-05-03 — Session 65 (Cloudflare R2 Storage Integration)
 - Migrated file storage to Cloudflare R2 (S3-compatible, zero egress fees)
 - Bucket: dukanchi-prod (Asia Pacific region)
