@@ -1,17 +1,18 @@
-FROM node:22-alpine
+FROM node:22-bookworm-slim
 
-# Canvas and node-gyp native build deps (Alpine uses apk)
-RUN apk add --no-cache \
+# Canvas native deps + Prisma requirements (Debian)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     python3 \
-    make \
-    g++ \
-    pkgconfig \
-    cairo-dev \
-    pango-dev \
-    jpeg-dev \
-    giflib-dev \
-    librsvg-dev \
-    pixman-dev
+    pkg-config \
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -22,7 +23,7 @@ RUN npm ci
 # Copy full application code
 COPY . .
 
-# Generate Prisma client
+# Generate Prisma client (debian-openssl-3.0.x binary)
 RUN node_modules/.bin/prisma generate
 
 # Build frontend (Vite)

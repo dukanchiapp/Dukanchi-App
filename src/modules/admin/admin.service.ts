@@ -9,8 +9,10 @@ const PROTECTED_ADMIN_ID = '5cbf1a3d-e8e7-4b64-836a-58475bbbb7d9';
 
 export class AdminService {
   static async getStats() {
-    const cached = await pubClient.get(ADMIN_STATS_KEY);
-    if (cached) return JSON.parse(cached.toString());
+    try {
+      const cached = await pubClient.get(ADMIN_STATS_KEY);
+      if (cached) return JSON.parse(cached.toString());
+    } catch { /* Redis unavailable — fall through to DB */ }
 
     const [usersCount, storesCount, postsCount, reviewsCount, reportsCount] = await Promise.all([
       prisma.user.count(),
@@ -38,7 +40,7 @@ export class AdminService {
     ]);
 
     const result = { users: usersCount, stores: storesCount, posts: postsCount, reviews: reviewsCount, reports: reportsCount, recentUsers, recentReports };
-    await pubClient.set(ADMIN_STATS_KEY, JSON.stringify(result), { EX: ADMIN_STATS_TTL });
+    try { await pubClient.set(ADMIN_STATS_KEY, JSON.stringify(result), { EX: ADMIN_STATS_TTL }); } catch { /* Redis unavailable — non-fatal */ }
     return result;
   }
 
@@ -521,7 +523,7 @@ export class AdminService {
       }
     }
 
-    await pubClient.del(ADMIN_STATS_KEY);
+    try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
     return { id: user.id, name: user.name, kycStatus: user.kycStatus };
   }
 }

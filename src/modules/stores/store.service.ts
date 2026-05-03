@@ -44,7 +44,7 @@ export class StoreService {
       where: { id },
       data: updateData
     });
-    await pubClient.del(ADMIN_STATS_KEY);
+    try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
     return store;
   }
 

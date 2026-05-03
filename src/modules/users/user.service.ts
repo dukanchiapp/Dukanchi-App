@@ -28,7 +28,7 @@ export class UserService {
         where: { id },
         data
       });
-      await pubClient.del(ADMIN_STATS_KEY);
+      try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
       return user;
     } catch (error: any) {
       if (error.code === 'P2002') {

@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-05-03 — Session 68 (Deploy fixes: Debian Dockerfile + Prisma binaryTargets + graceful Redis)
+- ISSUE 1: Prisma Alpine+OpenSSL mismatch — switched Dockerfile from node:22-alpine to node:22-bookworm-slim (Debian)
+- Dockerfile now uses apt-get: build-essential, python3, pkg-config, libcairo2-dev, libpango1.0-dev, libjpeg-dev, libgif-dev, librsvg2-dev, openssl, ca-certificates
+- prisma/schema.prisma: added binaryTargets = ["native", "debian-openssl-3.0.x"] to generator block
+- ISSUE 2: Redis graceful degradation — added .on('error') listeners to pubClient/subClient (prevents unhandled error event crash)
+- Wrapped all bare pubClient.get/set/del calls without try/catch in admin.service.ts, store.service.ts, user.service.ts, kyc.service.ts
+- connectRedis() already non-fatal; socket adapter and BullMQ IORedis already reconnect-safe
+- npx tsc --noEmit passes (exit 0)
+
+---
+
 ## 2026-05-03 — Session 67 (Railway: switch to Dockerfile builder)
 - Nixpacks kept failing on native deps (canvas, node-gyp, Python not found)
 - Switched Railway to use Dockerfile via railway.json (builder: DOCKERFILE)

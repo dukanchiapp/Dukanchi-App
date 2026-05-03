@@ -19,7 +19,7 @@ export class KycService {
       select: { id: true, kycStatus: true, kycSubmittedAt: true },
     });
 
-    await pubClient.del(ADMIN_STATS_KEY);
+    try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
     return user;
   }
 
