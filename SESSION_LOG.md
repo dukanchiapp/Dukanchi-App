@@ -6,6 +6,17 @@
 
 ---
 
+## 2026-05-03 — Session 67 (Railway: switch to Dockerfile builder)
+- Nixpacks kept failing on native deps (canvas, node-gyp, Python not found)
+- Switched Railway to use Dockerfile via railway.json (builder: DOCKERFILE)
+- Rewrote Dockerfile: node:22-alpine base, apk install for canvas native deps (python3, make, g++, cairo-dev, pango-dev, jpeg-dev, giflib-dev, librsvg-dev, pixman-dev)
+- Fixed start command: node_modules/.bin/tsx server.ts (previous "node server.ts" would fail — Node can't run .ts directly)
+- Used local prisma binary (node_modules/.bin/prisma generate) to avoid npx version mismatch
+- Removed nixpacks.toml — no longer needed
+- startCommand in railway.json: node_modules/.bin/tsx server.ts
+
+---
+
 ## 2026-05-03 — Session 66 (Railway deployment — canvas build fix)
 - Project deployed to Railway from GitHub (auto-deploy enabled)
 - First build failed: canvas library needed native deps (Cairo, Pango, etc.) not in Railway's default env
