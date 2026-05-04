@@ -35,8 +35,8 @@ RUN cd admin-panel && npm install && npm run build
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 
 # Use tsx to run TypeScript server directly (no separate TS compilation step)
 CMD ["node_modules/.bin/tsx", "server.ts"]
