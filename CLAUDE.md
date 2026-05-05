@@ -6,12 +6,31 @@
 - **Opus (chat):** Strategy, brainstorming, prompt creation, code review
 - **Claude Code (VS Code):** Code execution, file edits, commits, doc updates
 
+**Every new Opus thread, user pastes:**
+```
+Read STATUS.md from repo:
+https://github.com/dukanchiapp/Dukanchi-App/blob/main/STATUS.md
+Today's goal: [1 line]
+```
+
 **Quick status files:**
 - `STATUS.md` — current sprint, live state, next actions (update each session)
 - `DECISIONS.md` — architecture decisions, append-only
 - `SESSION_LOG.md` — full history, one entry per session
 
-**Every session end:** Update STATUS.md "Last updated" line + "Last deploy" line.
+**Every Claude Code session END must:**
+1. Append new entry to TOP of SESSION_LOG.md (after H1):
+   `YYYY-MM-DD — Session N (short title)`
+   - File: change + reason
+   - Commit hash if any
+   - tsc --noEmit result
+2. Refresh ALL sections of STATUS.md:
+   - "Last updated" line (date + session # + commit)
+   - Move done items, update Next 3 Actions, refresh Blockers
+3. If big architecture decision made → append to DECISIONS.md
+4. Commit: `git add -A && git commit -m "docs: session N — <title>"`
+
+**Communication style:** Hindi/Hinglish formal "aap". No "tu/tera". Short, point-wise.
 
 ## Project
 - App: Dukanchi — B2B2C local retail discovery (India)
