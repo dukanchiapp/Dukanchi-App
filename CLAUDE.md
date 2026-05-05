@@ -1,5 +1,18 @@
 # DUKANCHI — Claude Code Context
 
+## Session Workflow Protocol
+
+**Two-AI workflow:**
+- **Opus (chat):** Strategy, brainstorming, prompt creation, code review
+- **Claude Code (VS Code):** Code execution, file edits, commits, doc updates
+
+**Quick status files:**
+- `STATUS.md` — current sprint, live state, next actions (update each session)
+- `DECISIONS.md` — architecture decisions, append-only
+- `SESSION_LOG.md` — full history, one entry per session
+
+**Every session end:** Update STATUS.md "Last updated" line + "Last deploy" line.
+
 ## Project
 - App: Dukanchi — B2B2C local retail discovery (India)
 - Stack: Express + TypeScript + Prisma + PostgreSQL + pgvector + Redis + Socket.IO + React 19 + Vite + Tailwind
