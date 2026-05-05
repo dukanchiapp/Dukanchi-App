@@ -59,13 +59,14 @@ export class StoreService {
     return store;
   }
 
-  static async getStores(page: number, limit: number, category?: string, excludeOwnerId?: string) {
+  static async getStores(page: number, limit: number, viewerRole: string, category?: string, excludeOwnerId?: string) {
     const skip = (page - 1) * limit;
-    const where: any = { owner: { isBlocked: false } };
+    const B2B = ['retailer', 'supplier', 'brand', 'manufacturer'];
+    const visibleRoles = viewerRole === 'customer' ? ['retailer'] : B2B;
+    const where: any = { owner: { isBlocked: false, role: { in: visibleRoles } } };
     if (category) where.category = category;
     if (excludeOwnerId) {
       where.ownerId = { not: excludeOwnerId };
-      console.log('[StoreService.getStores] Excluding stores owned by:', excludeOwnerId);
     }
     const [stores, total] = await Promise.all([
       prisma.store.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
@@ -111,9 +112,11 @@ export class StoreService {
     }
   }
 
-  static async getStorePosts(storeId: string, page: number, limit: number) {
+  static async getStorePosts(storeId: string, page: number, limit: number, viewerRole: string) {
     const skip = (page - 1) * limit;
-    const blockedFilter = { storeId, store: { owner: { isBlocked: false } } };
+    const B2B = ['retailer', 'supplier', 'brand', 'manufacturer'];
+    const visibleRoles = viewerRole === 'customer' ? ['retailer'] : B2B;
+    const blockedFilter = { storeId, store: { owner: { isBlocked: false, role: { in: visibleRoles } } } };
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
         where: blockedFilter,

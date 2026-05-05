@@ -48,7 +48,7 @@ export class PostService {
     let allowedRoles: string[] = [];
     if (userRole === 'customer') allowedRoles = ['retailer'];
     else if (userRole === 'retailer') allowedRoles = ['retailer', 'supplier', 'manufacturer', 'brand'];
-    else if (['supplier', 'manufacturer', 'brand'].includes(userRole)) allowedRoles = ['retailer'];
+    else if (['supplier', 'manufacturer', 'brand'].includes(userRole)) allowedRoles = ['retailer', 'supplier', 'manufacturer', 'brand'];
     else if (userRole === 'admin') allowedRoles = ['customer', 'retailer', 'supplier', 'manufacturer', 'brand', 'admin'];
 
     let storeFilter: any = { owner: { role: { in: allowedRoles }, isBlocked: false } };

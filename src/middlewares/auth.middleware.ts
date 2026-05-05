@@ -80,7 +80,10 @@ export const requireAdmin = (req: any, res: express.Response, next: express.Next
   next();
 };
 
-export const canChat = (_role1: string, _role2: string) => {
-  // All users can message each other — open marketplace
-  return true;
+const B2B_ROLES = new Set(['retailer', 'supplier', 'brand', 'manufacturer']);
+
+export const canChat = (role1: string, role2: string): boolean => {
+  if (role1 === 'customer') return role2 === 'retailer';
+  if (role2 === 'customer') return role1 === 'retailer';
+  return B2B_ROLES.has(role1) && B2B_ROLES.has(role2);
 };

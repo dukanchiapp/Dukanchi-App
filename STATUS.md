@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-05 | Session 75 | Commit: 9bfdb7d
+> Last updated: 2026-05-06 | Session 76 | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -8,6 +8,7 @@
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
+- **B2B2C visibility:** Fully spec-compliant ✅ (Session 76 — canChat, store/feed/search/profile role filters)
 
 ## Active Sprint: Phase 0.5 — God Tier Vision (8 weeks)
 

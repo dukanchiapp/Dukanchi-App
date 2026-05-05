@@ -16,6 +16,14 @@ export class UserController {
     try {
       const user = await UserService.getUserProfile(req.params.id);
       if (!user) return res.status(404).json({ error: "User not found" });
+
+      // Customer can only view retailer profiles — return 404 to avoid leaking existence
+      const viewerRole = (req as any).user?.role;
+      const viewerId = (req as any).user?.userId;
+      if (viewerRole === 'customer' && user.role !== 'retailer' && user.id !== viewerId) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
       res.json(user);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch user" });

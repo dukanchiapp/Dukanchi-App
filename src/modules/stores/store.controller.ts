@@ -88,7 +88,8 @@ export class StoreController {
   static async getStores(req: Request, res: Response) {
     try {
       const { page = "1", limit = "20", category, excludeOwnerId } = req.query as any;
-      const result = await StoreService.getStores(parseInt(page), parseInt(limit), category, excludeOwnerId);
+      const viewerRole = (req as any).user.role;
+      const result = await StoreService.getStores(parseInt(page), parseInt(limit), viewerRole, category, excludeOwnerId);
       res.json(result);
     } catch {
       res.status(500).json({ error: "Failed to fetch stores" });
@@ -126,6 +127,13 @@ export class StoreController {
       const { userId } = req.query;
       const store = await StoreService.getStoreById(req.params.id, userId as string);
       if (!store || (store.owner as any)?.isBlocked) return res.status(404).json({ error: "Store not found" });
+
+      // Customer can only view retailer stores — return 404 (not 403) to avoid leaking existence
+      const viewerRole = (req as any).user?.role;
+      if (viewerRole === 'customer' && (store.owner as any)?.role !== 'retailer') {
+        return res.status(404).json({ error: "Store not found" });
+      }
+
       res.set('Cache-Control', 'public, max-age=30');
       res.json(store);
     } catch (error) {
@@ -148,7 +156,8 @@ export class StoreController {
   static async getStorePosts(req: Request, res: Response) {
     try {
       const { page = "1", limit = "30" } = req.query as any;
-      const result = await StoreService.getStorePosts(req.params.id, parseInt(page), parseInt(limit));
+      const viewerRole = (req as any).user.role;
+      const result = await StoreService.getStorePosts(req.params.id, parseInt(page), parseInt(limit), viewerRole);
       res.json(result);
     } catch {
       res.status(500).json({ error: "Failed to fetch posts" });

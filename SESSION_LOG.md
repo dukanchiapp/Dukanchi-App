@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-06 — Session 76 (B2B2C visibility hardening)
+- FIX 1 (canChat stub): auth.middleware.ts — replaced `return true` stub with real role-pair logic; customer↔retailer only; B2B↔B2B freely; customer blocked from supplier/brand/manufacturer chat
+- FIX 2 (store listing): store.service.ts getStores + getStorePosts — viewerRole param added; customer sees retailer-only; B2B sees all 4 B2B store types; console.log removed
+- FIX 3 (feed B2B): post.service.ts — supplier/manufacturer/brand now see all B2B posts (was incorrectly retailer-only)
+- FIX 4 (search B2B): search.controller.ts getAllowedRoles — same B2B fix; supplier/manufacturer/brand now search across all B2B roles
+- FIX 5 (store/user profile): store.controller.ts getStoreById + user.controller.ts getUserProfile — customer gets 404 for non-retailer profiles (existence not leaked); customer can still view own profile
+- tsc --noEmit: exit 0
+
+---
+
 ## 2026-05-05 — Session 75 (Audit Batch 5: UX Polish — FINAL BATCH)
 - UX-001: Login/Signup spinners — already shipped prior to audit; finding was outdated. No changes needed.
 - UX-002: Error toasts on interaction rollbacks — showToast added to 4 catch blocks:

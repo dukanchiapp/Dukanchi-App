@@ -6,7 +6,7 @@ export class SearchController {
   private static getAllowedRoles(userRole: string): string[] {
     if (userRole === 'customer') return ['retailer'];
     if (userRole === 'retailer') return ['retailer', 'supplier', 'manufacturer', 'brand'];
-    if (['supplier', 'manufacturer', 'brand'].includes(userRole)) return ['retailer'];
+    if (['supplier', 'manufacturer', 'brand'].includes(userRole)) return ['retailer', 'supplier', 'manufacturer', 'brand'];
     if (userRole === 'admin') return ['customer', 'retailer', 'supplier', 'manufacturer', 'brand', 'admin'];
     return [];
   }
