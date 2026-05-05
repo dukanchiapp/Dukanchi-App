@@ -31,8 +31,10 @@ export class PostController {
       const page = parseInt(String(req.query.page || '1'));
       const limit = Math.min(parseInt(String(req.query.limit || '20')), 50);
 
-      const isCacheable = !feedType || (feedType !== 'following' && (!locationRange || locationRange === 'all'));
-      const cacheKey = `feed:${userRole}:p${page}:l${limit}`;
+      // Only cache the plain global feed — following/location feeds are user-specific
+      // Cache key includes userId: feed contains per-user liked state and isOwnPost flags
+      const isCacheable = !feedType && (!locationRange || locationRange === 'all');
+      const cacheKey = `feed:${userId}:p${page}:l${limit}`;
 
       if (isCacheable) {
         try {

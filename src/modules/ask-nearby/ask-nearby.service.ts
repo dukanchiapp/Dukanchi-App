@@ -35,8 +35,14 @@ export async function sendAskNearby(
   longitude: number,
   areaLabel?: string,
 ) {
-  // Get all stores
+  // Bounding box pre-filter — reduces full-table scan to small geographic slice
+  const latDelta = radiusKm / 111;
+  const lngDelta = radiusKm / (111 * Math.cos(latitude * (Math.PI / 180)));
   const stores = await prisma.store.findMany({
+    where: {
+      latitude:  { gte: latitude  - latDelta,  lte: latitude  + latDelta  },
+      longitude: { gte: longitude - lngDelta, lte: longitude + lngDelta },
+    },
     select: {
       id: true,
       ownerId: true,
@@ -46,7 +52,7 @@ export async function sendAskNearby(
     },
   });
 
-  // Filter by radius
+  // Haversine refinement — removes bounding box corners outside the true radius
   const nearby = stores.filter(
     s => s.latitude && s.longitude && haversineKm(latitude, longitude, s.latitude, s.longitude) <= radiusKm,
   );
@@ -79,18 +85,25 @@ export async function sendAskNearby(
     data: { customerId, query, radiusKm, latitude, longitude, areaLabel },
   });
 
-  // Create response records + emit to owners
+  // Batch-insert all response records in a single query
+  await prisma.askNearbyResponse.createMany({
+    data: matched.map(store => ({ requestId: request.id, storeId: store.id, ownerId: store.ownerId })),
+    skipDuplicates: true,
+  });
+
+  // Fetch created responses to get their IDs for socket payloads
+  const responses = await prisma.askNearbyResponse.findMany({
+    where: { requestId: request.id },
+    select: { id: true, storeId: true, ownerId: true },
+  });
+
   const io = getIO();
   const customer = await prisma.user.findUnique({ where: { id: customerId }, select: { name: true } });
 
-  for (const store of matched) {
-    const response = await prisma.askNearbyResponse.create({
-      data: { requestId: request.id, storeId: store.id, ownerId: store.ownerId },
-    });
-
-    io.to(store.ownerId).emit('ask_nearby_request', {
+  for (const r of responses) {
+    io.to(r.ownerId).emit('ask_nearby_request', {
       requestId: request.id,
-      responseId: response.id,
+      responseId: r.id,
       query,
       customerName: customer?.name || 'Customer',
       areaLabel: areaLabel || null,

@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-05 — Session 73 (Audit Batch 3: Performance)
+- PERF-001: ask-nearby bounding box pre-filter — lat/lng WHERE clause added to prisma.store.findMany; eliminates full-table scan at scale
+- PERF-002: ask-nearby createMany batch insert — N sequential prisma.askNearbyResponse.create() replaced with single createMany + one findMany for socket IDs
+- BUGS-001/PERF-006: feed cache key now includes userId — was feed:{role}:... causing user A's likes/isOwnPost to bleed into user B's cached feed (privacy + correctness bug)
+- RELIABILITY-002: prisma.ts comment documents connection_limit=10&pool_timeout=20 recommendation for Neon; .env.example updated with correct DATABASE_URL format
+- BONUS (closes INFRA-005): .env.example fully rewritten — added GEMINI_API_KEY, SENTRY_DSN, VITE_GOOGLE_MAPS_API_KEY, APP_URL, NODE_ENV, GOOGLE_CLIENT_ID, VITE_GOOGLE_CLIENT_ID; all vars now documented with section headers
+- tsc --noEmit: exit 0
+
+---
+
 ## 2026-05-05 — Session 72 (Audit Batch 2: Security Critical)
 - SEC-001: togglePin ownership check — PostService.togglePin now accepts userId, fetches store.ownerId, throws 403 if mismatch
 - SEC-002: updateStore mass assignment fixed — explicit ALLOWED_FIELDS whitelist in store.service.ts, blocks ownerId/id/averageRating etc.
