@@ -4,33 +4,35 @@
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
-- **URL:** https://dukanchi-app-production.up.railway.app (LIVE)
-- **Custom domain:** dukanchi.com (Cloudflare proxied, SSL active)
+- **URL:** https://dukanchi.com (Cloudflare proxied, SSL Full Strict, TLS 1.2 min)
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
-- **Last deploy:** Session 75 — Phase 0.4 audit complete (UX-002 toasts)
-- **Hardening:** Phase 0.4 audit — 19/19 fixes deployed ✅
+- **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
 
-## Active Sprint
-**Phase 0.4 — Production Hardening — ✅ COMPLETE**
-- Batch 1: Quick wins (7 fixes) — Sessions 70-71 — DONE
-- Batch 2: Security Critical (5 fixes) — Session 72 — DONE
-- Batch 3: Performance (3 fixes + INFRA-005 bonus) — Session 73 — DONE
-- Batch 4: Reliability (3 fixes) — Session 74 — DONE
-- Batch 5: UX Polish (1 fix applied; UX-001 already shipped) — Session 75 — DONE
+## Active Sprint: Phase 0.5 — God Tier Vision (8 weeks)
 
-**Phase 0.5 — TBD (pending discussion)**
+**Strategic foundation:**
+- Primary user: Customer-first (retailer follows organically)
+- Wedge: Discovery (10x improvement vs Google Maps / JustDial / WhatsApp)
+- Pilot: Bandra, Mumbai — affluent, varied retail mix, bilingual
+- 6-month outcome: Pilot proven, Series A ready
+
+**8-week roadmap:**
+- Week 1-2: Discovery v2 — Voice + Image search — NEXT
+- Week 3-4: Retention v2 — Smart personalized feed
+- Week 5-6: Trust v2 — Verified retailers, anti-spam
+- Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Define Phase 0.5 sprint goals (discuss with Opus — feature work vs. infra vs. growth)
-2. Railway paid plan decision (~24 days left on trial)
-3. HSTS enable — schedule for 1 month after stable production (~June 2026)
+1. Phase 1 kickoff — repo audit (existing voice/image infra) + build plan
+2. Bandra pilot logistics — budget, team, retailer onboarding playbook
+3. Railway paid plan decision (~24 days trial left)
 
-## Open Blockers / Risks
-- [ ] Phase 0.5 goals not yet defined
+## Open Decisions / Risks
+- [ ] Bandra confirmed as pilot (founder may revise)
 - [ ] Railway free trial ends in ~24 days — paid plan TBD
+- [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] HSTS not yet enabled (intentional — wait 1 month)
 
 ## Stack
 | Layer | Tech |
@@ -41,4 +43,4 @@
 | Storage | Cloudflare R2 (dukanchi-prod) |
 | Cache | Redis (Railway internal) |
 | Hosting | Railway us-west2 (Debian-slim Dockerfile) |
-| Admin | /admin-panel/ (separate Vite SPA, served at /admin-panel/) |
+| Admin | /admin-panel/ (separate Vite SPA) |

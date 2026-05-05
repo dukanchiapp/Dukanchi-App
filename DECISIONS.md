@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-05-05 — Phase 0.5 strategic foundation
+- **Customer-first strategy:** Marketplaces have chicken-egg problem; in India hyperlocal, customer demand pulls retailers (low-tech dukandar onboards only when forced by demand). Verdict: customer-first, retailer follows.
+- **Discovery as wedge:** Speed/Trust/Convenience all matter, but Discovery is the 10x improvement — no current solution does it: Google Maps doesn't show products, JustDial is dead, WhatsApp is noise. Trust/Speed/Convenience layer on top.
+- **AI feature priority sequence:** Voice + Image search (Phase 1) → Smart feed (Phase 2) → Trust (Phase 3) → Predictive availability (Phase 6+, post-scale).
+- **Pilot: Bandra, Mumbai:** Affluent + varied retail mix + English/Hindi bilingual user base.
+- **Revisit if:** First 200 retailers onboard at <80% conversion → reconsider locality choice.
+
+---
+
 ## 2026-05-03 — Hosting: Railway (chose) over Render/Fly/AWS
 - **Why:** Fast deploys, $5 trial, simple Dockerfile builder, native Redis, GitHub auto-deploy
 - **Rejected:** Render (slow cold starts), Fly (steep config), AWS (overkill, billing risk)
