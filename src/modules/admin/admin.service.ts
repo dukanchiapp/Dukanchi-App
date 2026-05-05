@@ -77,16 +77,23 @@ export class AdminService {
 
   static async updateUser(id: string, role?: string, isBlocked?: boolean) {
     if (id === PROTECTED_ADMIN_ID) throw new Error("This admin account cannot be modified");
-    
+
     const updateData: any = {};
     if (role !== undefined) updateData.role = role;
     if (isBlocked !== undefined) updateData.isBlocked = isBlocked;
 
-    return prisma.user.update({
+    const result = await prisma.user.update({
       where: { id },
       data: updateData,
       select: { id: true, name: true, role: true, isBlocked: true },
     });
+
+    // Invalidate blocked-status cache so changes take effect immediately
+    if (isBlocked !== undefined) {
+      try { await pubClient.del(`blocked:${id}`); } catch { /* non-fatal */ }
+    }
+
+    return result;
   }
 
   static async bulkUpdateUsers(userIds: string[], isBlocked: boolean, currentUserId: string) {
@@ -100,6 +107,12 @@ export class AdminService {
       where: { id: { in: safeUserIds } },
       data: { isBlocked: !!isBlocked }
     });
+
+    // Invalidate blocked-status cache for all affected users
+    try {
+      await Promise.all(safeUserIds.map(id => pubClient.del(`blocked:${id}`)));
+    } catch { /* non-fatal */ }
+
     return { success: true };
   }
 

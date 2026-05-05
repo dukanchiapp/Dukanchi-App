@@ -71,7 +71,7 @@ async function startServer() {
   const httpServer = createServer(app);
   const io = initializeSocket(httpServer);
   setupSocketListeners(io);
-  startNotificationWorker();
+  const notificationWorker = startNotificationWorker();
 
   // ── 4. Seed admin account ─────────────────────────────────────────────────────
   await ensureAdminAccount(prisma);
@@ -106,16 +106,30 @@ async function startServer() {
   // ── 7. Graceful shutdown ──────────────────────────────────────────────────────
   const shutdown = async (signal: string) => {
     logger.info(`${signal} received — shutting down gracefully`);
-    httpServer.close(() => {
-      logger.info("HTTP server closed");
-    });
+
+    // 1. Stop accepting new HTTP requests
+    httpServer.close(() => { logger.info("HTTP server closed"); });
+
+    // 2. Drain BullMQ worker (waits for in-flight job to finish), then close queue
+    try {
+      const { notificationQueue } = await import("./src/config/bullmq");
+      await notificationWorker.close();
+      logger.info("BullMQ worker closed");
+      await notificationQueue.close();
+      logger.info("BullMQ queue closed");
+    } catch {}
+
+    // 3. Disconnect Prisma
     try { await prisma.$disconnect(); logger.info("Prisma disconnected"); } catch {}
+
+    // 4. Disconnect Redis
     try {
       const { pubClient, subClient } = await import("./src/config/redis");
       await pubClient.quit();
       await subClient.quit();
       logger.info("Redis disconnected");
     } catch {}
+
     process.exit(0);
   };
   process.on('SIGTERM', () => shutdown('SIGTERM'));

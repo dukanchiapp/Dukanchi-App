@@ -6,6 +6,14 @@
 
 ---
 
+## 2026-05-05 — Session 74 (Audit Batch 4: Reliability)
+- RELIABILITY-001: Notification worker rewritten — inline emit from follower chunk data; removed extra prisma.notification.findMany (was O(followers) round-trips); skipDuplicates:true on createMany; console.* replaced with logger
+- BUGS-003: Block/unblock now immediately invalidates blocked:{userId} Redis cache — updateUser (single) and bulkUpdateUsers (Promise.all batch); previously user could still auth for up to 60s after admin block
+- RELIABILITY-003: Graceful shutdown now drains BullMQ before closing Redis — notificationWorker.close() + notificationQueue.close() added in correct order (HTTP → BullMQ worker → BullMQ queue → Prisma → Redis → exit)
+- tsc --noEmit: exit 0
+
+---
+
 ## 2026-05-05 — Session 73 (Audit Batch 3: Performance)
 - PERF-001: ask-nearby bounding box pre-filter — lat/lng WHERE clause added to prisma.store.findMany; eliminates full-table scan at scale
 - PERF-002: ask-nearby createMany batch insert — N sequential prisma.askNearbyResponse.create() replaced with single createMany + one findMany for socket IDs

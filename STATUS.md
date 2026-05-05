@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-05 | Session 73 | Commit: 8fb939a
+> Last updated: 2026-05-05 | Session 74 | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -8,20 +8,21 @@
 - **Custom domain:** dukanchi.com (Cloudflare migration in progress)
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
-- **Last deploy:** Session 73 — Performance Batch 3 (3 fixes + INFRA-005 bonus)
+- **Last deploy:** Session 74 — Reliability Batch 4 (3 fixes)
 
 ## Active Sprint
-**Phase 0.4 — Production Hardening (Audit Report)**
+**Phase 0.4 — Production Hardening (Audit Report) — 16/19 fixes done**
 - Batch 1: Quick wins (7 fixes) — Sessions 70-71 — DONE
 - Batch 2: Security Critical (5 fixes) — Session 72 — DONE
 - Batch 3: Performance (3 fixes + INFRA-005 bonus) — Session 73 — DONE
+- Batch 4: Reliability (3 fixes) — Session 74 — DONE
 - Cloudflare migration — DNS in progress
-- Batch 4: Reliability — next
+- Batch 5: UX Polish — next (3 fixes remaining)
 
 ## Next 3 Actions
-1. Cloudflare DNS finish — verify dukanchi.com proxies, SSL active
-2. Audit Batch 4: Reliability (RELIABILITY-001/003/006)
-3. Audit Batch 5: UX Polish (UX-001/002)
+1. Audit Batch 5: UX Polish (UX-001/002 + login spinner)
+2. Cloudflare DNS finish — verify dukanchi.com proxies, SSL active
+3. Railway paid plan decision (~28 days trial remaining)
 
 ## Open Blockers / Risks
 - [ ] Cloudflare DNS propagation pending
