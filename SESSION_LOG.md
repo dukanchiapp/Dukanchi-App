@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-05 — Session 75 (Audit Batch 5: UX Polish — FINAL BATCH)
+- UX-001: Login/Signup spinners — already shipped prior to audit; finding was outdated. No changes needed.
+- UX-002: Error toasts on interaction rollbacks — showToast added to 4 catch blocks:
+  - Home.tsx: toggleLike, toggleSave, toggleFollow (all 3 handlers; useCallback deps updated)
+  - StoreProfile.tsx: toggleFollow
+  - Messages: Hinglish — "Like/Save/Follow nahi ho saka, dobara try karein"
+- INFRA-005: .env.example — already completed in Session 73 (verified)
+- tsc --noEmit: exit 0
+- Phase 0.4 Production Hardening COMPLETE — 19/19 high+medium audit fixes deployed (16 from report + 3 bonus: getFollowing guard, INFRA-005, SEC-012)
+
+---
+
 ## 2026-05-05 — Session 74 (Audit Batch 4: Reliability)
 - RELIABILITY-001: Notification worker rewritten — inline emit from follower chunk data; removed extra prisma.notification.findMany (was O(followers) round-trips); skipDuplicates:true on createMany; console.* replaced with logger
 - BUGS-003: Block/unblock now immediately invalidates blocked:{userId} Redis cache — updateUser (single) and bulkUpdateUsers (Promise.all batch); previously user could still auth for up to 60s after admin block

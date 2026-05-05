@@ -167,13 +167,13 @@ export default function HomePage() {
       const res = await fetch(`/api/posts/${postId}/like`, { credentials: 'include', method: 'POST' });
       if (!res.ok) throw new Error(`Like failed: ${res.status}`);
     } catch (err) {
-      console.error('toggleLike failed:', err);
+      showToast('Like nahi ho saka, dobara try karein', { type: 'error' });
       setInteractions(prev => ({
         ...prev,
         likedPostIds: wasLiked ? [...prev.likedPostIds, postId] : prev.likedPostIds.filter(id => id !== postId),
       }));
     }
-  }, []);
+  }, [showToast]);
 
   const toggleSave = useCallback(async (postId: string) => {
     let wasSaved = false;
@@ -188,13 +188,13 @@ export default function HomePage() {
       const res = await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
     } catch (err) {
-      console.error('toggleSave failed:', err);
+      showToast('Save nahi ho saka, dobara try karein', { type: 'error' });
       setInteractions(prev => ({
         ...prev,
         savedPostIds: wasSaved ? [...prev.savedPostIds, postId] : prev.savedPostIds.filter(id => id !== postId),
       }));
     }
-  }, []);
+  }, [showToast]);
 
   const toggleFollow = useCallback(async (storeId: string) => {
     let wasFollowed = false;
@@ -209,13 +209,13 @@ export default function HomePage() {
       const res = await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) throw new Error(`Follow failed: ${res.status}`);
     } catch (err) {
-      console.error('toggleFollow failed:', err);
+      showToast(wasFollowed ? 'Unfollow nahi ho saka, dobara try karein' : 'Follow nahi ho saka, dobara try karein', { type: 'error' });
       setInteractions(prev => ({
         ...prev,
         followedStoreIds: wasFollowed ? [...prev.followedStoreIds, storeId] : prev.followedStoreIds.filter(id => id !== storeId),
       }));
     }
-  }, []);
+  }, [showToast]);
 
   const handleShare = useCallback(async (post: Post) => {
     const shareData = {

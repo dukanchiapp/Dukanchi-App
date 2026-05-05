@@ -127,7 +127,7 @@ export default function StoreProfilePage() {
         setIsFollowing(data.following);
       }
     } catch (err) {
-      console.error('toggleFollow failed:', err);
+      showToast(wasFollowing ? 'Unfollow nahi ho saka, dobara try karein' : 'Follow nahi ho saka, dobara try karein', { type: 'error' });
       setIsFollowing(wasFollowing);
       setFollowersCount(prev => wasFollowing ? prev + 1 : Math.max(0, prev - 1));
     }
