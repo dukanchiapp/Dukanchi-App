@@ -158,9 +158,13 @@ export class PostService {
     }
   }
 
-  static async togglePin(postId: string) {
-    const post = await prisma.post.findUnique({ where: { id: postId } });
+  static async togglePin(postId: string, userId: string) {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: { store: { select: { ownerId: true } } }
+    });
     if (!post) throw new Error("Post not found");
+    if (post.store.ownerId !== userId) throw new Error("Unauthorized");
 
     if (!post.isPinned) {
       const pinnedCount = await prisma.post.count({ where: { storeId: post.storeId, isPinned: true } });

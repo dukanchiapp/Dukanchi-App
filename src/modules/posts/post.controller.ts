@@ -2,10 +2,18 @@ import { Request, Response } from "express";
 import { PostService } from "./post.service";
 import { pubClient } from "../../config/redis";
 import { logger } from "../../lib/logger";
+import { prisma } from "../../config/prisma";
 
 export class PostController {
   static async createPost(req: Request, res: Response) {
     try {
+      const userId = (req as any).user.userId;
+      const { storeId } = req.body;
+      if (storeId) {
+        const store = await prisma.store.findUnique({ where: { id: storeId }, select: { ownerId: true } });
+        if (!store) return res.status(404).json({ error: "Store not found" });
+        if (store.ownerId !== userId) return res.status(403).json({ error: "Not your store" });
+      }
       const post = await PostService.createPost(req.body);
       res.json(post);
     } catch (error) {
@@ -79,10 +87,12 @@ export class PostController {
 
   static async togglePin(req: Request, res: Response) {
     try {
-      const result = await PostService.togglePin(req.params.id);
+      const userId = (req as any).user.userId;
+      const result = await PostService.togglePin(req.params.id, userId);
       res.json(result);
     } catch (error: any) {
       if (error.message === "Post not found") return res.status(404).json({ error: error.message });
+      if (error.message === "Unauthorized") return res.status(403).json({ error: "Not your post" });
       if (error.message === "Maximum 3 pinned posts allowed") return res.status(400).json({ error: error.message });
       res.status(500).json({ error: "Failed to toggle pin" });
     }

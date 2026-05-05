@@ -6,6 +6,16 @@
 
 ---
 
+## 2026-05-05 — Session 72 (Audit Batch 2: Security Critical)
+- SEC-001: togglePin ownership check — PostService.togglePin now accepts userId, fetches store.ownerId, throws 403 if mismatch
+- SEC-002: updateStore mass assignment fixed — explicit ALLOWED_FIELDS whitelist in store.service.ts, blocks ownerId/id/averageRating etc.
+- SEC-003: IDOR guards added — getSaved, getSearchHistory, getLocations all check req.params.id === userId (admin bypass allowed)
+- QUALITY-005: createPost storeId ownership — verifies store.ownerId === userId before calling PostService.createPost
+- Bonus: getFollowing guard — self-only, no admin bypass (following list is private)
+- tsc --noEmit: exit 0
+
+---
+
 ## 2026-05-04 — Session 71 (Audit Batch 1: quick wins)
 - PERF-005: geminiEmbeddings.ts now uses shared Prisma singleton (was creating a second connection pool)
 - SEC-005: GEMINI_API_KEY added to Zod envSchema (was unvalidated, app started silently without it)

@@ -34,7 +34,18 @@ export class StoreService {
   }
 
   static async updateStore(id: string, data: any) {
-    const updateData = { ...data };
+    const ALLOWED_FIELDS = [
+      'storeName', 'category', 'description', 'address', 'phone',
+      'openingHours', 'openingTime', 'closingTime', 'workingDays', 'is24Hours',
+      'logoUrl', 'coverUrl', 'city', 'state', 'postalCode',
+      'phoneVisible', 'hideRatings', 'chatEnabled',
+      'manualProductText', 'gstNumber', 'gstOrBillUrl', 'selfieUrl',
+      'latitude', 'longitude',
+    ];
+    const updateData: Record<string, any> = {};
+    for (const key of ALLOWED_FIELDS) {
+      if (key in data) updateData[key] = (data as any)[key];
+    }
     if (updateData.postalCode !== undefined) {
       const parsed = parseInt(updateData.postalCode);
       updateData.postalCode = isNaN(parsed) ? null : parsed;

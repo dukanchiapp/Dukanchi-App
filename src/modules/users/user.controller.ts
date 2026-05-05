@@ -44,6 +44,10 @@ export class UserController {
 
   static async getFollowing(req: Request, res: Response) {
     try {
+      const requesterId = (req as any).user.userId;
+      if (req.params.id !== requesterId) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const stores = await UserService.getFollowedStores(req.params.id);
       res.json(stores);
     } catch (error) {
@@ -53,6 +57,11 @@ export class UserController {
 
   static async getSaved(req: Request, res: Response) {
     try {
+      const requesterId = (req as any).user.userId;
+      const role = (req as any).user.role;
+      if (req.params.id !== requesterId && role !== "admin") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const result = await UserService.getSavedItems(req.params.id);
       res.json(result);
     } catch (error) {
@@ -71,6 +80,11 @@ export class UserController {
 
   static async getSearchHistory(req: Request, res: Response) {
     try {
+      const requesterId = (req as any).user.userId;
+      const role = (req as any).user.role;
+      if (req.params.id !== requesterId && role !== "admin") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const history = await UserService.getSearchHistory(req.params.id);
       res.json(history);
     } catch (error) {
@@ -80,6 +94,11 @@ export class UserController {
 
   static async getLocations(req: Request, res: Response) {
     try {
+      const requesterId = (req as any).user.userId;
+      const role = (req as any).user.role;
+      if (req.params.id !== requesterId && role !== "admin") {
+        return res.status(403).json({ error: "Forbidden" });
+      }
       const locations = await UserService.getLocations(req.params.id);
       res.json(locations);
     } catch (error) {
