@@ -28,7 +28,7 @@
 **tsc --noEmit:** ✅ clean
 **Build:** ✅ vite build OK
 **Regression grep:** ✅ 0 remaining credentials:include
-**Commit:** TBD
+**Commit:** 5707fb9
 
 **Next:** Founder tests 2-account cross-browser chat, pastes console + Railway logs → Session 78c-FIX applies targeted fix.
 
