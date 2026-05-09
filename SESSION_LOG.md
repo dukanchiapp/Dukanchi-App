@@ -35,7 +35,7 @@ Defensive audit findings:
 **Build:** ✅ vite build OK
 **Migration grep:** ✅ 0 remaining `credentials: 'include'` outside api.ts
 **No external apiFetch:** ✅ 0 lines
-**Commit:** TBD
+**Commit:** c1e83e9
 
 **Sprint 0 status:** ✅ COMPLETE. All audit blockers cleared.
 **Next:** Session 79 — PWA install banner native hide + localStorage user cleanup. Then Sprint 1 — Capacitor install.
