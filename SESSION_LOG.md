@@ -28,7 +28,7 @@
 **Build:** ✅ vite build OK
 **Migration grep:** ✅ 0 remaining credentials:include
 **Debug-log grep:** ✅ 0 SOCKET-AUTH/CONN/MSG-EMIT remnants
-**Commit:** TBD
+**Commit:** 227355d
 
 **Sprint 0 status:** ✅ COMPLETE. All 4 audit blockers cleared, fetch migration done, Socket.IO native-aware, reconnection resilience added.
 **Next:** Sprint 1 / Session 80 — Install @capacitor/core + @capacitor/cli + @capacitor/android, run cap init, cap add android.
