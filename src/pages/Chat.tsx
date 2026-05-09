@@ -189,6 +189,16 @@ export default function ChatPage() {
     const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
 
+    socket.on('connect', () => {
+      console.log('[SOCKET][Chat] ✅ connected, id=', socket.id, 'currentUserId=', currentUserId);
+    });
+    socket.on('connect_error', (err) => {
+      console.error('[SOCKET][Chat] ❌ connect_error:', err.message, err);
+    });
+    socket.on('disconnect', (reason) => {
+      console.warn('[SOCKET][Chat] 🔌 disconnect:', reason);
+    });
+
     socket.on('newMessage', (msg: Message) => {
       const belongs =
         (msg.senderId === currentUserId && msg.receiverId === userId) ||

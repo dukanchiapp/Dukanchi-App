@@ -45,6 +45,16 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const newSocket = io(getSocketUrl(), getSocketAuthOptions());
 
+    newSocket.on('connect', () => {
+      console.log('[SOCKET][NotificationCtx] ✅ connected, id=', newSocket.id, 'userId=', user?.id);
+    });
+    newSocket.on('connect_error', (err) => {
+      console.error('[SOCKET][NotificationCtx] ❌ connect_error:', err.message, err);
+    });
+    newSocket.on('disconnect', (reason) => {
+      console.warn('[SOCKET][NotificationCtx] 🔌 disconnect:', reason);
+    });
+
     newSocket.on('newNotification', (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
     });

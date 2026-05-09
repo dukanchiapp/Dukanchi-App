@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-05-10 — Session 78c-DEBUG — Socket.IO Diagnostic Logging
+
+**Goal:** Find root cause of cross-account real-time delivery failure. ZERO functional changes — only logging added in 5 files.
+
+**Files changed:**
+- `src/pages/Chat.tsx` — connect/connect_error/disconnect listeners
+- `src/pages/Messages.tsx` — same listeners
+- `src/context/NotificationContext.tsx` — same listeners
+- `src/config/socket-listeners.ts` — verbose auth middleware logging (handshakeId, origin, tokenSource, JWT result), connection/disconnect logging
+- `src/modules/messages/message.service.ts` — pre-emit `fetchSockets()` room-roster log + post-emit confirmation
+
+**No behavioral change.** Cookie auth flow, UX, and production routes byte-identical. Only console output differs.
+
+**Diagnostic coverage:**
+- If [SOCKET-AUTH] shows "NO TOKEN" → cookie not sent on WebSocket upgrade
+- If [SOCKET-AUTH] shows "JWT verify FAILED" → token corrupted/expired
+- If AUTH OK but [MSG-EMIT] shows "0 sockets in room" → user not joining room despite auth
+- If everything OK but UI silent → frontend newMessage handler bug
+
+**tsc --noEmit:** ✅ clean
+**Build:** ✅ vite build OK
+**Regression grep:** ✅ 0 remaining credentials:include
+**Commit:** TBD
+
+**Next:** Founder tests 2-account cross-browser chat, pastes console + Railway logs → Session 78c-FIX applies targeted fix.
+
+---
+
 ## 2026-05-10 — Session 78b — Capacitor Pre-Flight: Bulk Fetch + Socket.IO Migration
 
 **Goal:** Complete Sprint 0. Migrate all remaining frontend fetch calls to apiFetch, make Socket.IO native-aware, fix token restoration bug from 78a.

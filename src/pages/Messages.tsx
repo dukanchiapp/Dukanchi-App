@@ -69,6 +69,16 @@ export default function MessagesPage() {
     const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
 
+    socket.on('connect', () => {
+      console.log('[SOCKET][Messages] ✅ connected, id=', socket.id, 'userId=', user?.id);
+    });
+    socket.on('connect_error', (err) => {
+      console.error('[SOCKET][Messages] ❌ connect_error:', err.message, err);
+    });
+    socket.on('disconnect', (reason) => {
+      console.warn('[SOCKET][Messages] 🔌 disconnect:', reason);
+    });
+
     socket.on('ask_nearby_request', (data: any) => {
       setAskNearbyCards(prev => {
         if (prev.find(c => c.responseId === data.responseId)) return prev;
