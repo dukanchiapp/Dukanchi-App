@@ -21,7 +21,7 @@
 **tsc --noEmit:** ✅ exit 0
 **Build:** ✅ vite build OK, dist/ generated, PWA SW generated
 **Regression:** ✅ web behavior unchanged (isNative() returns false on web)
-**Commit:** TBD
+**Commit:** 37f5f95
 
 **Blockers cleared:** 3/4 (cookie auth pending Session 78)
 **Next:** Session 78 — bulk migrate all fetch() calls to apiFetch, add /api/auth/refresh endpoint, AuthContext token storage on login
