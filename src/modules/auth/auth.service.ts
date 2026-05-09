@@ -73,4 +73,17 @@ export class AuthService {
 
     throw new Error("Invalid credentials");
   }
+
+  /**
+   * Issue a fresh 7-day JWT for an existing user. Used by /api/auth/refresh.
+   * Returns null if the user no longer exists or is blocked.
+   */
+  static async issueTokenForUser(userId: string): Promise<string | null> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true, isBlocked: true },
+    });
+    if (!user || user.isBlocked) return null;
+    return jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' });
+  }
 }

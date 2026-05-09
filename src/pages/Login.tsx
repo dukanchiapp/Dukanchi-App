@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Phone, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DukanchiLogo from '../components/DukanchiLogo';
+import { apiFetch } from '../lib/api';
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
@@ -20,7 +21,7 @@ export default function LoginPage() {
     try {
       const body = { phone, password };
 
-      const response = await fetch('/api/auth/login', { credentials: 'include',
+      const response = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

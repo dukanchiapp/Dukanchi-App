@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-09 | Session 77 | Commit: 37f5f95
+> Last updated: 2026-05-09 | Session 78a | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -10,7 +10,7 @@
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
 - **B2B2C visibility:** Fully spec-compliant ✅ (Session 76)
 
-## Active Sprint: Sprint 0 — Capacitor Pre-Flight (3/4 blockers cleared)
+## Active Sprint: Sprint 0 — Capacitor Pre-Flight (4/4 blockers cleared, bulk migration pending)
 
 **Track:** Android-first (iOS deferred to Sprint 5+)
 
@@ -18,7 +18,7 @@
 - ✅ `src/lib/api.ts` — apiFetch wrapper created (Session 77)
 - ✅ `index.html` IIFE — Capacitor native bypass added (Session 77)
 - ✅ CORS — `capacitor://localhost` + `http://localhost` allowed (Session 77)
-- ⏳ Auth Bearer header migration — ~20 files (Session 78, next)
+- ✅ Auth Bearer foundation — login/signup return token, AuthContext dual-mode, refresh endpoint (Session 78a)
 
 **Phase 0.5 — God Tier Vision (8 weeks, after Sprint 0):**
 - Week 1-2: Discovery v2 — Voice + Image search
@@ -27,9 +27,9 @@
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Session 78 — Bulk migrate all fetch() calls to apiFetch + auth refresh endpoint + AuthContext token storage
+1. Session 78b — Bulk migrate ~95 non-auth fetch() calls to apiFetch (~25 files, mechanical)
 2. Session 79 — PWA install banner native hide + localStorage user cleanup
-3. Sprint 1 (Session 80+) — Install Capacitor Android, generate android shell
+3. Sprint 1 (Session 80) — Install `@capacitor/core` + `@capacitor/android`, generate android shell
 
 ## Open Decisions / Risks
 - [ ] Bandra confirmed as pilot (founder may revise)

@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import { apiFetch, setToken as setNativeToken, clearToken as clearNativeToken, isNative } from '../lib/api';
 
 interface User {
   id: string;
@@ -27,13 +28,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    fetch('/api/auth/me', { credentials: 'include' })
+    apiFetch('/api/auth/me')
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (cancelled) return;
         if (data && !data.error && data.id) {
           setUser(data);
-          setToken("cookie");
+          setToken(isNative() ? null : "cookie");
           const wasTeamMember = localStorage.getItem('isTeamMember') === 'true';
           setIsTeamMember(wasTeamMember);
         }
@@ -50,14 +51,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (newUser: User, newToken: string, teamMember: boolean = false) => {
     setUser(newUser);
-    setToken("cookie");
+    // On native, persist JWT so apiFetch attaches it as Authorization: Bearer.
+    // On web, this is a no-op — the httpOnly cookie does the work.
+    if (isNative() && newToken) {
+      setNativeToken(newToken);
+    }
+    setToken(isNative() ? newToken : "cookie");
     setIsTeamMember(teamMember);
     localStorage.setItem('isTeamMember', String(teamMember));
     setAuthChecked(true);
   };
 
   const logout = () => {
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+    apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    // Clear native token (no-op on web)
+    clearNativeToken();
     setUser(null);
     setToken(null);
     setIsTeamMember(false);

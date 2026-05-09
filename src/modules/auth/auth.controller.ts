@@ -18,7 +18,9 @@ export class AuthController {
         path: '/'
       });
 
-      res.json({ success: true, user: result.user });
+      // Include token in body so native (Capacitor) clients can store it.
+      // Web clients ignore this — cookie auth works automatically.
+      res.json({ success: true, user: result.user, token: result.token });
     } catch (error: any) {
       if (error.message === "This phone number already exists") {
         return res.status(400).json({ error: error.message });
@@ -51,7 +53,9 @@ export class AuthController {
         res.cookie('dk_token', result.token, cookieOptions);
       }
 
-      res.json({ success: true, user: result.user });
+      // Include token in body so native (Capacitor) clients can store it.
+      // Web clients ignore this — cookie auth works automatically.
+      res.json({ success: true, user: result.user, token: result.token });
     } catch (error: any) {
       if (error.message === "Invalid credentials") {
         return res.status(401).json({ error: error.message });
@@ -72,6 +76,32 @@ export class AuthController {
     res.clearCookie('dk_token', clearOpts);
     res.clearCookie('dk_admin_token', clearOpts);
     res.json({ ok: true });
+  }
+
+  static async refresh(req: Request, res: Response) {
+    try {
+      const userId = (req as any).user?.userId;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+
+      const newToken = await AuthService.issueTokenForUser(userId);
+      if (!newToken) return res.status(401).json({ error: 'User not found or blocked' });
+
+      const isHttps = req.secure ||
+        req.headers['x-forwarded-proto'] === 'https' ||
+        (req.get('host') || '').includes('ngrok');
+      const cookieOptions = {
+        httpOnly: true,
+        secure: isHttps,
+        sameSite: (isHttps ? 'none' : 'lax') as 'none' | 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/',
+      };
+      res.cookie('dk_token', newToken, cookieOptions);
+      res.json({ success: true, token: newToken });
+    } catch (error: any) {
+      logger.error({ err: error }, 'Token refresh failed');
+      res.status(500).json({ error: 'Refresh failed' });
+    }
   }
 
   static async me(req: any, res: Response) {

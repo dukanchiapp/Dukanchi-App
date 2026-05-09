@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-05-09 — Auth dual-mode (cookie + Bearer token)
+- **Decision:** Auth flow supports both httpOnly cookie (web/PWA) and Authorization Bearer header (Capacitor native) simultaneously. Backend returns JWT in JSON body of login/signup additionally to setting cookie.
+- **Rationale:** iOS WKWebView has known issues with cross-origin httpOnly cookies. Android Capacitor WebView origin is `http://localhost` — different from `https://dukanchi.com` — cookie `SameSite=None+Secure` constraints make this fragile. Bearer header is the platform-standard auth for native mobile. Backend middleware already supported Bearer fallback.
+- **Trade-off accepted:** localStorage on native is less secure than httpOnly cookie. Mitigations: 7-day token expiry, `/api/auth/refresh` endpoint for rotation, app is wrapped (no foreign JS injection surface).
+- **Future:** When iOS launches, evaluate `@capacitor/secure-storage-plugin` for token storage (Keychain on iOS, EncryptedSharedPreferences on Android) instead of plain localStorage.
+
+---
+
 ## 2026-05-05 — Phase 0.5 strategic foundation
 - **Customer-first strategy:** Marketplaces have chicken-egg problem; in India hyperlocal, customer demand pulls retailers (low-tech dukandar onboards only when forced by demand). Verdict: customer-first, retailer follows.
 - **Discovery as wedge:** Speed/Trust/Convenience all matter, but Discovery is the 10x improvement — no current solution does it: Google Maps doesn't show products, JustDial is dead, WhatsApp is noise. Trust/Speed/Convenience layer on top.

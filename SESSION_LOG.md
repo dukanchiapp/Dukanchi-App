@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-05-09 — Session 78a — Capacitor Pre-Flight: Auth Bearer Foundation
+
+**Goal:** Wire dual-mode auth — cookie for web (unchanged) + Bearer token for native (new). Backend returns JWT in login/signup response body so native clients can store it.
+
+**Files changed:**
+- `src/modules/auth/auth.controller.ts` — login/signup now return `token` in JSON body (additive, cookie still set). New `refresh()` method.
+- `src/modules/auth/auth.service.ts` — `issueTokenForUser()` helper for refresh endpoint.
+- `src/modules/auth/auth.routes.ts` — `POST /api/auth/refresh` route added (requires valid token via `authenticateToken`).
+- `src/context/AuthContext.tsx` — `login()` calls `setNativeToken()` on native; `logout()` calls `clearNativeToken()`; `/api/auth/me` and `/api/auth/logout` use `apiFetch`.
+- `src/pages/Login.tsx` — `fetch` → `apiFetch`.
+- `src/pages/Signup.tsx` — `fetch` → `apiFetch`.
+
+**Behavior matrix:**
+| Platform | Login | Refresh | Logout |
+|---|---|---|---|
+| Web (PWA) | Cookie set, token in body (ignored) | Cookie refreshed | Cookie cleared |
+| Native | Token in body stored via setNativeToken | Bearer refresh, new token stored | Token cleared from localStorage |
+
+**tsc --noEmit:** ✅ exit 0
+**Build:** ✅ vite build OK
+**Commit:** TBD
+
+**Blockers cleared:** 4/4 (Sprint 0 critical path complete)
+**Next:** Session 78b — bulk migrate ~95 non-auth fetch call sites across ~25 files to apiFetch.
+
+---
+
 ## 2026-05-09 — Session 77 — Capacitor Pre-Flight: Foundation
 
 **Goal:** Lay groundwork for Capacitor migration. Knock out 3 of 4 audit blockers without installing Capacitor yet.

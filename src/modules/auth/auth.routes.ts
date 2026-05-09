@@ -11,7 +11,8 @@ router.post("/login", authLimiter, validate(loginSchema), AuthController.login);
 router.post("/logout", AuthController.logout);
 
 // /me is called by both the main app (dk_token) and admin panel (dk_admin_token)
-import { authenticateAny } from "../../middlewares/auth.middleware";
+import { authenticateToken, authenticateAny } from "../../middlewares/auth.middleware";
 router.get("/me", authenticateAny, AuthController.me);
+router.post("/refresh", authenticateToken, AuthController.refresh);
 
 export const authRoutes = router;
