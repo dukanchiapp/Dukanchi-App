@@ -6,6 +6,42 @@
 
 ---
 
+## 2026-05-10 — Session 78b — Capacitor Pre-Flight: Bulk Fetch + Socket.IO Migration
+
+**Goal:** Complete Sprint 0. Migrate all remaining frontend fetch calls to apiFetch, make Socket.IO native-aware, fix token restoration bug from 78a.
+
+**Files changed:**
+
+Auth fix:
+- `src/context/AuthContext.tsx` — `/me` restoration uses `getNativeToken() || "native"` instead of `null` on native (fixes !!token boolean checks across 8+ pages on cold start)
+
+Bulk fetch migration (24 files, ~95 call sites):
+- All files migrated: KYCForm, ReviewModal, AiBioModal, StoreFormFields, PostsGrid, AccountDetailsTab, BulkUploadTab, BusinessSettingsTabs, LocationContext, NotificationContext, useFeed, usePushNotifications, Chat, Home, LandingPage, Map, Messages, Profile, RetailerDashboard, Search, StoreProfile, Support, UserSettings
+- Import path bug from migration agent corrected: `src/components/` → `../lib/api` (not `../../lib/api`), `src/components/{sub}/` → `../../lib/api` (not `../../../lib/api`)
+
+Socket.IO native auth:
+- `src/lib/api.ts` — `getSocketUrl()` and `getSocketAuthOptions()` helpers added
+- `src/pages/Chat.tsx` — `io()` uses helpers
+- `src/pages/Messages.tsx` — `io()` uses helpers, orphaned `socketUrl` var removed
+- `src/context/NotificationContext.tsx` — `io()` uses helpers
+- Backend (`src/config/socket-listeners.ts`) already handled `socket.handshake.auth.token` fallback — no change needed
+
+Defensive audit findings:
+- EventSource: none found
+- XMLHttpRequest: none found
+- Auth-bearing image src: none found
+
+**tsc --noEmit:** ✅ exit 0
+**Build:** ✅ vite build OK
+**Migration grep:** ✅ 0 remaining `credentials: 'include'` outside api.ts
+**No external apiFetch:** ✅ 0 lines
+**Commit:** TBD
+
+**Sprint 0 status:** ✅ COMPLETE. All audit blockers cleared.
+**Next:** Session 79 — PWA install banner native hide + localStorage user cleanup. Then Sprint 1 — Capacitor install.
+
+---
+
 ## 2026-05-09 — Session 78a — Capacitor Pre-Flight: Auth Bearer Foundation
 
 **Goal:** Wire dual-mode auth — cookie for web (unchanged) + Bearer token for native (new). Backend returns JWT in login/signup response body so native clients can store it.

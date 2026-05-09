@@ -47,6 +47,35 @@ export function clearToken(): void {
 }
 
 /**
+ * Get Socket.IO connection options for both web and native.
+ * Web: withCredentials uses the httpOnly cookie.
+ * Native: passes JWT in the `auth` payload (server reads socket.handshake.auth.token).
+ */
+export function getSocketAuthOptions() {
+  if (isNative()) {
+    const token = getToken();
+    return {
+      auth: token ? { token } : undefined,
+      withCredentials: false,
+      transports: ['websocket'] as string[],
+    };
+  }
+  return {
+    withCredentials: true,
+    transports: ['websocket'] as string[],
+  };
+}
+
+/**
+ * Get the Socket.IO server URL.
+ * Web: same origin (relative '/').
+ * Native: absolute API_BASE so the WebView can reach the server.
+ */
+export function getSocketUrl(): string {
+  return isNative() ? API_BASE : '/';
+}
+
+/**
  * Universal fetch — replaces direct fetch() calls across the app.
  * Web: relative path + credentials:'include' (cookie auth, unchanged).
  * Native: absolute URL + Authorization: Bearer header.

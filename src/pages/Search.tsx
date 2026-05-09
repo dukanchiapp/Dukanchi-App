@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation, reverseGeocode } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
+import { apiFetch } from '../lib/api';
 
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { StoreCardSkeleton } from '../components/Skeleton';
@@ -65,9 +66,7 @@ export default function SearchPage() {
       try {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (!user.id) return;
-        const res = await fetch(`/api/users/${user.id}/search-history`, { credentials: 'include', 
-          
-        });
+        const res = await apiFetch(`/api/users/${user.id}/search-history`);
         if (res.ok) {
           const data = await res.json();
           const unique = [...new Set(data.map((d: any) => d.query))] as string[];
@@ -82,7 +81,7 @@ export default function SearchPage() {
 
   const saveSearch = (q: string) => {
     if (!q.trim() || !token) return;
-    fetch('/api/search/history', { credentials: 'include',
+    apiFetch('/api/search/history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: q.trim() }),
@@ -103,7 +102,7 @@ export default function SearchPage() {
   const clearAllHistory = async () => {
     if (!token) return;
     try {
-      await fetch('/api/search/history', { credentials: 'include', method: 'DELETE' });
+      await apiFetch('/api/search/history', { method: 'DELETE' });
       setSearchHistory([]);
     } catch (err) {
       console.error('clearAllHistory failed:', err);
@@ -122,7 +121,7 @@ export default function SearchPage() {
       setSuggestions([]);
       return;
     }
-    fetch(`/api/search/suggestions?q=${encodeURIComponent(debouncedQuery)}`, { credentials: 'include' })
+    apiFetch(`/api/search/suggestions?q=${encodeURIComponent(debouncedQuery)}`)
       .then(res => res.ok ? res.json() : { suggestions: [] })
       .then(data => setSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []))
       .catch(() => setSuggestions([]));
@@ -148,7 +147,7 @@ export default function SearchPage() {
     setLoading(true);
     setShowSuggestions(false);
     saveSearch(debouncedQuery);
-    fetch(`/api/search/ai?q=${encodeURIComponent(debouncedQuery)}`, { credentials: 'include' })
+    apiFetch(`/api/search/ai?q=${encodeURIComponent(debouncedQuery)}`)
       .then(res => (res.ok ? res.json() : { products: [], stores: [] }))
       .then(data => {
         setResults({
@@ -255,10 +254,9 @@ export default function SearchPage() {
 
     setAskSending(true);
     try {
-      const res = await fetch('/api/ask-nearby/send', {
+      const res = await apiFetch('/api/ask-nearby/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ query: askQuery.trim(), radiusKm: askRadius, latitude: lat, longitude: lng, areaLabel }),
       });
       const data = await res.json();

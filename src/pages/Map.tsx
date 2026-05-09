@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ShimmerBox } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { apiFetch } from '../lib/api';
 import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerComponent } from '@react-google-maps/api';
 
 const GoogleMap = GoogleMapComponent as any;
@@ -65,7 +66,7 @@ export default function MapPage() {
 
   useEffect(() => {
     setStoresLoading(true);
-    fetch('/api/stores?limit=200', { credentials: 'include' })
+    apiFetch('/api/stores?limit=200')
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => setStores(Array.isArray(data) ? data : (data.stores ?? [])))
       .catch(() => setStores([]))

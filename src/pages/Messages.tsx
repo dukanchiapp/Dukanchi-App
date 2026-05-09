@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext';
 import { ConversationSkeleton } from '../components/Skeleton';
 import ConversationRow from '../components/ConversationRow';
 import { Conversation } from '../types';
+import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 
 export default function MessagesPage() {
   usePageMeta({ title: 'Messages' });
@@ -30,7 +31,7 @@ export default function MessagesPage() {
     }));
 
   const refreshConversations = useCallback(() => {
-    fetch('/api/conversations', { credentials: 'include' })
+    apiFetch('/api/conversations')
       .then(r => r.ok ? r.json() : [])
       .then(data => setConversations(formatConversations(data as Conversation[])))
       .catch(() => {});
@@ -38,7 +39,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    fetch('/api/conversations', { credentials: 'include' })
+    apiFetch('/api/conversations')
       .then(res => res.ok ? res.json() : [])
       .then(data => setConversations(formatConversations(data as Conversation[])))
       .catch(() => {})
@@ -52,7 +53,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (authLoading || !user?.id) return;
     console.log('[Messages] fetching suggestions, excludeOwnerId:', user.id);
-    fetch(`/api/stores?limit=8&excludeOwnerId=${user.id}`, { credentials: 'include' })
+    apiFetch(`/api/stores?limit=8&excludeOwnerId=${user.id}`)
       .then(r => r.ok ? r.json() : { stores: [] })
       .then(data => {
         const all: any[] = Array.isArray(data) ? data : (data.stores ?? []);
@@ -65,8 +66,7 @@ export default function MessagesPage() {
   // Socket: listen for ask_nearby_request (retailer) + ask_nearby_confirmed (customer)
   useEffect(() => {
     if (!user) return;
-    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
-    const socket = io(socketUrl, { withCredentials: true, transports: ['websocket'] });
+    const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
 
     socket.on('ask_nearby_request', (data: any) => {
@@ -88,10 +88,9 @@ export default function MessagesPage() {
     if (respondingIds.has(responseId)) return;
     setRespondingIds(prev => new Set([...prev, responseId]));
     try {
-      const res = await fetch('/api/ask-nearby/respond', {
+      const res = await apiFetch('/api/ask-nearby/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({ responseId, answer }),
       });
       const data = await res.json();

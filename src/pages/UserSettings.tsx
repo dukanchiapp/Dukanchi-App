@@ -10,6 +10,7 @@ import { CustomerDataTabs } from '../components/settings/CustomerDataTabs';
 import { AccountDetailsTab } from '../components/settings/AccountDetailsTab';
 import { BulkUploadTab } from '../components/settings/BulkUploadTab';
 import { BusinessSettingsTabs } from '../components/settings/BusinessSettingsTabs';
+import { apiFetch } from '../lib/api';
 
 export default function UserSettings() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function UserSettings() {
 
   useEffect(() => {
     if (isRetailer && user?.id) {
-      fetch(`/api/users/${user.id}/store`, { credentials: 'include' })
+      apiFetch(`/api/users/${user.id}/store`)
         .then(res => res.json())
         .then(data => { if (data) setStore(data); })
         .catch(console.error);
@@ -67,27 +68,27 @@ export default function UserSettings() {
 
     if (activeTab === 'following') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/following`, { credentials: 'include', headers })
+      apiFetch(`/api/users/${user.id}/following`, { headers })
         .then(r => r.json()).then(setFollowedStores).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'saved') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/saved`, { credentials: 'include', headers })
+      apiFetch(`/api/users/${user.id}/saved`, { headers })
         .then(r => r.json()).then(setSavedItems).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'history') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/search-history`, { credentials: 'include', headers })
+      apiFetch(`/api/users/${user.id}/search-history`, { headers })
         .then(r => r.json()).then(setSearchHistory).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'locations') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/locations`, { credentials: 'include', headers })
+      apiFetch(`/api/users/${user.id}/locations`, { headers })
         .then(r => r.json()).then(setSavedLocations).catch(console.error).finally(() => setCustomerLoading(false));
     }
     if (activeTab === 'reviews') {
       setCustomerLoading(true);
-      fetch(`/api/users/${user.id}/reviews`, { credentials: 'include', headers })
+      apiFetch(`/api/users/${user.id}/reviews`, { headers })
         .then(r => r.json()).then(setUserReviews).catch(console.error).finally(() => setCustomerLoading(false));
     }
   }, [activeTab, user, token, isRetailer]);
@@ -96,7 +97,7 @@ export default function UserSettings() {
     if (!store) return;
     setLoadingPosts(true);
     try {
-      const res = await fetch(`/api/stores/${store.id}/posts?limit=100`, { credentials: 'include' });
+      const res = await apiFetch(`/api/stores/${store.id}/posts?limit=100`);
       if (res.ok) {
         const data = await res.json();
         setManagePosts(Array.isArray(data) ? data : (data.posts ?? []));
@@ -110,7 +111,7 @@ export default function UserSettings() {
     setTeamLoading(true);
     setTeamError('');
     try {
-      const res = await fetch(`/api/team/${store.id}`, { credentials: 'include' });
+      const res = await apiFetch(`/api/team/${store.id}`);
       if (res.ok) {
         setTeamMembers(await res.json());
       } else {
@@ -128,7 +129,7 @@ export default function UserSettings() {
     }
     setTeamError('');
     try {
-      const res = await fetch('/api/team', { credentials: 'include',
+      const res = await apiFetch('/api/team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ phone: newMemberPhone, password: newMemberPassword, storeId: store.id, name: newMemberName || 'Team Member' })
@@ -148,7 +149,7 @@ export default function UserSettings() {
     showConfirm('Remove this team member? They will immediately lose access.', {
       onConfirm: async () => {
         try {
-          const res = await fetch(`/api/team/${memberId}`, { credentials: 'include', method: 'DELETE' });
+          const res = await apiFetch(`/api/team/${memberId}`, { method: 'DELETE' });
           if (res.ok) {
             setTeamMembers(prev => prev.filter(m => m.id !== memberId));
             showToast('Team member removed successfully.', { type: 'success' });
@@ -219,7 +220,7 @@ export default function UserSettings() {
   const confirmDeleteSelectedPosts = async () => {
     try {
       for (const postId of selectedPostIds) {
-        const res = await fetch(`/api/posts/${postId}`, { credentials: 'include', method: 'DELETE' });
+        const res = await apiFetch(`/api/posts/${postId}`, { method: 'DELETE' });
         if (!res.ok) throw new Error(`Failed to delete post ${postId}`);
       }
       setManagePosts(prev => prev.filter(p => !selectedPostIds.has(p.id)));
@@ -240,7 +241,7 @@ export default function UserSettings() {
   };
   const confirmDeleteAllPosts = async () => {
     try {
-      const res = await fetch(`/api/stores/${store.id}/posts`, { credentials: 'include', method: 'DELETE' });
+      const res = await apiFetch(`/api/stores/${store.id}/posts`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete all posts');
       setManagePosts([]);
       setSelectedPostIds(new Set());
@@ -259,7 +260,7 @@ export default function UserSettings() {
   };
   const confirmDeleteSinglePost = async (postId: string) => {
     try {
-      const res = await fetch(`/api/posts/${postId}`, { credentials: 'include', method: 'DELETE' });
+      const res = await apiFetch(`/api/posts/${postId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete post');
       setManagePosts(prev => prev.filter(p => p.id !== postId));
       setSelectedPostIds(prev => {
@@ -338,11 +339,11 @@ export default function UserSettings() {
                 userReviews={userReviews}
                 loading={customerLoading}
                 onUnfollow={async (storeId) => {
-                  await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', method: 'POST' });
+                  await apiFetch(`/api/stores/${storeId}/follow`, { method: 'POST' });
                   setFollowedStores(prev => prev.filter(s => s.id !== storeId));
                 }}
                 onUnsave={async (postId) => {
-                  await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' });
+                  await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' });
                   setSavedItems(prev => ({
                     ...prev,
                     posts: prev.posts.filter(p => p.id !== postId),
@@ -350,7 +351,7 @@ export default function UserSettings() {
                   }));
                 }}
                 onClearHistory={async () => {
-                  await fetch('/api/me/search-history', { credentials: 'include', method: 'DELETE' });
+                  await apiFetch('/api/me/search-history', { method: 'DELETE' });
                   setSearchHistory([]);
                 }}
               />

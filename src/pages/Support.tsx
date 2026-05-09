@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { apiFetch } from '../lib/api';
 
 const MIN_DESC_LENGTH = 20;
 
@@ -29,7 +30,7 @@ export default function SupportPage() {
     if (description.trim().length < MIN_DESC_LENGTH) return;
     setSubmitting(true);
     try {
-      const res = await fetch('/api/complaints', { credentials: 'include', 
+      const res = await apiFetch('/api/complaints', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ issueType, description: description.trim() })

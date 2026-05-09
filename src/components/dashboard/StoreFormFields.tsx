@@ -2,6 +2,7 @@ import React from 'react';
 import { Camera, MapPin, Navigation, Clock, Check, Sparkles } from 'lucide-react';
 import StarRating from '../StarRating';
 import { CATEGORIES } from '../../constants/categories';
+import { apiFetch } from '../../lib/api';
 
 interface StoreFormFieldsProps {
   store: any;
@@ -183,7 +184,7 @@ export function StoreFormFields({
             if (val.length === 6) {
               setPincodeLoading(true);
               try {
-                const res = await fetch(`/api/pincode/${val}`);
+                const res = await apiFetch(`/api/pincode/${val}`);
                 if (res.ok) {
                   const data = await res.json();
                   setCity(data.city || ''); setState(data.state || '');

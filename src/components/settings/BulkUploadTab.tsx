@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Upload, Plus } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { apiFetch } from '../../lib/api';
 
 interface BulkUploadTabProps {
   store: any;
@@ -22,8 +23,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch(`/api/stores/${store.id}/bulk-import`, {
-        credentials: 'include',
+      const res = await apiFetch(`/api/stores/${store.id}/bulk-import`, {
         method: 'POST',
         body: formData,
       });
@@ -106,8 +106,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
               const text = (document.getElementById('manualProductText') as HTMLTextAreaElement)?.value || '';
               if (!store?.id) { showToast('Store not found', { type: 'error' }); return; }
               try {
-                const res = await fetch(`/api/stores/${store.id}`, {
-                  credentials: 'include',
+                const res = await apiFetch(`/api/stores/${store.id}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                   body: JSON.stringify({ manualProductText: text }),

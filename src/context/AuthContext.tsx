@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { apiFetch, setToken as setNativeToken, clearToken as clearNativeToken, isNative } from '../lib/api';
+import { apiFetch, getToken as getNativeToken, setToken as setNativeToken, clearToken as clearNativeToken, isNative } from '../lib/api';
 
 interface User {
   id: string;
@@ -34,7 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         if (data && !data.error && data.id) {
           setUser(data);
-          setToken(isNative() ? null : "cookie");
+          // On native: restore the actual JWT from storage so !!token checks pass across all pages.
+          // Fallback to "native" string if auth succeeded but token somehow unreadable.
+          setToken(isNative() ? (getNativeToken() || "native") : "cookie");
           const wasTeamMember = localStorage.getItem('isTeamMember') === 'true';
           setIsTeamMember(wasTeamMember);
         }

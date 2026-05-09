@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import ImageCropper from '../ImageCropper';
 import { useToast } from '../../context/ToastContext';
+import { apiFetch } from '../../lib/api';
 
 interface PostsGridProps {
   sortedPosts: any[];
@@ -62,7 +63,7 @@ export function PostsGrid({
   const handleTogglePin = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/posts/${postId}/pin`, { credentials: 'include', method: 'POST' });
+      const res = await apiFetch(`/api/posts/${postId}/pin`, { method: 'POST' });
       if (res.ok) {
         const updated = await res.json();
         onPostsChange(prev => prev.map(p => p.id === postId ? updated : p));
@@ -76,7 +77,7 @@ export function PostsGrid({
   const confirmDeletePost = async () => {
     if (!postToDelete) return;
     try {
-      const res = await fetch(`/api/posts/${postToDelete}`, { credentials: 'include', method: 'DELETE' });
+      const res = await apiFetch(`/api/posts/${postToDelete}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       onPostsChange(prev => prev.filter(p => p.id !== postToDelete));
       if (selectedPost?.id === postToDelete) setSelectedPost(null);
@@ -102,7 +103,7 @@ export function PostsGrid({
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
         setEditRawImageUrl(data.url);
@@ -115,8 +116,7 @@ export function PostsGrid({
     if (!editingPost) return;
     setEditUploading(true);
     try {
-      const res = await fetch(`/api/posts/${editingPost.id}`, {
-        credentials: 'include',
+      const res = await apiFetch(`/api/posts/${editingPost.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ caption: editCaption, imageUrl: editImage, price: editPrice || null }),
@@ -142,7 +142,7 @@ export function PostsGrid({
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
         setRawImageUrl(data.url);
@@ -181,8 +181,8 @@ export function PostsGrid({
     setAiLoading(true); setAiSuggestion(null);
     try {
       const { base64, mimeType } = await compressImageToBase64(newPostImage);
-      const res = await fetch('/api/ai/analyze-image', {
-        credentials: 'include', method: 'POST',
+      const res = await apiFetch('/api/ai/analyze-image', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       });
@@ -208,8 +208,8 @@ export function PostsGrid({
         reader.onerror = reject;
         reader.readAsDataURL(blob);
       });
-      const res = await fetch('/api/ai/transcribe-voice', {
-        credentials: 'include', method: 'POST',
+      const res = await apiFetch('/api/ai/transcribe-voice', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audioBase64: base64, mimeType: 'audio/webm' }),
       });
@@ -255,8 +255,8 @@ export function PostsGrid({
     if (!newPostImage) { showToast('Please upload an image for the post.', { type: 'warning' }); return; }
     setNewPostUploading(true);
     try {
-      const res = await fetch('/api/posts', {
-        credentials: 'include', method: 'POST',
+      const res = await apiFetch('/api/posts', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ storeId, caption: newPostCaption, imageUrl: newPostImage, ...(newPostPrice ? { price: parseFloat(newPostPrice) } : {}) }),
       });
@@ -447,7 +447,7 @@ export function PostsGrid({
                       const blob = await fetch(croppedDataUrl).then(r => r.blob());
                       const formData = new FormData();
                       formData.append('file', blob, 'cropped-post.jpg');
-                      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+                      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
                       if (res.ok) { const data = await res.json(); setNewPostImage(data.url); }
                     } catch { /* silent */ }
                     setShowCropper(false); setRawImageUrl('');
@@ -551,7 +551,7 @@ export function PostsGrid({
                       const blob = await fetch(croppedDataUrl).then(r => r.blob());
                       const formData = new FormData();
                       formData.append('file', blob, 'edited-post.jpg');
-                      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+                      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
                       if (res.ok) { const data = await res.json(); setEditImage(data.url); }
                     } catch { /* silent */ }
                     setEditShowCropper(false); setEditRawImageUrl('');

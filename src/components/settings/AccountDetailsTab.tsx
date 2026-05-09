@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { apiFetch } from '../../lib/api';
 
 interface AccountDetailsTabProps {
   isRetailer: boolean;
@@ -33,8 +34,7 @@ export const AccountDetailsTab = React.memo(function AccountDetailsTab({ isRetai
             const phone = (document.getElementById('details-phone') as HTMLInputElement).value;
             const email = (document.getElementById('details-email') as HTMLInputElement).value;
             try {
-              const res = await fetch(`/api/users/${user?.id}`, {
-                credentials: 'include',
+              const res = await apiFetch(`/api/users/${user?.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ name, phone, email }),

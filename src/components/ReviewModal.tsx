@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Send } from 'lucide-react';
 import StarRating from './StarRating';
+import { apiFetch } from '../lib/api';
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export default function ReviewModal({ isOpen, onClose, targetId, targetType, tar
         ...(targetType === 'store' ? { storeId: targetId } : { productId: targetId })
       };
 
-      const res = await fetch('/api/reviews', { credentials: 'include', 
+      const res = await apiFetch('/api/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

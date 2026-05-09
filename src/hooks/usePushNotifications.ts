@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -20,7 +21,7 @@ export function usePushNotifications() {
 
     async function subscribe() {
       try {
-        const res = await fetch('/api/push/vapid-public-key', { credentials: 'include' });
+        const res = await apiFetch('/api/push/vapid-public-key');
         const { publicKey } = await res.json();
         if (!publicKey || cancelled) return;
 
@@ -36,9 +37,8 @@ export function usePushNotifications() {
 
         if (cancelled) return;
 
-        await fetch('/api/push/subscribe', {
+        await apiFetch('/api/push/subscribe', {
           method: 'POST',
-          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(sub.toJSON()),
         });

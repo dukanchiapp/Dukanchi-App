@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
 
 const DEFAULT: any = {
   nav: { logoSub: 'apna bazaar, apni dukaan', ctaText: 'Free mein Join Karo' },
@@ -80,7 +81,7 @@ export default function LandingPage() {
   const [ct, setCt] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/landing-content')
+    apiFetch('/api/landing-content')
       .then(r => r.ok ? r.json() : { content: DEFAULT })
       .then(d => setCt(d.content || DEFAULT))
       .catch(() => setCt(DEFAULT));

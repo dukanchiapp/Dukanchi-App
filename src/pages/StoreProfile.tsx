@@ -7,6 +7,7 @@ import RefreshButton from '../components/RefreshButton';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
+import { apiFetch } from '../lib/api';
 
 export default function StoreProfilePage() {
   const { id } = useParams();
@@ -36,7 +37,7 @@ export default function StoreProfilePage() {
 
   useEffect(() => {
     if (currentUserId) {
-      fetch(`/api/me/interactions`, { credentials: 'include',   })
+      apiFetch(`/api/me/interactions`)
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setInteractions(data); })
         .catch(() => {});
@@ -46,13 +47,13 @@ export default function StoreProfilePage() {
   const toggleLike = async (postId: string) => {
     const isLiked = interactions.likedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, likedPostIds: isLiked ? prev.likedPostIds.filter(i => i !== postId) : [...prev.likedPostIds, postId] }));
-    try { await fetch(`/api/posts/${postId}/like`, { credentials: 'include',  method: 'POST',  }); } catch (e) { console.error(e); }
+    try { await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' }); } catch (e) { console.error(e); }
   };
 
   const toggleSave = async (postId: string) => {
     const isSaved = interactions.savedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, savedPostIds: isSaved ? prev.savedPostIds.filter(i => i !== postId) : [...prev.savedPostIds, postId] }));
-    try { await fetch(`/api/posts/${postId}/save`, { credentials: 'include',  method: 'POST',  }); } catch (e) { console.error(e); }
+    try { await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' }); } catch (e) { console.error(e); }
   };
 
   const handleShare = async (post: any) => {
@@ -86,22 +87,22 @@ export default function StoreProfilePage() {
 
   const fetchStoreData = async () => {
     try {
-      const storeRes = await fetch(`/api/stores/${id}?userId=${currentUserId}`, { credentials: 'include' });
+      const storeRes = await apiFetch(`/api/stores/${id}?userId=${currentUserId}`);
       if (!storeRes.ok) { setStore(null); setLoading(false); return; }
       const storeData = await storeRes.json();
       setStore(storeData);
       setIsFollowing(storeData.followers?.length > 0);
       setFollowersCount(storeData._count?.followers || 0);
 
-      const productsRes = await fetch(`/api/products?storeId=${id}`, { credentials: 'include' });
+      const productsRes = await apiFetch(`/api/products?storeId=${id}`);
       const productsData = await productsRes.json();
       setProducts(Array.isArray(productsData) ? productsData : (productsData.products ?? []));
 
-      const postsRes = await fetch(`/api/stores/${id}/posts`, { credentials: 'include' });
+      const postsRes = await apiFetch(`/api/stores/${id}/posts`);
       const postsData = await postsRes.json();
       setPosts(Array.isArray(postsData) ? postsData : (postsData.posts ?? []));
 
-      const reviewsRes = await fetch(`/api/reviews/store/${id}`, { credentials: 'include' });
+      const reviewsRes = await apiFetch(`/api/reviews/store/${id}`);
       const reviewsData = await reviewsRes.json();
       setReviews(Array.isArray(reviewsData) ? reviewsData : (reviewsData.reviews ?? []));
 
@@ -117,7 +118,7 @@ export default function StoreProfilePage() {
     setIsFollowing(!wasFollowing);
     setFollowersCount(prev => !wasFollowing ? prev + 1 : Math.max(0, prev - 1));
     try {
-      const res = await fetch(`/api/stores/${id}/follow`, { credentials: 'include',
+      const res = await apiFetch(`/api/stores/${id}/follow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

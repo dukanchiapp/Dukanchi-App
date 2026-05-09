@@ -10,6 +10,7 @@ import { PostCard } from '../components/PostCard';
 import { useFeed } from '../hooks/useFeed';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
+import { apiFetch } from '../lib/api';
 
 export default function HomePage() {
   usePageMeta({ title: 'Home' });
@@ -58,7 +59,7 @@ export default function HomePage() {
   // Fetch interactions once when token is available
   useEffect(() => {
     if (!token) return;
-    fetch('/api/me/interactions', { credentials: 'include' })
+    apiFetch('/api/me/interactions')
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setInteractions(data as Interactions); })
       .catch(() => {});
@@ -68,7 +69,7 @@ export default function HomePage() {
   useEffect(() => {
     if (feedType !== 'saved' || !user?.id || !token) return;
     setSavedLoading(true);
-    fetch(`/api/users/${user.id}/saved`, { credentials: 'include' })
+    apiFetch(`/api/users/${user.id}/saved`)
       .then(r => r.ok ? r.json() : { posts: [] })
       .then(data => setSavedPosts((Array.isArray(data.posts) ? data.posts : []) as Post[]))
       .catch(() => setSavedPosts([]))
@@ -77,7 +78,7 @@ export default function HomePage() {
 
   // Carousel
   useEffect(() => {
-    fetch('/api/app-settings', { credentials: 'include' })
+    apiFetch('/api/app-settings')
       .then(r => r.json())
       .then(data => {
         setCarouselImages(
@@ -164,7 +165,7 @@ export default function HomePage() {
       };
     });
     try {
-      const res = await fetch(`/api/posts/${postId}/like`, { credentials: 'include', method: 'POST' });
+      const res = await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' });
       if (!res.ok) throw new Error(`Like failed: ${res.status}`);
     } catch (err) {
       showToast('Like nahi ho saka, dobara try karein', { type: 'error' });
@@ -185,7 +186,7 @@ export default function HomePage() {
       };
     });
     try {
-      const res = await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' });
+      const res = await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
     } catch (err) {
       showToast('Save nahi ho saka, dobara try karein', { type: 'error' });
@@ -206,7 +207,7 @@ export default function HomePage() {
       };
     });
     try {
-      const res = await fetch(`/api/stores/${storeId}/follow`, { credentials: 'include', method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      const res = await apiFetch(`/api/stores/${storeId}/follow`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) throw new Error(`Follow failed: ${res.status}`);
     } catch (err) {
       showToast(wasFollowed ? 'Unfollow nahi ho saka, dobara try karein' : 'Follow nahi ho saka, dobara try karein', { type: 'error' });

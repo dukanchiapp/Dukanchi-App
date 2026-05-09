@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle, ShoppingBag, Tag } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
+import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 
 const POST_REF_PREFIX = '__POST_REF__:';
 
@@ -152,13 +153,13 @@ export default function ChatPage() {
   // Fetch receiver info once
   useEffect(() => {
     if (!userId || !currentUserId) return;
-    fetch(`/api/users/${userId}`, { credentials: 'include',   })
+    apiFetch(`/api/users/${userId}`)
       .then(res => res.ok ? res.json() : null)
       .then(async (userData) => {
         if (!userData) return;
         if (['retailer', 'supplier', 'brand', 'manufacturer'].includes(userData.role)) {
           try {
-            const storeRes = await fetch(`/api/users/${userId}/store`);
+            const storeRes = await apiFetch(`/api/users/${userId}/store`);
             const storeData = await storeRes.json();
             if (storeData?.storeName) {
               setReceiverName(storeData.storeName);
@@ -180,14 +181,12 @@ export default function ChatPage() {
   useEffect(() => {
     if (!currentUserId || !userId) return;
 
-    fetch(`/api/messages/${userId}`, { credentials: 'include',
-      
-    })
+    apiFetch(`/api/messages/${userId}`)
       .then(res => res.ok ? res.json() : { messages: [] })
       .then(data => setMessages((Array.isArray(data) ? data : (data.messages ?? [])) as Message[]))
       .catch(() => {});
 
-    const socket = io('/', { withCredentials: true, transports: ['websocket'] });
+    const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
 
     socket.on('newMessage', (msg: Message) => {
@@ -227,8 +226,7 @@ export default function ChatPage() {
   };
 
   const sendRaw = async (body: { receiverId?: string; message?: string; imageUrl?: string }) => {
-    const res = await fetch('/api/messages', {
-      credentials: 'include',
+    const res = await apiFetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -254,9 +252,8 @@ export default function ChatPage() {
       const formData = new FormData();
       formData.append('file', imageFile);
       try {
-        const res = await fetch('/api/upload', { credentials: 'include', 
+        const res = await apiFetch('/api/upload', {
           method: 'POST',
-          
           body: formData
         });
         if (res.ok) {

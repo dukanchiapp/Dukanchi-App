@@ -13,6 +13,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { StoreInfoCard } from '../components/profile/StoreInfoCard';
 import { PostsGrid } from '../components/profile/PostsGrid';
 import { ReviewsTab } from '../components/profile/ReviewsTab';
+import { apiFetch } from '../lib/api';
 
 export default function ProfilePage() {
   usePageMeta({ title: 'My Profile' });
@@ -38,7 +39,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      fetch(`/api/me/interactions`, { credentials: 'include' })
+      apiFetch(`/api/me/interactions`)
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setInteractions(data); })
         .catch(() => {});
@@ -48,13 +49,13 @@ export default function ProfilePage() {
   const toggleLike = async (postId: string) => {
     const isLiked = interactions.likedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, likedPostIds: isLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId] }));
-    try { await fetch(`/api/posts/${postId}/like`, { credentials: 'include', method: 'POST' }); } catch { /* silent */ }
+    try { await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' }); } catch { /* silent */ }
   };
 
   const toggleSave = async (postId: string) => {
     const isSaved = interactions.savedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, savedPostIds: isSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId] }));
-    try { await fetch(`/api/posts/${postId}/save`, { credentials: 'include', method: 'POST' }); } catch { /* silent */ }
+    try { await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' }); } catch { /* silent */ }
   };
 
   const handleShare = async (post: any) => {
@@ -83,7 +84,7 @@ export default function ProfilePage() {
     try {
       if (user?.role && user.role !== 'customer') {
         try {
-          const kycRes = await fetch('/api/kyc/status', { credentials: 'include' });
+          const kycRes = await apiFetch('/api/kyc/status');
           if (kycRes.ok) {
             const kycData = await kycRes.json();
             setKycStatus(kycData.kycStatus || 'none');
@@ -93,7 +94,7 @@ export default function ProfilePage() {
         } catch { /* silent */ }
       }
 
-      const storeRes = await fetch(`/api/users/${currentUserId}/store`, { credentials: 'include' });
+      const storeRes = await apiFetch(`/api/users/${currentUserId}/store`);
       let storeData = await storeRes.json();
 
       if (!storeData && user?.role === 'retailer') {
@@ -109,12 +110,12 @@ export default function ProfilePage() {
       if (storeData) {
         setStore(storeData);
         if (storeData.id !== 'mock-store') {
-          const postsRes = await fetch(`/api/stores/${storeData.id}/posts`, { credentials: 'include' });
+          const postsRes = await apiFetch(`/api/stores/${storeData.id}/posts`);
           if (postsRes.ok) {
             const postsData = await postsRes.json();
             setPosts(Array.isArray(postsData) ? postsData : (postsData.posts ?? []));
           }
-          const reviewsRes = await fetch(`/api/reviews/store/${storeData.id}`, { credentials: 'include' });
+          const reviewsRes = await apiFetch(`/api/reviews/store/${storeData.id}`);
           if (reviewsRes.ok) {
             const revData = await reviewsRes.json();
             setReviews(Array.isArray(revData) ? revData : (revData.reviews ?? []));
@@ -131,7 +132,7 @@ export default function ProfilePage() {
 
   const fetchChatCount = async () => {
     try {
-      const res = await fetch('/api/messages/conversations', { credentials: 'include' });
+      const res = await apiFetch('/api/messages/conversations');
       if (res.ok) { const convos = await res.json(); setChatCount(convos.length); }
     } catch { /* silent */ }
   };

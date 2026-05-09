@@ -1,6 +1,7 @@
 import React from 'react';
 import { CreditCard, Megaphone, AlertTriangle, HelpCircle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { apiFetch } from '../../lib/api';
 
 interface BusinessSettingsTabsProps {
   activeTab: string;
@@ -18,8 +19,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
   const handleToggleSetting = async (key: string, value: boolean) => {
     if (!store) return;
     try {
-      const res = await fetch(`/api/stores/${store.id}`, {
-        credentials: 'include',
+      const res = await apiFetch(`/api/stores/${store.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ [key]: value }),
@@ -77,8 +77,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
               const description = (document.getElementById('report-text') as HTMLTextAreaElement)?.value?.trim();
               if (!description) { showToast('Please describe the issue.', { type: 'error' }); return; }
               try {
-                const res = await fetch('/api/complaints', {
-                  credentials: 'include',
+                const res = await apiFetch('/api/complaints', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                   body: JSON.stringify({ issueType: 'fake_user', description }),
@@ -107,8 +106,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
               const description = (document.getElementById('help-text') as HTMLTextAreaElement)?.value?.trim();
               if (!description) { showToast('Please enter your message.', { type: 'error' }); return; }
               try {
-                const res = await fetch('/api/complaints', {
-                  credentials: 'include',
+                const res = await apiFetch('/api/complaints', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                   body: JSON.stringify({ issueType: 'feedback', description }),

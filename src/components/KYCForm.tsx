@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Camera, Building, X, ArrowLeft, Loader2 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
 
 export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: () => void, onLogout: () => void, onBack?: () => void }) {
   const [storeName, setStoreName] = useState('');
@@ -19,9 +20,8 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
     formData.append('file', file);
     
     try {
-      const res = await fetch('/api/upload', { credentials: 'include', 
+      const res = await apiFetch('/api/upload', {
         method: 'POST',
-        
         body: formData
       });
       if (res.ok) {
@@ -47,10 +47,10 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
     setLoading(true);
     try {
       // Submit KYC documents and intended store details
-      const kycRes = await fetch('/api/kyc/submit', { credentials: 'include', 
+      const kycRes = await apiFetch('/api/kyc/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           documentUrl: gstBill,
           selfieUrl: selfie,
           storeName: storeName,

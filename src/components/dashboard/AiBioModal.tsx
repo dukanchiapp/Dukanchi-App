@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Sparkles, X, Loader2, Mic, MicOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
+import { apiFetch } from '../../lib/api';
 
 interface AiBioModalProps {
   open: boolean;
@@ -32,8 +33,8 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
     if (!storeName) { showToast('Pehle store name bharo', { type: 'warning' }); onClose(); return; }
     setLoading(true);
     try {
-      const res = await fetch('/api/ai/generate-store-description', {
-        credentials: 'include', method: 'POST',
+      const res = await apiFetch('/api/ai/generate-store-description', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ storeName, category: selectedCategory, userContext: userContext.trim() }),
       });
@@ -69,8 +70,8 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
             reader.onerror = reject;
             reader.readAsDataURL(blob);
           });
-          const res = await fetch('/api/ai/transcribe-voice', {
-            credentials: 'include', method: 'POST',
+          const res = await apiFetch('/api/ai/transcribe-voice', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ audioBase64: base64, mimeType: 'audio/webm' }),
           });

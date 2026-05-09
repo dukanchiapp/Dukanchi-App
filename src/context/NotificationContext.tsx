@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 
 export interface Notification {
   id: string;
@@ -28,9 +29,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const fetchNotifications = async () => {
     if (!user) return;
     try {
-      const res = await fetch('/api/notifications', { credentials: 'include', 
-        
-      });
+      const res = await apiFetch('/api/notifications');
       if (res.ok) {
         setNotifications(await res.json());
       }
@@ -44,11 +43,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     fetchNotifications();
 
-    const socketUrl = import.meta.env.VITE_API_URL || window.location.origin;
-    const newSocket = io(socketUrl, {
-      withCredentials: true,
-      transports: ['websocket'],
-    });
+    const newSocket = io(getSocketUrl(), getSocketAuthOptions());
 
     newSocket.on('newNotification', (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
@@ -66,19 +61,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAsRead = async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     if (!user) return;
-    await fetch(`/api/notifications/${id}/read`, { credentials: 'include', 
-      method: 'POST',
-      
-    });
+    await apiFetch(`/api/notifications/${id}/read`, { method: 'POST' });
   };
 
   const markAllAsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     if (!user) return;
-    await fetch(`/api/notifications/read-all`, { credentials: 'include', 
-      method: 'POST',
-      
-    });
+    await apiFetch(`/api/notifications/read-all`, { method: 'POST' });
   };
 
   return (

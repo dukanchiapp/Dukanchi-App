@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { AiBioModal } from '../components/dashboard/AiBioModal';
 import { StoreFormFields } from '../components/dashboard/StoreFormFields';
 import { KycUploadForm } from '../components/dashboard/KycUploadForm';
+import { apiFetch } from '../lib/api';
 
 export default function RetailerDashboard() {
   const [loading, setLoading] = useState(true);
@@ -49,7 +50,7 @@ export default function RetailerDashboard() {
 
   useEffect(() => {
     if (user?.id && user?.role !== 'customer' && user?.role !== 'admin') {
-      fetch('/api/kyc/status', { credentials: 'include' })
+      apiFetch('/api/kyc/status')
         .then(res => res.json())
         .then(data => { setKycStatus(data.kycStatus || 'none'); setKycNotes(data.kycNotes || ''); })
         .catch(console.error);
@@ -58,7 +59,7 @@ export default function RetailerDashboard() {
 
   useEffect(() => {
     if (user?.id) {
-      fetch(`/api/users/${user.id}/store`)
+      apiFetch(`/api/users/${user.id}/store`)
         .then(res => res.json())
         .then(data => {
           if (data && data.id) {
@@ -73,7 +74,7 @@ export default function RetailerDashboard() {
             if (data.workingDays) setSelectedDays(data.workingDays.split(', ').filter(Boolean));
             setLoading(false);
           } else {
-            fetch('/api/kyc/status', { credentials: 'include' })
+            apiFetch('/api/kyc/status')
               .then(res => res.json())
               .then(kycData => {
                 if (kycData.kycStoreName || kycData.kycStorePhoto) {
@@ -123,8 +124,8 @@ export default function RetailerDashboard() {
     try {
       const url = storeId ? `/api/stores/${storeId}` : `/api/stores`;
       const method = storeId ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        credentials: 'include', method,
+      const res = await apiFetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ownerId: user?.id, storeName, description, address, workingDays,
@@ -142,8 +143,8 @@ export default function RetailerDashboard() {
           setStoreId(updatedStore.id);
           if (logoUrl) {
             try {
-              await fetch('/api/posts', {
-                credentials: 'include', method: 'POST',
+              await apiFetch('/api/posts', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ storeId: updatedStore.id, caption: `Welcome to ${storeName}! We are now open.`, imageUrl: logoUrl, isOpeningPost: true }),
               });
@@ -166,7 +167,7 @@ export default function RetailerDashboard() {
       setMapLat(lat); setMapLng(lng);
       if (storeId) {
         try {
-          await fetch(`/api/stores/${storeId}`, { credentials: 'include', method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: lat, longitude: lng }) });
+          await apiFetch(`/api/stores/${storeId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: lat, longitude: lng }) });
           showToast('📍 Location pinned successfully!', { type: 'success' });
         } catch { /* silent */ }
       } else {
@@ -179,7 +180,7 @@ export default function RetailerDashboard() {
     const file = e.target.files?.[0]; if (!file) return;
     const formData = new FormData(); formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) { const data = await res.json(); setLogoUrl(data.url); }
     } catch { /* silent */ }
   };
@@ -188,7 +189,7 @@ export default function RetailerDashboard() {
     const file = e.target.files?.[0]; if (!file) return;
     const formData = new FormData(); formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) { const data = await res.json(); setCoverUrl(data.url); }
     } catch { /* silent */ }
   };
@@ -198,7 +199,7 @@ export default function RetailerDashboard() {
     setKycUploading(true);
     const formData = new FormData(); formData.append('file', file);
     try {
-      const res = await fetch('/api/upload', { credentials: 'include', method: 'POST', body: formData });
+      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) {
         const data = await res.json();
         if (type === 'doc') setKycDocUrl(data.url);
@@ -213,8 +214,8 @@ export default function RetailerDashboard() {
     if (!kycDocUrl || !kycSelfieUrl || !kycStoreName || !kycStorePhoto) { showToast('Please fill in all KYC details.', { type: 'warning' }); return; }
     setKycSubmitting(true);
     try {
-      const res = await fetch('/api/kyc/submit', {
-        credentials: 'include', method: 'POST',
+      const res = await apiFetch('/api/kyc/submit', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentUrl: kycDocUrl, selfieUrl: kycSelfieUrl, storeName: kycStoreName, storePhoto: kycStorePhoto }),
       });

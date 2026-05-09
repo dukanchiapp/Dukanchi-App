@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Post, FeedResponse } from '../types';
+import { apiFetch } from '../lib/api';
 
 interface UseFeedOptions {
   feedType: string;
@@ -25,7 +26,7 @@ export function useFeed({ feedType, locationRange, lat, lng, enabled = true }: U
       const useLat = locationRange !== 'all' && lat ? lat : 0;
       const useLng = locationRange !== 'all' && lng ? lng : 0;
       const url = `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${useLat}&lng=${useLng}&page=${pageNum}&limit=15`;
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await apiFetch(url);
       if (!res.ok) throw new Error(`Feed ${res.status}`);
       const data: FeedResponse = await res.json();
       const incoming = data.posts || [];
