@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-05-09 — Session 77 — Capacitor Pre-Flight: Foundation
+
+**Goal:** Lay groundwork for Capacitor migration. Knock out 3 of 4 audit blockers without installing Capacitor yet.
+
+**Files changed:**
+- `src/lib/api.ts` — NEW. `apiFetch` wrapper, `isNative()`, `getToken/setToken/clearToken` helpers. Web behavior unchanged (relative paths + cookies). Native path uses absolute URL + Bearer header. No `@capacitor/*` imports yet.
+- `index.html` — IIFE bypass: native app (`window.Capacitor.isNativePlatform()`) no longer redirects to `/landing` on launch
+- `src/app.ts` — CORS allowlist now permits `capacitor://localhost` (iOS) and `http://localhost` (Android) unconditionally via `CAPACITOR_ORIGINS` constant
+- `.env.example` — added comment that Capacitor origins are hardcoded, not needed in `ALLOWED_ORIGINS`
+
+**Reasoning:** Audit identified 4 blockers. This session handles 3: redirect IIFE (5min), CORS (5min), and foundation `api.ts` module that Session 78's bulk fetch refactor depends on. Auth Bearer wiring intentionally deferred to Session 78 (~20 files). Track is Android-first.
+
+**tsc --noEmit:** ✅ exit 0
+**Build:** ✅ vite build OK, dist/ generated, PWA SW generated
+**Regression:** ✅ web behavior unchanged (isNative() returns false on web)
+**Commit:** TBD
+
+**Blockers cleared:** 3/4 (cookie auth pending Session 78)
+**Next:** Session 78 — bulk migrate all fetch() calls to apiFetch, add /api/auth/refresh endpoint, AuthContext token storage on login
+
+---
+
 ## 2026-05-06 — Session 76 (B2B2C visibility hardening)
 - FIX 1 (canChat stub): auth.middleware.ts — replaced `return true` stub with real role-pair logic; customer↔retailer only; B2B↔B2B freely; customer blocked from supplier/brand/manufacturer chat
 - FIX 2 (store listing): store.service.ts getStores + getStorePosts — viewerRole param added; customer sees retailer-only; B2B sees all 4 B2B store types; console.log removed

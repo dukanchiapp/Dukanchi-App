@@ -25,6 +25,12 @@
     <!-- Pre-React browser guard: redirect to /landing before React loads — zero flash -->
     <script>
       (function() {
+        // Capacitor native app: skip all PWA/landing redirect logic
+        if (window.Capacitor && window.Capacitor.isNativePlatform &&
+            window.Capacitor.isNativePlatform()) {
+          return;
+        }
+
         var path = window.location.pathname;
 
         var browserMode = false;

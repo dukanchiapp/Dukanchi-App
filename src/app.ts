@@ -52,11 +52,20 @@ if (env.NODE_ENV === 'production') {
 app.use(compression());
 
 // ── 3. CORS — must be before everything else ─────────────────────────────────
+// Capacitor origins are always allowed regardless of ALLOWED_ORIGINS env var:
+//   capacitor://localhost — iOS native WKWebView
+//   http://localhost      — Android native WebView
+const CAPACITOR_ORIGINS = ['capacitor://localhost', 'http://localhost'];
+
 app.use((req, res, next) => {
   const origin = req.headers.origin || '';
   const allowedOrigins = getAllowedOrigins();
 
-  if (isNgrokOrigin(origin) || (origin && allowedOrigins.includes(origin))) {
+  if (
+    isNgrokOrigin(origin) ||
+    CAPACITOR_ORIGINS.includes(origin) ||
+    (origin && allowedOrigins.includes(origin))
+  ) {
     res.header('Access-Control-Allow-Origin', origin);
   } else if (allowedOrigins.length > 0) {
     res.header('Access-Control-Allow-Origin', allowedOrigins[0]);
