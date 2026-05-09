@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-10 | Session 78c-DEBUG | Commit: 5707fb9
+> Last updated: 2026-05-10 | Session 78c-FIX | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -10,7 +10,7 @@
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
 - **B2B2C visibility:** Fully spec-compliant ✅ (Session 76)
 
-## Active Sprint: Sprint 0 ✅ COMPLETE — ⚠️ BLOCKED: Socket.IO real-time delivery debugging (Sprint 1 paused)
+## Active Sprint: Sprint 0 — Capacitor Pre-Flight ✅ COMPLETE
 
 **Track:** Android-first (iOS deferred to Sprint 5+)
 
@@ -28,9 +28,9 @@
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Founder: 2-account cross-browser test — send message, paste both browser consoles + Railway logs ([SOCKET-AUTH]/[SOCKET-CONN]/[MSG-EMIT]) to Claude Code
-2. Session 78c-FIX — apply targeted fix based on diagnostic data
-3. After fix verified → resume: Session 79 cleanup, then Sprint 1 Capacitor install
+1. Sprint 1 / Session 80 — Install `@capacitor/core` + `@capacitor/cli` + `@capacitor/android`, run `cap init`, `cap add android`
+2. Sprint 1 / Session 81 — Capacitor plugins: Geolocation, Camera, Splash Screen
+3. Sprint 2 / Session 82+ — FCM push notifications (replaces web push for native; resolves mobile background delivery completely)
 
 ## Open Decisions / Risks
 - [ ] Bandra confirmed as pilot (founder may revise)

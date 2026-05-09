@@ -20,6 +20,7 @@ export default function MessagesPage() {
   const [askNearbyCards, setAskNearbyCards] = useState<any[]>([]);
   const [respondingIds, setRespondingIds] = useState<Set<string>>(new Set());
   const socketRef = useRef<Socket | null>(null);
+  const reopenCountRef = useRef(0);
   const { token, user, isLoading: authLoading } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -68,16 +69,36 @@ export default function MessagesPage() {
     if (!user) return;
     const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
+    reopenCountRef.current = 0;
 
+    const isDev = import.meta.env.DEV;
     socket.on('connect', () => {
-      console.log('[SOCKET][Messages] ✅ connected, id=', socket.id, 'userId=', user?.id);
+      if (isDev) console.log('[SOCKET][Messages] connected', socket.id);
     });
     socket.on('connect_error', (err) => {
-      console.error('[SOCKET][Messages] ❌ connect_error:', err.message, err);
+      console.warn('[SOCKET][Messages] connect_error:', err.message);
     });
     socket.on('disconnect', (reason) => {
-      console.warn('[SOCKET][Messages] 🔌 disconnect:', reason);
+      if (isDev) console.warn('[SOCKET][Messages] disconnect', reason);
     });
+
+    // Reconnection-aware refetch: recover conversations missed while tab was backgrounded
+    const handleReopen = () => {
+      reopenCountRef.current += 1;
+      if (reopenCountRef.current > 1) {
+        refreshConversations();
+      }
+    };
+    socket.io.on('reconnect', handleReopen);
+    socket.io.engine?.on('open', handleReopen);
+
+    // Mobile foreground wakeup
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && socketRef.current && !socketRef.current.connected) {
+        socketRef.current.connect();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     socket.on('ask_nearby_request', (data: any) => {
       setAskNearbyCards(prev => {
@@ -91,8 +112,14 @@ export default function MessagesPage() {
       refreshConversations();
     });
 
-    return () => { socket.disconnect(); socketRef.current = null; };
-  }, [user]);
+    return () => {
+      socket.io.off('reconnect', handleReopen);
+      socket.io.engine?.off('open', handleReopen);
+      document.removeEventListener('visibilitychange', onVisibility);
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [user, refreshConversations]);
 
   const handleAskNearbyRespond = async (responseId: string, answer: 'yes' | 'no') => {
     if (respondingIds.has(responseId)) return;

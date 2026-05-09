@@ -6,6 +6,35 @@
 
 ---
 
+## 2026-05-10 — Session 78c-FIX — Reconnection Resilience + Debug Cleanup
+
+**Goal:** Close Sprint 0. Revert 78c-DEBUG verbose logging; add reconnection-aware data sync so mobile background → wake → reconnect recovers missed messages without user action.
+
+**Files changed:**
+- `src/config/socket-listeners.ts` — restored simple auth middleware; connect/disconnect logs now dev-only one-liner; production keeps `[SOCKET] auth rejected` warn for actual auth failures
+- `src/modules/messages/message.service.ts` — removed fetchSockets() diagnostic + [MSG-EMIT] logs; restored simple emit pattern
+- `src/lib/api.ts` — explicit reconnection options (reconnection:true, attempts:Infinity, delay:1s, max:5s, timeout:20s); added `SOCKET_RECONNECT_OPTS` constant
+- `src/pages/Chat.tsx` — concise lifecycle listeners (dev-only + connect_error warn); `reopenCountRef` + `socket.io.on('reconnect')` + `engine.on('open')` refetch; `visibilitychange` wakeup
+- `src/pages/Messages.tsx` — same pattern; reuses existing `refreshConversations()` callback; `refreshConversations` added to effect dep array
+- `src/context/NotificationContext.tsx` — same pattern; added `useRef` import; reuses existing `fetchNotifications()`
+
+**Behavior after this session:**
+- Both tabs foreground: real-time delivery instant ✅
+- Receiver backgrounds <30s: usually delivered (socket alive)
+- Receiver backgrounds 30s+, then foregrounds: reconnect → refetch → missed messages appear within 1-3s ✅
+- Sprint 2 FCM push will preempt this for native delivery
+
+**tsc --noEmit:** ✅ exit 0
+**Build:** ✅ vite build OK
+**Migration grep:** ✅ 0 remaining credentials:include
+**Debug-log grep:** ✅ 0 SOCKET-AUTH/CONN/MSG-EMIT remnants
+**Commit:** TBD
+
+**Sprint 0 status:** ✅ COMPLETE. All 4 audit blockers cleared, fetch migration done, Socket.IO native-aware, reconnection resilience added.
+**Next:** Sprint 1 / Session 80 — Install @capacitor/core + @capacitor/cli + @capacitor/android, run cap init, cap add android.
+
+---
+
 ## 2026-05-10 — Session 78c-DEBUG — Socket.IO Diagnostic Logging
 
 **Goal:** Find root cause of cross-account real-time delivery failure. ZERO functional changes — only logging added in 5 files.

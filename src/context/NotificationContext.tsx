@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
@@ -25,6 +25,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const reopenCountRef = useRef(0);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -44,24 +45,47 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     fetchNotifications();
 
     const newSocket = io(getSocketUrl(), getSocketAuthOptions());
+    reopenCountRef.current = 0;
 
+    const isDev = import.meta.env.DEV;
     newSocket.on('connect', () => {
-      console.log('[SOCKET][NotificationCtx] ✅ connected, id=', newSocket.id, 'userId=', user?.id);
+      if (isDev) console.log('[SOCKET][NotificationCtx] connected', newSocket.id);
     });
     newSocket.on('connect_error', (err) => {
-      console.error('[SOCKET][NotificationCtx] ❌ connect_error:', err.message, err);
+      console.warn('[SOCKET][NotificationCtx] connect_error:', err.message);
     });
     newSocket.on('disconnect', (reason) => {
-      console.warn('[SOCKET][NotificationCtx] 🔌 disconnect:', reason);
+      if (isDev) console.warn('[SOCKET][NotificationCtx] disconnect', reason);
     });
+
+    // Reconnection-aware refetch: recover notifications missed while tab was backgrounded
+    const handleReopen = () => {
+      reopenCountRef.current += 1;
+      if (reopenCountRef.current > 1) {
+        fetchNotifications();
+      }
+    };
+    newSocket.io.on('reconnect', handleReopen);
+    newSocket.io.engine?.on('open', handleReopen);
 
     newSocket.on('newNotification', (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
     });
 
+    // Mobile foreground wakeup
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && newSocket && !newSocket.connected) {
+        newSocket.connect();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     setSocket(newSocket);
 
     return () => {
+      newSocket.io.off('reconnect', handleReopen);
+      newSocket.io.engine?.off('open', handleReopen);
+      document.removeEventListener('visibilitychange', onVisibility);
       newSocket.disconnect();
     };
   }, []);

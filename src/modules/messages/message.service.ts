@@ -69,17 +69,10 @@ export class MessageService {
 
     try {
       const io = getIO();
-
-      // Diagnostic: log how many sockets are in each room before emitting
-      const receiverRoom = await io.in(receiverId).fetchSockets();
-      const senderRoom = await io.in(senderId).fetchSockets();
-      console.log(`[MSG-EMIT] sender=${senderId} (${senderRoom.length} sockets in room), receiver=${receiverId} (${receiverRoom.length} sockets in room), msgId=${savedMessage.id}`);
-
       io.to(receiverId).emit("newMessage", savedMessage);
       io.to(senderId).emit("newMessage", savedMessage);
-      console.log(`[MSG-EMIT] ✅ emitted newMessage to both rooms`);
     } catch (err) {
-      console.warn("[MSG-EMIT] ❌ Socket.io emit failed", err);
+      console.warn("Socket.io emit failed (might not be initialized in this context)", err);
     }
 
     // Fire-and-forget push notification to receiver

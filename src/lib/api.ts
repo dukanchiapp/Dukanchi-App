@@ -46,6 +46,14 @@ export function clearToken(): void {
   }
 }
 
+const SOCKET_RECONNECT_OPTS = {
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,       // 1s before first retry
+  reconnectionDelayMax: 5000,    // cap at 5s between retries
+  timeout: 20000,                // 20s before giving up on initial handshake
+};
+
 /**
  * Get Socket.IO connection options for both web and native.
  * Web: withCredentials uses the httpOnly cookie.
@@ -58,11 +66,13 @@ export function getSocketAuthOptions() {
       auth: token ? { token } : undefined,
       withCredentials: false,
       transports: ['websocket'] as string[],
+      ...SOCKET_RECONNECT_OPTS,
     };
   }
   return {
     withCredentials: true,
     transports: ['websocket'] as string[],
+    ...SOCKET_RECONNECT_OPTS,
   };
 }
 

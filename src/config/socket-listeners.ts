@@ -9,39 +9,23 @@ const JWT_SECRET = env.JWT_SECRET;
 
 export function setupSocketListeners(io: Server) {
   io.use((socket: Socket, next) => {
-    const handshakeId = Math.random().toString(36).slice(2, 8);
-    const hasAuthToken = !!socket.handshake.auth?.token;
-    const hasCookieHeader = !!socket.handshake.headers.cookie;
-    const cookieHeaderSnippet = (socket.handshake.headers.cookie || '').slice(0, 80);
-    const origin = socket.handshake.headers.origin || '(no origin)';
-
-    console.log(`[SOCKET-AUTH][${handshakeId}] handshake start — origin=${origin}, hasAuthToken=${hasAuthToken}, hasCookieHeader=${hasCookieHeader}, cookieHeader="${cookieHeaderSnippet}..."`);
-
     let token = socket.handshake.auth?.token;
-    let tokenSource = 'auth.token';
 
     if (!token && socket.handshake.headers.cookie) {
       const match = socket.handshake.headers.cookie.match(/dk_token=([^;]+)/);
-      if (match) {
-        token = match[1];
-        tokenSource = 'cookie';
-      }
+      if (match) token = match[1];
     }
 
     if (!token) {
-      console.error(`[SOCKET-AUTH][${handshakeId}] ❌ NO TOKEN found — auth.token missing AND dk_token cookie missing. Rejecting.`);
       return next(new Error('Authentication error: Token missing'));
     }
 
-    console.log(`[SOCKET-AUTH][${handshakeId}] ✓ token found via ${tokenSource}, length=${token.length}`);
-
     jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
       if (err) {
-        console.error(`[SOCKET-AUTH][${handshakeId}] ❌ JWT verify FAILED:`, err.message);
+        console.warn('[SOCKET] auth rejected:', err.message);
         return next(new Error('Authentication error: Invalid token'));
       }
       (socket as any).user = decoded;
-      console.log(`[SOCKET-AUTH][${handshakeId}] ✅ AUTH OK — userId=${decoded.userId}, role=${decoded.role}`);
       next();
     });
   });
@@ -51,10 +35,14 @@ export function setupSocketListeners(io: Server) {
 
     // Automatically join the user to a room of their own ID to receive private messages
     socket.join(userId);
-    console.log(`[SOCKET-CONN] ✅ user ${userId} connected, joined room ${userId}, socket=${socket.id}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[SOCKET] connect user=${userId} sid=${socket.id}`);
+    }
 
     socket.on('disconnect', (reason) => {
-      console.log(`[SOCKET-CONN] 🔌 user ${userId} disconnected — reason=${reason}, socket=${socket.id}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[SOCKET] disconnect user=${userId} reason=${reason}`);
+      }
     });
 
     socket.on("sendMessage", async (data) => {

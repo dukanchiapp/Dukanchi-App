@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-05-10 — Web socket reconnection strategy
+- **Decision:** On Socket.IO reconnect, frontend refetches the relevant data slice via existing REST endpoints rather than implementing a server-side missed-events queue.
+- **Rationale:** Server-side missed-events queue requires per-socket pending buffers, TTL handling, and replay logic — significant complexity. Refetch via existing REST is one extra round-trip per reconnect (cheap compared to WebSocket teardown/setup itself). The user-visible delay is bounded (foreground → reconnect → refetch typically <2s total). Sprint 2 FCM push will preempt this for native — phone wakes BEFORE reconnect happens, so this code path becomes a fallback.
+- **Trade-off accepted:** Slightly more REST traffic on reconnects. At current scale (hundreds of users) non-issue. At 100k+ users, revisit with a per-room "since cursor" pattern.
+- **Visibility wakeup:** Added explicit `visibilitychange` listener that calls `socket.connect()` when tab returns to foreground. Belt-and-suspenders with Socket.IO auto-reconnection — mobile Safari particularly benefits from this nudge.
+
+---
+
 ## 2026-05-09 — Auth dual-mode (cookie + Bearer token)
 - **Decision:** Auth flow supports both httpOnly cookie (web/PWA) and Authorization Bearer header (Capacitor native) simultaneously. Backend returns JWT in JSON body of login/signup additionally to setting cookie.
 - **Rationale:** iOS WKWebView has known issues with cross-origin httpOnly cookies. Android Capacitor WebView origin is `http://localhost` — different from `https://dukanchi.com` — cookie `SameSite=None+Secure` constraints make this fragile. Bearer header is the platform-standard auth for native mobile. Backend middleware already supported Bearer fallback.

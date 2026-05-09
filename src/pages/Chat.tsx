@@ -149,6 +149,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const socketRef = useRef<Socket | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const reopenCountRef = useRef(0);
 
   // Fetch receiver info once
   useEffect(() => {
@@ -188,16 +189,35 @@ export default function ChatPage() {
 
     const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
+    reopenCountRef.current = 0;
 
+    const isDev = import.meta.env.DEV;
     socket.on('connect', () => {
-      console.log('[SOCKET][Chat] ✅ connected, id=', socket.id, 'currentUserId=', currentUserId);
+      if (isDev) console.log('[SOCKET][Chat] connected', socket.id);
     });
     socket.on('connect_error', (err) => {
-      console.error('[SOCKET][Chat] ❌ connect_error:', err.message, err);
+      console.warn('[SOCKET][Chat] connect_error:', err.message);
     });
     socket.on('disconnect', (reason) => {
-      console.warn('[SOCKET][Chat] 🔌 disconnect:', reason);
+      if (isDev) console.warn('[SOCKET][Chat] disconnect', reason);
     });
+
+    // Reconnection-aware refetch: on transport re-open after a gap, refetch full thread
+    // to recover any messages missed while the tab was backgrounded.
+    const handleReopen = () => {
+      reopenCountRef.current += 1;
+      if (reopenCountRef.current > 1) {
+        apiFetch(`/api/messages/${userId}`)
+          .then(res => res.ok ? res.json() : { messages: [] })
+          .then(data => {
+            const fresh = (Array.isArray(data) ? data : (data.messages ?? [])) as Message[];
+            setMessages(fresh);
+          })
+          .catch(() => {});
+      }
+    };
+    socket.io.on('reconnect', handleReopen);
+    socket.io.engine?.on('open', handleReopen);
 
     socket.on('newMessage', (msg: Message) => {
       const belongs =
@@ -207,7 +227,18 @@ export default function ChatPage() {
       setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
     });
 
+    // Mobile foreground wakeup: ensure socket reconnects when tab becomes visible
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && socketRef.current && !socketRef.current.connected) {
+        socketRef.current.connect();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     return () => {
+      socket.io.off('reconnect', handleReopen);
+      socket.io.engine?.off('open', handleReopen);
+      document.removeEventListener('visibilitychange', onVisibility);
       socket.disconnect();
       socketRef.current = null;
     };
