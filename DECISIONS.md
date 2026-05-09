@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-05-10 — HTTP cache policy for /api routes
+- **Decision:** All `/api/*` endpoints respond with `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` by default. The 4 endpoints that benefit from short-lived caching (stores list, misc trending) explicitly override via `res.set` in their controllers and continue to cache.
+- **Rationale:** Browser ETag revalidation served stale empty bodies for conversations/messages/notifications when new data arrived. Hard refresh was the only user-visible mitigation, unacceptable for a chat app. Express default weak ETag is suitable for static documents, not for dynamic JSON APIs. Bandwidth cost of disabling caching is negligible — API responses are small.
+- **Implementation:** Single middleware mounted on `/api` after the rate limiter, before domain route handlers. Express last-write-wins on response headers preserves intentional cache overrides in controllers.
+- **Future:** If specific GET endpoints get hot enough to merit caching, do it explicitly in the controller (like stores and misc already do). Avoid blanket caching on dynamic endpoints.
+
+---
+
 ## 2026-05-10 — Web socket reconnection strategy
 - **Decision:** On Socket.IO reconnect, frontend refetches the relevant data slice via existing REST endpoints rather than implementing a server-side missed-events queue.
 - **Rationale:** Server-side missed-events queue requires per-socket pending buffers, TTL handling, and replay logic — significant complexity. Refetch via existing REST is one extra round-trip per reconnect (cheap compared to WebSocket teardown/setup itself). The user-visible delay is bounded (foreground → reconnect → refetch typically <2s total). Sprint 2 FCM push will preempt this for native — phone wakes BEFORE reconnect happens, so this code path becomes a fallback.

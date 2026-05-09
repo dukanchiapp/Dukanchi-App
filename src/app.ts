@@ -112,6 +112,21 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now()
 // ── 7. Global rate limiter — all /api routes ─────────────────────────────────
 app.use('/api', generalLimiter);
 
+// ── 7b. Default cache control for /api ───────────────────────────────────────
+// Dynamic data by default. Route handlers that want short-lived caching call
+// res.set('Cache-Control', 'public, max-age=N') — that overrides this default
+// because Express applies the LAST setHeader call before the response flushes.
+//
+// Why this exists: messages, conversations, notifications, and feed responses
+// were getting 304-revalidated by browsers using stale cached bodies. A new
+// message in DB wasn't visible until hard-refresh.
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // ── 7. Domain routes ──────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);

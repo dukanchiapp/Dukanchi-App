@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-10 | Session 78c-FIX | Commit: 227355d
+> Last updated: 2026-05-10 | Session 78d-HOTFIX | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -10,7 +10,7 @@
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
 - **B2B2C visibility:** Fully spec-compliant ✅ (Session 76)
 
-## Active Sprint: Sprint 0 — Capacitor Pre-Flight ✅ COMPLETE
+## Active Sprint: Sprint 0 — Capacitor Pre-Flight ✅ COMPLETE (verified end-to-end with real users)
 
 **Track:** Android-first (iOS deferred to Sprint 5+)
 

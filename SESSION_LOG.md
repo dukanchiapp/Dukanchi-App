@@ -6,6 +6,30 @@
 
 ---
 
+## 2026-05-10 — Session 78d-HOTFIX — HTTP Cache Headers for Dynamic API
+
+**Goal:** Stop browser from serving stale cached responses on dynamic /api/* endpoints. Production test exposed that conversations, messages, and notifications were returning 304 Not Modified to clients with stale cached bodies. New messages in DB invisible until hard-refresh.
+
+**Files changed:**
+- `src/app.ts` — added single middleware on `/api` after rate limiter, before route handlers. Sets `Cache-Control: no-store` + `Pragma: no-cache` + `Expires: 0` by default. Route handlers that call `res.set('Cache-Control', ...)` still override (Express last-write-wins on headers).
+
+**Root cause:** Customer (Nikhil Panwar) sent 4 messages to retailer (Dolphin hotel); POST /api/messages → 200 OK; admin panel showed all 4; but neither sender nor receiver saw them on their pages. Network tab on retailer: `conversations = 304`, `me = 304`. Hard refresh fixed everything. Express's default weak-ETag + browser conditional GET served stale empty bodies because ETag matched first empty-state load.
+
+**Endpoints fixed (default no-store now applies):** /api/messages/*, /api/notifications/*, /api/auth/*, /api/users/*, /api/posts/*, /api/search/*, /api/admin/*, and all other dynamic endpoints.
+
+**Endpoints NOT changed (intentional cache via res.set in handler):**
+- `store.controller.ts:137` — `public, max-age=30`
+- `misc.controller.ts:37,48,72` — `public, max-age=60/300`
+
+**tsc --noEmit:** ✅ exit 0
+**Build:** ✅ vite build OK
+**Commit:** TBD
+
+**Sprint 0 status:** ✅ COMPLETE (verified end-to-end with real users)
+**Next:** Sprint 1 / Session 80 — Install Capacitor Android
+
+---
+
 ## 2026-05-10 — Session 78c-FIX — Reconnection Resilience + Debug Cleanup
 
 **Goal:** Close Sprint 0. Revert 78c-DEBUG verbose logging; add reconnection-aware data sync so mobile background → wake → reconnect recovers missed messages without user action.
