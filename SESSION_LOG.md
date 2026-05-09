@@ -26,7 +26,7 @@
 
 **tsc --noEmit:** ✅ exit 0
 **Build:** ✅ vite build OK
-**Commit:** TBD
+**Commit:** 808ab63
 
 **Blockers cleared:** 4/4 (Sprint 0 critical path complete)
 **Next:** Session 78b — bulk migrate ~95 non-auth fetch call sites across ~25 files to apiFetch.
