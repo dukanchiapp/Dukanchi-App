@@ -23,7 +23,7 @@
 
 **tsc --noEmit:** ✅ exit 0
 **Build:** ✅ vite build OK
-**Commit:** TBD
+**Commit:** c6942a8
 
 **Sprint 0 status:** ✅ COMPLETE (verified end-to-end with real users)
 **Next:** Sprint 1 / Session 80 — Install Capacitor Android

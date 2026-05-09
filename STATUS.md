@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-10 | Session 78d-HOTFIX | Commit: TBD
+> Last updated: 2026-05-10 | Session 78d-HOTFIX | Commit: c6942a8
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
