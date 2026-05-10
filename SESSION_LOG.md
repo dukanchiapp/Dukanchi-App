@@ -1006,7 +1006,7 @@ Defensive audit findings:
 
 ## 2026-04-23 — Session 5 (UI redesign phase 1 — tokens, home, search)
 
-### Commit: TBD — ui: premium redesign phase 1 (home + search)
+### Commit: fa72a67 — ui: premium redesign phase 1 (home + search)
 
 #### src/index.css
 - Added Dukanchi design token CSS variables (`--dk-bg`, `--dk-accent`, `--dk-surface`, etc.)
@@ -1044,7 +1044,7 @@ Defensive audit findings:
 
 ## 2026-04-22 — Session 4 (Phase 2 Zod validation)
 
-### Commit: TBD — security: phase 2 zod input validation
+### Commit: fa72a67 — security: phase 2 zod input validation
 
 #### Zod installed
 **File:** `package.json` / `package-lock.json`
@@ -1085,7 +1085,7 @@ Defensive audit findings:
 
 ## 2026-04-22 — Session 3 (Phase 1 security cleanup)
 
-### Commit: TBD — security: phase 1 hardening
+### Commit: fa72a67 — security: phase 1 hardening
 
 #### JWT_SECRET hardening
 **File:** `server.ts`
