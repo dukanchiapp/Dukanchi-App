@@ -28,7 +28,7 @@
 **Web build:** ✅ unchanged (47 entries, 1307 KiB)
 **Android shell:** ✅ generated — applicationId `com.dukanchi.app` confirmed in build.gradle
 **Web assets synced:** ✅ android/app/src/main/assets/public/ populated
-**Commit:** TBD
+**Commit:** 6d298db
 
 **Next:** Founder opens android/ in Android Studio → first emulator boot test. Session 81 = native plugins.
 
