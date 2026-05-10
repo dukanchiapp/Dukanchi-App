@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-05-10 — Capacitor mode: bundled (not server.url)
+- **Decision:** Bundle `dist/` into APK. WebView loads from `https://localhost` (NOT `https://dukanchi.com` via `server.url`).
+- **Rationale:** App-store reviewers flag thin WebView wrappers. Bundled = real offline via existing service worker. Native plugins authenticate reliably with own scheme origin. `window.Capacitor` detection already wired in `src/lib/api.ts`.
+- **Trade-off accepted:** Web bundle ships in every APK — even small CSS tweak = Play Store update. Live update plugin can mitigate later if needed.
+- **LOCKED:** `appId = com.dukanchi.app` — PERMANENT post-Play-Store launch. Cannot change after first release.
+
+---
+
 ## 2026-05-10 — HTTP cache policy for /api routes
 - **Decision:** All `/api/*` endpoints respond with `Cache-Control: no-store, no-cache, must-revalidate, max-age=0` by default. The 4 endpoints that benefit from short-lived caching (stores list, misc trending) explicitly override via `res.set` in their controllers and continue to cache.
 - **Rationale:** Browser ETag revalidation served stale empty bodies for conversations/messages/notifications when new data arrived. Hard refresh was the only user-visible mitigation, unacceptable for a chat app. Express default weak ETag is suitable for static documents, not for dynamic JSON APIs. Bandwidth cost of disabling caching is negligible — API responses are small.

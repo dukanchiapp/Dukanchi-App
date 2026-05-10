@@ -11,3 +11,10 @@ uploads/
 test.js
 test-postgres.mjs
 .claude/
+
+# Capacitor (Android)
+.capacitor/
+*.iml
+android/local.properties
+android/app/release/
+android/app/debug/

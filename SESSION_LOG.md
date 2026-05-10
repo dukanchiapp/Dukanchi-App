@@ -6,6 +6,34 @@
 
 ---
 
+## 2026-05-10 — Session 80 — Sprint 1: Capacitor Android Install
+
+**Goal:** Install Capacitor 8 + generate android/ shell project. First step of Sprint 1 (Native Mobile, Android-first track).
+
+**Files added:**
+- `capacitor.config.ts` — appId `com.dukanchi.app`, appName `Dukanchi`, webDir `dist`, androidScheme `https`
+- `android/` — full native shell from `npx cap add android` (Capacitor 8.3.3)
+- `package.json` — new scripts: `build:web`, `build:mobile`, `sync:android`, `open:android`
+- `.gitignore` — Capacitor exclusions (.capacitor/, *.iml, android/local.properties, android/app/release+debug)
+
+**Capacitor version:** 8.3.3 (core + android + cli all pinned to same)
+
+**Build modes:**
+- `npm run build` / `build:web` → web PWA, relative paths (Railway unchanged)
+- `npm run build:mobile` → web bundle with `VITE_API_URL=https://dukanchi.com`
+- `npm run sync:android` → full mobile build + cap sync
+- `npm run open:android` → opens Android Studio
+
+**tsc --noEmit:** ✅ exit 0
+**Web build:** ✅ unchanged (47 entries, 1307 KiB)
+**Android shell:** ✅ generated — applicationId `com.dukanchi.app` confirmed in build.gradle
+**Web assets synced:** ✅ android/app/src/main/assets/public/ populated
+**Commit:** TBD
+
+**Next:** Founder opens android/ in Android Studio → first emulator boot test. Session 81 = native plugins.
+
+---
+
 ## 2026-05-10 — Session 78f-HOTFIX3 — Search History Clear URL fix
 
 **Files changed:**

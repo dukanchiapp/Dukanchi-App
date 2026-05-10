@@ -8,6 +8,10 @@
     "seed:test": "tsx scripts/seedTestData.ts && tsx scripts/backfillEmbeddings.ts",
     "dev": "tsx server.ts",
     "build": "vite build",
+    "build:web": "vite build",
+    "build:mobile": "VITE_API_URL=https://dukanchi.com vite build",
+    "sync:android": "npm run build:mobile && npx cap sync android",
+    "open:android": "npx cap open android",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
@@ -15,6 +19,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1030.0",
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/core": "^8.3.3",
     "@google/genai": "^1.50.1",
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.22.0",
@@ -60,6 +66,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.3",
     "@types/bcrypt": "^6.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
