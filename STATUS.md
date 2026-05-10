@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-10 | Session 80 | Commit: 6d298db
+> Last updated: 2026-05-10 | Session 80b | APK built locally (no commit)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -28,9 +28,9 @@
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Founder: open `android/` folder in Android Studio → first emulator boot test
-2. Session 81 — native plugins (Geolocation, Camera, Splash Screen, Status Bar)
-3. Sprint 2 / Session 82+ — FCM push notifications (replaces web push for native)
+1. Founder: install APK on personal Android phone (airdrop/WhatsApp self-message), test login + chat + search
+2. Founder: share APK with 1-2 trusted retailers for early feedback (optional)
+3. Session 81 — native plugins (Geolocation, Camera, Splash Screen, Status Bar)
 
 ## Open Decisions / Risks
 - [ ] Bandra confirmed as pilot (founder may revise)

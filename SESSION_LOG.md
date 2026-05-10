@@ -6,6 +6,23 @@
 
 ---
 
+## 2026-05-10 — Session 80b — First Debug APK Built
+
+**Process:**
+1. `npm run build:mobile` → React bundle with `VITE_API_URL=https://dukanchi.com` ✅
+2. `npx cap sync android` → dist/ copied to android/app/src/main/assets/public/ ✅
+3. `cd android && ./gradlew assembleDebug` → BUILD SUCCESSFUL in 39s ✅
+
+**APK:** `android/app/build/outputs/apk/debug/app-debug.apk` — **4.4 MB** — valid Android package
+**Full path:** `/Users/apple/Documents/Dukanchi-App/android/app/build/outputs/apk/debug/app-debug.apk`
+
+**Source files changed:** none — build artifact only (gitignored by android/.gitignore)
+**No commit needed.**
+
+**For founder:** Transfer APK to phone via WhatsApp self-message / AirDrop / Google Drive. Allow "Install unknown apps" for the transfer source, then install.
+
+---
+
 ## 2026-05-10 — Session 80 — Sprint 1: Capacitor Android Install
 
 **Goal:** Install Capacitor 8 + generate android/ shell project. First step of Sprint 1 (Native Mobile, Android-first track).
