@@ -19,7 +19,7 @@
 **tsc --noEmit:** ✅ exit 0
 **Build:** ✅ vite build OK
 **Grep:** ✅ 0 references to `/api/conversations` remain
-**Commit:** TBD
+**Commit:** 1a26b77
 
 **Sprint 0 status:** ✅✅✅ COMPLETE — verified end-to-end with real cross-account messaging.
 **Next:** Sprint 1 / Session 80 — Capacitor Android install.
