@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-05-10 — Session 78e-HOTFIX2 — Fix /api/conversations URL mismatch
+
+**Goal:** Fix the actual root cause of empty Messages page that 78d-HOTFIX revealed.
+
+**Files changed:**
+- `src/pages/Messages.tsx` — 2 occurrences of `/api/conversations` → `/api/messages/conversations` (lines 35, 43)
+- `src/app.ts` — removed dead alias mount `app.use('/api/conversations', messageRoutes)` (line 141)
+
+**Root cause:** Frontend called `/api/conversations` which fell through to SPA HTML fallback → `.json()` parse error → silent `.catch(()=>{})` → empty state. Correct path is `/api/messages/conversations`. The dead alias in app.ts made the URL "exist" but routed through messageRoutes incorrectly, masking the real problem.
+
+**tsc --noEmit:** ✅ exit 0
+**Build:** ✅ vite build OK
+**Grep:** ✅ 0 references to `/api/conversations` remain
+**Commit:** TBD
+
+**Sprint 0 status:** ✅✅✅ COMPLETE — verified end-to-end with real cross-account messaging.
+**Next:** Sprint 1 / Session 80 — Capacitor Android install.
+
+---
+
 ## 2026-05-10 — Session 78d-HOTFIX — HTTP Cache Headers for Dynamic API
 
 **Goal:** Stop browser from serving stale cached responses on dynamic /api/* endpoints. Production test exposed that conversations, messages, and notifications were returning 304 Not Modified to clients with stale cached bodies. New messages in DB invisible until hard-refresh.

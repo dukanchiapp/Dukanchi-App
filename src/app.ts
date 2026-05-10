@@ -138,7 +138,6 @@ app.use('/api/pincode', pincodeRouter);
 app.use('/api/posts', postRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/messages', messageRoutes);
-app.use('/api/conversations', messageRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/kyc', kycRoutes);

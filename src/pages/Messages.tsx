@@ -32,7 +32,7 @@ export default function MessagesPage() {
     }));
 
   const refreshConversations = useCallback(() => {
-    apiFetch('/api/conversations')
+    apiFetch('/api/messages/conversations')
       .then(r => r.ok ? r.json() : [])
       .then(data => setConversations(formatConversations(data as Conversation[])))
       .catch(() => {});
@@ -40,7 +40,7 @@ export default function MessagesPage() {
 
   useEffect(() => {
     if (!token) { setLoading(false); return; }
-    apiFetch('/api/conversations')
+    apiFetch('/api/messages/conversations')
       .then(res => res.ok ? res.json() : [])
       .then(data => setConversations(formatConversations(data as Conversation[])))
       .catch(() => {})
