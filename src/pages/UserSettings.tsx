@@ -351,7 +351,7 @@ export default function UserSettings() {
                   }));
                 }}
                 onClearHistory={async () => {
-                  await apiFetch('/api/me/search-history', { method: 'DELETE' });
+                  await apiFetch('/api/search/history', { method: 'DELETE' });
                   setSearchHistory([]);
                 }}
               />

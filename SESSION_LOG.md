@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-10 — Session 78f-HOTFIX3 — Search History Clear URL fix
+
+**Files changed:**
+- `src/pages/UserSettings.tsx:354` — `/api/me/search-history` → `/api/search/history`
+
+**Root cause:** `UserSettings.tsx` DELETE was hitting a non-existent route → SPA HTML → silent fail → history reappeared on next reload. Correct path matches `Search.tsx:105` and the backend route at `DELETE /api/search/history`. Found by post-78e URL audit of all 17 apiFetch paths.
+
+**tsc --noEmit:** ✅ | **Build:** ✅ | **Grep:** ✅ 0 remaining `/api/me/search-history`
+**Commit:** TBD
+
+---
+
 ## 2026-05-10 — Session 78e-HOTFIX2 — Fix /api/conversations URL mismatch
 
 **Goal:** Fix the actual root cause of empty Messages page that 78d-HOTFIX revealed.
