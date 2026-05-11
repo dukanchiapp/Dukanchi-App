@@ -15,10 +15,10 @@ export class PostController {
         if (store.ownerId !== userId) return res.status(403).json({ error: "Not your store" });
       }
       const post = await PostService.createPost(req.body);
-      res.json(post);
+      return res.json(post);
     } catch (error) {
       logger.error({ err: error }, "Failed to create post");
-      res.status(500).json({ error: "Failed to create post" });
+      return res.status(500).json({ error: "Failed to create post" });
     }
   }
 
@@ -51,9 +51,9 @@ export class PostController {
         pubClient.set(cacheKey, JSON.stringify(result), { EX: 30 }).catch(() => {});
       }
 
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch feed" });
+      return res.status(500).json({ error: "Failed to fetch feed" });
     }
   }
 
@@ -61,9 +61,9 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const interactions = await PostService.getInteractions(userId);
-      res.json(interactions);
+      return res.json(interactions);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch interactions" });
+      return res.status(500).json({ error: "Failed to fetch interactions" });
     }
   }
 
@@ -71,9 +71,9 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const result = await PostService.toggleLike(userId, req.params.id);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to toggle like" });
+      return res.status(500).json({ error: "Failed to toggle like" });
     }
   }
 
@@ -81,9 +81,9 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const result = await PostService.toggleSave(userId, req.params.id);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to toggle save" });
+      return res.status(500).json({ error: "Failed to toggle save" });
     }
   }
 
@@ -91,12 +91,12 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const result = await PostService.togglePin(req.params.id, userId);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === "Post not found") return res.status(404).json({ error: error.message });
       if (error.message === "Unauthorized") return res.status(403).json({ error: "Not your post" });
       if (error.message === "Maximum 3 pinned posts allowed") return res.status(400).json({ error: error.message });
-      res.status(500).json({ error: "Failed to toggle pin" });
+      return res.status(500).json({ error: "Failed to toggle pin" });
     }
   }
 
@@ -104,11 +104,11 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const result = await PostService.updatePost(req.params.id, userId, req.body);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === "Not found") return res.status(404).json({ error: "Not found" });
       if (error.message === "Unauthorized") return res.status(403).json({ error: "Unauthorized" });
-      res.status(500).json({ error: "Failed to update post" });
+      return res.status(500).json({ error: "Failed to update post" });
     }
   }
 
@@ -116,11 +116,11 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const result = await PostService.deletePost(req.params.id, userId);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === "Not found") return res.status(404).json({ error: "Not found" });
       if (error.message === "Unauthorized") return res.status(403).json({ error: "Unauthorized" });
-      res.status(500).json({ error: "Failed" });
+      return res.status(500).json({ error: "Failed" });
     }
   }
 
@@ -128,10 +128,10 @@ export class PostController {
     try {
       const userId = (req as any).user.userId;
       const result = await PostService.deleteAllStorePosts(req.params.storeId, userId);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === "Unauthorized") return res.status(403).json({ error: "Unauthorized" });
-      res.status(500).json({ error: "Failed" });
+      return res.status(500).json({ error: "Failed" });
     }
   }
 }

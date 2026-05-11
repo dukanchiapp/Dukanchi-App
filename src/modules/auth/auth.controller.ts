@@ -20,13 +20,13 @@ export class AuthController {
 
       // Include token in body so native (Capacitor) clients can store it.
       // Web clients ignore this — cookie auth works automatically.
-      res.json({ success: true, user: result.user, token: result.token });
+      return res.json({ success: true, user: result.user, token: result.token });
     } catch (error: any) {
       if (error.message === "This phone number already exists") {
         return res.status(400).json({ error: error.message });
       }
       logger.error({ err: error }, "Signup error");
-      res.status(500).json({ error: "Failed to create user" });
+      return res.status(500).json({ error: "Failed to create user" });
     }
   }
 
@@ -55,7 +55,7 @@ export class AuthController {
 
       // Include token in body so native (Capacitor) clients can store it.
       // Web clients ignore this — cookie auth works automatically.
-      res.json({ success: true, user: result.user, token: result.token });
+      return res.json({ success: true, user: result.user, token: result.token });
     } catch (error: any) {
       if (error.message === "Invalid credentials") {
         return res.status(401).json({ error: error.message });
@@ -64,7 +64,7 @@ export class AuthController {
         return res.status(403).json({ error: error.message });
       }
       logger.error({ err: error }, "Login error");
-      res.status(500).json({ error: "Login failed" });
+      return res.status(500).json({ error: "Login failed" });
     }
   }
 
@@ -75,7 +75,7 @@ export class AuthController {
     const clearOpts = { httpOnly: true, secure: isHttps, sameSite: (isHttps ? 'none' : 'lax') as 'none' | 'lax', path: '/' };
     res.clearCookie('dk_token', clearOpts);
     res.clearCookie('dk_admin_token', clearOpts);
-    res.json({ ok: true });
+    return res.json({ ok: true });
   }
 
   static async refresh(req: Request, res: Response) {
@@ -97,10 +97,10 @@ export class AuthController {
         path: '/',
       };
       res.cookie('dk_token', newToken, cookieOptions);
-      res.json({ success: true, token: newToken });
+      return res.json({ success: true, token: newToken });
     } catch (error: any) {
       logger.error({ err: error }, 'Token refresh failed');
-      res.status(500).json({ error: 'Refresh failed' });
+      return res.status(500).json({ error: 'Refresh failed' });
     }
   }
 
@@ -110,10 +110,10 @@ export class AuthController {
       const user = await prisma.user.findUnique({ where: { id: req.user.userId } });
       if (!user) return res.status(404).json({ error: "User not found" });
       const { password, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      return res.json(userWithoutPassword);
     } catch (error) {
       logger.error({ err: error }, "Me route error");
-      res.status(500).json({ error: "Failed to fetch user profile" });
+      return res.status(500).json({ error: "Failed to fetch user profile" });
     }
   }
 }

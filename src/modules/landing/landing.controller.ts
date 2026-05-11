@@ -176,9 +176,9 @@ export class LandingController {
   static async getContent(_req: Request, res: Response) {
     try {
       const row = await prisma.landingPageContent.findUnique({ where: { id: 'main' } });
-      res.json({ content: row ? row.content : defaultContent });
+      return res.json({ content: row ? row.content : defaultContent });
     } catch {
-      res.json({ content: defaultContent });
+      return res.json({ content: defaultContent });
     }
   }
 
@@ -194,9 +194,9 @@ export class LandingController {
         update: { content, updatedBy },
         create: { id: 'main', content, updatedBy },
       });
-      res.json({ success: true, content: row.content });
+      return res.json({ success: true, content: row.content });
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Server error' });
+      return res.status(500).json({ error: err.message || 'Server error' });
     }
   }
 }

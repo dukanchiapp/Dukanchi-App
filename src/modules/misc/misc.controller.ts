@@ -8,10 +8,10 @@ export class MiscController {
       const userId = (req as any).user.userId;
       const { issueType, description } = req.body;
       const complaint = await MiscService.submitComplaint(userId, issueType, description);
-      res.json(complaint);
+      return res.json(complaint);
     } catch (error) {
       logger.error({ err: error }, "Failed to create complaint");
-      res.status(500).json({ error: "Failed to submit complaint" });
+      return res.status(500).json({ error: "Failed to submit complaint" });
     }
   }
 
@@ -20,13 +20,13 @@ export class MiscController {
       const reportedByUserId = (req as any).user.userId;
       const { reason, reportedUserId, reportedStoreId } = req.body;
       const report = await MiscService.submitReport(reportedByUserId, reason, reportedUserId, reportedStoreId);
-      res.json(report);
+      return res.json(report);
     } catch (error: any) {
       if (error.message === "reportedUserId or reportedStoreId is required") {
         return res.status(400).json({ error: error.message });
       }
       logger.error({ err: error }, "Failed to create report");
-      res.status(500).json({ error: "Failed to submit report" });
+      return res.status(500).json({ error: "Failed to submit report" });
     }
   }
 
@@ -35,9 +35,9 @@ export class MiscController {
       const { page = "1", limit = "20" } = req.query;
       const result = await MiscService.getStoreReviews(req.params.storeId, parseInt(page as string), parseInt(limit as string));
       res.set('Cache-Control', 'public, max-age=60');
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch store reviews" });
+      return res.status(500).json({ error: "Failed to fetch store reviews" });
     }
   }
 
@@ -46,9 +46,9 @@ export class MiscController {
       const { page = "1", limit = "20" } = req.query;
       const result = await MiscService.getProductReviews(req.params.productId, parseInt(page as string), parseInt(limit as string));
       res.set('Cache-Control', 'public, max-age=60');
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch product reviews" });
+      return res.status(500).json({ error: "Failed to fetch product reviews" });
     }
   }
 
@@ -56,13 +56,13 @@ export class MiscController {
     try {
       const userId = (req as any).user.userId;
       const newReview = await MiscService.createReview(userId, req.body);
-      res.json(newReview);
+      return res.json(newReview);
     } catch (error: any) {
       if (error.message === "Must review either a store or a product" || error.message === "Cannot review both store and product at once") {
         return res.status(400).json({ error: error.message });
       }
       logger.error({ err: error }, "Failed to post review");
-      res.status(500).json({ error: "Failed to save review" });
+      return res.status(500).json({ error: "Failed to save review" });
     }
   }
 
@@ -70,9 +70,9 @@ export class MiscController {
     try {
       const settings = await MiscService.getAppSettings();
       res.set('Cache-Control', 'public, max-age=300');
-      res.json(settings);
+      return res.json(settings);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch app settings" });
+      return res.status(500).json({ error: "Failed to fetch app settings" });
     }
   }
 }

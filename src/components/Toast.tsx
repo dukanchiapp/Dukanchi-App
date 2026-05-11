@@ -19,6 +19,7 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
       const timer = setTimeout(onClose, 5000);
       return () => clearTimeout(timer);
     }
+    return;
   }, [onClose, confirm]);
 
   const icons = {

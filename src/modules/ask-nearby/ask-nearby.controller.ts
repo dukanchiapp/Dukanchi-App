@@ -26,9 +26,9 @@ export class AskNearbyController {
 
     try {
       const result = await sendAskNearby(userId, query.trim(), radius, lat, lng, areaLabel?.trim());
-      res.json(result);
+      return res.json(result);
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Server error' });
+      return res.status(500).json({ error: err.message || 'Server error' });
     }
   }
 
@@ -45,9 +45,9 @@ export class AskNearbyController {
 
     try {
       const result = await respondToAskNearby(ownerId, responseId, answer);
-      res.json(result);
+      return res.json(result);
     } catch (err: any) {
-      res.status(err.status || 500).json({ error: err.message || 'Server error' });
+      return res.status(err.status || 500).json({ error: err.message || 'Server error' });
     }
   }
 
@@ -55,9 +55,9 @@ export class AskNearbyController {
     const userId = (req as any).user.userId;
     try {
       const data = await getMyRequests(userId);
-      res.json(data);
+      return res.json(data);
     } catch (err: any) {
-      res.status(500).json({ error: err.message || 'Server error' });
+      return res.status(500).json({ error: err.message || 'Server error' });
     }
   }
 }
