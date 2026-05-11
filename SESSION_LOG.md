@@ -17,8 +17,8 @@
 **Generated resources:** ✅ `app/build/generated/res/processDebugGoogleServices/values/values.xml` exists (660 bytes)
 **APK:** ✅ 6.1 MB (post-clean rebuild)
 **IDE linter warning about `org.gradle.api.GradleException`:** false positive — class is fully available at Gradle runtime, not resolvable statically by IDE Groovy linter
-**Rule D (founder-side, MANDATORY):** Reinstall fresh APK → open app → grant notification permission → confirm no crash → verify `POST /api/push/fcm/register 200` in Railway logs → from second account send chat → phone receives native system notification
-**Commit:** TBD
+**Rule D verified (founder + Opus, 2026-05-11 ~4:40 PM IST):** Fresh APK installed on phone, notification permission granted with no crash. Railway HTTP logs confirmed `POST /api/push/fcm/register` 200 (2 calls, token registered). End-to-end test: web account sent chat message to phone account → native system notification received on phone with app backgrounded → tap deep-linked to chat. FCM push fully operational.
+**Commit:** 2e1c1bd
 
 ---
 

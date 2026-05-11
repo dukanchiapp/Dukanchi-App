@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-11 | Session 82b-HOTFIX | Commit: 2e1c1bd
+> Last updated: 2026-05-11 | Session 82b-HOTFIX verified | Commit: 2e1c1bd
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -28,9 +28,9 @@
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Founder: reinstall fresh APK + grant notification permission (confirm no crash) + end-to-end FCM push test (Rule D)
-2. Session 83 — Custom app icon + branded splash screen design
-3. Session 84 — Play Store release build prep (keystore, signing config, AAB)
+1. Session 83 — Custom app icon + branded splash screen design
+2. Session 84 — Play Store release build prep (keystore, signing config, AAB)
+3. Sprint 2 — Stability layer (Sentry crash reporting, PostHog analytics)
 
 ## Open Decisions / Risks
 - [ ] Bandra confirmed as pilot (founder may revise)
