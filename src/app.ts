@@ -54,8 +54,9 @@ app.use(compression());
 // ── 3. CORS — must be before everything else ─────────────────────────────────
 // Capacitor origins are always allowed regardless of ALLOWED_ORIGINS env var:
 //   capacitor://localhost — iOS native WKWebView
-//   http://localhost      — Android native WebView
-const CAPACITOR_ORIGINS = ['capacitor://localhost', 'http://localhost'];
+//   http://localhost      — Android native WebView (androidScheme: 'http')
+//   https://localhost     — Android native WebView (androidScheme: 'https' — our current config)
+const CAPACITOR_ORIGINS = ['capacitor://localhost', 'http://localhost', 'https://localhost'];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin || '';

@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-10 | Session 80b | APK built locally (no commit)
+> Last updated: 2026-05-11 | Session 80c-HOTFIX | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State

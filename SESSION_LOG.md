@@ -6,6 +6,18 @@
 
 ---
 
+## 2026-05-11 — Session 80c-HOTFIX — Fix Native APK Login (CORS https://localhost)
+
+**Root cause:** `androidScheme: 'https'` → Android WebView loads from `https://localhost`. CORS allowlist only had `http://localhost` — https variant was missing → browser blocked auth response → silent login failure on phone.
+
+**Fix:** `src/app.ts` — added `'https://localhost'` to `CAPACITOR_ORIGINS` + updated comment.
+
+**tsc --noEmit:** ✅ | **Build:** ✅ | **No APK rebuild needed** — backend-only change.
+**Founder action:** Force-close APK → re-open → login works.
+**Commit:** TBD
+
+---
+
 ## 2026-05-10 — Session 80b — First Debug APK Built
 
 **Process:**
