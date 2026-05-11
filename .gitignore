@@ -18,3 +18,17 @@ test-postgres.mjs
 android/local.properties
 android/app/release/
 android/app/debug/
+
+# Firebase / Google Services (contains API keys)
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+**/google-services.json
+**/GoogleService-Info.plist
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.tsbuildinfo
+typecheck-errors.txt
