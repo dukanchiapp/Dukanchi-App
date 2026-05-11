@@ -9,7 +9,8 @@
     "rootDir": "./",
     "allowImportingTsExtensions": false,
     "noEmit": false,
-    "declaration": false,
+    "declaration": true,
+    "declarationMap": false,
     "sourceMap": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
@@ -28,7 +29,8 @@
     "src/lib/logger.ts",
     "src/lib/sentry.ts",
     "server.ts",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "validators/**/*.ts"
   ],
   "exclude": [
     "node_modules",
