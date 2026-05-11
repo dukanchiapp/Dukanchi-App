@@ -27,7 +27,7 @@
 - ✅ Debug endpoint removed in follow-up commit
 - Sentry dashboard capture: check dukanchi.sentry.io → Issues within 60s of curl
 
-**Commits:** `4144e89` (wiring + debug), TBD (cleanup)
+**Commits:** `4144e89` (wiring + debug), 1201ec9 (cleanup)
 
 ---
 
