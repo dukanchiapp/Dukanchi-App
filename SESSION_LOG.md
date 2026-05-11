@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-05-11 — Session 82b-HOTFIX — Fix FCM Crash (google-services Plugin Silent Skip)
+
+**Root cause:** `android/app/build.gradle` wrapped `apply plugin: 'com.google.gms.google-services'` in a try/catch with `logger.info()` in the catch. Even with valid `google-services.json` (674 bytes) present, the plugin silently did NOT apply → `app/build/generated/res/google-services/debug/values/` never generated → `FirebaseApp.initializeApp()` failed at runtime → app crashed right after user granted notification permission. Classic Anti-Silent-Failure Rule B violation at native build layer.
+
+**Files changed:**
+- `android/app/build.gradle` — replaced silent try/catch with loud-fail: throws `org.gradle.api.GradleException` if file missing/empty; logs visible `logger.lifecycle()` confirmation when plugin applies
+
+**Build output (post-fix):** `✅ google-services plugin applied (Firebase config: google-services.json, 674 bytes)` + `BUILD SUCCESSFUL in 54s`
+**Generated resources:** ✅ `app/build/generated/res/processDebugGoogleServices/values/values.xml` exists (660 bytes)
+**APK:** ✅ 6.1 MB (post-clean rebuild)
+**IDE linter warning about `org.gradle.api.GradleException`:** false positive — class is fully available at Gradle runtime, not resolvable statically by IDE Groovy linter
+**Rule D (founder-side, MANDATORY):** Reinstall fresh APK → open app → grant notification permission → confirm no crash → verify `POST /api/push/fcm/register 200` in Railway logs → from second account send chat → phone receives native system notification
+**Commit:** TBD
+
+---
+
 ## 2026-05-11 — Session 82 — Sprint 1: FCM Push Notifications
 
 **Goal:** Add FCM as parallel push channel alongside existing Web Push. Native APK gets Android system notifications; web users keep PWA push (unchanged).

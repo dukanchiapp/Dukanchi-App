@@ -44,11 +44,15 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+// FCM is required for Dukanchi. google-services.json MUST be present at android/app/.
+// No silent fallback: missing/empty file = loud build failure (Anti-Silent-Failure Rule B).
+def servicesJSON = file('google-services.json')
+if (!servicesJSON.exists() || servicesJSON.length() == 0) {
+    throw new org.gradle.api.GradleException(
+        "google-services.json missing or empty at android/app/google-services.json. " +
+        "FCM is mandatory. Download from Firebase Console → Project Settings → " +
+        "Your Apps → com.dukanchi.app → google-services.json."
+    )
 }
+apply plugin: 'com.google.gms.google-services'
+logger.lifecycle("✅ google-services plugin applied (Firebase config: ${servicesJSON.name}, ${servicesJSON.length()} bytes)")
