@@ -6,6 +6,19 @@
 
 ---
 
+## 2026-05-11 — Session — CLAUDE.md Anti-Silent-Failure Rules
+
+**Files changed:**
+- `CLAUDE.md` — added "Anti-Silent-Failure Rules" section (5 rules: A-E) between "Rules (follow always)" and "Key File Map"
+
+**Rules added:** A (frontend↔backend URL parity audit), B (forbidden silent .catch(()=>{})), C (Capacitor config → CORS audit), D (native-only changes need native smoke test note), E (production curl after backend deploy).
+
+**Reasoning:** 3 silent-failure bugs in Sprint 0/1 (78e, 78f, 80c) cost ~4 hours of debugging. All had the same pattern: a `.catch(()=>{})` swallowed a URL mismatch or CORS failure. These 5 rules codify the post-mortem checks so they run automatically at pre-commit, not after shipping.
+
+**Commit:** TBD
+
+---
+
 ## 2026-05-11 — Session 81 — Sprint 1: Native Plugins (Polish Layer)
 
 **Plugins added:** @capacitor/splash-screen, @capacitor/status-bar, @capacitor/geolocation, @capacitor/app, @capacitor/keyboard (all 8.x, matched to core 8.3.3)

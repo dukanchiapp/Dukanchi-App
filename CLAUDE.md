@@ -49,6 +49,77 @@ Today's goal: [1 line]
 7. Push to origin main after every completed task
 8. Ask before creating new Prisma models — check schema first
 
+## Anti-Silent-Failure Rules (mandatory checks)
+
+These rules exist because we shipped 3 silent-failure bugs (sessions 78e, 78f, 80c) where frontend `.catch(()=>{})` swallowed real backend mismatches. Every Claude Code session that touches backend routes, frontend `apiFetch` calls, CORS, or `capacitor.config.ts` MUST run these checks before commit. Skipping them is not optional.
+
+### Rule A — Frontend ↔ backend URL parity audit
+
+After ANY change to `src/app.ts` route mounts OR any new/renamed `apiFetch('/api/...')` call in `src/`:
+
+1. List every unique frontend API path:
+   ```bash
+   grep -rhoE "apiFetch\([\`\"'][^\`\"',)]+" src/ --include="*.tsx" --include="*.ts" \
+     | sed "s/apiFetch([\"\`']/  /" | sort -u
+   ```
+2. List every backend `/api` mount:
+   ```bash
+   grep -E "app.use\(['\"]/api" src/app.ts
+   ```
+3. For each non-trivial frontend path, run a production curl OPTIONS or GET to confirm the route returns JSON (not HTML SPA fallback):
+   ```bash
+   curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://dukanchi.com<PATH>
+   ```
+   - `200 application/json` or `401 application/json` → real route exists ✅
+   - `200 text/html` → SPA fallback, route is broken ❌ FIX before commit
+
+### Rule B — Forbidden silent error swallowing
+
+Never write `.catch(() => {})` or `.catch(() => null)` on user-initiated API calls. Pre-commit grep:
+
+```bash
+grep -rn "\.catch(.*=>\s*{\s*}" src/ --include="*.tsx" --include="*.ts"
+```
+
+If a silent catch is legitimately needed (fire-and-forget analytics), add a comment explaining WHY and log to `console.error` before swallowing. No comment = treat as a bug.
+
+### Rule C — Capacitor config changes require CORS audit
+
+If you change `server.androidScheme`, `server.iosScheme`, `server.hostname`, or `server.url` in `capacitor.config.ts`, you MUST update `CAPACITOR_ORIGINS` in `src/app.ts` to match:
+
+| Config | Origin to allow |
+|---|---|
+| `androidScheme: 'http'`  | `http://localhost` |
+| `androidScheme: 'https'` | `https://localhost` |
+| `iosScheme: 'capacitor'` | `capacitor://localhost` |
+| `server.hostname: 'foo'` | `https://foo` or `http://foo` |
+
+Verify post-deploy:
+```bash
+curl -s -i -X OPTIONS https://dukanchi.com/api/auth/login \
+  -H "Origin: <expected-origin>" \
+  -H "Access-Control-Request-Method: POST" | grep -i access-control-allow-origin
+```
+
+### Rule D — Native-only changes get a native smoke test note
+
+If a change affects `src/lib/api.ts`, `src/context/AuthContext.tsx`, Socket.IO connection options, or any `if (isNative())` block, the SESSION_LOG entry MUST include either:
+- "Native APK smoke test confirmed by founder ✅" OR
+- "Native APK rebuild + manual test pending"
+
+Web-only verification is insufficient for these change classes.
+
+### Rule E — Production curl smoke test after backend deploy
+
+Whenever a session pushes a backend behavior change (routes, CORS, middleware, auth), the session is NOT complete until at least one production curl confirms the deploy landed. Railway takes 60-90 seconds.
+
+```bash
+sleep 90
+curl -s -i <production-endpoint> | head -5
+```
+
+If still failing after a second attempt, STOP and report — don't claim the session succeeded.
+
 ## Key File Map
 - All routes registered: src/app.ts
 - Auth middleware: src/middleware/auth.ts

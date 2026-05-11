@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-11 | Session 81 | Commit: 8af6a54
+> Last updated: 2026-05-11 | Session — CLAUDE.md hardening | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
