@@ -37,5 +37,13 @@
 
     <!-- Permissions -->
 
+    <!-- Required for all networking -->
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- For @capacitor/geolocation (Ask Nearby + RetailerDashboard store location) -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- For network status detection (offline-mode UX in Sprint 2) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 </manifest>

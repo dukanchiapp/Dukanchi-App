@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-11 | Session 80c-HOTFIX | Commit: 223d64b
+> Last updated: 2026-05-11 | Session 81 | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -28,9 +28,9 @@
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Founder: install APK on personal Android phone (airdrop/WhatsApp self-message), test login + chat + search
-2. Founder: share APK with 1-2 trusted retailers for early feedback (optional)
-3. Session 81 — native plugins (Geolocation, Camera, Splash Screen, Status Bar)
+1. Founder: uninstall old APK, install new 7.9 MB APK, verify: cream splash, dark status bar, native location permission, back button nav, keyboard handling
+2. Session 82 — Camera plugin OR FCM push notifications (founder to choose priority)
+3. Session 83 — Custom app icon + branded splash design
 
 ## Open Decisions / Risks
 - [ ] Bandra confirmed as pilot (founder may revise)

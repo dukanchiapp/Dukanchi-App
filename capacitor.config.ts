@@ -13,6 +13,28 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: true,
     captureInput: true,
   },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 3000,
+      launchAutoHide: false,         // Hide programmatically — feels smoother
+      backgroundColor: '#FAFAF8',    // Dukanchi cream background
+      androidSplashResourceName: 'splash',
+      androidScaleType: 'CENTER_CROP',
+      showSpinner: false,            // No spinner — cleaner brand moment
+      splashFullScreen: true,
+      splashImmersive: true,
+    },
+    StatusBar: {
+      backgroundColor: '#FAFAF8',
+      style: 'DARK',  // Dark icons on light background
+      overlaysWebView: false,
+    },
+    Keyboard: {
+      resize: 'body',                // Resize the webview body when keyboard appears
+      style: 'DEFAULT',
+      resizeOnFullScreen: true,
+    },
+  },
 };
 
 export default config;

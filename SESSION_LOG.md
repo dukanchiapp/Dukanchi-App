@@ -6,6 +6,27 @@
 
 ---
 
+## 2026-05-11 — Session 81 — Sprint 1: Native Plugins (Polish Layer)
+
+**Plugins added:** @capacitor/splash-screen, @capacitor/status-bar, @capacitor/geolocation, @capacitor/app, @capacitor/keyboard (all 8.x, matched to core 8.3.3)
+
+**Files changed:**
+- `package.json` — 5 new dependencies
+- `capacitor.config.ts` — plugins block: SplashScreen (cream bg, manual hide), StatusBar (Dark style, #FAFAF8), Keyboard (body resize)
+- `android/app/src/main/AndroidManifest.xml` — ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE added
+- `android/gradle.properties` — added `org.gradle.java.installations.paths` pointing to Android Studio's JDK 21 (geolocation plugin requires Java 21 exactly; system JDK 22 not accepted by Gradle toolchain)
+- `src/App.tsx` — `useEffect` with dynamic imports (web-safe, tree-shaken by Vite): StatusBar, SplashScreen, App (backButton), Keyboard — runs only when `isNative()` is true
+
+**Build note:** geolocation plugin requires JDK 21 exactly; Gradle toolchain rejected JDK 17 and 22. Fixed by pointing to Android Studio's bundled JDK 21 (`/Applications/Android Studio.app/Contents/jbr/Contents/Home`).
+
+**Camera plugin DEFERRED** to Session 82 — existing HTML file inputs with `capture="environment"` already trigger native camera in Capacitor WebView; refactoring 9+ sites is medium-risk for marginal gain.
+
+**tsc --noEmit:** ✅ | **build:web:** ✅ | **Tree-shaking:** ✅ 0 Capacitor symbols in web bundle
+**Cap sync:** ✅ 5 plugins | **Permissions:** ✅ 3 confirmed | **APK:** ✅ 7.9 MB (was 4.4 MB)
+**Commit:** TBD
+
+---
+
 ## 2026-05-11 — Session 80c-HOTFIX — Fix Native APK Login (CORS https://localhost)
 
 **Root cause:** `androidScheme: 'https'` → Android WebView loads from `https://localhost`. CORS allowlist only had `http://localhost` — https variant was missing → browser blocked auth response → silent login failure on phone.

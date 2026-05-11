@@ -31,6 +31,7 @@ import { usePushNotifications } from './hooks/usePushNotifications';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import { useLocation } from 'react-router-dom';
+import { isNative } from './lib/api';
 
 
 function FlowController() {
@@ -118,6 +119,41 @@ function BrowserModeBanner() {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (!isNative()) return;
+
+    // Dynamic imports so web bundle stays clean — Capacitor plugins never ship to dukanchi.com
+    (async () => {
+      try {
+        const { SplashScreen } = await import('@capacitor/splash-screen');
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
+        const { App: CapApp } = await import('@capacitor/app');
+        const { Keyboard } = await import('@capacitor/keyboard');
+
+        // Status bar: dark icons on cream background to match app
+        await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: '#FAFAF8' });
+
+        // Keyboard: ensure inputs scroll into view on focus (default Android is jumpy)
+        Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
+
+        // Hardware back button: navigate browser history instead of exiting
+        CapApp.addListener('backButton', ({ canGoBack }) => {
+          if (canGoBack) {
+            window.history.back();
+          } else {
+            CapApp.exitApp();
+          }
+        });
+
+        // Hide splash AFTER the app shell mounts so user never sees a blank white frame
+        await SplashScreen.hide({ fadeOutDuration: 200 });
+      } catch (err) {
+        console.error('[native-init] plugin setup failed:', err);
+      }
+    })();
+  }, []);
+
   return (
     <ErrorBoundary>
     <Router>

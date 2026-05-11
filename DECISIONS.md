@@ -5,6 +5,13 @@
 
 ---
 
+## 2026-05-11 — Camera plugin deferred from Session 81 to 82+
+- **Decision:** `@capacitor/camera` not installed in Session 81.
+- **Rationale:** Existing 9 file-input sites use `<input type="file" accept="image/*" capture="environment">` which Capacitor WebView already handles via native Android intent. These ALREADY trigger the native camera picker. Switching to `@capacitor/camera` API requires rewriting all 9 sites with risk of breaking working features. Marginal gain is not worth the risk before pilot launch.
+- **When to revisit:** Session 82 (dedicated migration with full regression test), or when features need non-input camera access (e.g. live product scanning).
+
+---
+
 ## 2026-05-10 — Capacitor mode: bundled (not server.url)
 - **Decision:** Bundle `dist/` into APK. WebView loads from `https://localhost` (NOT `https://dukanchi.com` via `server.url`).
 - **Rationale:** App-store reviewers flag thin WebView wrappers. Bundled = real offline via existing service worker. Native plugins authenticate reliably with own scheme origin. `window.Capacitor` detection already wired in `src/lib/api.ts`.
