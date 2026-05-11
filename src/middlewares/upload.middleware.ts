@@ -26,10 +26,10 @@ if (env.S3_BUCKET_NAME) {
     storage: multerS3({
       s3: s3,
       bucket: env.S3_BUCKET_NAME,
-      metadata: function (req, file, cb) {
+      metadata: function (_req, file, cb) {
         cb(null, { fieldName: file.fieldname });
       },
-      key: function (req, file, cb) {
+      key: function (_req, file, cb) {
         cb(null, Date.now().toString() + "-" + file.originalname);
       },
       contentType: multerS3.AUTO_CONTENT_TYPE,
@@ -39,7 +39,7 @@ if (env.S3_BUCKET_NAME) {
   upload = multer({
     storage: multer.diskStorage({
       destination: uploadDir,
-      filename: (req, file, cb) => {
+      filename: (_req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
         cb(null, Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + ext);
       },

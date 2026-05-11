@@ -1,5 +1,4 @@
 import { prisma } from "../../config/prisma";
-import { pubClient } from "../../config/redis";
 import { notificationQueue } from "../../config/bullmq";
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {

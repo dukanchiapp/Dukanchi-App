@@ -134,7 +134,7 @@ export async function respondToAskNearby(
   if (response.ownerId !== ownerId) throw Object.assign(new Error('Forbidden'), { status: 403 });
   if (response.status !== 'pending') throw Object.assign(new Error('Already responded'), { status: 400 });
 
-  const updated = await prisma.askNearbyResponse.update({
+  await prisma.askNearbyResponse.update({
     where: { id: responseId },
     data: { status: answer, respondedAt: new Date() },
   });

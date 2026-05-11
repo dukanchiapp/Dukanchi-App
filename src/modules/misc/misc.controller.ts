@@ -66,7 +66,7 @@ export class MiscController {
     }
   }
 
-  static async getAppSettings(req: Request, res: Response) {
+  static async getAppSettings(_req: Request, res: Response) {
     try {
       const settings = await MiscService.getAppSettings();
       res.set('Cache-Control', 'public, max-age=300');

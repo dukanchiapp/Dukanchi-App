@@ -3,7 +3,7 @@ import { AdminService } from "./admin.service";
 import { getUploadedFileUrl } from "../../middlewares/upload.middleware";
 
 export class AdminController {
-  static async getStats(req: Request, res: Response) {
+  static async getStats(_req: Request, res: Response) {
     try {
       const stats = await AdminService.getStats();
       res.json(stats);
@@ -115,7 +115,7 @@ export class AdminController {
     }
   }
 
-  static async exportStores(req: Request, res: Response) {
+  static async exportStores(_req: Request, res: Response) {
     try {
       const buf = await AdminService.exportStores();
       const filename = `stores-export-${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -167,7 +167,7 @@ export class AdminController {
     }
   }
 
-  static async getSettings(req: Request, res: Response) {
+  static async getSettings(_req: Request, res: Response) {
     try {
       const settings = await AdminService.getSettings();
       res.json(settings);

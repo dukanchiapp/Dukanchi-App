@@ -2,6 +2,9 @@ node_modules/
 build/
 dist/
 coverage/
+*.tsbuildinfo
+typecheck-web.txt
+typecheck-server.txt
 .DS_Store
 *.log
 .env*

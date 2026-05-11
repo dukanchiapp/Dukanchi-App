@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, Mic, ArrowUpRight, ChevronRight } from 'lucide-react';
+import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { useAuth } from '../context/AuthContext';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
-import { useUserLocation, reverseGeocode } from '../context/LocationContext';
+import { useUserLocation } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import { apiFetch } from '../lib/api';
 

@@ -12,7 +12,7 @@ import { apiFetch } from '../lib/api';
 export default function RetailerDashboard() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { showToast, showConfirm } = useToast();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState<string>('');
   const [store, setStore] = useState<any>(null);
