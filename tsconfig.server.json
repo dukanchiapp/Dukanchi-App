@@ -1,0 +1,50 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "./dist/server",
+    "rootDir": "./",
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "declaration": false,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "types": ["node"]
+  },
+  "include": [
+    "src/app.ts",
+    "src/modules/**/*.ts",
+    "src/middlewares/**/*.ts",
+    "src/config/**/*.ts",
+    "src/services/**/*.ts",
+    "src/workers/**/*.ts",
+    "src/types/**/*.ts",
+    "src/constants/**/*.ts",
+    "src/lib/logger.ts",
+    "src/lib/sentry.ts",
+    "server.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "admin-panel",
+    "src/components",
+    "src/pages",
+    "src/hooks",
+    "src/context",
+    "src/lib/api.ts",
+    "src/lib/storeUtils.ts",
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/**/*.tsx",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}
