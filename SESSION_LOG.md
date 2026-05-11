@@ -25,9 +25,11 @@
 - ✅ `tsc --noEmit` clean
 - ✅ Production curl to `/api/_debug/sentry-test` returned HTTP 500 (Railway deploy confirmed)
 - ✅ Debug endpoint removed in follow-up commit
-- Sentry dashboard capture: check dukanchi.sentry.io → Issues within 60s of curl
+- ✅ Sentry dashboard confirmed (see below)
 
-**Commits:** `4144e89` (wiring + debug), 1201ec9 (cleanup)
+**Verification confirmed (founder + Opus, 2026-05-11 ~6:42 PM IST):** Sentry dashboard at dukanchi.sentry.io showed captured issue "Sentry capture test — intentional 500 from /api/_debug/sentry-test" within 60 seconds of curl. Issue tagged Unhandled, environment production, GET method, request URL captured. Auto-resolved after debug endpoint cleanup commit 1201ec9. Backend Sentry production-grade.
+
+**Commits:** `4144e89` (wiring + debug), `1201ec9` (cleanup)
 
 ---
 
