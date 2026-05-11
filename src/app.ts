@@ -128,6 +128,15 @@ app.use('/api', (_req, res, next) => {
   next();
 });
 
+// ── 7c. Sentry user context — attach authed user to all subsequent error reports ─
+app.use((req, _res, next) => {
+  const user = (req as any).user;
+  if (user?.userId) {
+    Sentry.setUser({ id: user.userId, role: user.role });
+  }
+  next();
+});
+
 // ── 7. Domain routes ──────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -180,6 +189,11 @@ if (process.env.NODE_ENV !== "production") {
   });
   logger.info("Debug route /api/debug-sentry enabled (dev only)");
 }
+
+// TEMP DEBUG — Sentry capture verification. Remove after testing (session 85).
+app.get('/api/_debug/sentry-test', (_req, _res) => {
+  throw new Error('Sentry capture test — intentional 500 from /api/_debug/sentry-test');
+});
 
 // ── 12. Sentry error handler — must be BEFORE any other error middleware ──────
 Sentry.setupExpressErrorHandler(app);

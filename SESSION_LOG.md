@@ -6,6 +6,31 @@
 
 ---
 
+## 2026-05-11 — Session 85 — Sentry Backend Audit + Wiring + Verification
+
+**Audit findings (before changes):**
+1. SDK: `@sentry/node@^10.50.0` ✅
+2. Init location: `server.ts:7` — before all app imports ✅
+3. Integrations: `httpIntegration` ❌, `expressIntegration` ❌ — both missing
+4. Error handler: `Sentry.setupExpressErrorHandler(app)` present at `app.ts:185` ✅
+5. Sample rates: `tracesSampleRate` ✅, `profilesSampleRate` ❌, `beforeSend` PII strip ❌
+6. User context: no `Sentry.setUser()` middleware ❌
+
+**Files changed:**
+- `src/lib/sentry.ts` — added `httpIntegration()`, `expressIntegration()`, `nodeProfilingIntegration()`, `profilesSampleRate`, `beforeSend` auth/cookie header strip
+- `src/app.ts` — added `Sentry.setUser()` middleware after rate limiter; added `/api/_debug/sentry-test` (TEMP — removed in follow-up commit)
+- `package.json` — `@sentry/profiling-node` installed
+
+**Verification:**
+- ✅ `tsc --noEmit` clean
+- ✅ Production curl to `/api/_debug/sentry-test` returned HTTP 500
+- Sentry dashboard check: pending Railway deploy (~90s after push)
+- Debug endpoint removal: follow-up commit after capture confirmed
+
+**Commits:** TBD (wiring + debug), TBD (cleanup)
+
+---
+
 ## 2026-05-11 — Session 82b-HOTFIX — Fix FCM Crash (google-services Plugin Silent Skip)
 
 **Root cause:** `android/app/build.gradle` wrapped `apply plugin: 'com.google.gms.google-services'` in a try/catch with `logger.info()` in the catch. Even with valid `google-services.json` (674 bytes) present, the plugin silently did NOT apply → `app/build/generated/res/google-services/debug/values/` never generated → `FirebaseApp.initializeApp()` failed at runtime → app crashed right after user granted notification permission. Classic Anti-Silent-Failure Rule B violation at native build layer.

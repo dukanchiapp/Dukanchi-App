@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { logger } from "./logger";
 
 export function initSentry(): void {
@@ -14,8 +15,22 @@ export function initSentry(): void {
   Sentry.init({
     dsn,
     environment: process.env.NODE_ENV || "development",
+    integrations: [
+      Sentry.httpIntegration(),
+      Sentry.expressIntegration(),
+      nodeProfilingIntegration(),
+    ],
     tracesSampleRate: isProduction ? 0.1 : 1.0,
-    sendDefaultPii: false, // Never send PII like IPs or request bodies
+    profilesSampleRate: isProduction ? 0.1 : 1.0,
+    sendDefaultPii: false,
+    beforeSend(event) {
+      // Strip auth headers and cookies to avoid leaking tokens into Sentry
+      if (event.request?.headers) {
+        delete event.request.headers['authorization'];
+        delete event.request.headers['cookie'];
+      }
+      return event;
+    },
   });
 
   logger.info({ sentryEnv: process.env.NODE_ENV }, "Sentry initialized");
