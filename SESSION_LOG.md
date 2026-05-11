@@ -23,11 +23,11 @@
 
 **Verification:**
 - ✅ `tsc --noEmit` clean
-- ✅ Production curl to `/api/_debug/sentry-test` returned HTTP 500
-- Sentry dashboard check: pending Railway deploy (~90s after push)
-- Debug endpoint removal: follow-up commit after capture confirmed
+- ✅ Production curl to `/api/_debug/sentry-test` returned HTTP 500 (Railway deploy confirmed)
+- ✅ Debug endpoint removed in follow-up commit
+- Sentry dashboard capture: check dukanchi.sentry.io → Issues within 60s of curl
 
-**Commits:** TBD (wiring + debug), TBD (cleanup)
+**Commits:** `4144e89` (wiring + debug), TBD (cleanup)
 
 ---
 
