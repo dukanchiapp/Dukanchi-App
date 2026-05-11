@@ -5,6 +5,14 @@
 
 ---
 
+## 2026-05-11 — Dual-stack push (Web Push + FCM), not replacement
+- **Decision:** Keep existing Web Push (VAPID + webpush npm) and ADD FCM as a parallel channel for native Android users. `sendPushToUser()` fans out to both via `Promise.allSettled`.
+- **Rationale:** Web/PWA users (current production) keep working unchanged. Native APK users get proper Android system notifications (FCM). No platform left behind — graceful degradation if either service fails. Future iOS support also goes through FCM, same dispatch path.
+- **Trade-off accepted:** Slightly more DB rows per user (PushSubscription + FcmToken) and parallel API calls to two services. Acceptable for the platform coverage gain.
+- **Future cleanup option:** Could migrate Web Push to FCM Web SDK too, unifying under FCM. Not doing now — VAPID works, why risk breakage before pilot.
+
+---
+
 ## 2026-05-11 — Camera plugin deferred from Session 81 to 82+
 - **Decision:** `@capacitor/camera` not installed in Session 81.
 - **Rationale:** Existing 9 file-input sites use `<input type="file" accept="image/*" capture="environment">` which Capacitor WebView already handles via native Android intent. These ALREADY trigger the native camera picker. Switching to `@capacitor/camera` API requires rewriting all 9 sites with risk of breaking working features. Marginal gain is not worth the risk before pilot launch.

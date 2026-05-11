@@ -25,6 +25,7 @@ const envSchema = z.object({
   VAPID_PUBLIC_KEY: z.string().optional().transform(v => v === '' ? undefined : v),
   VAPID_PRIVATE_KEY: z.string().optional().transform(v => v === '' ? undefined : v),
   VAPID_MAILTO: z.string().optional().transform(v => v === '' ? undefined : v),
+  FIREBASE_ADMIN_KEY_JSON: z.string().optional().transform(v => v === '' ? undefined : v),
 });
 
 const _env = envSchema.safeParse(process.env);

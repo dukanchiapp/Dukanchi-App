@@ -28,6 +28,7 @@ import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { useAuth } from './context/AuthContext';
 import { usePushNotifications } from './hooks/usePushNotifications';
+import { useFcmRegistration } from './hooks/useFcmRegistration';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import { useLocation } from 'react-router-dom';
@@ -39,6 +40,7 @@ function FlowController() {
   const location = useLocation();
   const { user, isLoading } = useAuth();
   usePushNotifications();
+  useFcmRegistration();        // native-only FCM token registration
 
   const isStandalone = (() => {
     try {
@@ -143,6 +145,15 @@ export default function App() {
             window.history.back();
           } else {
             CapApp.exitApp();
+          }
+        });
+
+        // Push notification tap → navigate to the conversation (deep link)
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+          const url = action.notification.data?.url;
+          if (url && typeof url === 'string') {
+            window.location.href = url;
           }
         });
 

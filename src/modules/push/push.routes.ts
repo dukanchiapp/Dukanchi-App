@@ -39,4 +39,37 @@ router.delete('/unsubscribe', authenticateToken, async (req: Request, res: Respo
   }
 });
 
+router.post('/fcm/register', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.userId;
+    const { token, platform } = req.body;
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ error: 'token required' });
+    }
+    const platformValue = ['android', 'ios', 'web'].includes(platform) ? platform : 'android';
+    await prisma.fcmToken.upsert({
+      where: { token },
+      update: { userId, platform: platformValue, updatedAt: new Date() },
+      create: { userId, token, platform: platformValue },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('FCM register failed', err);
+    res.status(500).json({ error: 'register failed' });
+  }
+});
+
+router.delete('/fcm/unregister', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const { token } = req.body;
+    if (token) {
+      await prisma.fcmToken.deleteMany({ where: { token } });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('FCM unregister failed', err);
+    res.status(500).json({ error: 'unregister failed' });
+  }
+});
+
 export default router;

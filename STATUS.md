@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-11 | Session — CLAUDE.md hardening | Commit: dc6e040
+> Last updated: 2026-05-11 | Session 82 | Commit: TBD
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -28,9 +28,9 @@
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Next 3 Actions
-1. Founder: uninstall old APK, install new 7.9 MB APK, verify: cream splash, dark status bar, native location permission, back button nav, keyboard handling
-2. Session 82 — Camera plugin OR FCM push notifications (founder to choose priority)
-3. Session 83 — Custom app icon + branded splash design
+1. Founder: add `FIREBASE_ADMIN_KEY_JSON` Railway env var + copy `google-services.json` to `android/app/` + rebuild APK + test native push end-to-end
+2. Session 83 — Custom app icon + branded splash screen design
+3. Session 84 — Play Store release build prep (keystore, signing config)
 
 ## Open Decisions / Risks
 - [ ] Bandra confirmed as pilot (founder may revise)

@@ -6,6 +6,38 @@
 
 ---
 
+## 2026-05-11 — Session 82 — Sprint 1: FCM Push Notifications
+
+**Goal:** Add FCM as parallel push channel alongside existing Web Push. Native APK gets Android system notifications; web users keep PWA push (unchanged).
+
+**Files added:**
+- `src/hooks/useFcmRegistration.ts` — native-only FCM registration hook (dynamic import, tree-shaken on web)
+
+**Files changed:**
+- `prisma/schema.prisma` — new `FcmToken` model + `User.fcmTokens` back-relation; `db push` applied to Neon
+- `src/config/env.ts` — `FIREBASE_ADMIN_KEY_JSON` optional env var added
+- `src/services/push.service.ts` — renamed to `sendWebPushToUser` (private); added `sendFcmToUser`; exported `sendPushToUser` now fans out to both via `Promise.allSettled`
+- `src/modules/push/push.routes.ts` — `POST /fcm/register` + `DELETE /fcm/unregister`
+- `src/App.tsx` — `useFcmRegistration()` in FlowController; push tap deep-link handler in native useEffect
+- `capacitor.config.ts` — `PushNotifications` plugin block added
+- `package.json` — `@capacitor/push-notifications@8.0.4` + `firebase-admin@13.9.0`
+
+**Google-services.json:** Terminal has no Full Disk Access to ~/Downloads — file must be copied manually by founder: `cp ~/Downloads/google-services.json android/app/google-services.json`. Gradle already has auto-apply try/catch (added by `cap sync`) so build succeeds without it; FCM won't function until file is in place.
+
+**Gradle:** `android/build.gradle` and `android/app/build.gradle` already configured by `cap sync` — Google Services classpath and apply plugin present via try/catch.
+
+**Rule A:** ✅ `/api/push/fcm/register` in frontend matches `router.post('/fcm/register')` in backend
+**Rule B:** ✅ 0 user-facing silent catches in new code (2 `.catch(()=>{})` are stale-token DB cleanup — acceptable)
+**Rule C:** ✅ No scheme change, `CAPACITOR_ORIGINS` intact with all 3 variants
+**Rule D:** Native APK rebuild + manual test pending — founder must: (1) add `FIREBASE_ADMIN_KEY_JSON` Railway env var, (2) copy google-services.json, (3) rebuild APK, (4) install + test notification
+**Rule E:** Production curl pending Railway redeploy after founder adds env var
+
+**tsc --noEmit:** ✅ | **build:web:** ✅ 1320 KiB | **Tree-shaking:** ✅ 0 Capacitor symbols in web bundle
+**Cap sync:** ✅ 6 plugins | **APK:** ✅ 8.3 MB (was 7.9 MB)
+**Commit:** TBD
+
+---
+
 ## 2026-05-11 — Session — CLAUDE.md Anti-Silent-Failure Rules
 
 **Files changed:**
