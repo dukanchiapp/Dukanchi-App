@@ -165,7 +165,8 @@ export class SearchService {
           }
         );
         if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
+          type GeminiTextResp = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+          const geminiData = (await geminiRes.json()) as GeminiTextResp;
           const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
           const jsonMatch = text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {

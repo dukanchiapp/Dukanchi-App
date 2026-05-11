@@ -20,7 +20,8 @@ export async function generateEmbedding(text: string, retries = 3, delay = 1000)
       })
     });
     
-    const data = await res.json();
+    type EmbeddingResp = { embedding?: { values?: number[] } };
+    const data = (await res.json()) as EmbeddingResp;
     const embedding = data.embedding?.values;
     
     if (!embedding) {

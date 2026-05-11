@@ -100,18 +100,21 @@ export class StoreController {
     try {
       const code = req.params.code;
       if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: "Invalid pincode" });
+      type PostOffice = { Name: string; District: string; State: string };
+      type PincodeResp = Array<{ Status: string; PostOffice: PostOffice[] | null }>;
       const response = await fetch(`https://api.postalpincode.in/pincode/${code}`);
-      const data = await response.json();
-      if (data?.[0]?.Status === 'Success' && data[0].PostOffice?.length > 0) {
-        const po = data[0].PostOffice[0];
-        const districts = [...new Set(data[0].PostOffice.map((p: any) => p.District))];
-        const states = [...new Set(data[0].PostOffice.map((p: any) => p.State))];
-        return res.json({ 
-          city: po.District, 
+      const data = (await response.json()) as PincodeResp;
+      if (data?.[0]?.Status === 'Success' && (data[0].PostOffice?.length ?? 0) > 0) {
+        const postOffices = data[0].PostOffice ?? [];
+        const po = postOffices[0];
+        const districts = [...new Set(postOffices.map((p) => p.District))];
+        const states = [...new Set(postOffices.map((p) => p.State))];
+        return res.json({
+          city: po.District,
           state: po.State,
           allCities: districts,
           allStates: states,
-          postOffices: data[0].PostOffice.map((p: any) => p.Name)
+          postOffices: postOffices.map((p) => p.Name)
         });
       } else {
         return res.status(404).json({ error: "Pincode not found" });
