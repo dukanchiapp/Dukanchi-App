@@ -120,6 +120,43 @@ curl -s -i <production-endpoint> | head -5
 
 If still failing after a second attempt, STOP and report — don't claim the session succeeded.
 
+### Rule F — Local Smoke Test Isolation
+
+Local backend smoke tests (`npm run dev`) MUST use `DATABASE_URL_TEST` when testing any write-path endpoint (signup, login that mints token, account/delete, account/restore, any POST/PATCH/DELETE).
+
+- Mechanism: `DATABASE_URL=$DATABASE_URL_TEST npm run dev`
+- Production endpoint is ONLY tested via curl after Railway redeploy, never from local code
+- For pure read-only / auth-rejection smokes (T1 wrong-creds, T3 no-auth), default `DATABASE_URL` is acceptable but discouraged
+- Pre-flight check before any write-path smoke: confirm endpoint host matches test branch
+
+Origin: Session 88 / Day 2.5 — a smoke-test signup against the local dev server (connected to prod via main `.env`) accidentally created a `Test` user on production. Forensic cleanup landed via 5 safeguards; rule codified here to prevent recurrence.
+
+## Two-AI Workflow — Response Conventions
+
+### Opus Summary Convention
+
+When Claude Code's output for a step would exceed ~30 lines, default to a "Summary for Opus" block at the end of the response:
+- 4-6 bullet points covering: (a) what's done, (b) decisions made, (c) deviations/surprises with NDXX numbers, (d) Phase E queue impact, (e) what's pending approval
+- Full details (diffs, file contents) remain in the body — the summary is a TL;DR for the strategic loop (Opus chat) to catch up without parsing the whole message
+
+Reduces token usage + cognitive load on the strategic loop without losing fidelity.
+
+### Vitest Conventions
+
+When using `vi.mock()` with values referenced from outside the factory, wrap them in `vi.hoisted(() => ({...}))`. Top-level `const` causes hoisting reference errors because `vi.mock` is hoisted before regular const initialization.
+
+Example:
+```ts
+const { TEST_JWT_SECRET } = vi.hoisted(() => ({
+  TEST_JWT_SECRET: "test-jwt-secret-32-chars-long-padding",
+}));
+vi.mock("../config/env", () => ({
+  env: { JWT_SECRET: TEST_JWT_SECRET },
+}));
+```
+
+Origin: Session 88 / ND27 — first vitest test (`auth.middleware.test.ts`) failed on a top-level `const TEST_JWT_SECRET` used inside a `vi.mock` factory.
+
 ## Key File Map
 - All routes registered: src/app.ts
 - Auth middleware: src/middleware/auth.ts

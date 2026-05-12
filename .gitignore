@@ -35,3 +35,6 @@ ios/App/App/GoogleService-Info.plist
 # Misc
 *.tsbuildinfo
 typecheck-errors.txt
+
+# Local forensic snapshots (Session 88 incident response, etc.) — never committed
+temp/
