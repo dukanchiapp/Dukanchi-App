@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
-import { AuthService } from "./auth.service";
+import { AuthService, UnavailableUserError } from "./auth.service";
+import { unavailableError } from "../../middlewares/user-status";
 import { logger } from "../../lib/logger";
 
 export class AuthController {
   static async signup(req: Request, res: Response) {
     try {
       const result = await AuthService.signup(req.body);
-      
+
       const isHttps = req.secure ||
         req.headers['x-forwarded-proto'] === 'https' ||
         (req.get('host') || '').includes('ngrok');
@@ -22,6 +23,11 @@ export class AuthController {
       // Web clients ignore this — cookie auth works automatically.
       return res.json({ success: true, user: result.user, token: result.token });
     } catch (error: any) {
+      // Phone associated with an account in 30-day deletion grace — guide
+      // the caller to /restore rather than letting them silently fail.
+      if (error instanceof UnavailableUserError) {
+        return res.status(401).json(unavailableError(error.unavailableReason));
+      }
       if (error.message === "This phone number already exists") {
         return res.status(400).json({ error: error.message });
       }
@@ -57,9 +63,18 @@ export class AuthController {
       // Web clients ignore this — cookie auth works automatically.
       return res.json({ success: true, user: result.user, token: result.token });
     } catch (error: any) {
+      // Service-layer availability check (Day 2.5) — matches the 401 +
+      // `status` discriminator shape returned by the auth middleware for
+      // the same reasons. Single source of truth via unavailableError().
+      if (error instanceof UnavailableUserError) {
+        return res.status(401).json(unavailableError(error.unavailableReason));
+      }
       if (error.message === "Invalid credentials") {
         return res.status(401).json({ error: error.message });
       }
+      // Legacy "blocked" message-string path — unreachable now that the
+      // service throws UnavailableUserError instead, but kept as a safety
+      // net in case any caller still constructs the old-style error.
       if (error.message.includes("blocked")) {
         return res.status(403).json({ error: error.message });
       }
@@ -83,8 +98,12 @@ export class AuthController {
       const userId = (req as any).user?.userId;
       if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
-      const newToken = await AuthService.issueTokenForUser(userId);
-      if (!newToken) return res.status(401).json({ error: 'User not found or blocked' });
+      // Permissive: a user in their 30-day deletion grace must be able to
+      // refresh their session so they can call /api/account/restore beyond
+      // the original 7-day JWT TTL. blocked + deleted_expired are still
+      // rejected (returns null) by issueTokenForUser regardless of opts.
+      const newToken = await AuthService.issueTokenForUser(userId, { acceptDeletedPending: true });
+      if (!newToken) return res.status(401).json({ error: 'User not found or unavailable' });
 
       const isHttps = req.secure ||
         req.headers['x-forwarded-proto'] === 'https' ||
