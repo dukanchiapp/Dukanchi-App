@@ -6,6 +6,91 @@
 
 ---
 
+## 2026-05-13 — Session 89 — Hardening Sprint Day 3: Security Gaps Sprint (5 subtasks)
+
+**Goal:** Close 5 security gaps identified at end of Day 2.5 — JWT algorithm pinning, body-size DoS surface, upload validation depth, bcrypt cost factor, and request timeout coverage.
+
+**Status:** **CODE COMPLETE on `hardening/sprint`** — 5 feature commits + this docs commit. Branch now **31 commits ahead of `origin/main`** (was 25 at start of session). 20 files / +554 / −65 / 21 tests (was 17). Production deploy remains DEFERRED to Day 8 atomic merge.
+
+**Production runtime UNCHANGED**: Railway watches `main`, not feature branches. `origin/main` HEAD is still `32f5525` (Session 85). All Day 1 / Day 2 / Day 2.5 / Day 3 changes are on `hardening/sprint` only. Schema-ahead-of-code state on production unchanged from Day 2.5 (Day 2 additive migrations live, code catches up at Day 8).
+
+### What was done — 6-commit chain (5 features + 1 docs)
+
+1. `2a5d029` — **feat(auth): pin JWT algorithm to HS256 on sign + verify** [Subtask 3.1]
+   Whitelist `algorithms: ['HS256']` on `jwt.verify` in HTTP auth middleware (`verifyAndAttach`) and WebSocket gate (`setupSocketListeners`). Explicit `algorithm: 'HS256'` on all 4 `jwt.sign` sites in `auth.service.ts`. Closes algorithm-confusion attack surface: an attacker who learns `JWT_SECRET` cannot bypass verify with an HS512/RS256-signed token. New `jwt-algorithm-whitelist.test.ts` pins the contract (HS512-signed token rejected by HS256-whitelisted verify).
+
+2. `4e4428d` — **feat(api): tiered body limits (1MB global / 10MB AI) + 413 JSON handler** [Subtask 3.2]
+   Global JSON + urlencoded body limit `50MB → 1MB`. AI base64 routes (`/api/ai/analyze-image`, `/api/ai/transcribe-voice`) get 10MB override mounted BEFORE the global parser. New 413 JSON error handler at section 11b (before Sentry) converts body-parser's `PayloadTooLargeError` to typed `{ code: 'PAYLOAD_TOO_LARGE', limit }` JSON (Rule A: JSON not HTML; Rule B: logger.warn on every rejection). Nginx fronts at 20MB; Express limits are defense-in-depth.
+
+3. `8a0b4e8` — **feat(upload): production-grade validation — fileSize + MIME + magic bytes + filename sanitization** [Subtask 3.3]
+   `/api/upload` + `/api/admin/settings/upload` hardened. Multer storage → memory (required for magic-byte buffer inspection). fileSize 10MB cap. MIME whitelist (image/jpeg, png, webp, gif — SVG explicitly excluded to close XSS-via-SVG). Filename sanitization (basename only, no hidden-leading, no control chars, no double-extensions, `[a-zA-Z0-9._-]`-only, ≤200 chars). Magic-byte verification via `file-type@3.9.0` — first ~4KB of content must match claimed MIME (415 MIME_MISMATCH otherwise). DETECTED MIME (not claimed) stored on R2 — closes stored-XSS class. Storage key = `Date.now()-randombytes-safebasename.ext` (collision-resistant, unguessable). New `app.ts` section 11a Multer error handler. New `src/types/file-type.d.ts` shim (file-type@3.9 ships no `.d.ts`; DefinitelyTyped covers v10+ which is a different API). 7 smokes verified on TEST: real JPEG 200, 15MB 413 FILE_TOO_LARGE, text-as-jpeg 415, ELF-as-jpeg 415, path-traversal sanitized, evil.php.jpg 400 INVALID_FILENAME, all errors JSON.
+
+4. `6b9f434` — **feat(auth): BCRYPT_ROUNDS env var (default 12) + bump rounds 10→12** [Subtask 3.4]
+   New zod-validated env: `BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12)`. 3 hash sites use `env.BCRYPT_ROUNDS` (auth.service signup, admin.service password reset, team.service member creation). Backwards compatible — bcrypt encodes cost per-hash (`$2b$XX$...`), so rounds-10 hashes continue to validate; new hashes use 12. No data migration needed. 4 new tests pin guardrails (default, range accept, range reject, `$2b$12$` prefix). Inline schema mirror in test (test-isolation trade-off, documented). `.env.example` updated.
+
+5. `e554914` — **feat(api): request timeout coverage — server 60s + Gemini 30s + R2 60s + Prisma 30s** [Subtask 3.5]
+   4 layers active. **Server** (`server.ts` after createServer): requestTimeout 60s, timeout 60s, headersTimeout 30s, keepAliveTimeout 10s (tighter than Node 18 defaults 300/60/5). **Gemini** 30s via `AbortSignal.timeout` on 3 SDK sites (config.abortSignal — verified in `GenerateContentConfig` type) + 3 raw fetch sites (`signal:` option). **External pincode** 5s on `api.postalpincode.in` (fail fast on untrusted public API). **R2/S3** via `NodeHttpHandler` in `S3Client` (connectionTimeout 5s, socketTimeout 60s, requestTimeout 60s, throwOnRequestTimeout true) — `@smithy/node-http-handler` imported from `@aws-sdk/client-s3` transitive dep (no new install). **Prisma** `transactionOptions: { maxWait: 5s, timeout: 30s }`. Existing 500ms Promise.race in search.service:80 left untouched (performance budget, not security). Frontend Axios 20s untouched. `AbortSignal.timeout()` is Node 17.3+ native — no helper or new dep.
+
+6. `<this commit>` — **docs: Session 89 — Day 3 security sprint** [docs]
+   SESSION_LOG 89 entry (this) + STATUS.md refresh + DECISIONS.md unchanged (no architecture decisions this session).
+
+### Notable deviations / surprises (worth remembering)
+
+- **3.3.1 file-type@3.9 type shim** — DefinitelyTyped's `@types/file-type` covers v10+ only (different API: `fromBuffer` named export vs v3's default function). Local shim at `src/types/file-type.d.ts` declares the v3 contract. If we ever upgrade to ≥10, delete the shim.
+- **3.3.2 Control-char regex byte-mangling** — During upload.middleware rewrite, literal `\x00-\x1f\x7f` bytes in the filename-sanitize regex got eaten by markdown-stripping mid-tool-call. Recovered via a Python byte-level fix that converted literal control bytes to readable escape form. Caught by post-edit `sed -n` cat-v output.
+- **3.3.3 multer-s3 → memory + explicit PutObjectCommand** — Magic-byte verify needs the full buffer before persistence. multer-s3's stream-to-S3 path makes the buffer unavailable. Replaced with explicit `PutObjectCommand` from `@aws-sdk/client-s3`. `req.file.key`/.location shape preserved so `getUploadedFileUrl` is unchanged.
+- **3.3.4 DETECTED MIME stored on R2 (not claimed)** — Attacker uploads `evil.html` claiming `image/jpeg`; magic bytes detect it's HTML; we either reject (415) or in edge cases would store as `text/html`. With our whitelist this never reaches persistence — but the principle of "trust the bytes" is now codified.
+- **3.4 inline schema mirror in bcrypt test** — `env.ts` validates DATABASE_URL/JWT_SECRET/GEMINI_API_KEY at import; Vitest doesn't auto-load `.env` like tsx does. Test re-declares the BCRYPT_ROUNDS zod rule inline (with comment "keep in sync manually"). Same pattern as `jwt-algorithm-whitelist.test.ts`. Conscious test-isolation trade-off.
+- **3.5 Node 18+ defaults aren't zero** — Audit prompt framed defaults as "0 (NONE)". Actual: Node 18 LTS ships `requestTimeout=300_000`, Node 14+ has `headersTimeout=60_000`. Doesn't change the recommendation (we still want tighter values) but recalibrates urgency from "critical" to "high".
+- **3.5 NodeHttpHandler `throwOnRequestTimeout: true`** — Without this, AWS SDK only LOGS a warning when requestTimeout breaches. We want the breach to surface as a TimeoutError so the existing `verifyAndPersistUpload` catch returns 500 PERSIST_FAILED. Documented gotcha.
+
+### Verification (Phase D)
+
+- Typecheck: PASS (0 errors)
+- Test suite: 21/21 passing in 891ms (was 17 at start of Day 3; +1 JWT test + 4 bcrypt tests)
+- Boot smoke on TEST branch: clean — env validates, Redis connected, server listening :3099, /health 200 in 15ms, env.BCRYPT_ROUNDS=12 confirmed at runtime
+- Curl battery: 6/6 passing (1 skipped per spec permission — uploadable-image auth setup too involved for verification scope)
+  - `GET /health` → 200 JSON
+  - `GET /api/auth/me` (no auth) → 401 JSON
+  - `POST /api/auth/login` empty body → 400 zod-validation JSON
+  - `POST /api/upload` (no auth) → 401 JSON
+  - `POST /api/auth/login` 2MB body → 413 JSON `PAYLOAD_TOO_LARGE limit=1048576`
+  - `POST /api/ai/analyze-image` 5MB body → 401 (auth gate fires after body parses, NOT 413) — confirms 10MB AI override works
+- Rule A check: all error bodies are JSON (start with `{`), no HTML SPA fallback
+- Rule B check: no new silent catches added in Day 3
+- Rule F check: TEST branch only — no production hit this entire session
+
+### Backlog preserved / created
+
+- **Scope 3 upload extras** (per-route MIME tightening, admin-only PDF whitelist, rate-limiter S6) → Day 4/5 candidate
+- **Admin password length floor 6 chars** (`admin.service.ts:70`) → separate concern, flagged for awareness
+- **4 pre-existing `console.log` statements** in geminiEmbeddings.ts + search.service.ts → future logger migration sprint
+- **Day 2.7 test coverage sprint** (cascade integration, socket auth E2E, D5 atomicity, fixtures, CI wiring) → still pending, separate focused session
+
+### Deploy plan unchanged
+
+Day 8 atomic merge `hardening/sprint` → `main` → Railway redeploy + full Rule E verification. Production runtime continues on Session 85 code with Day 2 schema applied.
+
+### Files (Day 3 cumulative)
+
+20 files (17 modified + 3 new) / +554 / −65 across 6 commits.
+
+Modified: `.env.example`, `server.ts`, `src/app.ts`, `src/config/env.ts`, `src/config/prisma.ts`, `src/config/socket-listeners.ts`, `src/middlewares/auth.middleware.ts`, `src/middlewares/upload.middleware.ts`, `src/modules/admin/admin.routes.ts`, `src/modules/admin/admin.service.ts`, `src/modules/auth/auth.service.ts`, `src/modules/search/search.service.ts`, `src/modules/stores/bulkImport.service.ts`, `src/modules/stores/store.controller.ts`, `src/modules/team/team.service.ts`, `src/services/geminiEmbeddings.ts`, `src/services/geminiVision.ts`.
+
+New: `src/config/bcrypt-rounds.test.ts`, `src/middlewares/jwt-algorithm-whitelist.test.ts`, `src/types/file-type.d.ts`.
+
+### Phase E execution notes (commit-split mechanics)
+
+3 files needed hunk-splits across commits:
+
+- `src/modules/auth/auth.service.ts` — JWT hunks → commit 1; bcrypt hunk → commit 4
+- `src/app.ts` — body-parser + 11b 413 handler → commit 2; multer import + 11a Multer handler + upload-middleware import update + /api/upload route chain → commit 3
+- `src/middlewares/upload.middleware.ts` — full rewrite → commit 3; NodeHttpHandler import + requestHandler config → commit 5
+
+Mechanic: `git checkout HEAD -- <file>` was denied by sandbox (would destroy uncommitted work). Used Edit-tool revert-and-restore pattern: temporarily Edit-revert hunks that belong to a later commit, stage current file, commit, Edit-restore the deferred hunks back to working tree. Worked cleanly across all 3 hunk-split files. Every commit's typecheck passed (`npx tsc --noEmit` → 0 errors at each HEAD).
+
+---
+
 ## 2026-05-12 — Session 88 — Hardening Sprint Day 2.5: Soft-Delete Cascade Audit + Implementation + Tests
 
 **Goal:** Wire the Day 2 soft-delete schema (deletedAt, deletionRequestedAt, deletionReason) through the entire codebase — auth gate, route policies, service-layer reads, search filters, write paths, background fanout, social degradation — with comprehensive audit, deviation review, and smoke tests.
