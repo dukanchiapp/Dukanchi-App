@@ -19,6 +19,9 @@
     "typecheck": "npm run typecheck:web && npm run typecheck:server",
     "typecheck:web": "tsc -p tsconfig.app.json --noEmit",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
     "lint": "npm run typecheck",
     "start": "tsx server.ts"
   },
@@ -91,6 +94,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/web-push": "^3.6.4",
+    "@vitest/ui": "^4.1.6",
     "autoprefixer": "^10.4.21",
     "canvas": "^3.2.3",
     "prisma": "^5.22.0",
@@ -99,6 +103,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.6"
   }
 }
