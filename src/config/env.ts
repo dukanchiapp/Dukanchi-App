@@ -8,6 +8,13 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters long"),
+  // Password hashing cost factor — Day 3 / Session 89 / Subtask 3.4.
+  // 12 is the 2026 production-ready default (~250ms per hash on modern hardware).
+  // min(10) prevents accidental weakening; max(14) prevents runaway login latency.
+  // bcrypt encodes the cost in every hash ($2b$XX$...), so bumping this value
+  // is backwards-compatible — existing rounds-10 hashes continue to validate
+  // via bcrypt.compare's per-hash cost auto-detection. No data migration needed.
+  BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   // Optional plain strings — empty string ("") is treated as undefined for Railway compat
   ALLOWED_ORIGINS: z.string().optional().transform(v => v === '' ? undefined : v),

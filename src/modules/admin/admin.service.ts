@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
+import { env } from "../../config/env";
 import { invalidateUserStatusCache } from "../../middlewares/user-status";
 import bcrypt from "bcrypt";
 import xlsx from "xlsx";
@@ -68,7 +69,7 @@ export class AdminService {
 
   static async resetPassword(userId: string, newPassword: string) {
     if (!newPassword || newPassword.length < 6) throw new Error("Password must be at least 6 characters");
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashed },

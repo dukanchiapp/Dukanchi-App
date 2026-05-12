@@ -68,8 +68,9 @@ export class AuthService {
       throw new Error("This phone number already exists");
     }
 
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    // Salt rounds sourced from env.BCRYPT_ROUNDS (default 12) — Subtask 3.4.
+    // bcrypt encodes the cost per-hash, so bumping the env later is safe.
+    const hashedPassword = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
 
     const user = await prisma.user.create({
       data: { name, phone, password: hashedPassword, role, location }
