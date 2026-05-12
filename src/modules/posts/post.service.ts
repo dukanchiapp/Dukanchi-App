@@ -50,7 +50,11 @@ export class PostService {
     else if (['supplier', 'manufacturer', 'brand'].includes(userRole)) allowedRoles = ['retailer', 'supplier', 'manufacturer', 'brand'];
     else if (userRole === 'admin') allowedRoles = ['customer', 'retailer', 'supplier', 'manufacturer', 'brand', 'admin'];
 
-    let storeFilter: any = { owner: { role: { in: allowedRoles }, isBlocked: false } };
+    // Soft-delete cascade: feed hides posts whose store-owner is in any
+    // deleted state (matches user spec item 4: "skip recommendations from
+    // deleted users entirely"). Distinct from saved-posts view, which
+    // anonymizes rather than hides (preserves historical engagement).
+    let storeFilter: any = { owner: { role: { in: allowedRoles }, isBlocked: false, deletedAt: null } };
 
     if (locationRange && locationRange !== 'all' && userLat && userLng) {
       const rangeKm = parseFloat(locationRange);
