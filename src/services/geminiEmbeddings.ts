@@ -1,8 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '../config/prisma';
 import { env } from '../config/env';
-
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -23,7 +20,8 @@ export async function generateEmbedding(text: string, retries = 3, delay = 1000)
       })
     });
     
-    const data = await res.json();
+    type EmbeddingResp = { embedding?: { values?: number[] } };
+    const data = (await res.json()) as EmbeddingResp;
     const embedding = data.embedding?.values;
     
     if (!embedding) {

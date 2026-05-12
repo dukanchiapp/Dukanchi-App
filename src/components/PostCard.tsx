@@ -56,10 +56,10 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
   const isOwnPost = post.isOwnPost === true;
   const storeLink = isOwnPost ? '/profile' : `/store/${post.storeId}`;
   const status = getStoreStatus(
-    post.store?.openingTime,
-    post.store?.closingTime,
-    post.store?.is24Hours,
-    post.store?.workingDays
+    post.store?.openingTime ?? undefined,
+    post.store?.closingTime ?? undefined,
+    post.store?.is24Hours ?? undefined,
+    post.store?.workingDays ?? undefined
   );
   const { canvasStyle, imgStyle } = getImageStyles(imgRatio);
 

@@ -154,7 +154,6 @@ export function PostsGrid({
   const compressImageToBase64 = async (url: string): Promise<{ base64: string; mimeType: string }> => {
     const res = await fetch(url);
     const blob = await res.blob();
-    const mimeType = blob.type || 'image/jpeg';
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {

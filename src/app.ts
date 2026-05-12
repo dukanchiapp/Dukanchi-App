@@ -75,7 +75,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, ngrok-skip-browser-warning');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
+  return next();
 });
 
 // ── 4. Pino HTTP request logger ───────────────────────────────────────────────
@@ -167,19 +167,19 @@ app.use('/api/app-settings', settingsRoutes);
 app.post("/api/upload", authenticateToken, uploadLimiter, upload.single("file"), (req: any, res) => {
   if (!req.file) return res.status(400).json({ error: "No file uploaded" });
   const url = getUploadedFileUrl(req.file);
-  res.json({ url });
+  return res.json({ url });
 });
 
 // ── 9. Static landing page — served before Vite middleware so it bypasses the SPA ─
 app.get('/landing', (_req, res) => {
-  res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
+  return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
 // ── 9b. Admin panel — static files + SPA fallback ────────────────────────────
 const adminDistPath = path.resolve(process.cwd(), 'admin-panel', 'dist');
 app.use('/admin-panel', express.static(adminDistPath));
 app.get('/admin-panel/*splat', (_req, res) => {
-  res.sendFile(path.join(adminDistPath, 'index.html'));
+  return res.sendFile(path.join(adminDistPath, 'index.html'));
 });
 
 // ── 10. Debug/test routes (dev only) ──────────────────────────────────────────────

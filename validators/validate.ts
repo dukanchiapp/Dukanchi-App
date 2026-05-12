@@ -8,6 +8,6 @@ export function validate(schema: ZodSchema) {
       return res.status(400).json({ error: 'Validation failed', issues: result.error.issues });
     }
     req.body = result.data;
-    next();
+    return next();
   };
 }

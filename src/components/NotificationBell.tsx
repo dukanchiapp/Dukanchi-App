@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bell, Check, Trash2, Box } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, Check, Box } from 'lucide-react';
 import { useNotifications, Notification } from '../context/NotificationContext';
 
 export default function NotificationBell() {

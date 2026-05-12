@@ -1,0 +1,47 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "src/components/**/*",
+    "src/pages/**/*",
+    "src/hooks/**/*",
+    "src/context/**/*",
+    "src/types/**/*",
+    "src/constants/**/*",
+    "src/lib/api.ts",
+    "src/lib/storeUtils.ts",
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/vite-env.d.ts",
+    "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "admin-panel",
+    "src/modules",
+    "src/middlewares",
+    "src/config",
+    "src/services",
+    "src/workers",
+    "src/app.ts",
+    "src/server.ts",
+    "server.ts",
+    "scripts",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

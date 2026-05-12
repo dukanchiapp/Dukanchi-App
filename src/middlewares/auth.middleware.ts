@@ -50,9 +50,9 @@ const verifyAndAttach = async (
     if (await isUserBlocked(decoded.userId))
       return res.status(403).json({ error: "Account blocked" });
     (req as any).user = decoded;
-    next();
+    return next();
   } catch {
-    res.status(403).json({ error: "Invalid token" });
+    return res.status(403).json({ error: "Invalid token" });
   }
 };
 
@@ -77,7 +77,7 @@ export const authenticateAny = (req: express.Request, res: express.Response, nex
 
 export const requireAdmin = (req: any, res: express.Response, next: express.NextFunction) => {
   if (req.user?.role !== "admin") return res.status(403).json({ error: "Forbidden" });
-  next();
+  return next();
 };
 
 const B2B_ROLES = new Set(['retailer', 'supplier', 'brand', 'manufacturer']);

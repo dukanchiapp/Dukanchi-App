@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Move, Maximize2 } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Move, Maximize2 } from 'lucide-react';
 
 interface ImageCropperProps {
   imageUrl: string;

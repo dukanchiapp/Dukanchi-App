@@ -14,10 +14,10 @@ export class MessageController {
         before,
         parseInt(limit)
       );
-      res.json(result);
+      return res.json(result);
     } catch (error) {
       logger.error({ err: error }, 'Failed to fetch messages');
-      res.status(500).json({ error: 'Failed to fetch messages' });
+      return res.status(500).json({ error: 'Failed to fetch messages' });
     }
   }
 
@@ -25,9 +25,9 @@ export class MessageController {
     try {
       const userId = (req as any).user.userId;
       const convos = await MessageService.getConversations(userId);
-      res.json(convos);
+      return res.json(convos);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch conversations" });
+      return res.status(500).json({ error: "Failed to fetch conversations" });
     }
   }
 
@@ -37,13 +37,13 @@ export class MessageController {
       const { receiverId, message, imageUrl } = req.body;
       
       const savedMessage = await MessageService.sendMessage(senderId, receiverId, message, imageUrl);
-      res.json(savedMessage);
+      return res.json(savedMessage);
     } catch (error: any) {
       if (error.message === "User not found") return res.status(404).json({ error: "User not found" });
       if (error.message === "Chat not permitted between these roles") return res.status(403).json({ error: "Chat not permitted between these roles" });
       
       logger.error({ err: error }, "Failed to send message");
-      res.status(500).json({ error: "Failed to send message" });
+      return res.status(500).json({ error: "Failed to send message" });
     }
   }
 }

@@ -84,7 +84,8 @@ If a field cannot be mapped, omit it. productName must always be included.`;
         }
       );
 
-      const data = await res.json();
+      type GeminiTextResp = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+      const data = (await res.json()) as GeminiTextResp;
       const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON in Gemini response');

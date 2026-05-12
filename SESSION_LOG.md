@@ -6,6 +6,80 @@
 
 ---
 
+## 2026-05-12 — Session 86 — Hardening Sprint Day 1: TypeScript Strict Mode + tsconfig Architecture Split
+
+**Goal:** Enable TypeScript strict mode + fix all surfaced type errors + split tsconfig into proper architecture
+
+**Status:** COMPLETE — 0 type errors across 71+ backend `.ts` files and 80+ frontend `.tsx` files
+
+**What was done:**
+- Split monolithic `tsconfig.json` into 3 configs:
+  - `tsconfig.json` (base with strict flags, project references)
+  - `tsconfig.app.json` (frontend React, composite)
+  - `tsconfig.server.json` (backend Express, composite)
+- Enabled `"strict": true` plus 12 additional strict flags:
+  - `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`
+  - `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `alwaysStrict`
+  - `noUnusedLocals`, `noUnusedParameters`, `noImplicitReturns`
+  - `noFallthroughCasesInSwitch`, `useUnknownInCatchVariables`
+- Backend now properly type-checked (was completely excluded before — 71 `.ts` files unchecked)
+- Added proper npm scripts:
+  - `typecheck:web`, `typecheck:server`, `typecheck` (combined)
+  - `build:web`, `build:server` (standalone, available for future migration to compiled JS)
+  - `build` now runs `typecheck && build:web` (Railway uses tsx, no compiled-JS deploy)
+  - `start` aligned with production: `tsx server.ts` (matches Dockerfile/railway.json/PM2 ecosystem)
+- Fixed 114 type errors across affected files in 5 atomic commits
+
+**Path adjustments from prompt template (actual src/ structure):**
+- `src/contexts` → `src/context` (singular)
+- `src/lib/utils.ts` (didn't exist) → `src/lib/storeUtils.ts`
+- Added `src/workers/**/*.ts` (BullMQ notification worker) to server config
+- Added `src/types/**/*` and `src/constants/**/*` to both configs (shared types)
+
+**Type error fix breakdown (114 → 0):**
+| Category | Code | Count | Approach |
+|---|---|---|---|
+| 1 | config | (n/a) | Add `validators/**/*.ts` to server include; install `@types/multer-s3` |
+| 2 | TS6133 | 39 | Remove unused imports (modern JSX transform drops `React`), prefix Express middleware params with `_`, delete dead state/functions/computes |
+| 3 | TS7030 | 56 | Perl batch: `return ` before terminal `res.{json,send,end,redirect,sendFile,sendStatus}` and `res.status(N).{json,...}`; manual `return next()` for 4 middlewares; explicit `return;` in 1 useEffect |
+| 4 | TS7053 + TS18046 | 9 | Inline structural types for `fetch().json()` results (Gemini text, Gemini embedding, postalpincode.in); replace unsafe index access with `?? []` + typed map |
+| 5 | TS2345 | 1 | `?? undefined` at PostCard call site to convert Prisma `string\|null\|undefined` → `string\|undefined` |
+
+**Commits in this session (8 total):**
+- 1814751 — chore(hardening): split tsconfig into base+app+server with strict mode
+- 050d92d — fix(hardening): add validators to server config + install multer-s3 types
+- 8b9f1f3 — fix(hardening): remove unused imports and locals (TS6133, 39 fixes)
+- 7db65c8 — fix(hardening): add explicit returns to Express handlers (TS7030, 56 fixes)
+- fb014b3 — fix(hardening): proper typing for handlers, index access, catch blocks (TS7053+TS18046, 9 fixes)
+- f53aaa8 — fix(hardening): fix nullable string handling in PostCard (TS2345, 1 fix)
+- 9bde71a — fix(hardening): align start script with actual production (tsx) — strict mode still enforced via typecheck
+- 67482a0 — chore(hardening): Day 1 verification complete — strict mode working in dev and prod builds
+
+**Verification:**
+- `npm run typecheck` → 0 errors ✅
+- `npm run build:web` → SUCCESS (Vite 4.22s, PWA 55 entries) ✅
+- `npm run build:server` → SUCCESS (standalone) ✅
+- `npm run start` (tsx) → clean boot: Redis ✅, Prisma ✅, server :3000 ✅, graceful shutdown ✅
+- `npm run dev` (tsx) → identical clean boot ✅
+- Graceful shutdown order preserved (Session 74): HTTP → BullMQ worker → BullMQ queue → Prisma → Redis ✅
+
+**Lessons learned:**
+- Initial plan assumed production uses compiled JS (industry standard pattern)
+- Actual reality: Railway + Dockerfile + PM2 all use `tsx server.ts` directly (no compile step)
+- Strict mode value is preserved via `npm run typecheck` (CI/pre-commit gate), not via compiled output
+- This matches modern Node+TS deployment patterns (faster, no build artifact management)
+- Anti-Silent-Failure Rule worked: Claude Code stopped at the failed boot test, diagnosed the ESM resolution issue, reported the real cause (extensionless imports + `"type": "module"`), and surfaced the production-deploy reality before silently breaking anything
+
+**Branch state:**
+- Working branch: `claude/peaceful-dirac-41866d` (Claude worktree)
+- Originally intended: `hardening/day-1-tsconfig-strict` (locked by another worktree at session start; that branch only contains 1 prep commit `a2324bb` for `.gitignore`)
+- TODO: Merge `claude/peaceful-dirac-41866d` → `hardening/day-1-tsconfig-strict` (or rebase) in next session before pushing
+
+**Next session (Day 2):**
+Schema + DB hardening — spatial index for stores `lat/lng`, pgvector IVFFLAT/HNSW index for `embedding` column, User soft-delete columns for DPDP Act compliance
+
+---
+
 ## 2026-05-11 — Session 85 — Sentry Backend Audit + Wiring + Verification
 
 **Audit findings (before changes):**

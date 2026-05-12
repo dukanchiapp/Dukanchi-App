@@ -51,10 +51,10 @@ export class StoreController {
 
       const storeData = { ...req.body, ownerId };
       const store = await StoreService.createStore(storeData);
-      res.json(store);
+      return res.json(store);
     } catch (error) {
       logger.error({ err: error }, "Failed to create store");
-      res.status(500).json({ error: "Failed to create store" });
+      return res.status(500).json({ error: "Failed to create store" });
     }
   }
 
@@ -78,10 +78,10 @@ export class StoreController {
       }
 
       const store = await StoreService.updateStore(req.params.id, req.body);
-      res.json(store);
+      return res.json(store);
     } catch (error) {
       logger.error({ err: error }, "Failed to update store");
-      res.status(500).json({ error: "Failed to update store" });
+      return res.status(500).json({ error: "Failed to update store" });
     }
   }
 
@@ -90,9 +90,9 @@ export class StoreController {
       const { page = "1", limit = "20", category, excludeOwnerId } = req.query as any;
       const viewerRole = (req as any).user.role;
       const result = await StoreService.getStores(parseInt(page), parseInt(limit), viewerRole, category, excludeOwnerId);
-      res.json(result);
+      return res.json(result);
     } catch {
-      res.status(500).json({ error: "Failed to fetch stores" });
+      return res.status(500).json({ error: "Failed to fetch stores" });
     }
   }
 
@@ -100,25 +100,28 @@ export class StoreController {
     try {
       const code = req.params.code;
       if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: "Invalid pincode" });
+      type PostOffice = { Name: string; District: string; State: string };
+      type PincodeResp = Array<{ Status: string; PostOffice: PostOffice[] | null }>;
       const response = await fetch(`https://api.postalpincode.in/pincode/${code}`);
-      const data = await response.json();
-      if (data?.[0]?.Status === 'Success' && data[0].PostOffice?.length > 0) {
-        const po = data[0].PostOffice[0];
-        const districts = [...new Set(data[0].PostOffice.map((p: any) => p.District))];
-        const states = [...new Set(data[0].PostOffice.map((p: any) => p.State))];
-        res.json({ 
-          city: po.District, 
+      const data = (await response.json()) as PincodeResp;
+      if (data?.[0]?.Status === 'Success' && (data[0].PostOffice?.length ?? 0) > 0) {
+        const postOffices = data[0].PostOffice ?? [];
+        const po = postOffices[0];
+        const districts = [...new Set(postOffices.map((p) => p.District))];
+        const states = [...new Set(postOffices.map((p) => p.State))];
+        return res.json({
+          city: po.District,
           state: po.State,
           allCities: districts,
           allStates: states,
-          postOffices: data[0].PostOffice.map((p: any) => p.Name)
+          postOffices: postOffices.map((p) => p.Name)
         });
       } else {
-        res.status(404).json({ error: "Pincode not found" });
+        return res.status(404).json({ error: "Pincode not found" });
       }
     } catch (error) {
       logger.error({ err: error }, "Pincode lookup error");
-      res.status(500).json({ error: "Failed to look up pincode" });
+      return res.status(500).json({ error: "Failed to look up pincode" });
     }
   }
 
@@ -135,9 +138,9 @@ export class StoreController {
       }
 
       res.set('Cache-Control', 'public, max-age=30');
-      res.json(store);
+      return res.json(store);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch store" });
+      return res.status(500).json({ error: "Failed to fetch store" });
     }
   }
 
@@ -146,10 +149,10 @@ export class StoreController {
       const userId = (req as any).user.userId; // Always use JWT identity, never trust body
       const storeId = req.params.id;
       const result = await StoreService.toggleFollow(userId, storeId);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === 'Store not found') return res.status(404).json({ error: 'Store not found' });
-      res.status(500).json({ error: error.message || 'Failed to toggle follow' });
+      return res.status(500).json({ error: error.message || 'Failed to toggle follow' });
     }
   }
 
@@ -158,9 +161,9 @@ export class StoreController {
       const { page = "1", limit = "30" } = req.query as any;
       const viewerRole = (req as any).user.role;
       const result = await StoreService.getStorePosts(req.params.id, parseInt(page), parseInt(limit), viewerRole);
-      res.json(result);
+      return res.json(result);
     } catch {
-      res.status(500).json({ error: "Failed to fetch posts" });
+      return res.status(500).json({ error: "Failed to fetch posts" });
     }
   }
 
@@ -177,9 +180,9 @@ export class StoreController {
       }
 
       const product = await StoreService.createProduct(req.body);
-      res.json(product);
+      return res.json(product);
     } catch (error) {
-      res.status(500).json({ error: "Failed to create product" });
+      return res.status(500).json({ error: "Failed to create product" });
     }
   }
 
@@ -187,9 +190,9 @@ export class StoreController {
     try {
       const { search, category, storeId } = req.query;
       const products = await StoreService.getProducts(search as string, category as string, storeId as string);
-      res.json(products);
+      return res.json(products);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch products" });
+      return res.status(500).json({ error: "Failed to fetch products" });
     }
   }
 
@@ -219,14 +222,14 @@ export class StoreController {
 
       logger.info({ storeId, userId, imported: result.imported, skipped: result.skipped }, '[BulkImport] Import completed');
 
-      res.json({ success: true, imported: result.imported, skipped: result.skipped, mappingUsed: mapping, errors: result.errors });
+      return res.json({ success: true, imported: result.imported, skipped: result.skipped, mappingUsed: mapping, errors: result.errors });
     } catch (err: any) {
       // Handle multer file filter errors
       if (err.message?.includes('Only .xlsx')) {
         return res.status(400).json({ success: false, error: err.message });
       }
       logger.error({ err, storeId }, '[BulkImport] Import failed');
-      res.status(400).json({ success: false, error: err.message || 'Import failed' });
+      return res.status(400).json({ success: false, error: err.message || 'Import failed' });
     }
   }
 }

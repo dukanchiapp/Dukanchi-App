@@ -6,7 +6,7 @@ import { env } from '../../config/env';
 const router = Router();
 
 router.get('/vapid-public-key', (_req, res) => {
-  res.json({ publicKey: env.VAPID_PUBLIC_KEY || null });
+  return res.json({ publicKey: env.VAPID_PUBLIC_KEY || null });
 });
 
 router.post('/subscribe', authenticateToken, async (req: Request, res: Response) => {
@@ -21,9 +21,9 @@ router.post('/subscribe', authenticateToken, async (req: Request, res: Response)
       update: { p256dh: keys.p256dh, auth: keys.auth, userId },
       create: { userId, endpoint, p256dh: keys.p256dh, auth: keys.auth },
     });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch {
-    res.status(500).json({ error: 'Subscribe failed' });
+    return res.status(500).json({ error: 'Subscribe failed' });
   }
 });
 
@@ -33,9 +33,9 @@ router.delete('/unsubscribe', authenticateToken, async (req: Request, res: Respo
     if (endpoint) {
       await prisma.pushSubscription.deleteMany({ where: { endpoint } });
     }
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch {
-    res.status(500).json({ error: 'Unsubscribe failed' });
+    return res.status(500).json({ error: 'Unsubscribe failed' });
   }
 });
 
@@ -52,10 +52,10 @@ router.post('/fcm/register', authenticateToken, async (req: Request, res: Respon
       update: { userId, platform: platformValue, updatedAt: new Date() },
       create: { userId, token, platform: platformValue },
     });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     console.error('FCM register failed', err);
-    res.status(500).json({ error: 'register failed' });
+    return res.status(500).json({ error: 'register failed' });
   }
 });
 
@@ -65,10 +65,10 @@ router.delete('/fcm/unregister', authenticateToken, async (req: Request, res: Re
     if (token) {
       await prisma.fcmToken.deleteMany({ where: { token } });
     }
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     console.error('FCM unregister failed', err);
-    res.status(500).json({ error: 'unregister failed' });
+    return res.status(500).json({ error: 'unregister failed' });
   }
 });
 
