@@ -89,6 +89,18 @@ New: `src/config/bcrypt-rounds.test.ts`, `src/middlewares/jwt-algorithm-whitelis
 
 Mechanic: `git checkout HEAD -- <file>` was denied by sandbox (would destroy uncommitted work). Used Edit-tool revert-and-restore pattern: temporarily Edit-revert hunks that belong to a later commit, stage current file, commit, Edit-restore the deferred hunks back to working tree. Worked cleanly across all 3 hunk-split files. Every commit's typecheck passed (`npx tsc --noEmit` → 0 errors at each HEAD).
 
+### Final closure note
+
+- Day 3 fully pushed to `origin/hardening/sprint` at `e1828f5` (SHA range `7d8cf84..e1828f5`, fast-forward, no rejected refs, no force push). 6 commits visible on remote.
+- Branch state at session close: **31 commits ahead of `origin/main`** (production still on `32f5525` / Session 85).
+- Production status: **unchanged**. Railway watches `main`, not feature branches; this session's push triggered no redeploy.
+- Total session duration: ~13.5 hours (Day 2.5 session 88 + Day 3 session 89 combined, per founder's reckoning across both calendar days).
+- Day 3 specific: ~5 hours, 5 security subtasks, all Scope 2 production-grade with audit → implementation → smoke verification protocol.
+- Combined hardening sprint work shipped (Days 1 + 2 + 2.5 + 3): 31 commits, ~+1900/-173 lines, 21 tests passing, 0 typecheck errors at HEAD.
+- Day 4 starter prompt template saved to `temp/day-4-starter-prompt.md` (gitignored) for next-session paste-and-go.
+- Forensic snapshot `temp/accidental-user-snapshot-2026-05-12T13-26-19Z.json` retained per Day 8 cleanup plan.
+- Session officially signed off 2026-05-13.
+
 ---
 
 ## 2026-05-12 — Session 88 — Hardening Sprint Day 2.5: Soft-Delete Cascade Audit + Implementation + Tests

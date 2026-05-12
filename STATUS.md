@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-13 | Session 89 closed | Branch: hardening/sprint @ Day 3 head (5 feature + 1 docs commits this session, NOT pushed yet) | Prod runs main @ 32f5525
+> Last updated: 2026-05-13 | Session 89 closed | Branch: hardening/sprint @ e1828f5 (pushed) | Prod runs main @ 32f5525
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -26,13 +26,13 @@
   - 3.5 `e554914` — Request timeout coverage (server 60s + Gemini 30s + R2 60s + Prisma 30s)
   - +5 new tests (16→21 passing) — 1 JWT whitelist + 4 bcrypt rounds
 
-All committed locally to `hardening/sprint`. Push to `origin/hardening/sprint` pending user review.
+All committed AND pushed to `origin/hardening/sprint` at `e1828f5` (6 commits, fast-forward push, no rejected refs).
 
-Branch is **31 commits ahead of `origin/main`** (was 25 at start of Session 89: 24 from Day 2.5 closure + 1 Day 2.5 docs amend).
+Branch is **31 commits ahead of `origin/main`** (was 25 at start of Session 89: 24 from Day 2.5 closure + 1 Day 2.5 docs amend; +6 this session).
 
 ## Active Sprint: Hardening Sprint (Days 1-3 of 8 — 38% complete)
 
-**Branch:** `hardening/sprint` @ Day 3 docs head (local, unpushed)
+**Branch:** `hardening/sprint` @ `e1828f5` (matches origin)
 **Deploy plan:** **Day 8 atomic merge** `hardening/sprint` → `main` → Railway redeploy + full Rule E verification
 
 | Day | Topic | Status |
@@ -51,15 +51,12 @@ Branch is **31 commits ahead of `origin/main`** (was 25 at start of Session 89: 
 
 ## Next 3 Actions
 
-1. **Push Day 3 to `origin/hardening/sprint`** (after user reviews chain)
-   - `git push origin hardening/sprint` — 6 commits land on remote feature branch
-   - Production unaffected (Railway watches `main`, not feature branches)
+1. **Day 4 sequencing decision** (next session prompt — starter template at `temp/day-4-starter-prompt.md`)
+   - **Candidate A (recommended) — Day 4 Observability:** Sentry middleware tightening, error handler unification, PostHog wiring (frontend product analytics queued). Recommended first because Sentry is already partially configured (Session 85 production-grade base), so this is the natural extension and lowest-friction next step.
+   - **Candidate B — Day 2.6 Scope 3 upload extras:** per-route MIME tightening, admin-only PDF whitelist, S6 rate-limiter
+   - **Candidate C — Day 2.7 Test Coverage Sprint:** cascade integration tests, socket auth E2E, D5 atomicity, fixtures, CI wiring
 
-2. **Day 4 sequencing decision** (next session prompt)
-   - **Option A — Day 4 Observability:** Sentry middleware tightening, error handler unification, PostHog wiring (frontend product analytics queued)
-   - **Option B — Day 2.6 Scope 3 upload extras:** per-route MIME tightening, admin-only PDF whitelist, S6 rate-limiter
-   - **Option C — Day 2.7 Test Coverage Sprint:** cascade integration tests, socket auth E2E, D5 atomicity, fixtures, CI wiring
-   - User to decide sequencing — all 3 are valid Day 4 candidates.
+2. **Day 5-7 — Remaining sprint days** (sequencing depends on Day 4 choice)
 
 3. **Day 8 — Atomic merge + deploy** (after Days 4-7 complete)
    - `git checkout main && git merge hardening/sprint --no-ff && git push origin main`
