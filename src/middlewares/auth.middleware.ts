@@ -3,24 +3,16 @@ import jwt from "jsonwebtoken";
 import { env } from "../config/env";
 import { prisma } from "../config/prisma";
 import { pubClient } from "../config/redis";
+import { isUserUnavailable, unavailableError } from "./user-status";
 
 const JWT_SECRET = env.JWT_SECRET;
 
-// Redis-backed cache for blocked user status (TTL 60s)
-const BLOCKED_TTL = 60;
-const isUserBlocked = async (userId: string): Promise<boolean> => {
-  const key = `blocked:${userId}`;
-  try {
-    const cached = await pubClient.get(key);
-    if (cached !== null) return cached === '1';
-  } catch { /* Redis unavailable — fall through to DB */ }
-  const row = await prisma.user.findUnique({ where: { id: userId }, select: { isBlocked: true } });
-  const blocked = row?.isBlocked ?? false;
-  try { await pubClient.set(key, blocked ? '1' : '0', { EX: BLOCKED_TTL }); } catch { /* Redis unavailable — non-fatal */ }
-  return blocked;
-};
-
 // Redis-backed cache for team member existence (TTL 120s)
+//
+// NOTE: The former `blocked:${userId}` cache + `isUserBlocked` helper that
+// lived here has been replaced by the unified userStatus cache in
+// ./user-status.ts (Day 2.5 / Session 88). The TeamMember cache below is
+// unchanged — TeamMember has no soft-delete column today.
 const TEAM_MEMBER_TTL = 120;
 const teamMemberExists = async (teamMemberId: string): Promise<boolean> => {
   const key = `team:${teamMemberId}`;
@@ -34,12 +26,24 @@ const teamMemberExists = async (teamMemberId: string): Promise<boolean> => {
   return exists;
 };
 
-// Shared token-verification logic
+// Verification policy: whether to allow users within their 30-day deletion
+// grace window through. Only set by authenticateAllowDeleted (for /restore
+// and /api/auth/refresh) — every other entry point uses { false }.
+type VerifyOpts = { acceptDeletedPending: boolean };
+
+// Shared token-verification logic.
+// Reject order (each returns early — no fallthrough):
+//   1. Missing token                                  → 401 Access denied
+//   2. JWT verify failure / malformed payload         → 403 Invalid token
+//   3. JWT carries teamMemberId but member is gone    → 403 Access revoked
+//   4. User is unavailable (blocked / deleted)        → 401 with discriminator (unless permissive + deleted_pending)
+//   5. Otherwise                                      → attach decoded JWT to req.user and call next()
 const verifyAndAttach = async (
   token: string | undefined,
   req: express.Request,
   res: express.Response,
-  next: express.NextFunction
+  next: express.NextFunction,
+  opts: VerifyOpts,
 ) => {
   if (!token) return res.status(401).json({ error: "Access denied" });
   try {
@@ -47,8 +51,19 @@ const verifyAndAttach = async (
     if (!decoded?.userId) return res.status(403).json({ error: "Invalid token" });
     if (decoded.teamMemberId && !(await teamMemberExists(decoded.teamMemberId)))
       return res.status(403).json({ error: "Access revoked" });
-    if (await isUserBlocked(decoded.userId))
-      return res.status(403).json({ error: "Account blocked" });
+
+    const check = await isUserUnavailable(decoded.userId);
+    if (check.unavailable) {
+      // Permissive carve-out: deleted_pending (within grace period) is allowed
+      // through ONLY for callers that opted in via authenticateAllowDeleted.
+      // blocked + deleted_expired remain hard rejects on every path.
+      if (check.reason === "deleted_pending" && opts.acceptDeletedPending) {
+        (req as any).user = decoded;
+        return next();
+      }
+      return res.status(401).json(unavailableError(check.reason));
+    }
+
     (req as any).user = decoded;
     return next();
   } catch {
@@ -59,19 +74,37 @@ const verifyAndAttach = async (
 // Main-app routes — reads dk_token only; admin sessions (dk_admin_token) are invisible here
 export const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = req.cookies?.dk_token || req.headers['authorization']?.split(' ')[1];
-  return verifyAndAttach(token, req, res, next);
+  return verifyAndAttach(token, req, res, next, { acceptDeletedPending: false });
 };
 
 // Admin-panel routes — reads dk_admin_token; falls back to Authorization header
 export const authenticateAdminToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = req.cookies?.dk_admin_token || req.headers['authorization']?.split(' ')[1];
-  return verifyAndAttach(token, req, res, next);
+  return verifyAndAttach(token, req, res, next, { acceptDeletedPending: false });
 };
 
 // Shared endpoints (e.g. /api/me) that both apps call — accepts either cookie
 export const authenticateAny = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const token = req.cookies?.dk_token || req.cookies?.dk_admin_token || req.headers['authorization']?.split(' ')[1];
-  return verifyAndAttach(token, req, res, next);
+  return verifyAndAttach(token, req, res, next, { acceptDeletedPending: false });
+};
+
+// PERMISSIVE variant — accepts users in their 30-day deletion grace period
+// (deletedAt > NOW()). REJECTS: blocked users, hard-deleted (vanished) users,
+// users whose grace has expired (deletedAt <= NOW()).
+//
+// Wire this ONLY onto endpoints that must remain reachable after a user
+// requested account deletion:
+//   - POST /api/account/restore   (clears the deletion request)
+//   - POST /api/auth/refresh      (lets in-grace users keep their session
+//                                  alive for /restore beyond the original 7-day JWT)
+// Every other authenticated endpoint MUST use authenticateToken (strict).
+//
+// (Route wiring is intentionally NOT included in this commit — see Step 3
+// where /restore and /refresh are switched over.)
+export const authenticateAllowDeleted = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const token = req.cookies?.dk_token || req.headers['authorization']?.split(' ')[1];
+  return verifyAndAttach(token, req, res, next, { acceptDeletedPending: true });
 };
 
 
