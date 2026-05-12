@@ -10,7 +10,18 @@
 
 **Goal:** Wire the Day 2 soft-delete schema (deletedAt, deletionRequestedAt, deletionReason) through the entire codebase — auth gate, route policies, service-layer reads, search filters, write paths, background fanout, social degradation — with comprehensive audit, deviation review, and smoke tests.
 
-**Status:** COMPLETE — 9 commits on `hardening/sprint`, NOT pushed yet (Block 2). 32 files / +1,352 / −108 / 16 tests / 0 typecheck errors. Production DB schema unchanged (Day 2 already applied); this session only changes app behavior.
+**Status:** **CODE COMPLETE on `hardening/sprint` — production deploy DEFERRED to Day 8 atomic merge.** 9 commits pushed to `origin/hardening/sprint`. 32 files / +1,352 / −108 / 16 tests / 0 typecheck errors.
+
+**Production runtime UNCHANGED**: Railway watches `main`, not feature branches. `origin/main` HEAD is still `32f5525` (Session 85 — Sentry production-grade) — pre-Day-1, pre-Day-2, pre-Day-2.5 code. None of Day 1 / Day 2 / Day 2.5 application changes are live on production yet. This is per the Day 1 plan ("Branch merge to main happens after Day 8") and intentional.
+
+**Production DB IS updated**: Day 2 schema migrations (User soft-delete columns, Store GIST index, Product HNSW index, cube + earthdistance extensions) were applied directly via `psql -f` against `DATABASE_URL` in Session 87 Phase 5. This creates a deliberate **schema-ahead-of-code** state on production:
+- Prod DB has the new columns/indexes — safe because they're additive (nullable cols + advisory indexes)
+- Prod code (Session 85) doesn't reference any of them — works unchanged
+- At Day 8 deploy, code catches up to schema in a single atomic merge
+
+**Endpoints status:**
+- `/api/account/delete` + `/api/account/restore` — **exist in `hardening/sprint` code, NOT live on production**. Production `POST /api/account/restore` currently returns 404 HTML (Express default) — route mount not yet on main.
+- Soft-delete-aware auth middleware, cache invalidation, cascade reads, write-path checks, socket auth fix (ND22), background filters, social anonymization — **all on `hardening/sprint`, NONE on production yet**.
 
 ### What was done — 9-commit chain
 
@@ -113,14 +124,37 @@ During Step 4 verification, a curl-based smoke test against `/api/auth/users` hi
 - ask-nearby fanout customer-deleted check (tiny race window)
 ```
 
-### Branch state
+### Branch state (end of session 88)
 
-- `hardening/sprint` ahead of `origin/hardening/sprint` by **13 commits** (Day 2: 4 commits already there + Day 2.5: 9 new commits this session)
-- NOT pushed — Block 2 awaits explicit go-ahead after commit chain review
+- `hardening/sprint` HEAD = `a363fd6`, matches `origin/hardening/sprint` (pushed)
+- `hardening/sprint` is **24 commits ahead of `origin/main`** (Day 1: 8 + Day 2: 4 + Day 2.5: 9 + 3 merge/prep)
+- `origin/main` HEAD = `32f5525` (Session 85) — **production runs from here**
+- Branch merge to main deferred to **Day 8** per the agreed atomic-deploy plan
+
+### Block 2 outcome (push + production verification)
+
+- ✅ Push to `origin/hardening/sprint` successful: `abff3dc..a363fd6`, exit 0, no force, no rejected refs
+- ✅ Production curl battery: 6/7 tests pass (T1 /health, T2 JSON validity, T3 /me, T5 /refresh, T6 /search, T7 Rule A) — all exercising **pre-existing routes** that Session 85 already has
+- ⚠️ T4 `/api/account/restore` returns 404 HTML on production — **EXPECTED**, the route mount was added in commit `7b4606d` (Session 87) which is on `hardening/sprint`, NOT on `main`. Production never had this endpoint. This is not a regression.
+- **Verdict: YELLOW** — production unchanged, work safely on branch, Day 8 atomic merge will bring it all live together
+- **No customer impact** — endpoints that don't exist on prod can't be used by customers
+- Railway watch-branch insight: production deploys from `main`, not feature branches. Documented for future planning.
 
 ### Next session
 
-Block 2: push `hardening/sprint` → Railway redeploy → production curl + Sentry spot-check (Rule E). After Block 2 success: Day 2.7 (test coverage sprint) OR Day 3 (security gaps — upload limits, JWT algorithm whitelist, body size, bcrypt rounds).
+**Day 3 — Security hardening** (separate session, deferred from this one):
+- Upload middleware limits (file size cap + MIME whitelist)
+- JWT algorithm whitelist (reject `none`, lock to `HS256`)
+- Body size limits (review `express.json({ limit: "50mb" })`)
+- bcrypt rounds review (currently 10 — confirm OK for our threat model)
+- Request timeouts (Express default is none)
+
+**Day 8 — Atomic deploy** (after Days 3-7 complete on hardening/sprint):
+- Merge `hardening/sprint` → `main` (--no-ff for narrative clarity)
+- Push `main` → Railway auto-redeploy
+- Full Rule E production curl battery (this time ALL 7 should pass)
+- Sentry + Railway log spot-check
+- Cleanup `temp/accidental-user-snapshot-*.json` after green deploy
 
 ---
 
