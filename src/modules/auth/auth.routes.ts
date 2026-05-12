@@ -11,8 +11,15 @@ router.post("/login", authLimiter, validate(loginSchema), AuthController.login);
 router.post("/logout", AuthController.logout);
 
 // /me is called by both the main app (dk_token) and admin panel (dk_admin_token)
-import { authenticateToken, authenticateAny } from "../../middlewares/auth.middleware";
+import { authenticateAny, authenticateAllowDeleted } from "../../middlewares/auth.middleware";
 router.get("/me", authenticateAny, AuthController.me);
-router.post("/refresh", authenticateToken, AuthController.refresh);
+
+// /refresh uses the PERMISSIVE variant — a user in their 30-day deletion
+// grace window must still be able to refresh their session so they can
+// reach /api/account/restore beyond the original 7-day JWT TTL. Blocked
+// users and fully-expired-grace users are still rejected by the middleware.
+// Defense in depth: AuthService.issueTokenForUser will be tightened in
+// Step 4 to mirror this policy in the service layer too.
+router.post("/refresh", authenticateAllowDeleted, AuthController.refresh);
 
 export const authRoutes = router;

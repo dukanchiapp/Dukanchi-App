@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { invalidateUserStatusCache } from "../../middlewares/user-status";
 
 const GRACE_DAYS = 30;
 
@@ -40,6 +41,12 @@ export class AccountService {
     if (!updated.deletionRequestedAt || !updated.deletedAt) {
       throw new Error("Soft-delete write did not persist timestamps");
     }
+
+    // Invalidate the auth-middleware cache so the next request sees the new
+    // deletedAt immediately (otherwise stale cache could let the deleted user
+    // through for up to 60s). invalidateUserStatusCache never throws.
+    await invalidateUserStatusCache(updated.id);
+
     return { id: updated.id, deletionRequestedAt: updated.deletionRequestedAt, deletedAt: updated.deletedAt };
   }
 
@@ -63,6 +70,11 @@ export class AccountService {
       where: { id: userId },
       data: { deletedAt: null, deletionRequestedAt: null, deletionReason: null },
     });
+
+    // Mirror of requestDeletion — clear the cache so the next auth check sees
+    // the restored (non-deleted) state immediately.
+    await invalidateUserStatusCache(userId);
+
     return { id: userId, restored: true };
   }
 }

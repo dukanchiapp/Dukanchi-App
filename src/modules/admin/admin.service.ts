@@ -1,5 +1,6 @@
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
+import { invalidateUserStatusCache } from "../../middlewares/user-status";
 import bcrypt from "bcrypt";
 import xlsx from "xlsx";
 
@@ -88,9 +89,11 @@ export class AdminService {
       select: { id: true, name: true, role: true, isBlocked: true },
     });
 
-    // Invalidate blocked-status cache so changes take effect immediately
+    // Invalidate the unified userStatus cache so block/unblock takes effect
+    // immediately. invalidateUserStatusCache catches its own errors + Sentry-
+    // captures, so this won't throw even if Redis is down.
     if (isBlocked !== undefined) {
-      try { await pubClient.del(`blocked:${id}`); } catch { /* non-fatal */ }
+      await invalidateUserStatusCache(id);
     }
 
     return result;
@@ -108,10 +111,11 @@ export class AdminService {
       data: { isBlocked: !!isBlocked }
     });
 
-    // Invalidate blocked-status cache for all affected users
-    try {
-      await Promise.all(safeUserIds.map(id => pubClient.del(`blocked:${id}`)));
-    } catch { /* non-fatal */ }
+    // Invalidate the unified userStatus cache for every affected user.
+    // Each invalidateUserStatusCache call catches its own errors internally
+    // (logger.warn + Sentry capture), so Promise.all here will resolve cleanly
+    // even if individual Redis calls fail — no Promise.allSettled needed.
+    await Promise.all(safeUserIds.map(id => invalidateUserStatusCache(id)));
 
     return { success: true };
   }
