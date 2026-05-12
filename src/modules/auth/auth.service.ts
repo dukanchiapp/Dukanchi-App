@@ -75,7 +75,7 @@ export class AuthService {
       data: { name, phone, password: hashedPassword, role, location }
     });
 
-    const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
 
     try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
 
@@ -108,7 +108,7 @@ export class AuthService {
         throw new UnavailableUserError(check.reason);
       }
 
-      const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
       const { password: _, ...userWithoutPassword } = user;
       return { user: userWithoutPassword, token };
     }
@@ -134,7 +134,7 @@ export class AuthService {
       const token = jwt.sign(
         { userId: teamMember.store.ownerId, role: teamMember.store.owner.role, teamMemberId: teamMember.id },
         env.JWT_SECRET,
-        { expiresIn: '7d' }
+        { algorithm: 'HS256', expiresIn: '7d' }
       );
       const { password: _, ...userWithoutPassword } = teamMember.store.owner;
       return { user: userWithoutPassword, token, isTeamMember: true };
@@ -179,6 +179,10 @@ export class AuthService {
       if (!permitted) return null;
     }
 
-    return jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { expiresIn: '7d' });
+    // Algorithm pinned to HS256 (Day 3 / Session 89) — matches verify-side
+    // whitelist in auth.middleware.ts + socket-listeners.ts. Default was
+    // already HS256, but explicit signals intent and protects against future
+    // library default changes.
+    return jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
   }
 }

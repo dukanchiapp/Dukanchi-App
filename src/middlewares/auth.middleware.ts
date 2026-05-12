@@ -47,7 +47,12 @@ const verifyAndAttach = async (
 ) => {
   if (!token) return res.status(401).json({ error: "Access denied" });
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    // Algorithm whitelist (Day 3 / Session 89): pinned to HS256 to prevent
+    // algorithm-confusion attacks (e.g., an attacker submitting an HS512- or
+    // RS256-signed token that this server would otherwise accept). jsonwebtoken
+    // v9+ already rejects `alg: none` by default; this whitelist is
+    // defense-in-depth for the broader algorithm-substitution attack class.
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as any;
     if (!decoded?.userId) return res.status(403).json({ error: "Invalid token" });
     if (decoded.teamMemberId && !(await teamMemberExists(decoded.teamMemberId)))
       return res.status(403).json({ error: "Access revoked" });

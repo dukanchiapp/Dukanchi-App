@@ -30,7 +30,10 @@ export function setupSocketListeners(io: Server) {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      // Algorithm whitelist pinned to HS256 — matches HTTP auth middleware.
+      // Prevents algorithm-confusion attacks on the WebSocket gate.
+      // (Day 3 / Session 89.)
+      decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     } catch (err: any) {
       console.warn('[SOCKET] auth rejected: JWT invalid —', err?.message ?? err);
       return next(new Error('Authentication error: Invalid token'));
