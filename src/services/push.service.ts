@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import { env } from '../config/env';
 import { prisma } from '../config/prisma';
 import { logger } from '../lib/logger';
+import { isUserUnavailable } from '../middlewares/user-status';
 
 if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
@@ -103,6 +104,21 @@ export async function sendPushToUser(
   userId: string,
   payload: { title: string; body: string; url?: string }
 ) {
+  // Day 2.5 / Session 88: skip push fanout for unavailable users (blocked,
+  // deleted_pending, deleted_expired). DPDP — don't notify an account that
+  // has requested deletion or been admin-blocked. After D5 purges FCM tokens
+  // and Push subscriptions on /delete, the sub-functions below would find no
+  // delivery channels anyway — this check is the explicit gate that makes
+  // the policy clear and saves the per-channel DB lookup.
+  const check = await isUserUnavailable(userId);
+  if (check.unavailable) {
+    logger.debug(
+      { userId, reason: check.reason },
+      'Push fanout skipped: user unavailable',
+    );
+    return;
+  }
+
   // Run both channels in parallel — failure in one doesn't block the other
   await Promise.allSettled([
     sendWebPushToUser(userId, payload),

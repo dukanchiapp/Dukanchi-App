@@ -26,14 +26,30 @@ export class AccountService {
     const now = new Date();
     const deletedAt = new Date(now.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
 
-    const updated = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        deletionRequestedAt: now,
-        deletedAt,
-        deletionReason: reason ?? null,
-      },
-      select: { id: true, deletionRequestedAt: true, deletedAt: true },
+    // D5 (Day 2.5 / Session 88): purge push channels atomically with the
+    // soft-delete write. Reasons:
+    //   1. DPDP — stop pushing data to deleted accounts immediately, not
+    //      after the 30-day worker runs
+    //   2. Smaller blast radius if /restore happens — frontend re-registers
+    //      tokens naturally on next app open; no stale tokens lurking
+    //   3. Atomic — the transaction guarantees that if the soft-delete write
+    //      succeeds, the purges have also happened (no in-between state where
+    //      the user is "deleted" but still receiving pushes)
+    // The push.service dispatcher ALSO checks isUserUnavailable before fanout
+    // (Step 8 defense-in-depth); these purges make that check largely
+    // belt-and-suspenders, but the transaction is the source of truth.
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.fcmToken.deleteMany({ where: { userId } });
+      await tx.pushSubscription.deleteMany({ where: { userId } });
+      return tx.user.update({
+        where: { id: userId },
+        data: {
+          deletionRequestedAt: now,
+          deletedAt,
+          deletionReason: reason ?? null,
+        },
+        select: { id: true, deletionRequestedAt: true, deletedAt: true },
+      });
     });
 
     // After update, deletionRequestedAt + deletedAt are non-null (we just set them).
