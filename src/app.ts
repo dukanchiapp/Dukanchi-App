@@ -103,8 +103,32 @@ app.use(
 );
 
 // ── 5. Body parsers ───────────────────────────────────────────────────────────
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+//
+// Two-tier body-size policy (Day 3 / Session 89 / Subtask 3.2):
+//   - AI routes that accept base64 (image/audio) get a 10MB JSON parser
+//     mounted BEFORE the global parser. Express middleware skips re-parsing
+//     once req.body is set, so these requests are parsed exactly once at the
+//     higher limit. Frontend compresses images to 1200px @ 0.80 quality
+//     (~130-670KB base64 typical); 10MB is generous headroom.
+//   - All other routes use the global 1MB parser. Tight enough to close the
+//     DoS vector the previous 50MB setting created (unauthenticated POSTs
+//     would accept arbitrary 50MB payloads); generous enough for typical
+//     JSON CRUD payloads (<<100KB).
+//
+// Nginx fronts production at client_max_body_size 20M — these Express limits
+// are defense-in-depth, and they govern non-Cloudflare environments (dev,
+// future deploys, anyone bypassing the proxy).
+//
+// 413 responses are caught and converted to JSON by the dedicated handler
+// at the end of this file (before the Sentry error middleware).
+
+// AI base64 routes — must be registered BEFORE the global 1MB parser
+app.use('/api/ai/analyze-image', express.json({ limit: '10mb' }));
+app.use('/api/ai/transcribe-voice', express.json({ limit: '10mb' }));
+
+// Global default
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
@@ -191,6 +215,33 @@ if (process.env.NODE_ENV !== "production") {
   });
   logger.info("Debug route /api/debug-sentry enabled (dev only)");
 }
+
+// ── 11b. Payload-too-large handler (Day 3 / Session 89 / Subtask 3.2) ─────────
+// body-parser throws PayloadTooLargeError with type='entity.too.large' and
+// status=413 when a request body exceeds the configured limit. Without this
+// handler, the error falls through to fallthroughErrorHandler which returns
+// plain text "Internal Server Error\n" — a Rule A violation (API routes must
+// return JSON) and a 500 misclassification of what's really a 413.
+//
+// This handler MUST be registered before Sentry.setupExpressErrorHandler so
+// it can short-circuit the 413 case as a user-facing response, not as an
+// alertable error. Other errors fall through via `next(err)` and reach Sentry.
+//
+// Rule B: logger.warn with structured context — never silent.
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413)) {
+    logger.warn(
+      { type: err.type, limit: err.limit, length: err.length, message: err.message },
+      'Payload too large rejected at body-parser',
+    );
+    return res.status(413).json({
+      error: 'Payload too large',
+      code: 'PAYLOAD_TOO_LARGE',
+      limit: err.limit,
+    });
+  }
+  return next(err);
+});
 
 // ── 12. Sentry error handler — must be BEFORE any other error middleware ──────
 Sentry.setupExpressErrorHandler(app);
