@@ -5,6 +5,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
+import multer from "multer";
 import { env, getAllowedOrigins, isNgrokOrigin } from "./config/env";
 import { logger } from "./lib/logger";
 
@@ -25,7 +26,7 @@ import { landingPublicRoutes, landingAdminRoutes } from './modules/landing/landi
 import pushRoutes from './modules/push/push.routes';
 import { accountRoutes } from './modules/account/account.routes';
 
-import { upload, getUploadedFileUrl } from "./middlewares/upload.middleware";
+import { upload, getUploadedFileUrl, verifyAndPersistUpload, FILE_SIZE_LIMIT_BYTES } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
 import { fallthroughErrorHandler } from "./middlewares/error.middleware";
 import { generalLimiter, uploadLimiter } from "./middlewares/rate-limiter.middleware";
@@ -190,11 +191,18 @@ app.use('/api/app-settings', settingsRoutes);
 
 // ── 8. Misc endpoints ─────────────────────────────────────────────────────────
 // NOTE: /api/auth/me is the correct endpoint (auth.routes.ts, uses authenticateAny for both app + admin cookies)
-app.post("/api/upload", authenticateToken, uploadLimiter, upload.single("file"), (req: any, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  const url = getUploadedFileUrl(req.file);
-  return res.json({ url });
-});
+app.post(
+  "/api/upload",
+  authenticateToken,
+  uploadLimiter,
+  upload.single("file"),
+  verifyAndPersistUpload,
+  (req: any, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const url = getUploadedFileUrl(req.file);
+    return res.json({ url });
+  },
+);
 
 // ── 9. Static landing page — served before Vite middleware so it bypasses the SPA ─
 app.get('/landing', (_req, res) => {
@@ -215,6 +223,42 @@ if (process.env.NODE_ENV !== "production") {
   });
   logger.info("Debug route /api/debug-sentry enabled (dev only)");
 }
+
+// ── 11a. Multer error handler (Day 3 / Session 89 / Subtask 3.3) ──────────────
+// Multer throws MulterError (with `code` like LIMIT_FILE_SIZE) and custom
+// fileFilter rejections throw plain Error with `code` we attached
+// (INVALID_MIME, INVALID_FILENAME). None of these set `err.status`, so the
+// 413 handler below would miss them. Map each to the right HTTP shape.
+//
+// Rule A: every response is JSON. Rule B: every rejection branch logs via pino.
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      logger.warn({ code: err.code, field: err.field }, "Multer: file size limit exceeded");
+      return res.status(413).json({
+        error: "File too large",
+        code: "FILE_TOO_LARGE",
+        limit: FILE_SIZE_LIMIT_BYTES,
+      });
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      logger.warn({ code: err.code, field: err.field }, "Multer: unexpected file field");
+      return res.status(400).json({ error: "Unexpected file field", code: "UNEXPECTED_FIELD" });
+    }
+    logger.warn({ code: err.code, message: err.message }, "Multer error (generic)");
+    return res.status(400).json({ error: err.message, code: "UPLOAD_ERROR" });
+  }
+  // Custom errors raised from fileFilter (plain Error + .code we set)
+  if (err && err.code === "INVALID_MIME") {
+    logger.warn({ message: err.message }, "Upload rejected: claimed MIME not in whitelist");
+    return res.status(415).json({ error: "File type not allowed", code: "INVALID_MIME" });
+  }
+  if (err && err.code === "INVALID_FILENAME") {
+    logger.warn({ message: err.message }, "Upload rejected: filename sanitization");
+    return res.status(400).json({ error: err.message, code: "INVALID_FILENAME" });
+  }
+  return next(err);
+});
 
 // ── 11b. Payload-too-large handler (Day 3 / Session 89 / Subtask 3.2) ─────────
 // body-parser throws PayloadTooLargeError with type='entity.too.large' and
