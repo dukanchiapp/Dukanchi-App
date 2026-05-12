@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [vector]
+  extensions = [vector, cube, earthdistance]
 }
 
 model User {
@@ -31,6 +31,14 @@ model User {
   kycSubmittedAt  DateTime?
   kycReviewedAt   DateTime?
 
+  // Soft-delete (DPDP Act compliance — Session 87 hardening)
+  // deletedAt = when the grace period ends and account becomes inaccessible
+  // deletionRequestedAt = when the user clicked "delete account" (for grace timer)
+  // deletionReason = optional user-supplied reason (max 500 chars, DB-enforced)
+  deletedAt           DateTime?
+  deletionRequestedAt DateTime?
+  deletionReason      String?   @db.VarChar(500)
+
   stores     Store[]
   messagesSent     Message[] @relation("SentMessages")
   messagesReceived Message[] @relation("ReceivedMessages")
@@ -47,6 +55,8 @@ model User {
   askNearbyRequests AskNearbyRequest[] @relation("AskNearbyCustomer")
   pushSubscriptions PushSubscription[]
   fcmTokens         FcmToken[]
+
+  @@index([deletedAt])
 }
 
 model Store {
