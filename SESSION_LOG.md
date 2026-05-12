@@ -6,6 +6,82 @@
 
 ---
 
+## 2026-05-12 — Session 87 — Hardening Sprint Day 2: DB Schema Hardening (soft-delete, spatial GIST, vector HNSW)
+
+**Goal:** Add 3 schema enhancements to production: User soft-delete columns (DPDP), GiST spatial index on Store coordinates, HNSW vector index on Product embedding. Plus the two minimal account endpoints.
+
+**Status:** COMPLETE — all 3 migrations applied to TEST + PROD, /api/account/{delete,restore} endpoints live in code (not yet deployed to Railway).
+
+**What was done:**
+
+1. **Schema migrations** (3 forward + 3 down SQL files in proper Prisma format, hand-written):
+   - M1 `20260512164148_user_soft_delete_and_extensions` (transactional):
+     - ADD COLUMN `deletedAt`, `deletionRequestedAt` (TIMESTAMP), `deletionReason` (VARCHAR(500))
+     - CREATE INDEX `User_deletedAt_idx` (btree)
+     - CREATE EXTENSION `cube`, `earthdistance` (IF NOT EXISTS, idempotent)
+   - M2 `20260512164149_store_location_gist_index` (CONCURRENTLY, single statement):
+     - `CREATE INDEX CONCURRENTLY Store_location_gist_idx ON "Store" USING GIST (ll_to_earth(latitude, longitude))`
+     - Verified planner-usable (Index Scan when seqscan=off; planner correctly prefers Seq Scan on 2-row table)
+   - M3 `20260512164150_product_embedding_hnsw_index` (CONCURRENTLY, single statement):
+     - `CREATE INDEX CONCURRENTLY Product_embedding_hnsw_idx ON "Product" USING hnsw (embedding vector_cosine_ops)`
+     - pgvector 0.8.0, HNSW chosen over IVFFLAT (no training step, better for small-medium scale)
+
+2. **Application code** — new module `src/modules/account/`:
+   - `account.service.ts` — `requestDeletion(userId, reason?)`, `restore(userId)` with discriminated-union result type
+   - `account.controller.ts` — HTTP handlers, Sentry breadcrumbs (category="account", level="info" — not errors)
+   - `account.routes.ts` — `POST /delete` (auth + Zod validate), `POST /restore` (auth)
+   - `validators/schemas.ts` — `deleteAccountSchema` (reason ≤500 chars)
+   - `src/app.ts` — mount at `/api/account`
+
+3. **schema.prisma updated** to match: 3 new User fields + `@@index([deletedAt])`, datasource `extensions = [vector, cube, earthdistance]`. Prisma Client regenerated locally.
+
+**Testing strategy:**
+- Test branch: `ep-wandering-field-aogkpw0c-pooler` (Neon child, auto-expires May 19)
+- All 3 migrations applied to TEST first → verified (post-audit, 5 smokes) → applied to PROD
+- 5 smokes: count(deletedAt IS NULL), soft-delete round-trip (rolled back), VARCHAR(500) reject 501-char, GIST planner usability, HNSW cosine `<=>` syntax
+- Identical results on TEST and PROD
+
+**Performance:**
+- Pre-launch DB scale (8 users, 2 stores, 0 products), so index builds are microseconds
+- Migration wall-clocks: M1 1.10s, M2 0.56s, M3 0.82s on PROD
+- Lock duration on production tables: effectively zero (CONCURRENTLY + tiny tables)
+
+**Production verification (Anti-Silent-Failure Rule E):**
+- Pre-flight audit: extensions=plpgsql,vector / no target columns / no target indexes / 22 tables / 8-2-0 row counts — clean baseline
+- Post-audit: 4 extensions / 3 valid indexes / 22 tables / 8-2-0 unchanged — exact expected delta
+- Production curl post-migration: /health 200, /api/auth/me 401 JSON, /api/stores 401 JSON — app healthy
+
+**Commits this session:**
+- `fa0c391` — feat(hardening-d2): apply schema migrations to production (3 migration dirs + schema.prisma)
+- `7b4606d` — feat(hardening-d2): add /api/account/delete + /api/account/restore endpoints
+
+**Lessons learned:**
+- **Major discovery:** Neither test nor prod has `_prisma_migrations` table — the project has historically used `prisma db push` for schema sync, with migration files kept on disk as documentation. Plan to use `prisma migrate dev/deploy` would have either failed (re-applying 9 existing migrations) or triggered a destructive reset prompt. Caught at Phase 3 before any DB write; pivoted to Path B (write proper migration files, apply via `psql -f`, skip `_prisma_migrations` tracking). Migration baseline (`prisma migrate resolve --applied` for all 9 historical files) deserves its own focused session — queued as Day 2.7.
+- **`UID` is read-only in zsh** — using `UID=$(...)` to capture a user UUID broke smoke 3 the first time. Renamed to `USER_ROW_ID`. Future shell scripts: avoid common shell-reserved names.
+- **Path A (Prisma migrate engine) vs Path B (direct psql) decision matrix** — when a project doesn't have `_prisma_migrations`, baselining first is the "correct" long-term fix but high-blast-radius. Path B (psql -f manually-written migration.sql) matches project history and keeps audit trail without touching 9 historical migrations on prod.
+- **GiST + earthdistance on a 2-row table** — planner correctly chooses Seq Scan; `SET enable_seqscan = OFF` is the canonical way to verify the index is built and usable for the day it matters.
+- **CREATE INDEX CONCURRENTLY in single-statement files** — psql autocommit mode (default, no `--single-transaction`) executes each statement individually, so CONCURRENTLY works at file top level without ceremony.
+- **HNSW on empty table** — builds in 0ms, index becomes usable as rows are added. No need to wait for data.
+- **Node-modules drift between worktrees** — Day 1 installed `@types/multer-s3` in the worktree's node_modules, but the main repo on `hardening/sprint` hadn't been `npm install`ed since then. Running typecheck in main repo first hit TS7016. Fixed with `npm install` in main repo. Future: when switching worktrees, always npm install first.
+
+**Branch state:**
+- Working branch: `hardening/sprint` (main repo at `/Users/apple/Documents/Dukanchi-App`)
+- 2 new commits today on top of Day 1 merge `abff3dc`
+- Not yet pushed to origin — push deferred to founder's call
+- Production DB schema is AHEAD of deployed Railway code (DB has new columns/indexes, but `/api/account/*` routes are local-only until git push triggers Railway redeploy). This is safe: DB changes are additive (nullable columns, advisory indexes); existing code paths unaffected.
+
+**Scope explicitly deferred to Day 2.5:**
+- Auth middleware: reject login if `deletedAt` is set
+- Add `where: { deletedAt: null }` to all user-facing prisma queries (profile, follow, notifications, chat, search, admin)
+- Background worker: hard-delete users where `deletedAt < NOW() - 30 days`
+- Frontend: account-settings UI for delete/restore
+- Spatial query rewrite: update `search.service.ts` to use `earth_box`+`earth_distance` so the new GIST index is actually consulted
+
+**Next session (Day 3 — Security hardening):**
+Upload middleware limits (file size, MIME whitelist), JWT algorithm whitelist (reject `none`), body size limits (express.json limit currently 50mb — review), bcrypt rounds review.
+
+---
+
 ## 2026-05-12 — Session 86 — Hardening Sprint Day 1: TypeScript Strict Mode + tsconfig Architecture Split
 
 **Goal:** Enable TypeScript strict mode + fix all surfaced type errors + split tsconfig into proper architecture
