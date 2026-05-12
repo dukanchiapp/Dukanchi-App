@@ -69,6 +69,21 @@ async function startServer() {
 
   // ── 3. Setup HTTP server, sockets, workers ────────────────────────────────────
   const httpServer = createServer(app);
+
+  // Server-level request timeouts — Day 3 / Session 89 / Subtask 3.5.
+  // Tighter than Node 18 defaults (300s/60s/5s) to close the slow-loris vector
+  // and prevent worker pile-up from stalled clients.
+  //   - requestTimeout:   60s — total time a request can take (headers + body + response)
+  //   - timeout:          60s — legacy alias for requestTimeout (set both for belt-and-suspenders)
+  //   - headersTimeout:   30s — time to receive the full request header (must be < requestTimeout)
+  //   - keepAliveTimeout: 10s — idle time before closing a keep-alive socket (mobile-friendly)
+  // headersTimeout MUST be < requestTimeout per Node docs; keepAliveTimeout MUST
+  // be < headersTimeout in practice (otherwise idle sockets outlive the header gate).
+  httpServer.requestTimeout = 60_000;
+  httpServer.timeout = 60_000;
+  httpServer.headersTimeout = 30_000;
+  httpServer.keepAliveTimeout = 10_000;
+
   const io = initializeSocket(httpServer);
   setupSocketListeners(io);
   const notificationWorker = startNotificationWorker();

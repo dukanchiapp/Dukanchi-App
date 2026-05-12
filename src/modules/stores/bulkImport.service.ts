@@ -75,12 +75,14 @@ Return ONLY a valid JSON object. No markdown, no explanation.
 Example: {"productName":"Item Name","price":"MRP","category":"Category"}
 If a field cannot be mapped, omit it. productName must always be included.`;
 
+      // 30s timeout — Subtask 3.5. Bulk-import column mapping must not hang.
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: AbortSignal.timeout(30_000),
         }
       );
 

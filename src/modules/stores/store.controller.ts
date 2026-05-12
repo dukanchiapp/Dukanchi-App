@@ -102,7 +102,11 @@ export class StoreController {
       if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: "Invalid pincode" });
       type PostOffice = { Name: string; District: string; State: string };
       type PincodeResp = Array<{ Status: string; PostOffice: PostOffice[] | null }>;
-      const response = await fetch(`https://api.postalpincode.in/pincode/${code}`);
+      // 5s timeout — Subtask 3.5. External public API (api.postalpincode.in)
+      // has no SLA; fail fast so signup pincode-autofill doesn't block on it.
+      const response = await fetch(`https://api.postalpincode.in/pincode/${code}`, {
+        signal: AbortSignal.timeout(5_000),
+      });
       const data = (await response.json()) as PincodeResp;
       if (data?.[0]?.Status === 'Success' && (data[0].PostOffice?.length ?? 0) > 0) {
         const postOffices = data[0].PostOffice ?? [];

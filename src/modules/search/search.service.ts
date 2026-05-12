@@ -160,6 +160,7 @@ export class SearchService {
     let detectedCategory: string | null = null;
     if (env.GEMINI_API_KEY && env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
       try {
+        // 30s timeout — Subtask 3.5. Prevents pile-up if Gemini stalls.
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
             method: 'POST',
@@ -171,7 +172,8 @@ export class SearchService {
                 }]
               }],
               generationConfig: { maxOutputTokens: 100, temperature: 0.1 }
-            })
+            }),
+            signal: AbortSignal.timeout(30_000),
           }
         );
         if (geminiRes.ok) {

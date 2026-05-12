@@ -1,5 +1,9 @@
 import multer from "multer";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+// Imported from @aws-sdk/client-s3 transitive dep — explicit install not required.
+// Provides connection/socket/request timeout control for the S3 SDK
+// (Subtask 3.5 — closes the "unbounded R2 upload" worker-pile-up vector).
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import path from "path";
 import fs from "fs";
 import { promises as fsp } from "fs";
@@ -52,6 +56,12 @@ const MAGIC_BYTE_PEEK = 4100; // sufficient for all formats we accept
 const MAX_BASENAME_LENGTH = 200;
 
 // ── S3 client (production R2 path) ──────────────────────────────────────────
+// requestHandler enforces Subtask 3.5 timeouts:
+//   - connectionTimeout:  5s  — fail fast if R2 endpoint unreachable
+//   - socketTimeout:     60s  — accommodates large uploads over slow mobile
+//   - requestTimeout:    60s  — total per-request ceiling
+//   - throwOnRequestTimeout: true — convert breach into a TimeoutError (otherwise
+//     it's logged as a warning only; we want the handler to surface 500 PERSIST_FAILED)
 const s3Client = env.S3_BUCKET_NAME
   ? new S3Client({
       region: env.AWS_REGION || "auto",
@@ -61,6 +71,12 @@ const s3Client = env.S3_BUCKET_NAME
         accessKeyId: env.AWS_ACCESS_KEY_ID || "",
         secretAccessKey: env.AWS_SECRET_ACCESS_KEY || "",
       },
+      requestHandler: new NodeHttpHandler({
+        connectionTimeout: 5_000,
+        socketTimeout: 60_000,
+        requestTimeout: 60_000,
+        throwOnRequestTimeout: true,
+      }),
     })
   : null;
 

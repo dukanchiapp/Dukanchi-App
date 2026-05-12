@@ -10,6 +10,11 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function generateEmbedding(text: string, retries = 3, delay = 1000): Promise<number[]> {
   try {
     const startTime = Date.now();
+    // 30s timeout — Subtask 3.5. Note: callers may impose tighter budgets
+    // (e.g., search.service.ts:80 wraps this with a 500ms Promise.race for
+    // autocomplete latency). This 30s is the OUTER security ceiling — if the
+    // inner race fires first, the in-flight fetch is still bounded by this
+    // signal and will be cleaned up at the 30s mark.
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent?key=${env.GEMINI_API_KEY}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -17,7 +22,8 @@ export async function generateEmbedding(text: string, retries = 3, delay = 1000)
         model: 'models/text-embedding-004',
         content: { parts: [{ text }] },
         outputDimensionality: 768
-      })
+      }),
+      signal: AbortSignal.timeout(30_000),
     });
     
     type EmbeddingResp = { embedding?: { values?: number[] } };
