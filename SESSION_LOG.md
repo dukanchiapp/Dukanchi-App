@@ -6,6 +6,111 @@
 
 ---
 
+## 2026-05-13 — Session 89.5 — Hardening Sprint Day 2.6: Upload Scope 3 Extras (bridge session)
+
+**Goal:** Close the 3 deferred items from Day 3 Subtask 3.3 audit — per-route MIME tightening (Item 1), admin rate-limiter (Item 2), structured upload logging (Item 3) — and codify a new Rule F.2 around storage isolation, prompted by an R2-bucket cleanup forensic incident during today's smoke.
+
+**Status:** **CODE COMPLETE on `hardening/sprint`** — 3 commits (2 feature + 1 docs). Branch **34 commits ahead of `origin/main`** (was 31). 4 source files + 3 docs files / +225 / -30 / 21 tests still passing. Production deploy remains DEFERRED to Day 8 atomic merge.
+
+**Production runtime UNCHANGED**: Railway watches `main`, not feature branches. `origin/main` HEAD still `32f5525` (Session 85).
+
+### What was done — 3-commit chain (2 features + 1 docs)
+
+1. `1c69852` — **feat(upload): admin rate-limiter + standardHeaders on uploadLimiter** [Day 2.6 Item 2 + ND #2]
+   `uploadLimiter` (10/min Redis-backed) now applied to `/api/admin/settings/upload` — was missing per the Subtask 3.3 S6 audit. Admin already has token + role auth, but this caps damage at 10/min if an admin cookie leaks (vs generalLimiter's 300/min ceiling). `uploadLimiter` config also bumped with `standardHeaders:true` + `legacyHeaders:false` — parity with authLimiter and generalLimiter. 429 responses now ship the industry-standard `RateLimit-*` and `Retry-After` headers. Verified via 11-request burst on TEST: requests 1-10 → 200, request 11 → 429 with `Retry-After:28` + JSON body (Rule A; Rule B via pinoHttp customLogLevel).
+
+2. `96dc7fa` — **feat(upload): structured logging for upload events** [Day 2.6 Item 3]
+   Replaces generic `logger.warn` calls with structured-event format across `upload.middleware.ts` (4 rejection paths + 1 new success path) and `app.ts` section 11a Multer error handler (5 paths). All log lines now carry `event` tag (`upload.accepted | upload.rejected.{magic,mime,filename,size,field,mime_claim,multer_other} | upload.persist_failed`), `userId`, `route` (req.originalUrl), and context fields (claimedMime, detectedMime, fileSize, code, rejectionReason, storageKey, persistDurationMs, sink). New `upload.accepted` success log closes the operational gap — P99 persist latency now observable. `upload.persist_failed` (500 path) ALSO calls `Sentry.captureException` with tags + extras; routine 4xx stay logger-only (intentional — too noisy for Sentry). End-to-end verified on TEST: Test D → upload.accepted log with userId/route/storageKey/persistDurationMs=1295/sink=r2; Test C → upload.rejected.magic with all fields populated.
+
+3. `<this commit>` — **docs: Session 89.5 — Day 2.6 bridge + Rule F.2 + R2 cleanup forensics** [docs]
+   This SESSION_LOG entry + STATUS.md refresh + `CLAUDE.md` Rule F.2 addition.
+
+### Item 1 (PDF whitelist) — SKIPPED (ND #1)
+
+Audit invalidated the original premise. The Subtask 3.3 backlog had "admin-only PDF whitelist for KYC docs" — but the codebase shows:
+- KYC submission frontend (`src/components/KYCForm.tsx:23`) uploads via `/api/upload` and sends `image` field — Aadhaar/PAN are photographed, NOT scanned as PDFs.
+- Admin `/api/admin/settings/upload` callers (Settings.tsx logos, Settings.tsx carousel, LandingPage.tsx CMS) all send images — no PDF caller.
+- Adding PDF support would be SPECULATIVE — better deferred until a real PDF use case emerges (legal compliance docs, etc.).
+
+Single shared `IMAGE_MIME_WHITELIST` (jpeg/png/webp/gif) is correct for both customer and admin routes.
+
+### R2 cleanup forensic record — ND #3
+
+**Background:** Day 3 Subtask 3.3 smokes and Day 2.6 Item 2 rate-limit burst smoke both wrote real R2 objects to the production bucket (`dukanchi-prod`) because `R2_BUCKET_NAME` is the SAME env var for TEST and PROD. This is the storage-side analog of the Session 87/88 prod-DB-from-TEST-smoke incident. **Rule F gap on a non-DB surface.**
+
+**11 smoke artifacts removed via `DeleteObjectsCommand` batch (single API call, 0 errors):**
+
+```
+Day 3 stragglers (Subtask 3.3 smokes — May 12 17:51 UTC):
+  148B  1778608297225-4587734fcac4ab80-tiny.jpg
+  148B  1778608298884-6d47f7ca20c437d8-passwd.jpg
+
+Day 2.6 smokes (Test D + Test B reqs 1-8 — May 13 07:32-07:33 UTC):
+   62B  1778657572521-6b8b0b7743398385-tiny.jpg   (Test D)
+   62B  1778657600525-2d2987ebce6a560a-tiny.jpg   (Test B req#1)
+   62B  1778657601072-bf998c5b01bd1b29-tiny.jpg   (Test B req#2)
+   62B  1778657601599-fe9dc0ea859b7a7f-tiny.jpg   (Test B req#3)
+   62B  1778657602075-16f28b2b4066c888-tiny.jpg   (Test B req#4)
+   62B  1778657602695-ff02b8dfedfa344d-tiny.jpg   (Test B req#5)
+   62B  1778657603318-e4de55caccb1f819-tiny.jpg   (Test B req#6)
+   62B  1778657603938-5010d1b5e4544c50-tiny.jpg   (Test B req#7)
+   62B  1778657604540-6030fd72ffa62984-tiny.jpg   (Test B req#8)
+```
+
+**Cleanup mechanic:** A small one-off forensic script at `temp/r2-cleanup-day26.ts` (gitignored — local-only) lists candidates by (size ≤ 200B AND basename in `{tiny,passwd,fake}.jpg`) and either dry-runs (default) or deletes (with `DELETE=1` env gate). The filter caught exactly 11 of 22 bucket objects; the other 11 (real user content) were correctly excluded. Post-delete re-list: 0 candidates. Bucket-total dropped from 22 to 11 — count delta matches deletion count exactly, proving no collateral damage.
+
+**Why 11 not 9:** Day 3 Subtask 3.3 also left 2 stragglers (T1 + T5 smokes from May 12) that I missed during the Day 3 closure. Surfaced during today's dry-run; deleted in the same batch (Option 1 approved by user — same class of artifact, same Rule F gap, same cleanup mechanic).
+
+### Rule F.2 added to CLAUDE.md
+
+Codifies storage isolation for local smoke tests. Currently `R2_BUCKET_NAME` (and the four AWS_* credentials) point at the prod bucket from `.env`. Until separated, write-path smokes must explicitly clean up after themselves. Three acceptable workarounds documented:
+(a) dedicated `R2_BUCKET_NAME_TEST` env (preferred — Day 4+/Day 2.7 candidate to set up)
+(b) accept artifact creation in prod bucket + explicit cleanup (today's precedent)
+(c) skip write-path smokes when test bucket unavailable
+
+### Backlog created / preserved
+
+- **Dedicated test R2 bucket** (`R2_BUCKET_NAME_TEST`) — Day 4+/Day 2.7 infrastructure work. Would eliminate the cleanup burden going forward.
+- **KYC-specific rate limiter** — Day 4+ candidate. KYC submission currently goes through `/api/upload` (the general image route) under `uploadLimiter` (10/min). A separate `/api/kyc/upload` with a tighter cap (e.g., 1/day per user) would prevent KYC spam.
+- **xlsUpload rate-limit gap** — `/api/stores/:storeId/bulk-import` has no Multer-tier rate-limiter beyond `generalLimiter` (300/min). Has its own daily storeId cap (`rateLimitKey` in `bulkImport.service.ts:25`) and 5MB cap, so gap is small but worth noting for completeness.
+
+### Files touched (Day 2.6 cumulative)
+
+7 files: 4 source modifications + 3 docs.
+
+Source:
+- `src/middlewares/rate-limiter.middleware.ts` (uploadLimiter +standardHeaders/legacyHeaders)
+- `src/modules/admin/admin.routes.ts` (uploadLimiter import + applied to /settings/upload)
+- `src/middlewares/upload.middleware.ts` (Sentry import + structured logs + success log + Sentry capture on persist_failed)
+- `src/app.ts` (section 11a Multer error handler — 5 log enrichments + _req → req)
+
+Docs:
+- `SESSION_LOG.md` (this entry)
+- `STATUS.md` (refresh)
+- `CLAUDE.md` (Rule F.2 added after Rule F)
+
+### Verification
+
+- Typecheck: PASS (0 errors at each commit's HEAD and at final HEAD)
+- Test suite: 21/21 passing in ~1.6s (no regressions)
+- Boot smoke on TEST branch: clean
+- Behavioral smokes (4/4 RAN): Test A 401, Test D 200 with upload.accepted log, Test C 415 with upload.rejected.magic log, Test B 429 with Retry-After:28 + full RateLimit-* header set
+- R2 cleanup: 11/11 deleted, 0 errors, post-delete re-list shows 0 candidates
+- Rule A compliance: all error responses JSON (no HTML)
+- Rule B compliance: every rejection branch logs (directly or via pinoHttp 4xx-WARN)
+- Rule F compliance: TEST branch only; production untouched
+- Rule F.2 NEW: storage-side analog of Rule F, codified after today's R2 cleanup precedent
+
+### Total session footprint
+
+~45 min (audit 10 + impl 20 + smokes 5 + R2 cleanup 5 + Phase E 10). 3 commits. ~+225 / -30 source. ~+150 docs.
+
+### Deploy plan unchanged
+
+Day 8 atomic merge `hardening/sprint` → `main` → Railway redeploy + full Rule E verification.
+
+---
+
 ## 2026-05-13 — Session 89 — Hardening Sprint Day 3: Security Gaps Sprint (5 subtasks)
 
 **Goal:** Close 5 security gaps identified at end of Day 2.5 — JWT algorithm pinning, body-size DoS surface, upload validation depth, bcrypt cost factor, and request timeout coverage.

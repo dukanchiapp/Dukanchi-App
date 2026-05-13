@@ -131,6 +131,20 @@ Local backend smoke tests (`npm run dev`) MUST use `DATABASE_URL_TEST` when test
 
 Origin: Session 88 / Day 2.5 — a smoke-test signup against the local dev server (connected to prod via main `.env`) accidentally created a `Test` user on production. Forensic cleanup landed via 5 safeguards; rule codified here to prevent recurrence.
 
+### Rule F.2 — Storage Isolation
+
+Rule F's principle (TEST vs PROD separation for write-path smokes) extends to non-DB storage backends. Currently `R2_BUCKET_NAME` (and the four AWS_* credentials) are shared between TEST and PROD in `.env`. Any local smoke test that exercises an upload-write path (POST `/api/upload`, POST `/api/admin/settings/upload`, etc.) WILL create real objects in the production R2 bucket.
+
+Until storage backends are separated, write-path upload smokes follow one of:
+
+- **(a) Use a dedicated test bucket env** — set `R2_BUCKET_NAME_TEST` and have the smoke runner export it as `R2_BUCKET_NAME` for the duration of the smoke. Preferred long-term — eliminates cleanup burden entirely. (Day 4+/Day 2.7 candidate to wire up.)
+- **(b) Accept artifact creation + clean up explicitly** — run the smoke, capture the storage keys returned in response bodies, delete them via `@aws-sdk/client-s3 DeleteObjectsCommand` before commit. Today's precedent (Session 89.5).
+- **(c) Skip the smoke** — for write-path tests that would create artifacts when no test bucket is available AND no explicit cleanup is planned, skip the smoke and document the gap.
+
+The minimum acceptable bar is (b): smoke-then-cleanup-before-commit. (a) is preferred; (c) is the fallback when neither is feasible. Silent leakage into the prod bucket — discovering it days later — is NOT acceptable.
+
+Origin: Session 89.5 / Day 2.6 — 9 placeholder JPEGs (Day 2.6 Item 2 rate-limit burst smoke) + 2 stragglers (Day 3 Subtask 3.3 smoke T1 + T5) leaked into the prod `dukanchi-prod` R2 bucket. Cleaned forensically via a one-off `temp/r2-cleanup-day26.ts` script; rule codified here to prevent recurrence on the storage surface.
+
 ## Two-AI Workflow — Response Conventions
 
 ### Opus Summary Convention
