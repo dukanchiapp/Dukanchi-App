@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-13 | Session 91 closed | Branch: hardening/sprint @ Day 2.7 head (3 commits added this session, push pending) | Prod runs main @ 32f5525
+> Last updated: 2026-05-13 | Session 92 closed | Branch: hardening/sprint @ Day 5 head (4 commits added this session, push pending) | Prod runs main @ 32f5525
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -43,11 +43,18 @@
   - **21 → 36 tests** (+15 = +14 spec'd + 1 bonus T13b positive control)
   - 4 NDs documented (fixture bug fixed mid-flight; JWT iat byte-identical; T13b positive control kept; rate-limit-redis bypass via MemoryStore)
   - **0 production code touched** — test-only, invariant verified
-  - **Pre-flag for Day 5**: Neon TEST branch `hardening-day2-test` decayed (boot smoke surfaced PrismaClientInitializationError). Caught by existing try/catch; non-fatal; not a regression. **5-min Neon dashboard task required to revive before Day 5 DB-dependent smokes.**
+- **Day 5 (Session 92):** Refresh Token Rotation + Admin Cookie Bug Fix — Auth0/Clerk-style industry-standard flow ✅
+  - `969579e` — Backend: new `JWT_REFRESH_SECRET` env, `src/lib/redis-keys.ts` (90 lines), `src/services/refreshToken.service.ts` (439 lines, 5 public functions + RefreshTokenError class), auth.controller rewrite (setAuthCookies helper fixes ND #2 admin routing), auth.middleware type+jti checks, /refresh route handles its own user-status check (Day 2.5 carve-out preserved), X-Refresh-Token header fallback for native, pinoHttp+logger redact updates
+  - `e6d0608` — Frontend: `src/lib/api.ts` rewrite with silent-refresh interceptor + native localStorage path, AuthContext.tsx auth:expired event listener, Login.tsx+Signup.tsx pass refreshToken, admin-panel axios interceptor
+  - `d96146f` — Tests: 6 new refresh-flow integration tests via supertest + stateful in-memory Redis simulator (T1 rotation, T2 reuse+family revoke, T3 invalid sig, T4 no token, T5 logout blacklist, T6 admin cookies regression)
+  - **36 → 42 tests** (+6 = matches Q8 Option A target)
+  - 14 NDs documented + accepted (D1-D14)
+  - 8 manual smokes (S1-S8) PASSED live against revived Neon TEST: customer login dual-cookies, /refresh rotation, reuse detection, admin cookie routing (ND #2 regression-proof live), logout token blacklist, prod-fail guard exits, X-Refresh-Token header path
+  - **Neon TEST branch revived** in pre-flight (user task — Day 2.7 follow-up resolved)
 
-All Days 1+2+2.5+3+2.6+4 committed AND pushed to `origin/hardening/sprint`. Day 2.7 (this session) committed locally — push pending.
+All Days 1+2+2.5+3+2.6+4+2.7 committed AND pushed to `origin/hardening/sprint`. Day 5 (this session) committed locally — push pending.
 
-Branch is **41 commits ahead of `origin/main`** (was 38 at start of Session 91; +3 this session: 2 test + 1 docs).
+Branch is **45 commits ahead of `origin/main`** (was 41 at start of Session 92; +4 this session: 3 feature + 1 docs).
 
 ## Active Sprint: Hardening Sprint (Days 1-4 + 2.6 + 2.7 of 8 — 69% complete)
 
@@ -97,7 +104,9 @@ Branch is **41 commits ahead of `origin/main`** (was 38 at start of Session 91; 
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] `hardening/sprint` is **41 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] `hardening/sprint` is **45 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] **Day 5 deploy pre-flight TODO**: Provision `JWT_REFRESH_SECRET` in Railway dashboard before Day 8 merge. Generate via `openssl rand -base64 48`. Server hard-fails boot in production if still using the dev fallback (env.ts post-parse guard, verified live in S7 smoke).
+- [ ] **Day 5.1 follow-up session**: Native (Capacitor) APK rebuild + manual test of silent-refresh flow on a real device. Backend + frontend code is 100% testable via mocks + curl, but the full native localStorage → X-Refresh-Token → retry round-trip needs a real device.
 - [ ] Neon test branch `hardening-day2-test` auto-expires May 19 — fine, served its purpose
 - [ ] Schema-ahead-of-code state on production — safe (additive Day 2 migrations) until Day 8
 - [ ] Day 2.7 (baseline `_prisma_migrations` table on prod + test coverage sprint) — separate focused session

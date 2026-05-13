@@ -6,6 +6,87 @@
 
 ---
 
+## 2026-05-13 — Session 92 — Hardening Sprint Day 5: Refresh Token Rotation + Admin Cookie Bug Fix
+
+**Goal:** Replace the Day 2.5 "renew same 7-day JWT" /refresh with a true industry-standard rotation pattern (Auth0/Clerk-style) — short-lived access tokens (15min) + long-lived rotating refresh tokens (30d) + one-time use + theft detection. Plus fix the admin cookie routing bug (Day 5 audit ND #2) and add native (Capacitor) silent-refresh support.
+
+**Status:** **CODE COMPLETE on `hardening/sprint`** — 4 commits this session (3 feature + 1 docs). Branch **45 commits ahead of `origin/main`** (was 41 at start of Session 92; +4 this session). 17 files / +1817 / -164 / +6 tests (36→42 passing). Production deploy DEFERRED to Day 8 atomic merge.
+
+**Production runtime UNCHANGED**: Railway watches `main`. `origin/main` HEAD still `32f5525` (Session 85). All Day 1-5 + 2.5 + 2.6 + 2.7 changes on `hardening/sprint` only.
+
+**Neon TEST branch revived in pre-flight:** Prior `hardening-day2-test` branch had decayed (surfaced in Day 2.7 Phase D). User created a fresh Neon `test` branch (parent: production, current data) before Day 5 audit, updated `DATABASE_URL_TEST` in `.env`. All 8 Phase 6 smokes ran against the live TEST DB.
+
+### What was done — 4-commit chain (3 feature + 1 docs)
+
+1. `969579e` — **feat(auth): refresh token rotation backend with theft detection (incl. ND #2 fix)** [Day 5 Phases 1+2+3 + Phase 4 Q6 backend]
+   New `src/lib/redis-keys.ts` (90 lines — key patterns + TTL constants + inline threat-model docstring). New `src/services/refreshToken.service.ts` (439 lines — 5 public functions: generateRefreshToken, verifyRefreshToken, rotateRefreshToken, rotateFromVerifiedPayload, detectReuseAndRevokeFamily, revokeRefreshToken; RefreshTokenError typed class with 4 codes). New `JWT_REFRESH_SECRET` env (zod-validated, distinct from JWT_SECRET, dev fallback + production hard-fail guard via post-parse check). `src/modules/auth/auth.service.ts` extracts signAccessToken helper (now exported) with type:'access' + jti claims + 15-min expiry; signup/login/team-member-login all return `{user, accessToken, refreshToken}`. `src/modules/auth/auth.controller.ts` full rewrite (270 lines) — setAuthCookies routes by role (ND #2 fix), blacklistAccessTokenIfPresent for logout, /refresh full flow with verify → user-status check → rotate → REUSE_DETECTED handoff to detectReuseAndRevokeFamily. `src/middlewares/auth.middleware.ts` adds type === 'access' check (lenient on missing for legacy) + accessBlacklistKey(jti) check. `src/modules/auth/auth.routes.ts` drops `authenticateAllowDeleted` from /refresh (controller does its own user-status check, preserves Day 2.5 carve-out for deleted_pending users). `src/app.ts` + `src/lib/logger.ts` redact paths add `req.headers["x-refresh-token"]` + body.accessToken/refreshToken so tokens never land in structured logs. Phase 4 Q6 backend: auth.controller.ts /refresh reads cookies first, falls back to `X-Refresh-Token` header (native clients).
+
+2. `e6d0608` — **feat(auth): silent refresh frontend interceptors (PWA + admin panel)** [Day 5 Phase 4]
+   `src/lib/api.ts` major rewrite (247 lines, +211 net) — refresh-token localStorage helpers (`getRefreshToken/setRefreshToken/clearRefreshToken/setTokens/clearTokens`), `attemptRefresh()` with native/web branching (native sends X-Refresh-Token header + reads body tokens to localStorage; web uses cookies + IGNORES body — XSS invariant), 401 interceptor in `apiFetch` with `__isRefreshRetry` flag for infinite-loop protection, `REFRESH_BYPASS_PATHS` array, `auth:expired` event dispatch on refresh failure. `src/context/AuthContext.tsx` updated — `login()` signature accepts 4th optional `refreshToken` arg, `logout()` uses `clearTokens()`, new useEffect listens for `auth:expired` event. `src/pages/Login.tsx` + `src/pages/Signup.tsx` pass `data.refreshToken` to login() with `data.accessToken ?? data.token` fallback for back-compat. `admin-panel/src/lib/api.ts` adds axios response.use interceptor with same refresh-on-401 pattern (cookie-only, redirects to /login on failure).
+
+3. `d96146f` — **test(auth): 6 refresh flow integration tests + mock-redis set ops** [Day 5 Phase 5]
+   New `src/__tests__/auth.refresh.test.ts` (419 lines, 6 tests) — supertest + stateful in-memory Redis simulator (vi.hoisted Map<string,string> KV + Map<string,Set<string>> sets) so tests assert on STORED STATE not just mock-call shape:
+     - T1 rotates on first use (old jti blacklisted, new jti active, family extends)
+     - T2 reuse → 401 + entire family revoked (verifies sMembers empty, all jtis blacklisted)
+     - T3 invalid signature → 401 + zero state mutation (deep-equality snapshot)
+     - T4 no cookie + no header → 401 NO_REFRESH_TOKEN + zero state mutation
+     - T5 logout blacklists refresh + access jtis, post-logout refresh fails
+     - T6 admin login sets dk_admin_* ONLY (ND #2 regression) + inverse check
+   `src/test-helpers/mock-redis.ts` extended with sAdd/sMembers/sRem stubs for future tests. Final test count: 42/42 in ~1s.
+
+4. `<this commit>` — **docs(day5): Session 92 SESSION_LOG + STATUS update + Neon test branch note** [Day 5 Phase 6 closure]
+   This entry + STATUS.md refresh. Cites all 3 feature commit hashes, 14 NDs accepted by user, 8 smokes passed against live Neon TEST.
+
+### 14 Deviations / Surprises accepted (D1-D14)
+
+- **D1** (Phase 2): `generateRefreshToken` signature changed from `(userId, role, familyId?)` to `(userId, role, opts?: {familyId?, teamMemberId?})` mid-flight — teamMemberId needed in refresh payload for team-member impersonation sessions.
+- **D2** (Phase 2): Exported `rotateFromVerifiedPayload` alongside `rotateRefreshToken` so controller can insert user-status check between verify and rotate (Service=state, Controller=policy split).
+- **D3** (Phase 2): `detectReuseAndRevokeFamily(userId, familyId)` signature changed from spec's `(jti, familyId) → void` — userId needed to DEL `rt:active:{userId}:{jti}` keys. Returns `{revokedCount}` additively.
+- **D4** (Phase 2): Family-set TTL re-stamped on every rotation via explicit `pubClient.expire()` after sAdd. Without this, Redis SET TTL isn't reset by SADD and family could expire mid-rotation chain.
+- **D5** (Phase 2): `Sentry.captureMessage(level:'warning')` for security events (refresh_token.reuse_detected, refresh_token.family_revoked) — NOT captureException (it's a signal, not a code error). Matches Day 4 ND #6 philosophy.
+- **D6** (Phase 3): Access token symmetric defense — `type: 'access'` claim added by signAccessToken; authenticateToken middleware rejects `type === 'refresh'` (lenient on missing type for legacy compat).
+- **D7** (Phase 3): Race window between `SET rt:blacklist` and `DEL rt:active` (~1ms) — blacklist-first ordering preserves theft-signal priority (concurrent reuse sees blacklist, gets REUSE_DETECTED not NOT_ACTIVE). Atomic MULTI/EXEC deferred to follow-up.
+- **D8** (Phase 4): Web frontend NEVER reads body tokens — `setTokens()` web-no-op invariant explicit in code + docstring. `attemptRefresh()` on web reads only response status, never `.json()` the body. XSS protection preserved.
+- **D9** (Phase 4): `auth:expired` event bus pattern between `api.ts` and `AuthContext.tsx` — decouples token logic from React/router. Listener mounted before any 401 (AuthProvider wraps app root).
+- **D10** (Phase 4): No new tests added in Phase 4 — Phase 5 owns the test additions. Day 2.7 Test 7 already updated in Phase 3 to exercise new flow.
+- **D11** (Phase 4): `data.accessToken ?? data.token` fallback in Login.tsx + Signup.tsx — defensive against deploy-transition where new frontend hits older backend (or vice versa). Removes after a few weeks of stability.
+- **D12** (Phase 5): Test file at `src/__tests__/auth.refresh.test.ts` per spec. Existing convention is colocated; `src/__tests__/` matches vitest include glob, no config change needed.
+- **D13** (Phase 5): T5 post-logout refresh returns `code: 'REUSE_DETECTED'` (not a LOGOUT-specific code). Semantically accurate (logged-out jti is blacklisted same as rotated jti) but frontend should treat any 401-with-code on refresh as "redirect to login". User accepted as future-hardening item.
+- **D14** (Phase 5): T6 inverse check added beyond spec (customer cookies absent from admin response AND vice versa). ~10 extra lines, high regression value.
+
+### 8 Manual smoke results (S1-S8 against revived Neon TEST)
+
+| # | Test | Result |
+|---|------|--------|
+| S1 | Boot + /health | ✅ HTTP 200 + X-Request-Id, no Prisma error (Neon TEST alive) |
+| S2 | Customer signup + login | ✅ dk_token + dk_refresh ONLY; both in Set-Cookie + body |
+| S3 | /refresh with cookies | ✅ 200 + rotated tokens (new jti, same familyId) |
+| S4 | Reuse old refresh | ✅ 401 `{"code":"REUSE_DETECTED"}` |
+| S5 | Admin login | ✅ dk_admin_token + dk_admin_refresh ONLY (ND #2 regression-proof live) |
+| S6 | Logout | ✅ All 4 cookies cleared (Expires:1970); post-logout /me → 401 TOKEN_REVOKED (access blacklist enforced) |
+| S7 | Prod-fail guard | ✅ `EXIT_CODE=1` + openssl hint when NODE_ENV=production + dev fallback secret |
+| S8 | X-Refresh-Token header path | ✅ 200 + new tokens (native client compat) |
+| R2 | Smoke artifact check | ✅ 0 candidates — Day 5 didn't touch upload paths |
+
+### Day 5 follow-up backlog items
+
+1. **Native APK rebuild + manual test** (per Rule D / Q13) — backend + frontend changes are 100% testable via mocks + curl, but the full native flow (login → 15-min expiry → silent refresh → retry) needs a real device + APK rebuild. Deferred to **Day 5.1 follow-up session**.
+2. **LOGGED_OUT vs REUSE_DETECTED code differentiation** (D13) — post-logout refresh currently returns REUSE_DETECTED. Frontend should treat both as "redirect to login", but distinguishing in logs would improve observability. Future-hardening.
+3. **Atomic MULTI/EXEC for blacklist+delete race window** (D7) — 1ms race between `SET rt:blacklist` and `DEL rt:active` in rotation. Acceptable for 1.0; tighten when refactoring redis layer.
+4. **`issueTokenForUser` cleanup** — Marked @deprecated in Phase 3; no internal callers remain. Safe to remove after Day 8 deploy stability period.
+5. **Refresh-token-aware `req.user` typing** — `req.user` is currently `(req as any).user` in controllers. Could be tightened with a typed Express.Request augmentation. Cosmetic; not blocking.
+6. **Test customer row in TEST DB** — Phone `9999900001` created during S2 smoke. Lives in TEST branch (per Rule F.2), no production impact. Optional cleanup via psql DELETE.
+
+### Phase E execution notes
+
+3 feature commits + 1 docs commit (this entry). No hunk-splits needed — file-to-commit mapping was unambiguous (cleaner profile than Day 3's 3 hunk-splits). Typecheck PASS at each commit's staged content; tests jump 36 → 36 → 42 → 42 across the chain (commit 3 adds the 6 new tests). Each commit body cites the relevant phases + NDs by number for traceability.
+
+### Deploy plan unchanged
+
+Day 8 atomic merge `hardening/sprint` → `main` → Railway redeploy + full Rule E verification + JWT_REFRESH_SECRET provisioned in Railway dashboard pre-merge.
+
+---
+
 ## 2026-05-13 — Session 91 — Hardening Sprint Day 2.7: Test Coverage Sprint (Scope 2)
 
 **Goal:** Build the integration test scaffolding that Day 5 (Auth Refinements) will need. Convert smoke-only confidence on Day 3 security surfaces (upload validation, body limit, rate-limiter, JWT whitelist, bcrypt) into durable test confidence. Land Day 2.5 carve-out test for /refresh.
