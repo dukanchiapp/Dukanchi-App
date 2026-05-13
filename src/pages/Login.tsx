@@ -37,8 +37,16 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Pass isTeamMember flag to context
-      login(data.user, data.token, data.isTeamMember || false);
+      // Day 5: pass BOTH tokens — AuthContext.login persists refreshToken
+      // on native (localStorage); web ignores both (httpOnly cookies set
+      // by server's Set-Cookie). data.accessToken is the new field name;
+      // data.token is the legacy alias for back-compat with older builds.
+      login(
+        data.user,
+        data.accessToken ?? data.token,
+        data.isTeamMember || false,
+        data.refreshToken,
+      );
       navigate('/');
     } catch (err: any) {
       setError(err.message);

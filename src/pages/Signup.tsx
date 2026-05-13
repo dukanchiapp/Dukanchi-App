@@ -54,7 +54,8 @@ export default function SignupPage() {
       // captured against the anonymous distinct_id, then login()'s
       // identify() promotes that anonymous user to the real userId.
       captureEvent('user_signed_up', { role });
-      login(data.user, data.token);
+      // Day 5: pass refreshToken so native persists both tokens.
+      login(data.user, data.accessToken ?? data.token, false, data.refreshToken);
       navigate('/');
     } catch (err: any) {
       setError(err.message);

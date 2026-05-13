@@ -1,5 +1,11 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { apiFetch, getToken as getNativeToken, setToken as setNativeToken, clearToken as clearNativeToken, isNative } from '../lib/api';
+import {
+  apiFetch,
+  getToken as getNativeToken,
+  setTokens,
+  clearTokens,
+  isNative,
+} from '../lib/api';
 import { setSentryUser } from '../lib/sentry-frontend';
 import { identifyUser, captureEvent } from '../lib/posthog';
 
@@ -14,7 +20,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isTeamMember: boolean;
-  login: (user: User, token: string, isTeamMember?: boolean) => void;
+  /**
+   * Login state setter. Day 5 / Session 92: accepts refreshToken as a
+   * 4th optional positional arg so native (Capacitor) clients can persist
+   * BOTH tokens to localStorage. Web ignores this — cookies carry both.
+   */
+  login: (user: User, accessToken: string, isTeamMember?: boolean, refreshToken?: string) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -57,14 +68,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  const login = (newUser: User, newToken: string, teamMember: boolean = false) => {
+  const login = (
+    newUser: User,
+    newAccessToken: string,
+    teamMember: boolean = false,
+    newRefreshToken?: string,
+  ) => {
     setUser(newUser);
-    // On native, persist JWT so apiFetch attaches it as Authorization: Bearer.
-    // On web, this is a no-op — the httpOnly cookie does the work.
-    if (isNative() && newToken) {
-      setNativeToken(newToken);
+    // Day 5: native persists BOTH tokens via setTokens (writes to
+    // localStorage). Web is a no-op — httpOnly cookies were set by the
+    // server's Set-Cookie headers on the login response.
+    if (isNative()) {
+      setTokens({
+        accessToken: newAccessToken,
+        ...(newRefreshToken ? { refreshToken: newRefreshToken } : {}),
+      });
     }
-    setToken(isNative() ? newToken : "cookie");
+    setToken(isNative() ? newAccessToken : "cookie");
     setIsTeamMember(teamMember);
     localStorage.setItem('isTeamMember', String(teamMember));
     setAuthChecked(true);
@@ -82,8 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     apiFetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
-    // Clear native token (no-op on web)
-    clearNativeToken();
+    // Day 5: clear BOTH tokens (access + refresh) on native. No-op on web
+    // (cookies cleared server-side by /logout's res.clearCookie calls).
+    clearTokens();
     setUser(null);
     setToken(null);
     setIsTeamMember(false);
@@ -94,6 +115,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSentryUser(null);
     identifyUser(null);
   };
+
+  // Day 5: silent-refresh failure handler. When apiFetch's interceptor
+  // can't recover from a 401 (refresh token expired/revoked/stolen), it
+  // dispatches 'auth:expired'. Treat as forced logout — clears state.
+  // Components observing `user` will react (redirect to /login).
+  useEffect(() => {
+    const handler = () => {
+      // Don't POST /logout — the server has already invalidated the
+      // session (that's why refresh failed). Just clear local state.
+      clearTokens();
+      setUser(null);
+      setToken(null);
+      setIsTeamMember(false);
+      localStorage.removeItem('isTeamMember');
+      setSentryUser(null);
+      identifyUser(null);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth:expired', handler);
+      return () => window.removeEventListener('auth:expired', handler);
+    }
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, token, isTeamMember, login, logout, isLoading: !authChecked }}>
