@@ -6,6 +6,80 @@
 
 ---
 
+## 2026-05-13 — Session 90 — Hardening Sprint Day 4: Observability (Scope 2)
+
+**Goal:** Close the observability gap identified in Day 3+2.6 — backend Sentry hardening (release tag + request-ID correlation), structured logs in socket-listeners, frontend Sentry + PostHog with graceful degradation, source-map upload pipeline, and 7 product events for the new analytics surface.
+
+**Status:** **CODE COMPLETE on `hardening/sprint`** — 3 commits (2 feature + 1 docs). Branch **38 commits ahead of `origin/main`** (was 35). 17 files (15 modified + 2 new) / ~+1372 / -63 across the full Phase D diff (~+365 / -63 source LOC excluding package-lock churn). 21/21 tests still passing.
+
+**Production runtime UNCHANGED**: Railway watches `main`, not feature branches. `origin/main` HEAD still `32f5525` (Session 85). Day 1+2+2.5+3+2.6+4 all live on `hardening/sprint` only.
+
+### What was done — 3-commit chain (2 feature + 1 docs)
+
+1. `ea42840` — **feat(observability): backend Sentry release tag + request-ID propagation + socket-listeners structured logs** [Day 4 backend]
+   `src/lib/sentry.ts`: Sentry.init now passes `release: RAILWAY_GIT_COMMIT_SHA || npm_package_version || 'unknown'` so the Sentry UI can correlate errors to specific deploys. `src/app.ts`: new section 4b middleware (after pinoHttp, before routes) sets `X-Request-Id` response header AND `Sentry.getCurrentScope().setTag('request_id', req.id)` for log↔Sentry correlation. `src/config/socket-listeners.ts`: 9 `console.*` calls migrated to pino structured logs with event tags (`socket.auth.*`, `socket.connect`, `socket.disconnect`, `socket.message.drop.*`, `socket.message.save_failed`) and context fields (userId, socketId, senderId, receiverId, roles, reason). Backend `console.*` count: 26 → 17.
+
+2. `c7c0ef0` — **feat(observability): frontend Sentry + PostHog + source map build pipeline** [Day 4 frontend + build]
+   New file `src/lib/sentry-frontend.ts` (92 lines): @sentry/react init with `VITE_SENTRY_DSN`, browserTracing + replay integrations (replay session OFF by default — `replaysSessionSampleRate:0`; on-error 100% — `replaysOnErrorSampleRate:1.0`; mask all text + media for privacy when toggled on). Naming disambiguates from existing backend `src/lib/sentry.ts` (ND #1).
+   New file `src/lib/posthog.ts` (96 lines): posthog-js init targeting **eu.i.posthog.com** (DPDP-friendly, closer to India) via `VITE_POSTHOG_KEY` + `VITE_POSTHOG_HOST`. autocapture + pageview ON; session_recording explicitly OFF; dev-mode auto-opt-out so local dev doesn't pollute events. Three exported helpers (`initPostHog`, `identifyUser`, `captureEvent`).
+   `src/main.tsx`: both inits called BEFORE React renders.
+   `src/context/AuthContext.tsx`: `setSentryUser` + `identifyUser` on login + session-revival; `setSentryUser(null)` + `identifyUser(null)` on logout; `user_logged_in` event captured.
+   7 product events wired across 6 files: `user_signed_up`, `user_logged_in`, `store_created`, `post_created`, `ai_feature_used` × 3 (photo-to-post, voice-to-post, store-bio-voice), `search_performed` (metrics only — query text NOT captured for privacy), `chat_message_sent` (booleans only — message text NOT captured). `account_delete_requested` SKIPPED (ND #2 — no frontend callsite exists yet; helper imported for when UI lands).
+   `vite.config.ts`: conditional `@sentry/vite-plugin` appended last (requires `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` ALL set; if any missing, plugin omitted and warning logged at config-load — ND #4). `build.sourcemap: true` for prod builds.
+   Dependencies: `@sentry/react@10.53.1`, `posthog-js@1.373.4`, `@sentry/vite-plugin@5.3.0` (devDep). +39 transitive packages. Bundle: `index.js` 607KB → 736KB (gzipped +50KB, ND #8). Day 5+ optimization candidate (manual chunks).
+
+3. `<this commit>` — **docs: Session 90 — Day 4 Observability + .env.example updates** [docs]
+   This SESSION_LOG entry + STATUS.md refresh + `.env.example` 6 new env-var docs (VITE_SENTRY_DSN, SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT, VITE_POSTHOG_KEY, VITE_POSTHOG_HOST). CLAUDE.md unchanged (no new rules codified this session — existing patterns applied).
+
+### NDs documented (8 total — all accepted by user)
+
+- **ND #1**: No `web/` folder — single-package layout. Frontend Sentry placed at `src/lib/sentry-frontend.ts` to disambiguate from existing backend `src/lib/sentry.ts`. Adapted per spec permission.
+- **ND #2**: `account_delete_requested` event has no frontend callsite. Backend `/api/account/delete` exists (Day 2.5 cascade) but no `apiFetch` consumer in `src/pages` / `src/components`. Event skipped (7/8 wired); helper imported in AuthContext for easy future wiring. NOT a silent swallow.
+- **ND #3**: `X-Request-Id` is pinoHttp's sequential integer (saw `X-Request-Id: 1` on /health), not UUID. Functionally adequate for single-container deploy. 1-line upgrade to `crypto.randomUUID()` deferred to Day 5+.
+- **ND #4**: Vite Sentry plugin requires 3 env vars (`SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT`), not 1. All-or-nothing graceful skip pattern with config-load warning.
+- **ND #5**: PostHog auto-opts-out in dev via `posthog.opt_out_capturing()` in the loaded callback. Production behavior unchanged. Privacy-friendly default; override available by removing the dev opt-out line.
+- **ND #6**: Sentry session replay integration registered but `replaysSessionSampleRate: 0` (disabled). On-error replay at 100% with mask-all-text + block-all-media. Privacy-first per spec; full enablement deferred.
+- **ND #7**: Frontend release tag NOT set directly in `Sentry.init` — relies on `@sentry/vite-plugin` to auto-inject release at build time when active. When plugin inactive (token missing), events arrive without release tag (graceful). Avoided TypeScript ambient-global declaration churn.
+- **ND #8**: Bundle `index.js` grew 607KB → 736KB (+130KB; ~+50KB gzipped). Within audit prediction. Day 5+ optimization candidate via manual chunks for the two new SDKs.
+
+### Verification (Phase D)
+
+- Typecheck: PASS (0 errors at each commit's HEAD and at final HEAD)
+- Test suite: 21/21 passing in ~1s (no regressions)
+- Boot smoke (TEST DB, PORT 3099): clean — Redis + Socket.IO + Notification worker, server bound, `/health` HTTP 200 with `X-Request-Id: 1`, only expected `SENTRY_DSN not set` warning (graceful)
+- Frontend build smoke (no SENTRY_AUTH_TOKEN): exit 0 in 14.53s, 55 PWA entries precached, expected `[observability] Sentry source-map upload disabled` warning at config-load time (graceful)
+- R2 bucket check: 11 objects total, **0 smoke candidates** (Day 4 didn't touch upload paths — no Rule F.2 cleanup needed this session)
+- Rule A: all error responses JSON ✓ (no new error paths added)
+- Rule B: no silent catches added in Day 4 ✓
+- Rule F: TEST branch only, no production hit ✓
+- Rule F.2: N/A — Day 4 didn't write to R2
+
+### Backlog created / preserved
+
+- **pinoHttp UUID upgrade** — 1-line change (`genReqId: () => crypto.randomUUID()`) → Day 5+ when distributed correlation matters
+- **`account_delete_requested` frontend wiring** — when UI for delete button lands, add `captureEvent('account_delete_requested')` in the handler (helper already imported)
+- **Bundle size optimization** — manual chunks for `@sentry/react` and `posthog-js` to reduce critical-path bundle size (currently +130KB) → Day 5+
+- **17 remaining console.* in backend** — `search.service.ts` (4), `geminiEmbeddings.ts` (4), `push.routes.ts` (2), `message.service.ts` (1), `socket.ts` (1), `redis.ts` (4 — boot/pre-logger), `env.ts` (1 — startup/pre-logger). Defer to a focused cleanup sprint.
+- **Sentry session replay opt-in decision** — privacy review needed before flipping `replaysSessionSampleRate` above 0. Infrastructure ready (mask config wired) when policy decision lands.
+
+### Files (Day 4 cumulative)
+
+17 files (15 modified + 2 new) / ~+1372 / -63 across 3 commits. Code-only diff (excluding +1007 package-lock churn): ~+365 / -63 source LOC.
+
+Modified: `.env.example`, `package.json`, `package-lock.json`, `src/app.ts`, `src/components/dashboard/AiBioModal.tsx`, `src/components/profile/PostsGrid.tsx`, `src/config/socket-listeners.ts`, `src/context/AuthContext.tsx`, `src/lib/sentry.ts`, `src/main.tsx`, `src/pages/Chat.tsx`, `src/pages/RetailerDashboard.tsx`, `src/pages/Search.tsx`, `src/pages/Signup.tsx`, `vite.config.ts`.
+
+New: `src/lib/sentry-frontend.ts`, `src/lib/posthog.ts`.
+
+### Deploy plan unchanged
+
+Day 8 atomic merge `hardening/sprint` → `main` → Railway redeploy + full Rule E verification. Production runtime continues on Session 85 code with Day 2 schema applied.
+
+### Phase E execution notes
+
+No hunk-splits needed this session — each modified file mapped to exactly one commit. Cleaner profile than Day 3 (which needed 3 hunk-splits) and matching Day 2.6's clean profile. 3-commit refinement (merging Vite plugin + frontend Sentry into one) was the right call — the plugin without frontend Sentry would have been dead code.
+
+---
+
 ## 2026-05-13 — Session 89.5 — Hardening Sprint Day 2.6: Upload Scope 3 Extras (bridge session)
 
 **Goal:** Close the 3 deferred items from Day 3 Subtask 3.3 audit — per-route MIME tightening (Item 1), admin rate-limiter (Item 2), structured upload logging (Item 3) — and codify a new Rule F.2 around storage isolation, prompted by an R2-bucket cleanup forensic incident during today's smoke.
