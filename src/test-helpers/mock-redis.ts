@@ -21,6 +21,11 @@ export function makeMockRedis() {
     del: vi.fn().mockResolvedValue(1),
     expire: vi.fn().mockResolvedValue(1),
     incr: vi.fn().mockResolvedValue(1),
+    // Set operations — used by refreshToken.service.ts for rt:family:* sets.
+    // Day 5 / Session 92.
+    sAdd: vi.fn().mockResolvedValue(1),
+    sMembers: vi.fn().mockResolvedValue([] as string[]),
+    sRem: vi.fn().mockResolvedValue(1),
     // sendCommand stub — used by rate-limit-redis. Returns a minimal
     // shape that satisfies the library's INCR / EXPIRE / TTL / EVAL
     // patterns when the test doesn't care about rate-limit behavior.
