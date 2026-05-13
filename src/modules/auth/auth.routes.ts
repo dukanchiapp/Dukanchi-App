@@ -11,15 +11,15 @@ router.post("/login", authLimiter, validate(loginSchema), AuthController.login);
 router.post("/logout", AuthController.logout);
 
 // /me is called by both the main app (dk_token) and admin panel (dk_admin_token)
-import { authenticateAny, authenticateAllowDeleted } from "../../middlewares/auth.middleware";
+import { authenticateAny } from "../../middlewares/auth.middleware";
 router.get("/me", authenticateAny, AuthController.me);
 
-// /refresh uses the PERMISSIVE variant — a user in their 30-day deletion
-// grace window must still be able to refresh their session so they can
-// reach /api/account/restore beyond the original 7-day JWT TTL. Blocked
-// users and fully-expired-grace users are still rejected by the middleware.
-// Defense in depth: AuthService.issueTokenForUser will be tightened in
-// Step 4 to mirror this policy in the service layer too.
-router.post("/refresh", authenticateAllowDeleted, AuthController.refresh);
+// /refresh — Day 5 / Session 92. NO middleware on this route: the controller
+// reads the refresh cookie (dk_refresh / dk_admin_refresh, NOT dk_token)
+// and runs verifyRefreshToken + isUserUnavailable internally. Putting the
+// access-token middleware here would be wrong — refresh is supposed to be
+// callable when the access token has expired. The Day 2.5 deleted_pending
+// carve-out is preserved inside the controller's own user-status check.
+router.post("/refresh", AuthController.refresh);
 
 export const authRoutes = router;

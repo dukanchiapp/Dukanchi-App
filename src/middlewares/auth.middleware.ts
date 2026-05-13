@@ -4,6 +4,7 @@ import { env } from "../config/env";
 import { prisma } from "../config/prisma";
 import { pubClient } from "../config/redis";
 import { isUserUnavailable, unavailableError } from "./user-status";
+import { accessBlacklistKey } from "../lib/redis-keys";
 
 const JWT_SECRET = env.JWT_SECRET;
 
@@ -54,6 +55,34 @@ const verifyAndAttach = async (
     // defense-in-depth for the broader algorithm-substitution attack class.
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as any;
     if (!decoded?.userId) return res.status(403).json({ error: "Invalid token" });
+
+    // Symmetric token-type defense — Day 5 / Session 92.
+    // New access tokens carry { type: 'access' }; new refresh tokens carry
+    // { type: 'refresh' } and are verified via JWT_REFRESH_SECRET (not
+    // JWT_SECRET — so a refresh token can't even pass jwt.verify above).
+    // But defense-in-depth: if anything ever leaks the refresh secret OR
+    // if a future code change accidentally cross-wires the secrets, this
+    // explicit check refuses refresh tokens on the access path.
+    // Lenient on missing `type` for legacy tokens (pre-Day-5) — those
+    // expire naturally within their 7-day TTL during the migration window.
+    if (decoded.type && decoded.type !== "access") {
+      return res.status(403).json({ error: "Invalid token type" });
+    }
+
+    // Access-token blacklist (logout revocation) — Day 5 / Session 92.
+    // New tokens carry { jti: <uuid> }; logout SETs accessBlacklistKey(jti).
+    // Lenient on missing jti (legacy tokens). One Redis GET per authed
+    // request — acceptable cost; if it ever becomes a hot-path concern,
+    // shorten access-token TTL further (see redis-keys.ts NOTE).
+    if (decoded.jti) {
+      try {
+        const blacklisted = await pubClient.get(accessBlacklistKey(decoded.jti));
+        if (blacklisted) {
+          return res.status(401).json({ error: "Token revoked", code: "TOKEN_REVOKED" });
+        }
+      } catch { /* Redis unavailable — fail-open on blacklist check, fail-closed on auth */ }
+    }
+
     if (decoded.teamMemberId && !(await teamMemberExists(decoded.teamMemberId)))
       return res.status(403).json({ error: "Access revoked" });
 

@@ -94,7 +94,14 @@ app.use(
       if (res.statusCode >= 400) return 'warn';
       return 'info';
     },
-    redact: ['req.headers.authorization', 'req.headers.cookie'],
+    redact: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      // Day 5 / Session 92 / Phase 4 Q6: native clients send the refresh
+      // token as X-Refresh-Token when cookies aren't reliable (Capacitor
+      // WebView). Same secrecy class as cookies — redact from request logs.
+      'req.headers["x-refresh-token"]',
+    ],
     serializers: {
       req(req) {
         return { method: req.method, url: req.url, id: req.id };

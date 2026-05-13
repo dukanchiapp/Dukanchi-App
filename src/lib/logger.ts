@@ -13,7 +13,11 @@ export const logger = pino({
       "*.token",
       "req.headers.authorization",
       "req.headers.cookie",
+      // Day 5: refresh-token native header — same secrecy class as cookies
+      'req.headers["x-refresh-token"]',
       "body.password",
+      "body.accessToken",
+      "body.refreshToken",
       "body.token",
       "body.jwt",
     ],

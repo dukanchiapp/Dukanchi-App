@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import { pubClient } from "../../config/redis";
@@ -7,8 +8,48 @@ import {
   evaluateUserStatus,
   UnavailableReason,
 } from "../../middlewares/user-status";
+import { generateRefreshToken } from "../../services/refreshToken.service";
+import { ACCESS_TOKEN_TTL_SECONDS } from "../../lib/redis-keys";
 
 const ADMIN_STATS_KEY = 'admin:stats';
+
+/**
+ * Mint a fresh access token — Day 5 / Session 92.
+ *
+ * Payload includes:
+ *   - userId, role (existing)
+ *   - jti (UUID v4) — enables logout-driven access-token blacklist via
+ *     accessBlacklistKey(jti). Legacy tokens (pre-Day-5) lacked jti and
+ *     can't be blacklisted; this gap closes naturally as old tokens
+ *     expire (15-min TTL).
+ *   - type: 'access' — symmetric defense vs refreshToken.service's
+ *     type: 'refresh'. authenticateToken middleware rejects tokens with
+ *     type === 'refresh' (lenient on missing type for legacy compat).
+ *   - teamMemberId (optional) — preserved for team-member impersonation
+ *     sessions so per-message socket gates still validate membership.
+ *
+ * Algorithm pinned to HS256 (Day 3.1 whitelist).
+ */
+export function signAccessToken(args: {
+  userId: string;
+  role: string;
+  teamMemberId?: string;
+}): { token: string; jti: string } {
+  const jti = crypto.randomUUID();
+  const payload: Record<string, unknown> = {
+    userId: args.userId,
+    role: args.role,
+    jti,
+    type: "access",
+  };
+  if (args.teamMemberId) payload.teamMemberId = args.teamMemberId;
+
+  const token = jwt.sign(payload, env.JWT_SECRET, {
+    algorithm: "HS256",
+    expiresIn: ACCESS_TOKEN_TTL_SECONDS,
+  });
+  return { token, jti };
+}
 
 /**
  * Error subclass thrown by login / signup when the target user is unavailable
@@ -76,12 +117,15 @@ export class AuthService {
       data: { name, phone, password: hashedPassword, role, location }
     });
 
-    const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
+    // Day 5: issue access (15min, JWT_SECRET) + refresh (30d, JWT_REFRESH_SECRET).
+    // Refresh token starts a new family for this user's signup session.
+    const { token: accessToken } = signAccessToken({ userId: user.id, role: user.role });
+    const { token: refreshToken } = await generateRefreshToken(user.id, user.role);
 
     try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
 
     const { password: _, ...userWithoutPassword } = user;
-    return { user: userWithoutPassword, token };
+    return { user: userWithoutPassword, accessToken, refreshToken };
   }
 
   static async login(data: any) {
@@ -109,9 +153,10 @@ export class AuthService {
         throw new UnavailableUserError(check.reason);
       }
 
-      const token = jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
+      const { token: accessToken } = signAccessToken({ userId: user.id, role: user.role });
+      const { token: refreshToken } = await generateRefreshToken(user.id, user.role);
       const { password: _, ...userWithoutPassword } = user;
-      return { user: userWithoutPassword, token };
+      return { user: userWithoutPassword, accessToken, refreshToken };
     }
 
     // No User account found — try TeamMember login
@@ -132,34 +177,37 @@ export class AuthService {
         throw new UnavailableUserError(ownerCheck.reason);
       }
 
-      const token = jwt.sign(
-        { userId: teamMember.store.ownerId, role: teamMember.store.owner.role, teamMemberId: teamMember.id },
-        env.JWT_SECRET,
-        { algorithm: 'HS256', expiresIn: '7d' }
-      );
+      // Team-member tokens impersonate the owner (userId = ownerId) but carry
+      // teamMemberId so per-message socket gates can still verify membership.
+      const ownerId = teamMember.store.ownerId;
+      const ownerRole = teamMember.store.owner.role;
+      const { token: accessToken } = signAccessToken({
+        userId: ownerId,
+        role: ownerRole,
+        teamMemberId: teamMember.id,
+      });
+      const { token: refreshToken } = await generateRefreshToken(ownerId, ownerRole, {
+        teamMemberId: teamMember.id,
+      });
       const { password: _, ...userWithoutPassword } = teamMember.store.owner;
-      return { user: userWithoutPassword, token, isTeamMember: true };
+      return { user: userWithoutPassword, accessToken, refreshToken, isTeamMember: true };
     }
 
     throw new Error("Invalid credentials");
   }
 
   /**
-   * Issue a fresh 7-day JWT for an existing user. Used by /api/auth/refresh.
-   * Returns null if the user is unavailable.
+   * @deprecated Day 5 / Session 92 — superseded by the refresh-token
+   * rotation flow in `src/services/refreshToken.service.ts`. The
+   * /api/auth/refresh route now reads the refresh cookie directly and
+   * uses `rotateFromVerifiedPayload`. This method is kept for the
+   * migration window only; no internal callers remain. Safe to remove
+   * after Day 8 deploy + a few weeks of stability.
    *
-   * STRICT BY DEFAULT — refuses any unavailable user (blocked, deleted_pending,
-   * deleted_expired, missing).
-   *
-   * The /api/auth/refresh route uses authenticateAllowDeleted (permissive)
-   * middleware AND passes { acceptDeletedPending: true } here so users in
-   * their 30-day grace period can refresh their token to reach /restore
-   * beyond the original 7-day JWT TTL. blocked + deleted_expired remain
-   * hard rejects regardless of opts (defense-in-depth alongside the
-   * middleware).
-   *
-   * No other call site should pass acceptDeletedPending: true — the carve-out
-   * exists solely so /restore stays reachable.
+   * Still respects Day 2.5's deleted_pending carve-out (acceptDeletedPending).
+   * If you need this elsewhere, prefer wiring through the refresh-token
+   * service instead — it gives you rotation, theft detection, and a
+   * proper revocation surface for free.
    */
   static async issueTokenForUser(
     userId: string,
@@ -173,17 +221,12 @@ export class AuthService {
 
     const check = evaluateRow(user);
     if (check.unavailable) {
-      // Permissive carve-out: deleted_pending is allowed through ONLY when
-      // explicitly opted in (matches authenticateAllowDeleted's policy).
       const permitted =
         check.reason === "deleted_pending" && opts.acceptDeletedPending === true;
       if (!permitted) return null;
     }
 
-    // Algorithm pinned to HS256 (Day 3 / Session 89) — matches verify-side
-    // whitelist in auth.middleware.ts + socket-listeners.ts. Default was
-    // already HS256, but explicit signals intent and protects against future
-    // library default changes.
-    return jwt.sign({ userId: user.id, role: user.role }, env.JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
+    const { token } = signAccessToken({ userId: user.id, role: user.role });
+    return token;
   }
 }

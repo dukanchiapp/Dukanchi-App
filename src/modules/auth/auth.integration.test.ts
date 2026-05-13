@@ -25,14 +25,18 @@ import request from "supertest";
  * covering the new behavior with the same scaffolding.
  */
 
-const { TEST_JWT_SECRET } = vi.hoisted(() => ({
+const { TEST_JWT_SECRET, TEST_JWT_REFRESH_SECRET } = vi.hoisted(() => ({
   TEST_JWT_SECRET: "test-jwt-secret-32-chars-long-padding",
+  TEST_JWT_REFRESH_SECRET: "test-refresh-secret-32-chars-long-pad",
 }));
 
 // ── Module-level mocks (hoisted by vi.mock) ────────────────────────────────
 vi.mock("../../config/env", () => ({
   env: {
     JWT_SECRET: TEST_JWT_SECRET,
+    // Day 5: refresh-token signing secret — must differ from JWT_SECRET so
+    // a leaked access-token secret doesn't also forge refresh tokens.
+    JWT_REFRESH_SECRET: TEST_JWT_REFRESH_SECRET,
     NODE_ENV: "test",
     BCRYPT_ROUNDS: 4,
     DATABASE_URL: "postgresql://test",
@@ -55,6 +59,11 @@ vi.mock("../../config/redis", () => ({
     get: vi.fn().mockResolvedValue(null),
     set: vi.fn().mockResolvedValue("OK"),
     del: vi.fn().mockResolvedValue(1),
+    // Day 5: refresh-token rotation uses Set operations on rt:family:* and
+    // EXPIRE to re-stamp the family-set TTL on each rotation.
+    sAdd: vi.fn().mockResolvedValue(1),
+    sMembers: vi.fn().mockResolvedValue([]),
+    expire: vi.fn().mockResolvedValue(1),
     sendCommand: vi.fn().mockResolvedValue([1, Date.now() + 60_000]),
     on: vi.fn(),
     duplicate: vi.fn().mockReturnValue({ on: vi.fn(), connect: vi.fn() }),
@@ -92,7 +101,10 @@ vi.mock("bcrypt", () => ({
 
 // ── Imports AFTER mocks (modules now see mocked deps) ──────────────────────
 import bcrypt from "bcrypt";
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import { prisma } from "../../config/prisma";
+import { pubClient } from "../../config/redis";
 import { authRoutes } from "./auth.routes";
 import { makeTestApp } from "../../test-helpers/app-factory";
 import {
@@ -101,6 +113,7 @@ import {
   makeBlockedUser,
 } from "../../test-helpers/fixtures";
 import { signTestJWT } from "../../test-helpers/jwt-helpers";
+import { rtActiveKey } from "../../lib/redis-keys";
 
 const app = makeTestApp({ routes: { "/api/auth": authRoutes } });
 
@@ -109,7 +122,7 @@ describe("POST /api/auth/login", () => {
     vi.clearAllMocks();
   });
 
-  it("[Test 1] valid credentials → 200 + token in response body + dk_token cookie set", async () => {
+  it("[Test 1] valid credentials → 200 + accessToken + refreshToken in response body + both cookies set (Day 5: dual-token issuance)", async () => {
     const user = makeTestUser({ role: "customer" });
     vi.mocked(prisma.user.findUnique).mockResolvedValue(user as any);
     vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
@@ -120,13 +133,21 @@ describe("POST /api/auth/login", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(res.body.token).toBeTruthy();
+    // Day 5: response body now carries BOTH tokens (+ legacy `token` alias
+    // for native clients that haven't yet shipped the refresh-aware build).
+    expect(res.body.accessToken).toBeTruthy();
+    expect(res.body.refreshToken).toBeTruthy();
+    expect(res.body.token).toBe(res.body.accessToken);
     expect(res.body.user.id).toBe(user.id);
     // Password must NOT leak in response
     expect(res.body.user.password).toBeUndefined();
-    // Set-Cookie header carries dk_token for the cookie auth path
+    // Set-Cookie header carries BOTH dk_token (access, 15min) AND dk_refresh
+    // (refresh, 30d, path=/api/auth) — fixes ND #2 admin-routing bug for
+    // customer role too by going through setAuthCookies helper.
     const setCookie = res.headers["set-cookie"];
-    expect(Array.isArray(setCookie) ? setCookie.join(";") : String(setCookie)).toContain("dk_token=");
+    const cookieStr = Array.isArray(setCookie) ? setCookie.join(";") : String(setCookie);
+    expect(cookieStr).toContain("dk_token=");
+    expect(cookieStr).toContain("dk_refresh=");
   });
 
   it("[Test 2] wrong password → 401 with generic 'Invalid credentials' (Day 3.5 info-leak fix preserved)", async () => {
@@ -208,29 +229,51 @@ describe("POST /api/auth/refresh (Day 2.5 carve-out preserved)", () => {
     vi.clearAllMocks();
   });
 
-  it("[Test 7] deleted_pending user → 200 + new token (preserves Day 2.5 carve-out: grace-period users must be able to refresh to reach /restore)", async () => {
+  it("[Test 7] deleted_pending user → 200 + rotated token pair (preserves Day 2.5 carve-out under Day 5 rotation flow)", async () => {
     const user = makeDeletedPendingUser();
-    // authenticateAllowDeleted calls user-status which queries prisma; the
-    // refresh handler then calls AuthService.issueTokenForUser which also
-    // queries prisma. Both lookups return the same deleted_pending user.
+    // user-status check in the controller queries prisma after refresh
+    // verify succeeds. Return deleted_pending so the carve-out branch
+    // (status.unavailable + reason === 'deleted_pending' → ALLOW) fires.
     vi.mocked(prisma.user.findUnique).mockResolvedValue(user as any);
 
-    const token = signTestJWT({ userId: user.id, role: user.role });
+    // Construct a refresh token that verifyRefreshToken will accept:
+    //   - signed with TEST_JWT_REFRESH_SECRET (matches env mock)
+    //   - HS256, with the new payload shape (type: 'refresh' + jti + familyId)
+    //   - rt:active:{userId}:{jti} must return truthy so verifyRefreshToken
+    //     sees the token as "still active" (not yet rotated or revoked)
+    const jti = crypto.randomUUID();
+    const familyId = crypto.randomUUID();
+    const refreshToken = jwt.sign(
+      { userId: user.id, role: user.role, jti, familyId, type: "refresh" },
+      TEST_JWT_REFRESH_SECRET,
+      { algorithm: "HS256", expiresIn: 30 * 24 * 60 * 60 },
+    );
+
+    // Per-test override: pubClient.get returns '1' only for the rt:active
+    // key for this token; everything else (rt:blacklist, etc.) returns null.
+    const activeKey = rtActiveKey(user.id, jti);
+    vi.mocked(pubClient.get).mockImplementation(async (key: string) =>
+      key === activeKey ? "1" : null,
+    );
 
     const res = await request(app)
       .post("/api/auth/refresh")
-      .set("Cookie", [`dk_token=${token}`])
+      .set("Cookie", [`dk_refresh=${refreshToken}`])
       .send({});
 
     expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.token).toBeTruthy();
-    expect(typeof res.body.token).toBe("string");
-    // NOTE: We intentionally do NOT assert that the new token differs from
-    // the input — JWT `iat` is in seconds, and within the same second both
-    // tokens carry identical payload+secret → identical signature. That's
-    // a Day 2.5 implementation detail; Day 5 will introduce true rotation
-    // (refresh tokens with a `jti` UUID per issue) and that test belongs
-    // with the new behavior, not this carve-out test.
+    expect(res.body.ok).toBe(true);
+    // Day 5: response carries new access + new refresh tokens (rotation).
+    expect(res.body.accessToken).toBeTruthy();
+    expect(res.body.refreshToken).toBeTruthy();
+    // Rotated refresh token MUST differ from input (new jti) — this is the
+    // Day 5 rotation contract, and unlike Day 2.5's renew-same-token, the
+    // jti UUID differs even when iat collides at second-resolution.
+    expect(res.body.refreshToken).not.toBe(refreshToken);
+    // Both cookies re-set
+    const setCookie = res.headers["set-cookie"];
+    const cookieStr = Array.isArray(setCookie) ? setCookie.join(";") : String(setCookie);
+    expect(cookieStr).toContain("dk_token=");
+    expect(cookieStr).toContain("dk_refresh=");
   });
 });
