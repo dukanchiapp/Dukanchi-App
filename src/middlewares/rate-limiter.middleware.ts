@@ -22,6 +22,12 @@ export const uploadLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: { error: "Too many uploads. Please slow down." },
+  // Day 2.6 ND #2: standardHeaders emits the industry-standard RateLimit-*
+  // and Retry-After headers (RFC 6585 §4 / draft-ietf-httpapi-ratelimit-headers).
+  // Without these, clients can't back off correctly when they hit 429.
+  // legacyHeaders=false suppresses the older X-RateLimit-* duplicates.
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 export const messageLimiter = rateLimit({
