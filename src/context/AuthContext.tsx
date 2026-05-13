@@ -1,5 +1,7 @@
 import { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import { apiFetch, getToken as getNativeToken, setToken as setNativeToken, clearToken as clearNativeToken, isNative } from '../lib/api';
+import { setSentryUser } from '../lib/sentry-frontend';
+import { identifyUser, captureEvent } from '../lib/posthog';
 
 interface User {
   id: string;
@@ -39,6 +41,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setToken(isNative() ? (getNativeToken() || "native") : "cookie");
           const wasTeamMember = localStorage.getItem('isTeamMember') === 'true';
           setIsTeamMember(wasTeamMember);
+          // Restore observability identity on session revival (page reload).
+          // Both helpers are graceful no-ops when their env vars are unset.
+          setSentryUser({ id: data.id, role: data.role });
+          identifyUser({ id: data.id, role: data.role });
         }
       })
       .catch(err => {
@@ -62,6 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsTeamMember(teamMember);
     localStorage.setItem('isTeamMember', String(teamMember));
     setAuthChecked(true);
+    // Observability: attach user identity to Sentry + PostHog. Both are
+    // graceful no-ops when their respective env vars are unset.
+    setSentryUser({ id: newUser.id, role: newUser.role });
+    identifyUser({ id: newUser.id, role: newUser.role });
+    // PostHog event: user_logged_in. captureEvent is a no-op when PostHog
+    // is disabled or running in dev (opt-out via initPostHog loaded hook).
+    captureEvent('user_logged_in', {
+      role: newUser.role,
+      is_team_member: teamMember,
+    });
   };
 
   const logout = () => {
@@ -72,6 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setIsTeamMember(false);
     localStorage.removeItem('isTeamMember');
+    // Observability: clear user identity on logout (PostHog reset assigns
+    // a fresh anonymous distinct_id so future events aren't attributed
+    // to the now-logged-out user).
+    setSentryUser(null);
+    identifyUser(null);
   };
 
   return (

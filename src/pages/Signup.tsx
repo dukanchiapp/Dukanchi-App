@@ -4,6 +4,7 @@ import { User, Phone, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DukanchiLogo from '../components/DukanchiLogo';
 import { apiFetch } from '../lib/api';
+import { captureEvent } from '../lib/posthog';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -49,6 +50,10 @@ export default function SignupPage() {
         throw new Error(data.error || 'Signup failed');
       }
 
+      // PostHog: user_signed_up fires BEFORE login() so the event is
+      // captured against the anonymous distinct_id, then login()'s
+      // identify() promotes that anonymous user to the real userId.
+      captureEvent('user_signed_up', { role });
       login(data.user, data.token);
       navigate('/');
     } catch (err: any) {
