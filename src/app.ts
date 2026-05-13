@@ -231,10 +231,19 @@ if (process.env.NODE_ENV !== "production") {
 // 413 handler below would miss them. Map each to the right HTTP shape.
 //
 // Rule A: every response is JSON. Rule B: every rejection branch logs via pino.
-app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Day 2.6 Item 3: structured-log correlation fields (req.user is set by
+  // authenticateToken / authenticateAdminToken earlier in the chain, before
+  // Multer runs, so it's available even though we're in an error handler).
+  const userId = (req as any).user?.userId ?? null;
+  const route = req.originalUrl;
+
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
-      logger.warn({ code: err.code, field: err.field }, "Multer: file size limit exceeded");
+      logger.warn(
+        { event: 'upload.rejected.size', userId, route, code: err.code, field: err.field },
+        "Multer: file size limit exceeded",
+      );
       return res.status(413).json({
         error: "File too large",
         code: "FILE_TOO_LARGE",
@@ -242,19 +251,31 @@ app.use((err: any, _req: express.Request, res: express.Response, next: express.N
       });
     }
     if (err.code === "LIMIT_UNEXPECTED_FILE") {
-      logger.warn({ code: err.code, field: err.field }, "Multer: unexpected file field");
+      logger.warn(
+        { event: 'upload.rejected.field', userId, route, code: err.code, field: err.field },
+        "Multer: unexpected file field",
+      );
       return res.status(400).json({ error: "Unexpected file field", code: "UNEXPECTED_FIELD" });
     }
-    logger.warn({ code: err.code, message: err.message }, "Multer error (generic)");
+    logger.warn(
+      { event: 'upload.rejected.multer_other', userId, route, code: err.code, message: err.message },
+      "Multer error (generic)",
+    );
     return res.status(400).json({ error: err.message, code: "UPLOAD_ERROR" });
   }
   // Custom errors raised from fileFilter (plain Error + .code we set)
   if (err && err.code === "INVALID_MIME") {
-    logger.warn({ message: err.message }, "Upload rejected: claimed MIME not in whitelist");
+    logger.warn(
+      { event: 'upload.rejected.mime_claim', userId, route, code: 'INVALID_MIME', message: err.message },
+      "Upload rejected: claimed MIME not in whitelist",
+    );
     return res.status(415).json({ error: "File type not allowed", code: "INVALID_MIME" });
   }
   if (err && err.code === "INVALID_FILENAME") {
-    logger.warn({ message: err.message }, "Upload rejected: filename sanitization");
+    logger.warn(
+      { event: 'upload.rejected.filename', userId, route, code: 'INVALID_FILENAME', message: err.message },
+      "Upload rejected: filename sanitization",
+    );
     return res.status(400).json({ error: err.message, code: "INVALID_FILENAME" });
   }
   return next(err);

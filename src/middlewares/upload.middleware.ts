@@ -10,6 +10,7 @@ import { promises as fsp } from "fs";
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
 import _fileType from "file-type";
+import * as Sentry from "@sentry/node";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
 
@@ -171,6 +172,14 @@ export async function verifyAndPersistUpload(
     return next();
   }
 
+  // Day 2.6 Item 3: structured-log correlation fields.
+  // userId comes from auth middleware set on req.user before this runs.
+  // route uses originalUrl so /api/upload vs /api/admin/settings/upload
+  // are distinguishable in log aggregators (Sentry, Railway, etc.).
+  const userId = (req as any).user?.userId ?? null;
+  const route = req.originalUrl;
+  const t0 = Date.now();
+
   // Magic-byte inspection — first 4KB of buffer is plenty for our formats.
   const peek = file.buffer.subarray(0, Math.min(MAGIC_BYTE_PEEK, file.buffer.length));
   const detected = fileType(peek);
@@ -178,10 +187,15 @@ export async function verifyAndPersistUpload(
   if (!detected || !IMAGE_MIME_WHITELIST.has(detected.mime)) {
     logger.warn(
       {
-        claimed: file.mimetype,
-        detected: detected?.mime ?? null,
+        event: 'upload.rejected.magic',
+        userId,
+        route,
+        claimedMime: file.mimetype,
+        detectedMime: detected?.mime ?? null,
         originalname: file.originalname,
-        size: file.size,
+        fileSize: file.size,
+        code: 'MIME_MISMATCH',
+        rejectionReason: 'magic-byte not in image whitelist',
       },
       "Upload rejected: magic-byte not in image whitelist",
     );
@@ -194,7 +208,17 @@ export async function verifyAndPersistUpload(
 
   if (detected.mime !== file.mimetype) {
     logger.warn(
-      { claimed: file.mimetype, detected: detected.mime, originalname: file.originalname },
+      {
+        event: 'upload.rejected.mime',
+        userId,
+        route,
+        claimedMime: file.mimetype,
+        detectedMime: detected.mime,
+        originalname: file.originalname,
+        fileSize: file.size,
+        code: 'MIME_MISMATCH',
+        rejectionReason: 'claimed MIME differs from content',
+      },
       "Upload rejected: claimed MIME differs from content",
     );
     res.status(415).json({
@@ -210,7 +234,18 @@ export async function verifyAndPersistUpload(
   try {
     safeBase = sanitizeFilename(file.originalname);
   } catch (err: any) {
-    logger.warn({ originalname: file.originalname, message: err.message }, "Upload rejected at sanitize");
+    logger.warn(
+      {
+        event: 'upload.rejected.filename',
+        userId,
+        route,
+        originalname: file.originalname,
+        fileSize: file.size,
+        code: 'INVALID_FILENAME',
+        rejectionReason: err.message,
+      },
+      "Upload rejected at sanitize",
+    );
     res.status(400).json({ error: err.message, code: "INVALID_FILENAME" });
     return;
   }
@@ -244,9 +279,44 @@ export async function verifyAndPersistUpload(
       (file as any).path = diskPath;
       (file as any).destination = uploadDir;
     }
+    // Day 2.6 Item 3: structured success log — closes the operational gap
+    // where we were silent on success and couldn't measure upload rate / P99
+    // persist latency from logs alone.
+    logger.info(
+      {
+        event: 'upload.accepted',
+        userId,
+        route,
+        storageKey,
+        claimedMime: file.mimetype,
+        detectedMime: detected.mime,
+        fileSize: file.size,
+        persistDurationMs: Date.now() - t0,
+        sink: s3Client && env.S3_BUCKET_NAME ? 'r2' : 'disk',
+      },
+      'Upload accepted and persisted',
+    );
     return next();
   } catch (err) {
-    logger.error({ err, storageKey }, "Upload persist failed");
+    logger.error(
+      {
+        event: 'upload.persist_failed',
+        userId,
+        route,
+        storageKey,
+        err,
+        fileSize: file.size,
+        persistDurationMs: Date.now() - t0,
+      },
+      "Upload persist failed",
+    );
+    // Day 2.6 Item 3: capture to Sentry — persist_failed is a 500-class event
+    // (R2 down, disk full, network blip), not a routine 4xx. Matches the
+    // logger+Sentry pattern in user-status.ts:242, message.service.ts:151.
+    Sentry.captureException(err, {
+      tags: { component: 'upload', event: 'upload.persist_failed' },
+      extra: { userId, route, storageKey, fileSize: file.size },
+    });
     res.status(500).json({ error: "Failed to save upload", code: "PERSIST_FAILED" });
     return;
   }
