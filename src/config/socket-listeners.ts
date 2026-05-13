@@ -5,6 +5,7 @@ import { canChat } from "../middlewares/auth.middleware";
 import { isUserUnavailable, evaluateUserStatus } from "../middlewares/user-status";
 import { notificationQueue } from "./bullmq";
 import { env } from "./env";
+import { logger } from "../lib/logger";
 
 const JWT_SECRET = env.JWT_SECRET;
 
@@ -35,19 +36,25 @@ export function setupSocketListeners(io: Server) {
       // (Day 3 / Session 89.)
       decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     } catch (err: any) {
-      console.warn('[SOCKET] auth rejected: JWT invalid —', err?.message ?? err);
+      logger.warn(
+        { event: 'socket.auth.invalid_token', err: err?.message ?? String(err) },
+        'Socket auth rejected: JWT invalid',
+      );
       return next(new Error('Authentication error: Invalid token'));
     }
 
     if (!decoded?.userId) {
-      console.warn('[SOCKET] auth rejected: JWT missing userId');
+      logger.warn({ event: 'socket.auth.missing_userid' }, 'Socket auth rejected: JWT missing userId');
       return next(new Error('Authentication error: Invalid token'));
     }
 
     // User availability gate — same predicate as HTTP middleware
     const check = await isUserUnavailable(decoded.userId);
     if (check.unavailable) {
-      console.warn(`[SOCKET] auth rejected: user=${decoded.userId} reason=${check.reason}`);
+      logger.warn(
+        { event: 'socket.auth.user_unavailable', userId: decoded.userId, reason: check.reason },
+        'Socket auth rejected: user unavailable',
+      );
       return next(new Error(`Authentication error: ${check.reason}`));
     }
 
@@ -60,13 +67,15 @@ export function setupSocketListeners(io: Server) {
 
     // Automatically join the user to a room of their own ID to receive private messages
     socket.join(userId);
+    // Dev-only connect/disconnect breadcrumb — gated to avoid log volume in prod
+    // (every WebSocket connection would otherwise produce an INFO line).
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`[SOCKET] connect user=${userId} sid=${socket.id}`);
+      logger.info({ event: 'socket.connect', userId, socketId: socket.id }, 'Socket connected');
     }
 
     socket.on('disconnect', (reason) => {
       if (process.env.NODE_ENV !== 'production') {
-        console.log(`[SOCKET] disconnect user=${userId} reason=${reason}`);
+        logger.info({ event: 'socket.disconnect', userId, socketId: socket.id, reason }, 'Socket disconnected');
       }
     });
 
@@ -79,7 +88,16 @@ export function setupSocketListeners(io: Server) {
         const sender = await prisma.user.findUnique({ where: { id: senderId } });
 
         if (!receiver || !sender) {
-          console.warn(`[SOCKET] sendMessage drop: user not found (sender=${!!sender} receiver=${!!receiver})`);
+          logger.warn(
+            {
+              event: 'socket.message.drop.user_not_found',
+              senderId,
+              receiverId,
+              senderFound: !!sender,
+              receiverFound: !!receiver,
+            },
+            'Socket sendMessage drop: user not found',
+          );
           return;
         }
 
@@ -99,17 +117,31 @@ export function setupSocketListeners(io: Server) {
           blockedReason: null,
         });
         if (senderCheck.unavailable || receiverCheck.unavailable) {
-          console.warn(
-            `[SOCKET] sendMessage drop: ` +
-              `sender=${senderCheck.unavailable ? senderCheck.reason : "ok"} ` +
-              `receiver=${receiverCheck.unavailable ? receiverCheck.reason : "ok"}`,
+          logger.warn(
+            {
+              event: 'socket.message.drop.party_unavailable',
+              senderId,
+              receiverId,
+              senderReason: senderCheck.unavailable ? senderCheck.reason : 'ok',
+              receiverReason: receiverCheck.unavailable ? receiverCheck.reason : 'ok',
+            },
+            'Socket sendMessage drop: sender or receiver unavailable',
           );
-          return; // Silent drop — see Rule B note below
+          return; // Silent drop — Rule B satisfied by the logger.warn above
         }
 
         if (!canChat(sender.role, receiver.role)) {
-          console.warn(`[SOCKET] sendMessage drop: chat not permitted (${sender.role} → ${receiver.role})`);
-          return; // Silent drop of unauthorized message
+          logger.warn(
+            {
+              event: 'socket.message.drop.not_permitted',
+              senderId,
+              receiverId,
+              senderRole: sender.role,
+              receiverRole: receiver.role,
+            },
+            'Socket sendMessage drop: chat not permitted between roles',
+          );
+          return; // Silent drop of unauthorized message — Rule B satisfied
         }
         
         const savedMessage = await prisma.message.create({
@@ -137,7 +169,10 @@ export function setupSocketListeners(io: Server) {
           }
         }
       } catch (error) {
-        console.error("Failed to save message:", error);
+        logger.error(
+          { event: 'socket.message.save_failed', err: error, senderId: userId },
+          'Failed to save chat message',
+        );
       }
     });
     

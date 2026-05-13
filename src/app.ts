@@ -103,6 +103,23 @@ app.use(
   })
 );
 
+// ── 4b. Request ID propagation — Day 4 / Session 90 / Edits 1+2 ──────────────
+// pinoHttp generates req.id per-request (Pino's default UUID v4). Propagate it:
+//   (a) to the X-Request-Id response header — visible to clients so a user
+//       support ticket can quote the ID and we can trace it across logs.
+//   (b) to the Sentry scope as a tag — when an exception is captured anywhere
+//       downstream, Sentry's event UI shows the request_id alongside it,
+//       making log↔Sentry correlation trivial.
+// Must run AFTER pinoHttp (which generates req.id) and BEFORE route handlers.
+app.use((req, res, next) => {
+  const requestId = (req as any).id;
+  if (requestId) {
+    res.setHeader('X-Request-Id', String(requestId));
+    Sentry.getCurrentScope().setTag('request_id', String(requestId));
+  }
+  next();
+});
+
 // ── 5. Body parsers ───────────────────────────────────────────────────────────
 //
 // Two-tier body-size policy (Day 3 / Session 89 / Subtask 3.2):
