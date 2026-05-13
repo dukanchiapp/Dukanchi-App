@@ -6,6 +6,117 @@
 
 ---
 
+## 2026-05-13 — Session 91 — Hardening Sprint Day 2.7: Test Coverage Sprint (Scope 2)
+
+**Goal:** Build the integration test scaffolding that Day 5 (Auth Refinements) will need. Convert smoke-only confidence on Day 3 security surfaces (upload validation, body limit, rate-limiter, JWT whitelist, bcrypt) into durable test confidence. Land Day 2.5 carve-out test for /refresh.
+
+**Strategic context:** Day 5 audit (Session 91 part 1, see Day 5 Auth Refinements audit) surfaced ND #7 — no E2E auth flow tests exist; shipping refresh-token rotation without coverage = high regression risk. Strategic pivot to Day 2.7 (Test Coverage Sprint) BEFORE Day 5 implementation to build the test scaffolding first. Day 5 will then add refresh-flow tests on top of this base.
+
+**Status:** **CODE COMPLETE on `hardening/sprint`** — 3 commits (2 test + 1 docs). Branch **41 commits ahead of `origin/main`** (was 38). **0 production code touched** (Day 2.7 invariant held). 7 new files (5 helpers + 2 test files) + 2 dev dependencies. **21 → 36 tests** (+15 = +14 spec'd + 1 bonus positive-control). All passing in ~1s.
+
+**Production runtime UNCHANGED**: Railway watches `main`. `origin/main` HEAD still `32f5525` (Session 85).
+
+### What was done — 3-commit chain (2 test + 1 docs)
+
+1. `219160f` — **test(auth): integration scaffolding + 7 auth-critical tests (Day 2.7 P1)**
+   New `src/test-helpers/` directory (5 reusable factories totaling 489 lines):
+   - `app-factory.ts` (87 lines) — `makeTestApp` builder for supertest. Avoids importing src/app.ts (which would require mocking 20+ modules); each test mounts only the routes under test. Body-limit + cookie-parser + 413-handler opts.
+   - `fixtures.ts` (221 lines) — `makeTestUser`, `makeTestStore`, `makeTestProduct`, `makeTestPost` + convenience builders (`makeDeletedPendingUser`, `makeDeletedExpiredUser`, `makeBlockedUser`). Partial-overrideable. Plain objects, no real DB.
+   - `mock-prisma.ts` (81 lines) — `makeMockPrisma` shape-compatible client mock.
+   - `mock-redis.ts` (45 lines) — `makeMockRedis` pub+sub client mock with sane defaults + sendCommand stub.
+   - `jwt-helpers.ts` (55 lines) — `signTestJWT` (HS256 7d), `signWrongAlgJWT` (HS512), `signExpiredJWT` (1s past iat), shared `TEST_JWT_SECRET`.
+
+   7 new auth tests in `src/modules/auth/auth.integration.test.ts` (236 lines):
+   - [T1] login valid → 200 + dk_token cookie + token
+   - [T2] login wrong password → 401 generic (Day 3.5 info-leak fix preserved)
+   - [T3] login blocked + correct pwd → 401 status='blocked'
+   - [T4] login deleted_pending + correct pwd → 401 status='deleted_pending' (login still rejects; carve-out is /refresh only)
+   - [T5] GET /me valid token → 200 password-stripped
+   - [T6] GET /me no token → 401 'Access denied'
+   - [T7] /refresh deleted_pending → 200 + new token (Day 2.5 carve-out preserved)
+
+   Deps: `supertest@7.2.2` + `@types/supertest@7.2.0` (devDeps, runtime impact 0).
+
+2. `ec75f0f` — **test(security): 8 integration tests — upload + body-limit + rate-limit + JWT + bcrypt (Day 2.7 P2)**
+   `src/middlewares/security.integration.test.ts` (317 lines). Reuses Commit 1 scaffolding.
+
+   - [T8] Upload text-as-jpeg → 415 MIME_MISMATCH (magic-byte via file-type@3.9.0)
+   - [T9] Upload 12MB → 413 FILE_TOO_LARGE (Multer LIMIT_FILE_SIZE → 11a handler)
+   - [T10] 1.5MB JSON body on 1MB route → 413 PAYLOAD_TOO_LARGE (11b handler)
+   - [T11] 5MB JSON body on /ai route (10MB override) → 200 accepted
+   - [T12] Rate-limit max=3 → 4th req 429 + Retry-After + RateLimit-* headers (Day 2.6 ND #2 standardHeaders validation)
+   - [T13] HS512 token via authenticateToken → rejected (Day 3.1)
+   - [T13b] HS256 token via authenticateToken → accepted (positive control — bonus)
+   - [T14] bcrypt round-trip rounds=4 + $2b$04$ prefix + wrong-password rejection (Day 3.4)
+
+   `fs/promises.writeFile` mocked at module level so disk-fallback path in upload.middleware doesn't write real files (Rule F + Rule F.2).
+
+3. `<this commit>` — **docs: Session 91 — Day 2.7 Test Coverage Sprint + Neon decay note + STATUS refresh**
+   This SESSION_LOG entry + STATUS.md refresh.
+
+### NDs documented (4 — all accepted by user)
+
+- **ND #1 (test-helper fixture bug)** — Initial `makeDeletedPendingUser` set `deletedAt` in the PAST. Production semantic is `deletedAt` = "when soft-delete becomes effective" → FUTURE for pending, PAST for expired. Tests 4 + 7 caught it; fixture corrected before commit. **NOT a production bug — pure test-authoring error.** Strong validation signal: Day 2.5 logic is solid (assertions matched right behavior; helper was wrong).
+- **ND #2 (JWT iat byte-identical)** — Removed T7's "new token != old token" assertion. JWT `iat` is in seconds; two signings in the same second produce byte-identical tokens. Day 2.5 doesn't promise rotation; Day 5 will (jti UUID per issue). Test inline-documented to point forward to Day 5 TDD.
+- **ND #3 (T13b positive control)** — Kept. Defensive test design: T13b proves the algorithm whitelist (not test-rig brokenness) is the only reason T13 rejects. 3ms cost. 7 spec'd + 1 bonus = 8 P2 tests.
+- **ND #4 (rate-limit-redis bypass)** — T12 uses express-rate-limit's MemoryStore with max:3 instead of production RedisStore + max:10. Lua EVAL scripts in rate-limit-redis aren't trivially mockable. Test validates the LIBRARY contract (429 + standardHeaders → Retry-After + RateLimit-* headers) and OUR config preferences. Store-specific behavior is Day 8 integration concern. Documented inline.
+
+### Day 2.7 invariant held: 0 production code touched
+
+Pre-flight constraint: "Day 2.7 should be test-only". Verified via `git status -s` filtered to non-test paths → **empty**. Only changes outside test files were `package.json` + `package-lock.json` (devDep additions only).
+
+### Verification (Phase D)
+
+- Typecheck: PASS (0 errors at each commit's HEAD and at final HEAD)
+- Test suite: **36/36 passing** in 909-976ms (run twice; ~5% variance, no flakes)
+- Boot smoke on TEST branch: ⚠️ PASS-with-caveat — server boots, /health 200, X-Request-Id present, but `ensureAdminAccount` failed with `PrismaClientInitializationError: Can't reach database server` (Neon test branch `hardening-day2-test` decayed). Pre-existing infra issue (STATUS.md flagged auto-expiry May 19; appears to have happened earlier). Caught by existing try/catch — non-fatal. **Not a Day 2.7 regression.**
+- R2 bucket: 11 objects scanned, 0 smoke candidates. Day 2.7 mocked `fsp.writeFile`, no R2 writes. Rule F.2 honored via mocking.
+- Rule A/B/F/F.2: all honored (test-only changes, no production behavior alteration)
+
+### Pre-flag for Day 5 — Neon TEST branch revival needed
+
+**Required user action BEFORE Day 5 audit/implementation:** Recreate or revive the Neon TEST branch (`hardening-day2-test`) so `DATABASE_URL_TEST` resolves to a live endpoint. Day 5's auth-flow integration smokes will hit the DB-dependent paths (signup → persist, refresh → user lookup, etc.); mocked tests (Day 2.7's 36) work fine, but live smokes need a live test DB.
+
+Estimated effort: 5-min Neon dashboard task (branch from prod main, point `DATABASE_URL_TEST` to the new branch).
+
+### Backlog created / preserved
+
+- **`tsconfig.test.json` deferred (still)** — Vitest config comment from Day 2.5 said "Future Day 2.7 work may add". Tests compile via vitest's internal esbuild. Test files don't get same strict typecheck as production. **Optional cleanup, not blocking.** Marked for a future focused cleanup pass.
+- **Frontend component tests** — `@testing-library/react` + jsdom setup not added. Frontend (React pages, Day 4 PostHog event captures) untested. **Defer to a frontend-focused test sprint.**
+- **CI integration** — `.github/workflows/*` absent. Pre-commit hooks not added. **Day 6 territory per original sprint plan.** Don't merge concerns.
+- **Day 5 readiness** — Auth-flow refresh-rotation tests will be added by Day 5 itself (TDD: write failing test, implement, verify green). Day 2.7 scaffolding ready.
+- **Cascade integration tests (Priority 3 from audit)** — `/api/account/delete` flow, FCM purge atomicity in `$transaction`, store/post reads with deleted-owner filter. **Defer to a future test sprint** when fixture complexity is justified by need.
+- **Socket auth E2E (Priority 4 from audit)** — io.use auth tests, sendMessage per-message defense. **Defer** — Socket.io test patterns add another infrastructure layer.
+
+### Files (Day 2.7 cumulative)
+
+7 new files (5 helpers + 2 test files) + 2 modified (package.json, package-lock.json).
+
+**Per-file LOC (new):**
+- `src/test-helpers/app-factory.ts`: 87
+- `src/test-helpers/fixtures.ts`: 221
+- `src/test-helpers/jwt-helpers.ts`: 55
+- `src/test-helpers/mock-prisma.ts`: 81
+- `src/test-helpers/mock-redis.ts`: 45
+- `src/modules/auth/auth.integration.test.ts`: 236
+- `src/middlewares/security.integration.test.ts`: 317
+- **Total new: 1042 LOC** (helpers: 489; tests: 553)
+
+**Diff stat (vs HEAD = 6de5716):**
+- 2 modified (package metadata): +215 / -4
+- 7 new: +1042
+- **Cumulative: ~+1257 / -4** (~+1042 code-only, excluding package-lock churn)
+
+### Production code untouched
+
+**Critical Day 2.7 invariant: ✅ HELD.** `git status` filtered to non-test, non-package paths returns empty. Zero changes to `src/app.ts`, `src/lib/*`, `src/middlewares/*` (the production files), `src/modules/*/{controller,service,routes}.ts`, etc. Day 2.7 surface is exclusively `src/test-helpers/` + `*.integration.test.ts` files.
+
+### Deploy plan unchanged
+
+Day 8 atomic merge `hardening/sprint` → `main`. Production runtime continues on Session 85.
+
+---
+
 ## 2026-05-13 — Session 90 — Hardening Sprint Day 4: Observability (Scope 2)
 
 **Goal:** Close the observability gap identified in Day 3+2.6 — backend Sentry hardening (release tag + request-ID correlation), structured logs in socket-listeners, frontend Sentry + PostHog with graceful degradation, source-map upload pipeline, and 7 product events for the new analytics surface.

@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-13 | Session 90 closed | Branch: hardening/sprint @ Day 4 head (3 commits added this session, push pending) | Prod runs main @ 32f5525
+> Last updated: 2026-05-13 | Session 91 closed | Branch: hardening/sprint @ Day 2.7 head (3 commits added this session, push pending) | Prod runs main @ 32f5525
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -36,14 +36,22 @@
   - `c7c0ef0` — Frontend Sentry (@sentry/react, sentry-frontend.ts), PostHog (posthog-js, EU instance), 7 product events (signup, login, store_created, post_created, ai_feature_used×3, search_performed, chat_message_sent), Vite source-map upload plugin (graceful)
   - 8 NDs documented and accepted (single-package layout, missing delete UI callsite, sequential req-id, 3-env-var plugin, dev opt-out, replay off-by-default, plugin-injected release, +130KB bundle)
   - Backend `console.*`: 26 → 17 (socket-listeners now 0)
+- **Day 2.7 (Session 91):** Test Coverage Sprint — integration test scaffolding + 15 new tests ✅
+  - `219160f` — `src/test-helpers/` directory (5 reusable factories: app-factory, fixtures, mock-prisma, mock-redis, jwt-helpers) + 7 auth integration tests (login × 4 paths, /me × 2, /refresh Day 2.5 carve-out)
+  - `ec75f0f` — 8 security integration tests (upload magic-byte + size, body limit ×2 tiers, rate-limit 429 + Retry-After, JWT HS512 reject + HS256 accept positive control, bcrypt round-trip)
+  - Deps: `supertest@7.2.2` + `@types/supertest@7.2.0` (devDeps only — runtime impact 0)
+  - **21 → 36 tests** (+15 = +14 spec'd + 1 bonus T13b positive control)
+  - 4 NDs documented (fixture bug fixed mid-flight; JWT iat byte-identical; T13b positive control kept; rate-limit-redis bypass via MemoryStore)
+  - **0 production code touched** — test-only, invariant verified
+  - **Pre-flag for Day 5**: Neon TEST branch `hardening-day2-test` decayed (boot smoke surfaced PrismaClientInitializationError). Caught by existing try/catch; non-fatal; not a regression. **5-min Neon dashboard task required to revive before Day 5 DB-dependent smokes.**
 
-All Days 1+2+2.5+3+2.6 committed AND pushed to `origin/hardening/sprint`. Day 4 (this session) committed locally — push pending.
+All Days 1+2+2.5+3+2.6+4 committed AND pushed to `origin/hardening/sprint`. Day 2.7 (this session) committed locally — push pending.
 
-Branch is **38 commits ahead of `origin/main`** (was 35 at start of Session 90; +3 this session: 2 feature + 1 docs).
+Branch is **41 commits ahead of `origin/main`** (was 38 at start of Session 91; +3 this session: 2 test + 1 docs).
 
-## Active Sprint: Hardening Sprint (Days 1-4 + Day 2.6 of 8 — 56% complete)
+## Active Sprint: Hardening Sprint (Days 1-4 + 2.6 + 2.7 of 8 — 69% complete)
 
-**Branch:** `hardening/sprint` @ Day 4 head (local, unpushed)
+**Branch:** `hardening/sprint` @ Day 2.7 head (local, unpushed)
 **Deploy plan:** **Day 8 atomic merge** `hardening/sprint` → `main` → Railway redeploy + full Rule E verification
 
 | Day | Topic | Status |
@@ -53,9 +61,10 @@ Branch is **38 commits ahead of `origin/main`** (was 35 at start of Session 90; 
 | 2.5 (Session 88) | Soft-delete cascade (audit + impl + tests) | ✅ Done, pushed |
 | 3 (Session 89) | Security: JWT alg + body limits + upload validation + bcrypt + timeouts | ✅ Done, pushed |
 | 2.6 (Session 89.5) | Upload Scope 3 extras (admin rate-limiter + structured logging) + Rule F.2 + R2 cleanup | ✅ Done, pushed |
-| 4 (Session 90) | Observability — backend Sentry tightening + frontend Sentry + PostHog + 7 product events | ✅ Done, push pending |
-| 5 (Next) | Day 2.7 Test Coverage Sprint OR bundle/perf optimization OR error handler unification | ⏳ Sequencing TBD |
-| 6-7 | Remaining sprint days | Planned |
+| 4 (Session 90) | Observability — backend Sentry tightening + frontend Sentry + PostHog + 7 product events | ✅ Done, pushed |
+| 2.7 (Session 91) | Test Coverage Sprint — integration scaffolding + 15 new tests (21 → 36) | ✅ Done, push pending |
+| 5 (Next) | Auth Refinements — access/refresh split, rotation, reuse detection, server-side logout, CSRF | ⏳ Pending; **REQUIRES Neon TEST branch revival first** |
+| 6-7 | Remaining sprint days (CI/Docker is Day 6, perf/UX Day 7) | Planned |
 | 8 | Atomic merge to main + production deploy + verification | Planned |
 
 **Path B decision (Session 87)** — Project has no `_prisma_migrations` table on prod or test. Migrations applied via `psql -f`. Baseline-then-track setup queued as **Day 2.7** dedicated session.
@@ -88,7 +97,7 @@ Branch is **38 commits ahead of `origin/main`** (was 35 at start of Session 90; 
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] `hardening/sprint` is **38 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] `hardening/sprint` is **41 commits ahead of `origin/main`** — intentional, merges at Day 8
 - [ ] Neon test branch `hardening-day2-test` auto-expires May 19 — fine, served its purpose
 - [ ] Schema-ahead-of-code state on production — safe (additive Day 2 migrations) until Day 8
 - [ ] Day 2.7 (baseline `_prisma_migrations` table on prod + test coverage sprint) — separate focused session
@@ -101,12 +110,19 @@ Branch is **38 commits ahead of `origin/main`** (was 35 at start of Session 90; 
   - Dedicated `R2_BUCKET_NAME_TEST` env to eliminate Rule F.2 cleanup burden → Day 5+/Day 2.7 candidate
   - KYC-specific rate limiter (tighter cap than 10/min upload limit, e.g., 1/day) → Day 5+ candidate
   - xlsUpload rate-limit gap (`/api/stores/:storeId/bulk-import` only has generalLimiter + per-storeId daily cap) → low-priority backlog
-- [ ] Day 4 backlog (new):
+- [ ] Day 4 backlog:
   - pinoHttp UUID upgrade — `genReqId: () => crypto.randomUUID()` 1-line change for distributed correlation → Day 5+
   - `account_delete_requested` PostHog event — wire when UI for /api/account/delete lands (helper already imported in AuthContext)
   - Bundle size chunking — manual chunks for @sentry/react + posthog-js to reduce +130KB critical-path → Day 5+
   - 17 remaining backend `console.*` calls — `search.service` (4), `geminiEmbeddings` (4), `push.routes` (2), `message.service` (1), `socket` (1), `redis` (4 pre-logger), `env` (1 pre-logger) → focused cleanup sprint
   - Sentry session replay opt-in decision — `replaysSessionSampleRate` bump above 0 awaits privacy review
+- [ ] Day 2.7 backlog (new):
+  - **Neon TEST branch revival** — `hardening-day2-test` unreachable per Phase D boot smoke. 5-min Neon dashboard task. **BLOCKS Day 5 DB-dependent smokes.**
+  - `tsconfig.test.json` — Vitest currently uses internal esbuild; test files don't get production-strict typecheck. Low-priority cleanup.
+  - Frontend component tests (React pages + Day 4 PostHog events) — needs `@testing-library/react` + jsdom infrastructure → future frontend-focused test sprint
+  - Cascade integration tests (Priority 3 from Day 2.7 audit): `/api/account/delete` + FCM purge atomicity + cross-cascade reads → future test sprint
+  - Socket auth E2E tests (Priority 4): io.use + per-message defense → future test sprint
+  - Test suite runtime currently ~1s — well under any threshold worth optimizing
 
 ## Stack
 | Layer | Tech |
