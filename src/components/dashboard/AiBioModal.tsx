@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Sparkles, X, Loader2, Mic, MicOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
+import { captureEvent } from '../../lib/posthog';
 
 interface AiBioModalProps {
   open: boolean;

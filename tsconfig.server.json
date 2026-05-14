@@ -28,6 +28,7 @@
     "src/constants/**/*.ts",
     "src/lib/logger.ts",
     "src/lib/sentry.ts",
+    "src/lib/redis-keys.ts",
     "server.ts",
     "scripts/**/*.ts",
     "validators/**/*.ts"

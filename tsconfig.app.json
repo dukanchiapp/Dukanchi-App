@@ -22,6 +22,8 @@
     "src/constants/**/*",
     "src/lib/api.ts",
     "src/lib/storeUtils.ts",
+    "src/lib/sentry-frontend.ts",
+    "src/lib/posthog.ts",
     "src/main.tsx",
     "src/App.tsx",
     "src/vite-env.d.ts",

@@ -36,7 +36,6 @@ import { unavailableError, isUserUnavailable } from "../../middlewares/user-stat
 import { logger } from "../../lib/logger";
 import { pubClient } from "../../config/redis";
 import {
-  generateRefreshToken,
   verifyRefreshToken,
   rotateFromVerifiedPayload,
   detectReuseAndRevokeFamily,

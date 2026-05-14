@@ -121,6 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // dispatches 'auth:expired'. Treat as forced logout — clears state.
   // Components observing `user` will react (redirect to /login).
   useEffect(() => {
+    // Guard against any SSR-style environment (shouldn't happen in our
+    // pure-CSR Vite app, but TS strict-mode TS7030 catches the implicit
+    // fallthrough below if we don't explicitly handle this branch).
+    if (typeof window === 'undefined') return undefined;
     const handler = () => {
       // Don't POST /logout — the server has already invalidated the
       // session (that's why refresh failed). Just clear local state.
@@ -132,10 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSentryUser(null);
       identifyUser(null);
     };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('auth:expired', handler);
-      return () => window.removeEventListener('auth:expired', handler);
-    }
+    window.addEventListener('auth:expired', handler);
+    return () => window.removeEventListener('auth:expired', handler);
   }, []);
 
   return (

@@ -145,6 +145,21 @@ The minimum acceptable bar is (b): smoke-then-cleanup-before-commit. (a) is pref
 
 Origin: Session 89.5 / Day 2.6 — 9 placeholder JPEGs (Day 2.6 Item 2 rate-limit burst smoke) + 2 stragglers (Day 3 Subtask 3.3 smoke T1 + T5) leaked into the prod `dukanchi-prod` R2 bucket. Cleaned forensically via a one-off `temp/r2-cleanup-day26.ts` script; rule codified here to prevent recurrence on the storage surface.
 
+### Rule G — Verification Protocol
+
+Always use `npm run typecheck` for TypeScript verification, NEVER `npx tsc --noEmit` alone. The root `tsconfig.json` is a composite reference — it does NOT enforce strict project configs. Running `tsc --noEmit` against it can report "0 errors" while the strict project configs fail.
+
+`npm run typecheck` runs BOTH:
+- `tsc -p tsconfig.app.json --noEmit` — the frontend project (React app, strict include list, lib DOM)
+- `tsc -p tsconfig.server.json --noEmit` — the backend project (Node, strict include list, no DOM)
+
+Per-project configs have stricter rules:
+- Explicit `include` lists for `src/lib/*.ts` (mixed frontend/backend lib — neither project includes the other's files via glob)
+- `noFallthroughCasesInSwitch`, `noImplicitReturns` (TS7030), and other compile-time checks the root config doesn't always apply
+- Project-aware path resolution (`@/*` aliases differ per project)
+
+Origin: Session 92.1 / Day 5.1 — Day 4 `c7c0ef0` + Day 5 `e6d0608` shipped 4 strict-config typecheck errors (missing import, 2 missing tsconfig.app.json includes, TS7030 implicit fallthrough) that Phase D verifications missed because they used `npx tsc --noEmit`. Surfaced by Phase 3 Step 1 `npm run build` (which runs `npm run typecheck && npm run build:web`). Rule codified here to prevent recurrence.
+
 ## Two-AI Workflow — Response Conventions
 
 ### Opus Summary Convention
