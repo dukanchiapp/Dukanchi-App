@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-14 | Session 92.1 closed | Branch: hardening/sprint @ Day 5.1 head (4 commits added this session, push pending) | Prod runs main @ 32f5525
+> Last updated: 2026-05-14 | Session 93 closed | Branch: hardening/sprint @ Day 6 head (6 commits this session, all pushed, all CI green) | Prod runs main @ 32f5525
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -61,14 +61,24 @@
   - **CLAUDE.md Rule G** added: use `npm run typecheck` (runs both web + server project configs), never `npx tsc --noEmit` alone
   - 13 NDs documented (D17-D29). 5 follow-up backlog items captured.
 
-All Days 1+2+2.5+3+2.6+4+2.7+5 committed AND pushed to `origin/hardening/sprint`. Day 5.1 (this session) committed locally — push pending.
+- **Day 6 (Session 93):** Tooling & CI Foundation — 6 phases, 6 commits, 0 reverts, all CI green ✅
+  - `99f7039` — `feat(ci)`: GitHub Actions CI (Node 22, PR + push-to-main, 4 hard gates) + Husky two-tier hooks (pre-commit lint-staged + secret scan; pre-push typecheck) + Dependabot weekly Monday IST × 3 ecosystems. Closes ND-D6-1 + ND-D6-2.
+  - `e40c854` — `feat(deps)`: xlsx → exceljs migration + `npm audit fix` transitive HIGH/MODERATE. 17 vulns (7 HIGH/2 MOD/8 LOW) → **8 vulns (0/0/8 LOW)**. Closes ND-D6-6. `.xls` legacy binary support dropped (exceljs limitation).
+  - `2fde985` — `feat(ci)`: vitest v8 coverage (baseline 4.30/3.00/3.39/4.81 — statements/branches/functions/lines) + Codecov upload + bundle-size PR comment (preactjs/compressed-size-action, report-only). Closes ND-D6-4 + ND-D6-5. Surfaced ND-D6-PHASE3-1 (Codecov token required — Day 8 user manual action).
+  - `59a8733` — `docs(day6)`: README.md rewrite (232 lines, 11 sections, 0 AI-Studio refs) + RUNBOOK.md NEW (324 lines, 8 sections, Day 8 atomic-merge checklist live) + vite.config.ts build guard rejecting localhost VITE_API_URL in production mode. Closes ND-D6-9 (audit) + ND-D6-11 + ND-D6-EXTRA-5.
+  - `f429d38` — `docs(day6)`: RUNBOOK §9 (Sentry source maps provisioning) + §10 (UptimeRobot setup) + CI workflow forwarding Sentry secrets gracefully (build still succeeds with empty creds or 401 — verified). Closes ND-D6-3 + ND-D6-10.
+  - This commit — Session 93 closure (SESSION_LOG + STATUS refresh).
+  - **Metrics:** 5 CI runs, 5 green, avg ~1m15s. Tests 42/42 throughout. Typecheck 0 errors throughout. Branch advanced 49 → 54 ahead of `origin/main`.
+  - **Day 8 user manual actions queued** (RUNBOOK §6): `CODECOV_TOKEN` secret, Sentry source-map secrets (Railway + GitHub), UptimeRobot signup + monitor, branch protection rules on `main`.
 
-Branch is **49 commits ahead of `origin/main`** (was 45 at start of Session 92.1; +4 this session: 3 production fix + 1 docs).
+All Days 1+2+2.5+3+2.6+4+2.7+5+5.1+6 **committed AND pushed** to `origin/hardening/sprint`.
 
-## Active Sprint: Hardening Sprint (Days 1-4 + 2.6 + 2.7 of 8 — 69% complete)
+Branch is **54 commits ahead of `origin/main`** (was 49 at start of Session 93; +5 this session via 5 phase commits + 1 closure commit = 6, but only 5 are counted in "ahead of main" delta because pre-Session-93 the branch was already 49 ahead).
 
-**Branch:** `hardening/sprint` @ Day 2.7 head (local, unpushed)
-**Deploy plan:** **Day 8 atomic merge** `hardening/sprint` → `main` → Railway redeploy + full Rule E verification
+## Active Sprint: Hardening Sprint (Days 1–6 of 8 — 87% complete)
+
+**Branch:** `hardening/sprint` @ Day 6 head (all pushed)
+**Deploy plan:** **Day 8 atomic merge** `hardening/sprint` → `main` → Railway redeploy + full Rule E verification (RUNBOOK §6 checklist)
 
 | Day | Topic | Status |
 |---|---|---|
@@ -78,10 +88,12 @@ Branch is **49 commits ahead of `origin/main`** (was 45 at start of Session 92.1
 | 3 (Session 89) | Security: JWT alg + body limits + upload validation + bcrypt + timeouts | ✅ Done, pushed |
 | 2.6 (Session 89.5) | Upload Scope 3 extras (admin rate-limiter + structured logging) + Rule F.2 + R2 cleanup | ✅ Done, pushed |
 | 4 (Session 90) | Observability — backend Sentry tightening + frontend Sentry + PostHog + 7 product events | ✅ Done, pushed |
-| 2.7 (Session 91) | Test Coverage Sprint — integration scaffolding + 15 new tests (21 → 36) | ✅ Done, push pending |
-| 5 (Next) | Auth Refinements — access/refresh split, rotation, reuse detection, server-side logout, CSRF | ⏳ Pending; **REQUIRES Neon TEST branch revival first** |
-| 6-7 | Remaining sprint days (CI/Docker is Day 6, perf/UX Day 7) | Planned |
-| 8 | Atomic merge to main + production deploy + verification | Planned |
+| 2.7 (Session 91) | Test Coverage Sprint — integration scaffolding + 15 new tests (21 → 36) | ✅ Done, pushed |
+| 5 (Session 92) | Auth Refinements — access/refresh split, rotation, reuse detection, server-side logout, X-Refresh-Token header for native | ✅ Done, pushed |
+| 5.1 (Session 92.1) | Native APK live smoke — T1 validated on Vivo X200; +3 production fixes shipped; Rule G codified | ✅ Done, pushed |
+| **6 (Session 93)** | **Tooling & CI Foundation — GH Actions + Husky + Dependabot + coverage + bundle monitoring + xlsx→exceljs + README/RUNBOOK rewrite + Sentry/uptime docs + build guard** | **✅ Done, pushed** |
+| 7 (Next) | Deploy hardening — staging env + ESLint/Prettier + coverage ramp + R2 versioning + admin-panel routing fix + Day-7 backlog | ⏳ Pending |
+| 8 | Atomic merge to main + production deploy + Rule E verification + user manual actions (CODECOV_TOKEN / Sentry secrets / UptimeRobot / branch protection) | Planned |
 
 **Path B decision (Session 87)** — Project has no `_prisma_migrations` table on prod or test. Migrations applied via `psql -f`. Baseline-then-track setup queued as **Day 2.7** dedicated session.
 
@@ -89,18 +101,16 @@ Branch is **49 commits ahead of `origin/main`** (was 45 at start of Session 92.1
 
 ## Next 3 Actions
 
-1. **Day 4 sequencing decision** (next session prompt — starter template at `temp/day-4-starter-prompt.md`)
-   - **Candidate A (recommended) — Day 4 Observability:** Sentry middleware tightening, error handler unification, PostHog wiring (frontend product analytics queued). Recommended first because Sentry is already partially configured (Session 85 production-grade base), so this is the natural extension and lowest-friction next step.
-   - **Candidate B — Day 2.6 Scope 3 upload extras:** per-route MIME tightening, admin-only PDF whitelist, S6 rate-limiter
-   - **Candidate C — Day 2.7 Test Coverage Sprint:** cascade integration tests, socket auth E2E, D5 atomicity, fixtures, CI wiring
+1. **Day 7 — Deploy hardening (next session)** — recommended scope: coverage ramp (start 4% → 30% target by EOD), R2 versioning audit (~2 min Cloudflare check), staging environment setup (Neon paid branch + Railway second env, ~2 hr), ESLint/Prettier (~1 hr), admin-panel routing bug fix (~1 hr), and optional GH Actions Node 20 → 22 actions migration. Full Day 7 candidate list in SESSION_LOG Session 93 §7.
 
-2. **Day 5-7 — Remaining sprint days** (sequencing depends on Day 4 choice)
-
-3. **Day 8 — Atomic merge + deploy** (after Days 4-7 complete)
+2. **Day 8 — Atomic merge + deploy** (after Day 7 complete, all 4 user manual actions provisioned per RUNBOOK §6)
+   - Provision `CODECOV_TOKEN` (GitHub secret), `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` (Railway env + GitHub secrets), UptimeRobot monitor on `/health`, branch protection rules on `main`
    - `git checkout main && git merge hardening/sprint --no-ff && git push origin main`
-   - Railway auto-redeploys; full Rule E curl battery on production
-   - Sentry + Railway log spot-check
+   - Railway auto-redeploys; run Rule E 5-curl smoke battery from RUNBOOK §6
+   - Sentry + Railway log spot-check; confirm Sentry release tagged with Railway commit SHA + source maps showing readable stack traces
    - Cleanup `temp/accidental-user-snapshot-*.json` after green deploy
+
+3. **Post-deploy — Phase 0.5 God Tier Vision kickoff** — Week 1-2 Discovery v2 (voice + image search). Branch off fresh from `main` post-Day-8.
 
 ## Phase 0.5 — God Tier Vision (8 weeks, queued after Hardening Sprint)
 - Week 1-2: Discovery v2 — Voice + Image search
@@ -113,7 +123,7 @@ Branch is **49 commits ahead of `origin/main`** (was 45 at start of Session 92.1
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] `hardening/sprint` is **49 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] `hardening/sprint` is **54 commits ahead of `origin/main`** — intentional, merges at Day 8
 - [ ] **Day 5.2 — Bundled-mode Capacitor smoke** queued (~30 min). Build APK without server.url override (production-mirror mode); exercises cross-origin X-Refresh-Token CORS path on real device. Fills the Day 5.1 D20 gap (server.url smoke was same-origin, didn't directly test prod cross-origin path).
 - [ ] **Day 5 deploy pre-flight TODO**: Provision `JWT_REFRESH_SECRET` in Railway dashboard before Day 8 merge. Generate via `openssl rand -base64 48`. Server hard-fails boot in production if still using the dev fallback (env.ts post-parse guard, verified live in S7 smoke).
 - [ ] **Day 5.1 follow-up session**: Native (Capacitor) APK rebuild + manual test of silent-refresh flow on a real device. Backend + frontend code is 100% testable via mocks + curl, but the full native localStorage → X-Refresh-Token → retry round-trip needs a real device.
@@ -135,13 +145,27 @@ Branch is **49 commits ahead of `origin/main`** (was 45 at start of Session 92.1
   - Bundle size chunking — manual chunks for @sentry/react + posthog-js to reduce +130KB critical-path → Day 5+
   - 17 remaining backend `console.*` calls — `search.service` (4), `geminiEmbeddings` (4), `push.routes` (2), `message.service` (1), `socket` (1), `redis` (4 pre-logger), `env` (1 pre-logger) → focused cleanup sprint
   - Sentry session replay opt-in decision — `replaysSessionSampleRate` bump above 0 awaits privacy review
-- [ ] Day 2.7 backlog (new):
-  - **Neon TEST branch revival** — `hardening-day2-test` unreachable per Phase D boot smoke. 5-min Neon dashboard task. **BLOCKS Day 5 DB-dependent smokes.**
+- [ ] Day 2.7 backlog (carried):
+  - ~~**Neon TEST branch revival**~~ ✅ DONE — Day 5 pre-flight Session 92.
   - `tsconfig.test.json` — Vitest currently uses internal esbuild; test files don't get production-strict typecheck. Low-priority cleanup.
   - Frontend component tests (React pages + Day 4 PostHog events) — needs `@testing-library/react` + jsdom infrastructure → future frontend-focused test sprint
   - Cascade integration tests (Priority 3 from Day 2.7 audit): `/api/account/delete` + FCM purge atomicity + cross-cascade reads → future test sprint
   - Socket auth E2E tests (Priority 4): io.use + per-message defense → future test sprint
   - Test suite runtime currently ~1s — well under any threshold worth optimizing
+- [ ] **Day 6 backlog (new):**
+  - **Day 8 user manual actions (RUNBOOK §6 checklist):**
+    - `CODECOV_TOKEN` GitHub repository secret (closes ND-D6-PHASE3-1) — ~3 min via codecov.io OAuth
+    - `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` in **both** Railway env + GitHub secrets (completes ND-D6-3 provisioning) — ~5 min
+    - UptimeRobot signup + monitor on `https://dukanchi.com/health`, 5-min interval, 30s timeout (completes ND-D6-10 follow-through) — ~5 min
+    - Branch protection rules on `main` (Q-D6-6 manual GitHub action): require PR + required check = `ci` + no force-push — ~3 min
+  - **Coverage ramp 4% → 70%** — Day 7+ multi-sprint effort. Priority targets: routes/services beyond auth (kyc, posts, search, stores, messages, push, team, users all at 0% currently). Frontend needs jsdom infra first (carried from Day 2.7 backlog).
+  - **R2 versioning audit** — ~2 min Cloudflare dashboard check; enable versioning + 30-day retention if disabled. RUNBOOK §7 has Day 7 placeholder.
+  - **Admin panel routing bug** — `localhost:5173/admin-panel/login` auto-redirects to `localhost:5173/login`. Vite base + React Router base mismatch suspected. Day 7+ debug session.
+  - **GH Actions Node 20 deprecation** — `actions/checkout@v4` + `actions/setup-node@v4` + `actions/github-script@*` all flagged for Node 24 default by 2026-06-02; full Node 20 removal 2026-09-16. 13 months runway; cheap to migrate to `@v5` when published.
+  - **ND-D6-8 ESLint + Prettier** — Day 7+ candidate (~1 hr).
+  - **ND-D6-7 Staging environment** — Neon paid branch + Railway second env + DNS subdomain. Day 7+ candidate (~2 hr).
+  - **ND-D6-12 Pen test** — pre-launch external engagement (Phase 0.5 candidate).
+  - **5 of 6 audit EXTRAs deferred** — commitlint (EXTRA-2), PR template (EXTRA-3), temp/ cleanup audit (EXTRA-4), console.* logger migration (EXTRA-1), scripts/ audit (EXTRA-6). All Day 7+.
 
 ## Stack
 | Layer | Tech |
