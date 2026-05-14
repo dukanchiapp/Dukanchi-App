@@ -65,20 +65,28 @@ export default defineConfig({
       ],
 
       // Thresholds — Day 6 Phase 3 baseline-driven (Q-D6-1).
-      // Fail floor: MIN(baseline, 60%). Aspirational: 70%.
+      // Fail floor: MIN(baseline, target). Aspirational: 70%.
       //
-      // Baseline (Session 93, commit e40c854 + this commit):
-      //   Statements 4.30% | Branches 3.00% | Functions 3.39% | Lines 4.81%
+      // Baselines:
+      //   Day 6 close (Session 93, 42 tests):
+      //     Statements 4.30% | Branches 3.00% | Functions 3.39% | Lines 4.81%
+      //   Day 7 close (Session 94, +39 tests = 81 total):
+      //     Statements 7.26% | Branches 4.54% | Functions 8.82% | Lines 7.99%
       //
-      // Floors below are baseline rounded down with ~0.3-1pt safety margin —
-      // prevents flaky CI failures while still catching regressions of >1pt
-      // on any metric. Day 7 backlog item: ramp coverage to 70% (huge gap;
-      // multi-sprint effort focused on routes/services beyond auth + refresh).
+      // Day 7 target was 25-30% statements (Q-D7-5 breadth-first scope).
+      // Actual jump was smaller (~3pt) because route-level integration tests
+      // with service mocks exercise controllers + middleware but not
+      // service-layer business logic (where most LOC live). Day 8+ backlog:
+      // unmock service layer for posts/search/messages OR add jsdom + RTL
+      // for frontend React pages (the ~1500 uncovered lines of biggest
+      // potential gain).
+      //
+      // Floors below are baseline rounded down with ~0.3-1pt safety margin.
       thresholds: {
-        statements: 4,
-        branches: 2,
-        functions: 3,
-        lines: 4,
+        statements: 7,
+        branches: 4,
+        functions: 8,
+        lines: 7,
       },
     },
   },
