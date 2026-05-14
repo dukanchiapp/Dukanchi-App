@@ -213,6 +213,9 @@ The `hardening/sprint` branch lands on `main` as one atomic merge after Days 1�
 - [ ] `CODECOV_TOKEN` set as a **GitHub repository secret** (not Railway) — closes ND-D6-9. Without it Codecov upload returns "Token required — not valid tokenless upload" and CI is green-but-no-data.
 - [ ] All other variables in [README Environment Variables table](./README.md#environment-variables) confirmed in Railway prod env.
 
+### Operational decisions (documentation-only, low priority)
+- [ ] **Document R2 backup strategy decision before launch** — R2 has no native versioning (§7). For pilot, application-level UUID keys + Bucket Lock evaluation (Day 7+ backlog) are sufficient. Capture the final decision (e.g., "deferred to Series A" or "Bucket Lock enabled on /kyc/ and /products/") in a one-paragraph note here before Day 8 merge.
+
 ### Branch protection rules (manual GitHub setup — Q-D6-6)
 - [ ] Settings → Branches → Add rule for `main`
 - [ ] **Require a pull request before merging** (no direct push)
@@ -255,16 +258,37 @@ All five must return expected codes (200 / 200 application/json / `access-contro
 
 ---
 
-## 7. R2 Versioning Status
+## 7. R2 Object Protection Strategy
 
-**Status: UNKNOWN** as of Day 6 audit (Area 11). The `dukanchi-prod` R2 bucket may or may not have versioning enabled.
+**Status (verified 2026-05-14 / Day 7 Session 94 / Q-D7-1):** Cloudflare R2 **does not support native object versioning** as of May 2026. There is no firm roadmap announced.
 
-**Risk:** Without versioning, an accidental delete or overwrite of a user upload is unrecoverable.
+> Source: [Cloudflare R2 docs](https://developers.cloudflare.com/r2/) + Cloudflare Discord community confirmation (Dec 2025). The R2 Settings UI for `dukanchi-prod` confirms — only **Object Lifecycle Rules** and **Bucket Lock Rules** are available; no "Object Versioning" toggle exists.
 
-**Day 7 backlog action:**
-- [ ] Cloudflare dashboard → R2 → `dukanchi-prod` → Settings → Object Versioning → confirm status
-- [ ] If disabled, enable versioning + 30-day retention policy
-- [ ] Document final state in this section
+### Day 6 audit correction
+The Day 6 pre-flight audit (Area 11) listed R2 versioning as a Day 7 action under an S3-parity assumption. That assumption was **wrong** — R2's API is S3-compatible at the object-I/O layer but does not implement S3's versioning model. **ND-D7-1 is CLOSED** with this corrected understanding (feature unavailability, not a misconfiguration).
+
+### Available R2 protection primitives (and how Dukanchi uses each)
+
+| Primitive | What it does | Dukanchi posture |
+|---|---|---|
+| **Bucket Lock Rules** | Object immutability after upload (WORM — Write Once Read Many). Configurable retention. | **Recommended for production-critical objects** (KYC docs, product photos that should never change). Day 7+ backlog item: evaluate per-prefix lock rules. |
+| **Object Lifecycle Rules** | Auto-delete or transition objects based on age, prefix, tag. **NOT versioning** — these operate on the current object. | Useful for ephemeral artifacts (test uploads, expired KYC drafts). Day 7+ backlog: define rule set. |
+| **Application-level unique keys** | Each upload generates a UUID-based path; no overwrites possible because the key is collision-free. | **Likely already in place** via existing upload-key generation in `src/middlewares/upload.middleware.ts`. Day 7+ backlog: confirm via code audit. |
+| **Daily R2 backup sync** | Out-of-band copy of bucket contents to a second bucket / cold storage. Recovers from catastrophic loss (account compromise, accidental bulk delete via admin panel, etc.). | Series A scope. Implementation options: Cloudflare Workers cron + `aws s3 sync` to a backup bucket, OR third-party (Rewind / R2 Backup). |
+
+### Risk assessment for pilot launch
+
+| Phase | Volume | Risk | Mitigation sufficient? |
+|---|---|---|---|
+| **Pilot (Bandra, ~200 DAU)** | Few hundred uploads/day | **LOW** | Yes — most data is append-only (new uploads, not in-place edits). UUID-keyed paths prevent accidental overwrites. |
+| **Day 8 atomic merge** | n/a | **NO BLOCKER** | Versioning unavailability does not block the merge; corrected understanding documented here. |
+| **Growth (1,000 DAU)** | Several thousand uploads/day | MEDIUM | Reassess. Likely need Bucket Lock on KYC + product photos. Define lifecycle rules. |
+| **Pre-Series A (10k+ DAU)** | Tens of thousands daily | HIGH | Daily backup sync mandatory. Bucket Lock across all production-critical prefixes. |
+
+### Day 7+ backlog items (R2 protection)
+- [ ] **Audit application code for object key uniqueness** — confirm all upload paths use UUID-based keys (no slug-based or user-derived paths that could collide). Likely already done; verify in `upload.middleware.ts` + `post.service.ts` + KYC upload path. (~15 min)
+- [ ] **Evaluate Bucket Lock Rules for production-critical prefixes** — KYC documents (`/kyc/`) and product photos (`/products/`) should be lock-protected with reasonable retention. (~30 min Cloudflare dashboard work + ~30 min testing the lock doesn't break re-uploads.)
+- [ ] **Daily R2 backup snapshot** — Series A scope. Cloudflare Workers cron OR third-party. (~4-6 hr implementation.)
 
 ---
 
@@ -452,3 +476,4 @@ When UptimeRobot fires a "Down" alert:
 |---|---|---|
 | 2026-05-14 | Session 93 / Day 6 Phase 4 | Initial RUNBOOK created. Closes ND-D6-11. |
 | 2026-05-14 | Session 93 / Day 6 Phase 5 | Added §9 Sentry source maps (closes ND-D6-3) + §10 Uptime monitoring (closes ND-D6-10). |
+| 2026-05-14 | Session 94 / Day 7 Phase 1 | §7 rewritten — R2 versioning unavailable on Cloudflare; documented alternatives (Bucket Lock, Lifecycle Rules, app-level UUID keys, daily backup sync) + pilot risk assessment. Closes ND-D7-1 with corrected understanding (not a misconfiguration). §6 added "Document R2 backup strategy decision before launch" line. |
