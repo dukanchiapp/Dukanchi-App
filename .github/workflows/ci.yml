@@ -69,6 +69,22 @@ jobs:
       - name: Typecheck (Rule G — both web + server projects)
         run: npm run typecheck
 
+      - name: Lint (report-only — Day 7 Phase 3 / ND-D7-3 + ND-D7-4)
+        # Q-D7-4 approved: report-only initially. CI never fails on lint
+        # warnings — but the logs surface them so the Day 8+ cleanup
+        # sweep has a published baseline to track against. Promote to
+        # hard-gate after the baseline (448 problems / Session 94) is
+        # cleared. See README "Code Style" section.
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Format check (report-only — Day 7 Phase 3 / ND-D7-4)
+        # Same Q-D7-4 stance as lint. 174 files pending format at Session
+        # 94 baseline; Day 8+ sweep will run `npm run format:fix` as a
+        # single atomic commit.
+        run: npm run format
+        continue-on-error: true
+
       - name: Run tests with coverage (v8 provider)
         # Day 6 Phase 3 / ND-D6-4: produces ./coverage/lcov.info for Codecov.
         # Thresholds (statements/branches/functions/lines) live in vitest.config.ts

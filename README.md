@@ -166,6 +166,41 @@ Tests use mocked Prisma + Redis (Rule F: tests never touch prod DB). Write-path 
 
 ---
 
+## Code Style
+
+ESLint + Prettier landed in Day 7 / Session 94 / Phase 3 (closes ND-D7-3 + ND-D7-4).
+
+| Command | Purpose |
+|---|---|
+| `npm run lint` | ESLint v9 flat config; check only — no auto-fix |
+| `npm run lint:fix` | ESLint with `--fix` — **manual invocation only**, never run from CI/hooks |
+| `npm run format` | Prettier check — lists files needing format |
+| `npm run format:fix` | Prettier `--write` — **manual invocation only**, never run from CI/hooks |
+
+**Prettier config** (`.prettierrc.json`): single-quote, 2-space, 100-char width, trailing-comma on, `arrowParens: always`, LF line endings.
+
+**ESLint config** (`eslint.config.js`): flat v9 config mirroring `admin-panel/eslint.config.js` — `@eslint/js` recommended + `typescript-eslint` recommended + `react-hooks` flat + `react-refresh` Vite preset + `eslint-config-prettier` (last, so Prettier owns formatting). No type-aware linting — `npm run typecheck` already runs strict TS project configs.
+
+**CI behaviour:** both lint + format steps run with `continue-on-error: true` (report-only). Promoted to gating in Day 8+ once baseline is cleared. **Day 7 establishes infrastructure; the baseline cleanup is a separate atomic commit** (Day 8+ sweep, not this commit) — existing code is NOT auto-formatted by Phase 3.
+
+**Day 7 baseline (Session 94):**
+- ESLint: 448 problems (439 errors, 9 warnings). Top rule: `@typescript-eslint/no-explicit-any` (333 occurrences).
+- Prettier: 174 files need formatting.
+
+### VS Code format-on-save
+Add to `.vscode/settings.json` (workspace-local, gitignored — do not commit):
+```json
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "[json]": { "editor.defaultFormatter": "esbenp.prettier-vscode" }
+}
+```
+
+---
+
 ## Mobile (Capacitor / Android)
 
 The mobile app is the web app loaded inside Capacitor's WebView, with native plugins for camera, geolocation, push notifications, status bar, and splash screen.
