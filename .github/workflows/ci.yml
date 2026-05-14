@@ -1,0 +1,70 @@
+# Dukanchi CI — Day 6 / Session 93 / Phase 1
+#
+# Closes ND-D6-1 (no CI/CD) and the verification protocol gap surfaced by
+# Day 5.1 (4-then-6 strict typecheck errors hid for 2 sprint days because
+# manual verification used the wrong tsc invocation).
+#
+# Triggers:
+#   - Every PR (any target branch) — gate before merge
+#   - Push to main — catches direct commits + post-merge regression
+# Skips: feature-branch pushes (Q-D6-6 — save Actions minutes)
+#
+# Jobs:
+#   ci — single job, all checks run on Ubuntu + Node 22 (matches Railway
+#        Debian-slim runtime version). Sequential steps fail-fast.
+#
+# Hard gates (any non-zero exit aborts the job + blocks merge if branch
+# protection is configured):
+#   1. npm ci          — clean dependency install (reproducible)
+#   2. npm run typecheck — Rule G (runs typecheck:web + typecheck:server)
+#   3. npm test        — vitest run (42/42 baseline at Day 5.1 close)
+#   4. npm run build   — full prod build (catches vite/PWA issues)
+#
+# Required branch protection rules (USER MANUAL ACTION per Q-D6-6):
+#   - main: require PR (no direct push)
+#   - main: required check = "ci"
+#   - main: no force-push
+
+name: ci
+
+on:
+  pull_request:
+    branches: ['**']
+  push:
+    branches: [main]
+
+# Cancel in-progress runs when a new commit pushes to the same ref —
+# saves Actions minutes when devs push rapid corrections.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Typecheck + Test + Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (Rule G — both web + server projects)
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build (full production bundle)
+        # Build last because typecheck + test failures are cheaper signals.
+        # If this fails, the deploy would also fail — catch it in CI.
+        run: npm run build

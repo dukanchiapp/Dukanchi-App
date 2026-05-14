@@ -23,7 +23,8 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "lint": "npm run typecheck",
-    "start": "tsx server.ts"
+    "start": "tsx server.ts",
+    "prepare": "husky"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1030.0",
@@ -101,6 +102,8 @@
     "@vitest/ui": "^4.1.6",
     "autoprefixer": "^10.4.21",
     "canvas": "^3.2.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.4",
     "prisma": "^5.22.0",
     "supertest": "^7.2.2",
     "tailwindcss": "^4.1.14",
