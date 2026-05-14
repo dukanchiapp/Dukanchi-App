@@ -3,7 +3,7 @@ import { pubClient } from "../../config/redis";
 import { env } from "../../config/env";
 import { invalidateUserStatusCache } from "../../middlewares/user-status";
 import bcrypt from "bcrypt";
-import xlsx from "xlsx";
+import ExcelJS from "exceljs";
 
 const ADMIN_STATS_KEY = 'admin:stats';
 const ADMIN_STATS_TTL = 60;
@@ -284,10 +284,19 @@ export class AdminService {
       'Created At': new Date(s.createdAt).toISOString(),
     }));
 
-    const ws = xlsx.utils.json_to_sheet(rows);
-    const wb = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(wb, ws, 'Stores');
-    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    // Day 6 Phase 2 / Session 93: migrated sheetjs (xlsx) → exceljs.
+    // Trusted-data write path — input is from prisma, not user upload —
+    // so the security gain is from removing xlsx from the dep tree (its
+    // PARSE surface was the attack vector; WRITE was safe). Keeping
+    // exceljs for both read AND write keeps one library in the bundle.
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Stores');
+    if (rows.length > 0) {
+      sheet.columns = Object.keys(rows[0]).map((key) => ({ header: key, key }));
+      rows.forEach((row) => sheet.addRow(row));
+    }
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(arrayBuffer as ArrayBuffer);
   }
 
   static async getReports(page: number, limit: number) {

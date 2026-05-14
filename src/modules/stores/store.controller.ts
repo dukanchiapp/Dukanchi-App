@@ -215,8 +215,8 @@ export class StoreController {
       // Rate limit
       await BulkImportService.checkRateLimit(storeId);
 
-      // Parse file
-      const { headers, rows } = BulkImportService.parseExcelFile(req.file.buffer);
+      // Parse file (async since Day 6 Phase 2 — exceljs is promise-based)
+      const { headers, rows } = await BulkImportService.parseExcelFile(req.file.buffer);
 
       // AI column mapping
       const mapping = await BulkImportService.mapColumnsWithAI(headers, rows);
