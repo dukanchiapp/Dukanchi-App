@@ -26,6 +26,39 @@ export function isNative(): boolean {
     (window as any).Capacitor?.isNativePlatform?.() === true;
 }
 
+/**
+ * Resolve the HTTP API base URL at runtime — Day 5.1 / Session 92.1.
+ *
+ * Web (PWA): always returns '' so fetch uses relative paths against the
+ * page origin (unchanged behavior).
+ *
+ * Native (Capacitor):
+ *   - Production bundled APK loads from https://localhost (androidScheme:
+ *     'https') or capacitor://localhost. window.location.hostname is
+ *     'localhost'. Returns the build-time API_BASE (VITE_API_URL) so
+ *     requests reach the real production API.
+ *   - Remote-load mode (Day 5.1 ngrok server.url override, future dev
+ *     hot-reload, etc.): WebView loaded from a remote URL. hostname is
+ *     NOT 'localhost'. Returns '' so fetch uses same-origin relative
+ *     paths — they resolve back to the load origin, hitting the same
+ *     backend that served the HTML.
+ *
+ * This is a permanent production-safety improvement (NOT a Day 5.1
+ * smoke-only hack). It works for both modes without per-build env
+ * tweaks: the baked-in API_BASE is only consulted when the WebView is
+ * running the bundled assets.
+ *
+ * Origin: Phase 3.6 of Day 5.1 — physical-device test surfaced
+ * net::ERR_CLEARTEXT_NOT_PERMITTED for fetch to http://localhost:3000
+ * because VITE_API_URL was baked at build time and applied even when
+ * the app was loaded from ngrok.
+ */
+function resolveApiBase(): string {
+  if (!isNative()) return '';
+  if (typeof window === 'undefined') return API_BASE;
+  return window.location.hostname === 'localhost' ? API_BASE : '';
+}
+
 // ── Access token storage (native-only) ──────────────────────────────────────
 
 /** Get access token. Native only — web uses cookies. */
@@ -151,11 +184,21 @@ export function getSocketAuthOptions() {
 
 /**
  * Get the Socket.IO server URL.
+ *
  * Web: same origin (relative '/').
- * Native: absolute API_BASE so the WebView can reach the server.
+ * Native bundled APK (hostname=localhost): absolute API_BASE.
+ * Native remote-load (hostname=ngrok etc.): window.location.origin so
+ * Socket.IO connects back to the same host that served the HTML
+ * (Socket.IO needs a full URL, not '').
+ *
+ * Day 5.1 / Phase 3.6 fix — see resolveApiBase() docstring above.
  */
 export function getSocketUrl(): string {
-  return isNative() ? API_BASE : '/';
+  if (!isNative()) return '/';
+  if (typeof window === 'undefined') return API_BASE;
+  return window.location.hostname === 'localhost'
+    ? API_BASE
+    : window.location.origin;
 }
 
 // ── Silent refresh — Day 5 / Session 92 / Phase 4 ───────────────────────────
@@ -201,7 +244,10 @@ async function attemptRefresh(): Promise<boolean> {
       headers['X-Refresh-Token'] = rt;
     }
 
-    const url = isNative() ? `${API_BASE}/api/auth/refresh` : '/api/auth/refresh';
+    // Day 5.1 / Phase 3.6: use resolveApiBase() so remote-load WebViews
+    // (Day 5.1 ngrok smoke) hit /api/auth/refresh on the load origin,
+    // not on the build-time-baked VITE_API_URL.
+    const url = `${resolveApiBase()}/api/auth/refresh`;
     const res = await fetch(url, {
       method: 'POST',
       headers,
@@ -255,7 +301,10 @@ export async function apiFetch(
   path: string,
   options: ApiFetchOptions = {},
 ): Promise<Response> {
-  const url = isNative() ? `${API_BASE}${path}` : path;
+  // Day 5.1 / Phase 3.6: resolveApiBase() returns '' for web PWA and for
+  // native remote-load (ngrok server.url); returns API_BASE only for the
+  // production bundled-APK case where window.location.hostname === 'localhost'.
+  const url = `${resolveApiBase()}${path}`;
 
   const headers = new Headers(options.headers || {});
 
