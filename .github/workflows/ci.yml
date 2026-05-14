@@ -88,6 +88,17 @@ jobs:
       - name: Build (full production bundle)
         # Build last because typecheck + test failures are cheaper signals.
         # If this fails, the deploy would also fail — catch it in CI.
+        #
+        # Day 6 Phase 5 / ND-D6-3: forward Sentry source-map upload secrets
+        # when present. vite.config.ts gates the plugin behind
+        # !!(SENTRY_AUTH_TOKEN && SENTRY_ORG && SENTRY_PROJECT) — if any are
+        # absent (GitHub passes empty string for unset secrets), the plugin
+        # is omitted entirely and the build proceeds with a graceful warning.
+        # See RUNBOOK §9 for provisioning instructions.
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: npm run build
 
   bundle-size:

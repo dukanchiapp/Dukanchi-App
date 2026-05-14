@@ -317,8 +317,138 @@ sleep 90 && curl -s -i https://dukanchi.com/health | head -5
 
 ---
 
+## 9. Sentry Source Maps — Production Provisioning
+
+**Closes ND-D6-3** (plugin wired in `vite.config.ts` Day 4 / Session 90; the
+auth-token secret was never actually provisioned anywhere, so source maps
+have never reached Sentry).
+
+### Why source maps matter
+Vite's production build runs Terser, which:
+- Renames local variables (`storeService` → `r`, etc.)
+- Strips whitespace + newlines
+- Inlines small functions
+
+Without source maps uploaded to Sentry, every frontend stack trace looks like:
+```
+at r (https://dukanchi.com/assets/index-Bzyoh25m.js:1:48291)
+at e.handleClick (https://dukanchi.com/assets/Search-CgRO4D5u.js:1:8421)
+```
+With source maps uploaded, the same stack trace renders as:
+```
+at storeService.fetchById (src/services/storeService.ts:47:12)
+at Search.handleClick (src/pages/Search.tsx:142:8)
+```
+The difference between 5-minute debugging and 1-hour debugging on a P0.
+
+### Required environment variables (build time, NOT runtime)
+| Variable | Where to get it | Example |
+|---|---|---|
+| `SENTRY_AUTH_TOKEN` | Sentry → Settings → Auth Tokens → New Internal Integration | `sntrys_eyJ...` (~190 chars) |
+| `SENTRY_ORG` | Sentry org slug (visible in URL) | `dukanchi` |
+| `SENTRY_PROJECT` | Sentry project slug (visible in URL) | `javascript-react` |
+
+All three must be set or the plugin is skipped entirely with a graceful warning. Partial sets are explicitly rejected by the gate in `vite.config.ts`.
+
+### Generating `SENTRY_AUTH_TOKEN`
+1. Sentry dashboard → **Settings** → **Custom Integrations** → **Create New Integration** → **Internal Integration**
+2. Name: `Dukanchi CI Source Maps`
+3. **Permissions required:**
+   - `Releases`: **Admin** (create releases + upload source maps)
+   - `Project`: **Read**
+   - All others: No Access
+4. Save → copy the auth token (shown once — store immediately)
+5. The token is owner-bound and revocable; if it leaks, regenerate from the same screen
+
+### Where to provision
+
+#### Railway (for production deploys)
+1. Railway dashboard → **handsome-charm** project → **Variables**
+2. Add three new variables:
+   - `SENTRY_AUTH_TOKEN` (paste the token; will be masked after save)
+   - `SENTRY_ORG`
+   - `SENTRY_PROJECT`
+3. Save. Railway redeploys automatically. The Dockerfile's `vite build` step picks them up; source maps upload at build, then `--delete-after-upload` (Sentry plugin default) removes the `.map` files from the deployed image so they don't ship to clients.
+
+#### GitHub Actions (for CI builds — optional, recommended)
+The CI `build` step is wired to forward these as build-time env vars when present as repository secrets (Day 6 Phase 5).
+1. GitHub repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+2. Add the same three: `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT`
+3. CI builds will start uploading source maps on every PR + push to main. Without these secrets, CI build still succeeds — the plugin is omitted with a warning (verified in Phase 5 CI run).
+
+### Verification post-provisioning
+After the next production deploy:
+1. Sentry dashboard → **Releases** — should show a new release tagged with the Railway commit SHA (auto-discovered via `RAILWAY_GIT_COMMIT_SHA` env, see `vite.config.ts:70`)
+2. Trigger a frontend test error (e.g., temporarily throw in `Home.tsx` on a button click, or use Sentry's "Send Test Event" button)
+3. Check the event in Sentry — stack trace must show original file paths + line numbers, NOT minified `r.js:1:48291`
+4. If stack trace is still minified, check the Sentry release artifacts — must include `.map` files alongside `.js` files
+
+### Auto-release tagging (already wired)
+`vite.config.ts:70` reads `process.env.RAILWAY_GIT_COMMIT_SHA` and passes it to the Sentry plugin as the release name. Railway injects this automatically into every build. Local builds use `undefined`, falling back to Sentry's auto-generated release name based on git HEAD.
+
+---
+
+## 10. Uptime Monitoring (UptimeRobot)
+
+**Closes ND-D6-10** (no uptime monitor pinging `/health`; current detection
+loop relies on Sentry error spikes + user reports, which can lag a P0
+outage by 15–30 minutes).
+
+### Target endpoint
+- **URL:** `https://dukanchi.com/health`
+- **Expected response:** `200 OK` with body `{"status":"ok"}` (JSON)
+- **Cloudflare-cached:** No (origin response; `Cache-Control: no-store` on `/health`)
+
+### Recommended monitor configuration
+
+| Setting | Value | Why |
+|---|---|---|
+| Monitor type | HTTP(s) | Plain GET — `/health` doesn't require auth |
+| Interval | **5 minutes** | Free-tier minimum; cuts MTTD from "Sentry alert lag" to ~5 min worst case |
+| Timeout | 30s | Matches Railway's healthcheck timeout in `railway.json` |
+| Friendly name | `Dukanchi Production /health` | Recognizable in alert emails |
+| HTTP method | GET | |
+| Alert when | Down for ≥ 1 consecutive failure | Reduces flapping noise |
+| Notification window | 24/7 | Production incidents don't respect business hours |
+
+### Setup steps (UptimeRobot free tier — 50 monitors, 5-min interval)
+1. Sign up at https://uptimerobot.com — Google OAuth recommended
+2. Dashboard → **+ Add New Monitor**
+3. Fill the form per the table above
+4. **Alert Contacts:** add at minimum the founder email + on-call rotation email if applicable. Slack webhook + SMS available on paid tier.
+5. Save. First check runs immediately; status updates ~30s after.
+
+### Public status page (optional, recommended once retailer onboarding starts)
+UptimeRobot free tier includes a basic public status page at `https://stats.uptimerobot.com/<id>`. After founder onboarding picks up:
+1. UptimeRobot → **Status Pages** → **+ Add Status Page**
+2. Subdomain: `status` (e.g., `status.dukanchi.com` via Cloudflare CNAME, free)
+3. Add the `/health` monitor + future monitors (e.g., R2, Neon)
+4. Customize logo + colors to match brand
+
+### Alternatives considered
+| Tool | Free tier | Pros | Cons |
+|---|---|---|---|
+| **UptimeRobot** ✅ (recommended) | 50 monitors @ 5 min | Mature, simple, reliable | Free tier email alerts only |
+| BetterStack | 10 monitors @ 30s | Better UX, faster intervals, Slack-native | Cap at 10 monitors |
+| HealthChecks.io | Unlimited cron monitors | Best for periodic-job health (workers) | Not designed for HTTP probes |
+| Pingdom | None — paid only | Industry standard, extensive history | Overkill pre-Series A |
+
+### When to upgrade
+- **Today–pilot launch:** UptimeRobot free tier sufficient
+- **Post 1,000 DAU or pilot expands to 5+ cities:** add a second monitor for `/api/auth/me` (auth-path uptime, separate from `/health`) and consider BetterStack paid tier for 30-second intervals
+- **Post Series A or B2B SaaS posture:** StatusPage.io ($79/mo) for branded public status page with incident timeline + subscriber notifications
+
+### Adding monitor metadata to incident response (RUNBOOK §4 cross-ref)
+When UptimeRobot fires a "Down" alert:
+1. **Confirm with manual curl** — `curl -s -i https://dukanchi.com/health | head -5` (UptimeRobot probes from US/EU; verify it isn't a regional Cloudflare hiccup)
+2. **Follow §4 decision tree** — alert is the trigger, not the diagnosis
+3. **Log in postmortem** — note the alert timestamp + UptimeRobot incident URL in the SESSION_LOG entry
+
+---
+
 ## Changelog
 
 | Date | Session | Change |
 |---|---|---|
 | 2026-05-14 | Session 93 / Day 6 Phase 4 | Initial RUNBOOK created. Closes ND-D6-11. |
+| 2026-05-14 | Session 93 / Day 6 Phase 5 | Added §9 Sentry source maps (closes ND-D6-3) + §10 Uptime monitoring (closes ND-D6-10). |

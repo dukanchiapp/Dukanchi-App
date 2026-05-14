@@ -127,6 +127,8 @@ npm run open:android       # opens Android Studio
 - Build runs `Dockerfile` (node:22-bookworm-slim + canvas/cairo system deps + Prisma generate + vite build).
 - Healthcheck: `GET /health` → 200 OK within 30s.
 - Start command: `node_modules/.bin/tsx server.ts`.
+- Production uptime is monitored via UptimeRobot — see [RUNBOOK §10](./RUNBOOK.md#10-uptime-monitoring-uptimerobot) for setup.
+- Sentry source maps upload at build when `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` are provisioned in Railway env — see [RUNBOOK §9](./RUNBOOK.md#9-sentry-source-maps--production-provisioning).
 
 **Rollback + incident response: see [RUNBOOK.md](./RUNBOOK.md).**
 
