@@ -56,10 +56,26 @@ npx prisma db push           # for first-time setup against a fresh DB
 npm run dev                  # backend on :3000, frontend on :5173
 ```
 
-For the admin panel SPA:
+### Running Both Apps in Dev
+
+The customer app and the admin panel are two separate Vite SPAs that **must run on different ports**. In production they share a single Express server (admin served at `/admin-panel/*`); in dev they run as independent Vite processes.
+
 ```bash
-cd admin-panel && npm install && npm run dev   # admin on :5174
+# Terminal 1 — backend (:3000) + customer frontend (:5173)
+npm run dev          # backend (tsx server.ts) — only starts the API
+npm run dev:web      # in a second terminal, customer Vite on :5173
+
+# Terminal 3 — admin panel (:5174)
+cd admin-panel && npm install && npm run dev
 ```
+
+Open in browser:
+- Customer app → http://localhost:5173/
+- Admin panel  → http://localhost:5174/admin-panel/ *(note the `/admin-panel/` base path — matches production)*
+
+Admin panel proxies `/api` and `/uploads` to `http://localhost:3000` (configured in `admin-panel/vite.config.ts`), so the backend only needs to listen on :3000 once. CORS in `.env.example` already lists `:5174`; if you upgraded from a pre-Day-7 `.env`, add `http://localhost:5174` to `ALLOWED_ORIGINS`.
+
+The admin Vite config sets `strictPort: true` — if `:5174` is already in use it fails loudly instead of silently moving to `:5175`. Kill the stale process (`lsof -i:5174` → `kill -9 <pid>`) and retry.
 
 ---
 
