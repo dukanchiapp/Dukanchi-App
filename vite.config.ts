@@ -9,6 +9,38 @@ export default defineConfig(({mode}) => {
   // loadEnv kept for future safe VITE_ prefixed vars; never expose secret keys here
   loadEnv(mode, '.', '');
 
+  // ── ND-D6-EXTRA-5 (Day 6 Phase 4): production build guard ─────────────
+  // `.env.example` ships VITE_API_URL="http://localhost:3000" — a fresh
+  // checkout that runs `npm run build` without overriding this would
+  // produce a bundle that connects to a non-existent localhost in prod.
+  //
+  // Day 5.1's resolveApiBase() runtime fallback partially mitigates this,
+  // but a build-time fail-fast is the right level — the configuration
+  // mistake never reaches production artifacts.
+  //
+  // Fires only when:
+  //   - mode === 'production' (Vite's build mode flag), AND
+  //   - VITE_API_URL is SET and points to localhost / 127.0.0.1.
+  // CI builds without VITE_API_URL set → guard skipped (no false positives).
+  // `npm run build:mobile` overrides to https://dukanchi.com → guard passes.
+  // `npm run dev` / `dev:web` use mode='development' → guard skipped.
+  if (mode === 'production') {
+    const apiUrl = process.env.VITE_API_URL || '';
+    const looksLikeLocalhost =
+      apiUrl.startsWith('http://localhost') ||
+      apiUrl.startsWith('https://localhost') ||
+      apiUrl.startsWith('http://127.0.0.1') ||
+      apiUrl.startsWith('https://127.0.0.1');
+    if (looksLikeLocalhost) {
+      throw new Error(
+        `[ND-D6-EXTRA-5] Production build aborted: VITE_API_URL points to localhost (${apiUrl}). ` +
+          `Set VITE_API_URL to the production API origin (e.g., https://dukanchi.com) ` +
+          `or use \`npm run build:mobile\` which sets it automatically. ` +
+          `See README.md "Environment Variables" section.`,
+      );
+    }
+  }
+
   // Day 4 / Session 90 / Edit 11: conditional Sentry source-map upload.
   // Only enabled when SENTRY_AUTH_TOKEN is set at build time. Without the
   // token, the plugin is omitted from the plugins array entirely — Vite
