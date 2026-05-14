@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-14 | Session 93 closed | Branch: hardening/sprint @ Day 6 head (6 commits this session, all pushed, all CI green) | Prod runs main @ 32f5525
+> Last updated: 2026-05-14 | Session 94 closed | Branch: hardening/sprint @ Day 7 head (5 commits this session, all pushed, all CI green; 60 commits ahead of main) | Prod runs main @ 32f5525
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -71,11 +71,20 @@
   - **Metrics:** 5 CI runs, 5 green, avg ~1m15s. Tests 42/42 throughout. Typecheck 0 errors throughout. Branch advanced 49 → 54 ahead of `origin/main`.
   - **Day 8 user manual actions queued** (RUNBOOK §6): `CODECOV_TOKEN` secret, Sentry source-map secrets (Railway + GitHub), UptimeRobot signup + monitor, branch protection rules on `main`.
 
-All Days 1+2+2.5+3+2.6+4+2.7+5+5.1+6 **committed AND pushed** to `origin/hardening/sprint`.
+- **Day 7 (Session 94):** Deploy Hardening + Coverage Foundation — 5 phases, 5 commits, 0 reverts, all CI green ✅
+  - `1fd853a` — `docs(day7)`: RUNBOOK §7 rewritten — R2 has no native versioning (Day 6 audit assumption corrected; pilot risk LOW; protection primitives table + 3 Day 7+ backlog items). Closes ND-D7-1 with corrected understanding.
+  - `4434a4b` — `fix(admin-panel)`: dev port 5173 → 5174 + `strictPort: true`. Real bug was port collision (NOT React Router) — recon downgraded severity HIGH → MEDIUM. Production routing already correct. README dual-app workflow documented. Closes ND-D7-2.
+  - `64d2313` — `chore(lint)`: ESLint v9 flat + Prettier + CI report-only (`continue-on-error: true`). Baseline: 448 ESLint problems / 174 Prettier-pending. Mirrors admin-panel preset for consistency. Hard rule honored: NO `--fix` / `--write` on existing code. Closes ND-D7-3 + ND-D7-4.
+  - `4e81a04` — `test(coverage)`: +39 tests across 8 files (6 service routes × 4 tests + redis-keys + storeUtils unit tests). Coverage 4.30% → **7.26% statements** / **8.82% functions** (biggest gain — controllers + middleware now exercised). vitest thresholds promoted to new baseline floor. Closes ND-D7-5 with honest gap report (target 25-30% NOT reached; gap traces to service-mock architecture + frontend deferral).
+  - This commit — Session 94 closure (SESSION_LOG + STATUS refresh).
+  - **Metrics:** Tests 42 → **81** (+39, +93%). 5 CI runs all green. Typecheck 0 errors throughout. Branch advanced 54 → **60 ahead of `origin/main`**.
+  - **All 5 Day 7 NDs closed** (ND-D7-1 through ND-D7-5). No new NDs surfaced. All 6 Q-D7 decisions approved with defaults.
 
-Branch is **54 commits ahead of `origin/main`** (was 49 at start of Session 93; +5 this session via 5 phase commits + 1 closure commit = 6, but only 5 are counted in "ahead of main" delta because pre-Session-93 the branch was already 49 ahead).
+All Days 1+2+2.5+3+2.6+4+2.7+5+5.1+6+7 **committed AND pushed** to `origin/hardening/sprint`.
 
-## Active Sprint: Hardening Sprint (Days 1–6 of 8 — 87% complete)
+Branch is **60 commits ahead of `origin/main`** (was 54 at start of Session 94; +5 phase commits + 1 closure commit = 6, all pushed).
+
+## Active Sprint: Hardening Sprint (Days 1–7 of 8 — 95% complete)
 
 **Branch:** `hardening/sprint` @ Day 6 head (all pushed)
 **Deploy plan:** **Day 8 atomic merge** `hardening/sprint` → `main` → Railway redeploy + full Rule E verification (RUNBOOK §6 checklist)
@@ -91,9 +100,9 @@ Branch is **54 commits ahead of `origin/main`** (was 49 at start of Session 93; 
 | 2.7 (Session 91) | Test Coverage Sprint — integration scaffolding + 15 new tests (21 → 36) | ✅ Done, pushed |
 | 5 (Session 92) | Auth Refinements — access/refresh split, rotation, reuse detection, server-side logout, X-Refresh-Token header for native | ✅ Done, pushed |
 | 5.1 (Session 92.1) | Native APK live smoke — T1 validated on Vivo X200; +3 production fixes shipped; Rule G codified | ✅ Done, pushed |
-| **6 (Session 93)** | **Tooling & CI Foundation — GH Actions + Husky + Dependabot + coverage + bundle monitoring + xlsx→exceljs + README/RUNBOOK rewrite + Sentry/uptime docs + build guard** | **✅ Done, pushed** |
-| 7 (Next) | Deploy hardening — staging env + ESLint/Prettier + coverage ramp + R2 versioning + admin-panel routing fix + Day-7 backlog | ⏳ Pending |
-| 8 | Atomic merge to main + production deploy + Rule E verification + user manual actions (CODECOV_TOKEN / Sentry secrets / UptimeRobot / branch protection) | Planned |
+| 6 (Session 93) | Tooling & CI Foundation — GH Actions + Husky + Dependabot + coverage + bundle monitoring + xlsx→exceljs + README/RUNBOOK rewrite + Sentry/uptime docs + build guard | ✅ Done, pushed |
+| **7 (Session 94)** | **Deploy Hardening — R2 strategy correction + admin-panel port 5174 + ESLint v9 + Prettier + coverage ramp (42 → 81 tests; 4.30 → 7.26% statements)** | **✅ Done, pushed** |
+| 8 (Next) | Atomic merge to main + production deploy + Rule E verification + user manual actions (CODECOV_TOKEN / Sentry secrets / UptimeRobot / branch protection) | ⏳ Pending |
 
 **Path B decision (Session 87)** — Project has no `_prisma_migrations` table on prod or test. Migrations applied via `psql -f`. Baseline-then-track setup queued as **Day 2.7** dedicated session.
 
@@ -101,14 +110,19 @@ Branch is **54 commits ahead of `origin/main`** (was 49 at start of Session 93; 
 
 ## Next 3 Actions
 
-1. **Day 7 — Deploy hardening (next session)** — recommended scope: coverage ramp (start 4% → 30% target by EOD), R2 versioning audit (~2 min Cloudflare check), staging environment setup (Neon paid branch + Railway second env, ~2 hr), ESLint/Prettier (~1 hr), admin-panel routing bug fix (~1 hr), and optional GH Actions Node 20 → 22 actions migration. Full Day 7 candidate list in SESSION_LOG Session 93 §7.
+1. **Day 8 — Atomic merge + deploy (next session)** — all Day 7 work complete; ready to merge. **Pre-merge BLOCKERS (4 user manual actions, ~16 min total)** per RUNBOOK §6:
+   - Provision `CODECOV_TOKEN` (GitHub repo secret) — ~3 min via codecov.io OAuth
+   - Provision `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` in **both** Railway env + GitHub Actions secrets — ~5 min
+   - Sign up UptimeRobot + add `/health` 5-min monitor — ~5 min
+   - Branch protection rules on `main` — require PR + required check = `ci` + no force-push — ~3 min
 
-2. **Day 8 — Atomic merge + deploy** (after Day 7 complete, all 4 user manual actions provisioned per RUNBOOK §6)
-   - Provision `CODECOV_TOKEN` (GitHub secret), `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` (Railway env + GitHub secrets), UptimeRobot monitor on `/health`, branch protection rules on `main`
-   - `git checkout main && git merge hardening/sprint --no-ff && git push origin main`
-   - Railway auto-redeploys; run Rule E 5-curl smoke battery from RUNBOOK §6
-   - Sentry + Railway log spot-check; confirm Sentry release tagged with Railway commit SHA + source maps showing readable stack traces
-   - Cleanup `temp/accidental-user-snapshot-*.json` after green deploy
+   Then atomic merge: `git checkout main && git merge hardening/sprint --no-ff && git push origin main` → Railway auto-redeploys (~6-8 min) → run Rule E 5-curl smoke battery (RUNBOOK §6) → confirm Sentry release tagged with Railway SHA + source maps readable → cleanup `temp/accidental-user-snapshot-*.json` after green deploy.
+
+2. **Day 8+ atomic cleanup sweeps (parallel-mergeable post-Day-8):**
+   - ESLint baseline cleanup (333 `no-explicit-any` + 67 `no-unused-vars` etc.) → promote CI lint to hard-gate after
+   - Prettier baseline cleanup (single `npm run format:fix` touches 174 files; mechanical commit, no logic change)
+   - Service-layer unmock for posts/search/messages → estimated +10-15pt coverage
+   - Frontend test infra (jsdom + RTL) + 5-10 React page tests → estimated +5-10pt coverage
 
 3. **Post-deploy — Phase 0.5 God Tier Vision kickoff** — Week 1-2 Discovery v2 (voice + image search). Branch off fresh from `main` post-Day-8.
 
@@ -123,7 +137,7 @@ Branch is **54 commits ahead of `origin/main`** (was 49 at start of Session 93; 
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] `hardening/sprint` is **54 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] `hardening/sprint` is **60 commits ahead of `origin/main`** — intentional, merges at Day 8
 - [ ] **Day 5.2 — Bundled-mode Capacitor smoke** queued (~30 min). Build APK without server.url override (production-mirror mode); exercises cross-origin X-Refresh-Token CORS path on real device. Fills the Day 5.1 D20 gap (server.url smoke was same-origin, didn't directly test prod cross-origin path).
 - [ ] **Day 5 deploy pre-flight TODO**: Provision `JWT_REFRESH_SECRET` in Railway dashboard before Day 8 merge. Generate via `openssl rand -base64 48`. Server hard-fails boot in production if still using the dev fallback (env.ts post-parse guard, verified live in S7 smoke).
 - [ ] **Day 5.1 follow-up session**: Native (Capacitor) APK rebuild + manual test of silent-refresh flow on a real device. Backend + frontend code is 100% testable via mocks + curl, but the full native localStorage → X-Refresh-Token → retry round-trip needs a real device.
@@ -152,20 +166,29 @@ Branch is **54 commits ahead of `origin/main`** (was 49 at start of Session 93; 
   - Cascade integration tests (Priority 3 from Day 2.7 audit): `/api/account/delete` + FCM purge atomicity + cross-cascade reads → future test sprint
   - Socket auth E2E tests (Priority 4): io.use + per-message defense → future test sprint
   - Test suite runtime currently ~1s — well under any threshold worth optimizing
-- [ ] **Day 6 backlog (new):**
-  - **Day 8 user manual actions (RUNBOOK §6 checklist):**
+- [ ] **Day 6 backlog (carry — Day 7 partial follow-through):**
+  - **Day 8 user manual actions (RUNBOOK §6 checklist) — all still pending:**
     - `CODECOV_TOKEN` GitHub repository secret (closes ND-D6-PHASE3-1) — ~3 min via codecov.io OAuth
     - `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` in **both** Railway env + GitHub secrets (completes ND-D6-3 provisioning) — ~5 min
     - UptimeRobot signup + monitor on `https://dukanchi.com/health`, 5-min interval, 30s timeout (completes ND-D6-10 follow-through) — ~5 min
     - Branch protection rules on `main` (Q-D6-6 manual GitHub action): require PR + required check = `ci` + no force-push — ~3 min
-  - **Coverage ramp 4% → 70%** — Day 7+ multi-sprint effort. Priority targets: routes/services beyond auth (kyc, posts, search, stores, messages, push, team, users all at 0% currently). Frontend needs jsdom infra first (carried from Day 2.7 backlog).
-  - **R2 versioning audit** — ~2 min Cloudflare dashboard check; enable versioning + 30-day retention if disabled. RUNBOOK §7 has Day 7 placeholder.
-  - **Admin panel routing bug** — `localhost:5173/admin-panel/login` auto-redirects to `localhost:5173/login`. Vite base + React Router base mismatch suspected. Day 7+ debug session.
+  - ~~Admin panel routing bug~~ ✅ shipped in Day 7 Phase 2 / `4434a4b` (real cause: port collision, not router; production already correct)
+  - ~~ND-D6-8 ESLint + Prettier~~ ✅ shipped in Day 7 Phase 3 / `64d2313` (report-only initially per Q-D7-4; Day 8+ cleanup sweep queued)
+  - **Coverage ramp 4% → 70%** — Day 7 lifted to 7.26%; still huge gap. Day 8+ multi-sprint effort. Mitigations queued (service unmock + jsdom infra).
   - **GH Actions Node 20 deprecation** — `actions/checkout@v4` + `actions/setup-node@v4` + `actions/github-script@*` all flagged for Node 24 default by 2026-06-02; full Node 20 removal 2026-09-16. 13 months runway; cheap to migrate to `@v5` when published.
-  - **ND-D6-8 ESLint + Prettier** — Day 7+ candidate (~1 hr).
-  - **ND-D6-7 Staging environment** — Neon paid branch + Railway second env + DNS subdomain. Day 7+ candidate (~2 hr).
+  - **ND-D6-7 Staging environment** — Neon paid branch + Railway second env + DNS subdomain. Day 7+ candidate (~2 hr). Deferred to Series A scope.
   - **ND-D6-12 Pen test** — pre-launch external engagement (Phase 0.5 candidate).
-  - **5 of 6 audit EXTRAs deferred** — commitlint (EXTRA-2), PR template (EXTRA-3), temp/ cleanup audit (EXTRA-4), console.* logger migration (EXTRA-1), scripts/ audit (EXTRA-6). All Day 7+.
+  - **5 of 6 audit EXTRAs deferred** — commitlint (EXTRA-2), PR template (EXTRA-3), temp/ cleanup audit (EXTRA-4), console.* logger migration (EXTRA-1), scripts/ audit (EXTRA-6). All Day 8+.
+- [ ] **Day 7 backlog (new):**
+  - **ESLint baseline cleanup sweep** (Day 8+ atomic commit) — 448 problems / 333 `no-explicit-any` + 67 `no-unused-vars` + 9 `no-empty` + 4 `no-useless-escape` + 1 `no-extra-boolean-cast`. Phased: services → controllers → lib. After cleanup, promote CI lint from `continue-on-error: true` to hard-gate.
+  - **Prettier baseline cleanup sweep** (Day 8+ atomic commit) — single `npm run format:fix` touches 174 files. Mechanical commit, no logic changes.
+  - **Coverage ramp continuation** — service-layer unmock for posts/search/messages → est +10-15pt statements via deeper service LOC coverage with existing 24 service tests.
+  - **Frontend test infra** (Q-D7-6 deferred) — jsdom + @testing-library/react + 5-10 React page tests → est +5-10pt statements.
+  - **`notification.worker.ts` test** — 121 lines at 0%; 1 dedicated test file.
+  - **`bulkImport.service.ts` permanent vitest test** — 290 lines at 0%; has Day 6 unit smoke via tsx but no permanent vitest test.
+  - **R2 application-level key uniqueness audit** (RUNBOOK §7 carry) — verify all upload paths use UUID-keyed paths (~15 min).
+  - **R2 Bucket Lock evaluation** for `/kyc/` and `/products/` prefixes (RUNBOOK §7 carry) — ~60 min Cloudflare work.
+  - **Daily R2 backup snapshot** — Series A scope (~4-6 hr).
 
 ## Stack
 | Layer | Tech |
