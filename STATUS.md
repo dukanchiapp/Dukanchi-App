@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-13 | Session 92 closed | Branch: hardening/sprint @ Day 5 head (4 commits added this session, push pending) | Prod runs main @ 32f5525
+> Last updated: 2026-05-14 | Session 92.1 closed | Branch: hardening/sprint @ Day 5.1 head (4 commits added this session, push pending) | Prod runs main @ 32f5525
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
@@ -52,9 +52,18 @@
   - 8 manual smokes (S1-S8) PASSED live against revived Neon TEST: customer login dual-cookies, /refresh rotation, reuse detection, admin cookie routing (ND #2 regression-proof live), logout token blacklist, prod-fail guard exits, X-Refresh-Token header path
   - **Neon TEST branch revived** in pre-flight (user task — Day 2.7 follow-up resolved)
 
-All Days 1+2+2.5+3+2.6+4+2.7 committed AND pushed to `origin/hardening/sprint`. Day 5 (this session) committed locally — push pending.
+- **Day 5.1 (Session 92.1):** Native APK Smoke — T1 live-validated + 3 production bugs shipped ✅
+  - `131e86f` — `fix(auth)`: CORS Allow-Headers gap for X-Refresh-Token (Day 5 Phase 4 Q6 retroactive — curl smoke missed it because curl bypasses preflight)
+  - `3a9b27d` — `fix(typecheck)`: 6 strict project-config errors hidden by verification protocol gap + CLAUDE.md Rule G codified (Day 4 + Day 5 retroactive)
+  - `f106024` — `fix(api)`: resolveApiBase() runtime resolution for remote-load WebView origins (latent VITE_API_URL bug — never hit by production APK; surfaced by Day 5.1 server.url smoke; permanent non-revertable production-safety improvement)
+  - **T1 live-validated** on Vivo X200 device 10BECN0KCN001RU — POST /api/auth/login → 200 → 22 subsequent API requests all 200 → home feed rendered end-to-end. All API calls correctly resolved to ngrok URL via resolveApiBase().
+  - **T2-T6 deferred** — already covered by Phase 5 unit tests (42/42 mocked against stateful in-memory Redis simulator). User decision per Option B (pragmatic close).
+  - **CLAUDE.md Rule G** added: use `npm run typecheck` (runs both web + server project configs), never `npx tsc --noEmit` alone
+  - 13 NDs documented (D17-D29). 5 follow-up backlog items captured.
 
-Branch is **45 commits ahead of `origin/main`** (was 41 at start of Session 92; +4 this session: 3 feature + 1 docs).
+All Days 1+2+2.5+3+2.6+4+2.7+5 committed AND pushed to `origin/hardening/sprint`. Day 5.1 (this session) committed locally — push pending.
+
+Branch is **49 commits ahead of `origin/main`** (was 45 at start of Session 92.1; +4 this session: 3 production fix + 1 docs).
 
 ## Active Sprint: Hardening Sprint (Days 1-4 + 2.6 + 2.7 of 8 — 69% complete)
 
@@ -104,7 +113,8 @@ Branch is **45 commits ahead of `origin/main`** (was 41 at start of Session 92; 
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] `hardening/sprint` is **45 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] `hardening/sprint` is **49 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [ ] **Day 5.2 — Bundled-mode Capacitor smoke** queued (~30 min). Build APK without server.url override (production-mirror mode); exercises cross-origin X-Refresh-Token CORS path on real device. Fills the Day 5.1 D20 gap (server.url smoke was same-origin, didn't directly test prod cross-origin path).
 - [ ] **Day 5 deploy pre-flight TODO**: Provision `JWT_REFRESH_SECRET` in Railway dashboard before Day 8 merge. Generate via `openssl rand -base64 48`. Server hard-fails boot in production if still using the dev fallback (env.ts post-parse guard, verified live in S7 smoke).
 - [ ] **Day 5.1 follow-up session**: Native (Capacitor) APK rebuild + manual test of silent-refresh flow on a real device. Backend + frontend code is 100% testable via mocks + curl, but the full native localStorage → X-Refresh-Token → retry round-trip needs a real device.
 - [ ] Neon test branch `hardening-day2-test` auto-expires May 19 — fine, served its purpose

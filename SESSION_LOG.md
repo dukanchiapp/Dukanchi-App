@@ -6,6 +6,107 @@
 
 ---
 
+## 2026-05-14 — Session 92.1 — Hardening Sprint Day 5.1: Native APK Smoke + 3 Production Fixes Shipped
+
+**Goal:** Validate Day 5 refresh-token rotation end-to-end on a physical Android device via Capacitor APK. Day 5's 42/42 mocked tests + curl smokes proved logical correctness; Day 5.1's job was live device verification.
+
+**Status:** **CODE COMPLETE on `hardening/sprint`** — 4 commits this session (3 production fix + 1 closure docs). Branch advanced from 45 to 49 commits ahead of `origin/main`. T1 (customer login) live-validated on real device; T2-T6 deferred (already covered comprehensively by Phase 5 unit tests against stateful in-memory Redis mock). Production deploy still gated on Day 8 atomic merge.
+
+**Production runtime UNCHANGED.** `origin/main` HEAD still `32f5525` (Session 85). All Day 1-5.1 changes on `hardening/sprint` only.
+
+### Pre-flight (Day 5.1 setup)
+
+- **adb PATH permanent fix in `~/.zshrc`** (Q14 Option A) — `ANDROID_HOME` + platform-tools added to PATH for future sessions. Current Claude Code subprocess didn't inherit (Bash tool launched before .zshrc edit); inlined `/Users/apple/Library/Android/sdk/platform-tools/adb` for this session's adb commands.
+- **Phone connected:** Vivo X200, device ID `10BECN0KCN001RU`, USB debugging authorized.
+- **Capacitor + ngrok + Neon TEST** all verified in pre-flight 6-check (5/6 ✓, 1 deferred to inline workaround per D17).
+
+### Phases summary
+
+**Phase 1 — Backend + ngrok bridge.** Backend booted against revived Neon TEST branch on port 3000; ngrok tunnel `https://recollect-clay-defame.ngrok-free.dev` established. CORS verified on 3 origin scenarios (ngrok-as-origin, OPTIONS preflight, Capacitor `https://localhost`). **Surfaced D18:** `app.ts:78` Access-Control-Allow-Headers missing `x-refresh-token` — Day 5 Phase 4 Q6 implementation gap. Day 5 backend curl smoke (S8) passed despite this because curl doesn't enforce CORS preflight; browser WebView would have failed.
+
+**Phase 1.5 — `131e86f` `fix(auth): add x-refresh-token to CORS Allow-Headers for native silent refresh`** (Day 5 retroactive). 1-line addition to app.ts:78. Verified live via OPTIONS preflight from `Origin: https://localhost` — response now includes `X-Refresh-Token` in Allow-Headers. Pushed immediately per user direction (same pattern as Day 5 Phase 1 closure protocol).
+
+**Phase 2 — Capacitor config update.** Added `server.url`, `cleartext: false`, `allowNavigation` inside `server` block. Loud REVERT-BEFORE-COMMIT comment (Day 5.1 smoke only). `npx cap sync android` clean (0.158s, 6 plugins).
+
+**Phase 2.5 — `3a9b27d` `fix(typecheck): resolve 6 strict project-config errors + Rule G`** (Day 4 + Day 5 retroactive). `npm run build` blocked at typecheck step. Standard `npx tsc --noEmit` (root composite tsconfig) had been reporting "0 errors" but the project-specific configs (`tsconfig.app.json` + `tsconfig.server.json`) caught 6 retroactive errors:
+  - `AiBioModal.tsx:83` missing `captureEvent` import (Day 4 c7c0ef0)
+  - `tsconfig.app.json` missing `posthog.ts` + `sentry-frontend.ts` includes (Day 4 c7c0ef0)
+  - `AuthContext.tsx:123` useEffect TS7030 fallthrough (Day 5 e6d0608)
+  - `auth.controller.ts:39` unused `generateRefreshToken` import (Day 5 e6d0608)
+  - `tsconfig.server.json` missing `redis-keys.ts` include (Day 5 969579e)
+
+  **Codified CLAUDE.md Rule G** — always use `npm run typecheck` (runs both project configs), never `npx tsc --noEmit` alone. Origin attribution links to Day 5.1 / Session 92.1.
+
+**Phase 3 — APK build + install.** Gradle assembleDebug took 18s not 30-40 min (D25 — cache warm from prior session). APK = 7.55 MB. `adb uninstall` returned DELETE_FAILED_INTERNAL_ERROR (D26 — Vivo package-manager quirk OR no prior install); `adb install -r` succeeded regardless. Package visible: `com.dukanchi.app`.
+
+**Phase 3.5 — ngrok ERR_NGROK_6024 fix.** Added `android.overrideUserAgent: "DukanchiTestAgent/1.0"` to bypass ngrok's free-tier interstitial. Loud REVERT-BEFORE-COMMIT comment (Day 5.1 smoke only). APK rebuilt (2s) + reinstalled.
+
+**Phase 3.6 — `f106024` `fix(api): resolve API base URL at runtime to handle remote-load WebView origins`** (production-safety improvement). Phase 5 T1 first attempt failed with `net::ERR_CLEARTEXT_NOT_PERMITTED` — frontend was fetching `http://localhost:3000` because `VITE_API_URL=http://localhost:3000` was baked at build time. **D28 latent bug:** never hit by production native APK because production `.env` sets `VITE_API_URL=https://dukanchi.com`; surfaced first by Day 5.1 server.url smoke. Fix added `resolveApiBase()` helper that branches on `window.location.hostname === 'localhost'`:
+  - Production native (bundled, hostname=localhost) → returns `API_BASE` (unchanged behavior)
+  - Native remote-load (server.url override, hostname=ngrok) → returns `''` for same-origin relative paths
+  - Web PWA → returns `''` (unchanged)
+
+  3 call sites refactored: `apiFetch`, `attemptRefresh`, `getSocketUrl`. **Non-revertable improvement** — production-safe, stays permanently in `src/lib/api.ts`.
+
+**Phase 3.7 — `temp/seed-test-customer.ts`** (gitignored helper). Idempotent script that updates phone `9999900001` to password `test1234` for repeatable smoke logins. Refuses to run if DATABASE_URL_TEST equals DATABASE_URL (Rule F guard). First run hit **D29:** `blockedReason` doesn't exist in prisma schema (only in fixtures.ts TestUser interface — evaluateUserStatus shape vs DB column mismatch). Removed from script's update payload. Second run UPDATED existing user 99cbffbf-7d47-4e42-84a1-84f31465ad5b cleanly.
+
+**Phase 4 — Chrome DevTools remote debugging.** User attached DevTools via `chrome://inspect/#devices`. Network + Application tabs available.
+
+**Phase 5 — Live smoke battery:**
+- **T1 (customer login on device): ✅ PASS — END-TO-END VALIDATED**
+  - POST `/api/auth/login` → 200, 1.5 kB, 1.30s
+  - 22 subsequent API requests all 200
+  - Home feed rendered with stores, images, geolocation-based listings
+  - All API calls correctly resolved to ngrok URL (NOT localhost) via `resolveApiBase()` — the latent D28 bug fix proved out live on real device
+  - dual-cookie issuance + localStorage population both visible in DevTools Application tab
+  - **End-to-end native flow validated on real Android device**
+- **T2-T6 (refresh rotation, reuse detection, app restart, logout, family revoke): DEFERRED** — already covered comprehensively by Phase 5 unit tests (42/42 mocked against stateful in-memory Redis simulator). User decision per Option B: skip redundant device validation, trust the unit-test coverage.
+
+**Phase 6 — This closure.** Reverted both Day 5.1 smoke overrides in `capacitor.config.ts`:
+  - `server` block: removed `url` + `cleartext` + `allowNavigation` + 6-line REVERT comment
+  - `android` block: removed `overrideUserAgent` + 7-line REVERT comment
+
+Verified via `git grep "DAY 5.1 LOCAL SMOKE ONLY" capacitor.config.ts` (0 matches) + `git diff capacitor.config.ts` (empty diff vs HEAD baseline). Re-ran `npx cap sync android` clean (0.204s). Hard gates: typecheck PASS, 42/42 tests PASS.
+
+### 13 Deviations consolidated (D17–D29)
+
+- **D17** (pre-flight) — adb installed at `~/Library/Android/sdk/platform-tools/adb` but not on PATH. Surfaced + user fixed via .zshrc Option A.
+- **D18** (Phase 1) — CORS Allow-Headers missing `x-refresh-token`. Shipped as commit `131e86f`.
+- **D19** (Phase 1) — User's .zshrc PATH fix doesn't propagate into Claude Code's running Bash subprocess. Inlined absolute adb path for this session.
+- **D20** (Phase 1.5) — WebView origin nuance: server.url loading is same-origin, doesn't exercise production cross-origin CORS path. CORS fix still correct for production scenario.
+- **D21** (Phase 2) — `cap sync` emits "Cannot copy web assets" warn when server.url set without prior build. Capacitor explicitly says "not an error".
+- **D22** (Phase 3 Step 1) — Verification protocol gap: `npx tsc --noEmit` (root composite tsconfig) misses project-specific strict-config errors. Closed by Rule G in commit `3a9b27d`.
+- **D23** (Phase 3 Step 1) — dist/ never created when build exits early at typecheck step.
+- **D24** (Phase 2.5) — User spec said 4 fixes; actual was 6 (the extra 2 surfaced when `typecheck:server` ran — exactly Rule G's scenario). Commit subject adjusted to `fix(typecheck)` from `fix(frontend)`.
+- **D25** (Phase 3 Step 3) — Gradle build 18s not 30-40 min. Cache warm from prior session.
+- **D26** (Phase 3 Step 4) — `adb uninstall` returned `DELETE_FAILED_INTERNAL_ERROR`. Non-blocking; `adb install -r` handled replacement.
+- **D27** (Phase 3.5) — Phase 6 revert list has TWO items (server.url + overrideUserAgent), not one. Both grep-detectable via `DAY 5.1 LOCAL SMOKE ONLY` marker.
+- **D28** (Phase 3.6) — Latent baked-VITE_API_URL bug: production native APKs never hit it because real prod VITE_API_URL is the correct target. Day 5.1 server.url smoke surfaced first. Shipped as `f106024` — non-revertable production-safety improvement.
+- **D29** (Phase 3.7) — `fixtures.ts` TestUser interface has `blockedReason` field that doesn't exist in prisma schema. Low-priority reconcile backlog item.
+
+### Production bugs caught and shipped (3 commits + 1 helper + Rule G codified)
+
+1. **`131e86f`** — CORS Allow-Headers gap for X-Refresh-Token (Day 5 Phase 4 Q6 retroactive)
+2. **`3a9b27d`** — 6 strict typecheck errors hidden by verification protocol gap + CLAUDE.md Rule G codified (Day 4 + Day 5 retroactive)
+3. **`f106024`** — `resolveApiBase()` for remote-load WebView origins (latent bug, production-safety improvement)
+4. **`<this closure commit>`** — Session 92.1 docs
+
+`temp/seed-test-customer.ts` is a smoke helper, gitignored under `temp/` — not a shipped commit. Same precedent as Day 2.6's `temp/r2-cleanup-day26.ts`.
+
+### Day 5.1 follow-up backlog (5 items)
+
+1. **Day 5.2 — Bundled-mode Capacitor smoke** (~30 min separate session). Build APK without `server.url` (production-mirror mode: WebView loads from `https://localhost` bundled dist; API calls to remote backend via `VITE_API_URL`). This exercises the X-Refresh-Token CORS path on a real device — fills the gap D20 documented (Day 5.1 server.url smoke is same-origin, doesn't directly test the cross-origin production path).
+2. **T7 — Native header positive test in suite.** Phase 5 T4 tested `X-Refresh-Token`-via-cookie-fallback (no cookies + no header → 401). The positive case (`X-Refresh-Token` header + no cookies → 200 + new tokens) was verified live by Day 5 S8 curl smoke but not yet in the test suite. Add as 43rd test.
+3. **LOGGED_OUT vs REUSE_DETECTED error code differentiation** — Phase 5 D13 follow-up. Post-logout refresh currently returns `code: 'REUSE_DETECTED'` (semantically accurate since blacklisted jti is treated identically to rotated jti). Distinguishing in error code would improve observability without changing behavior.
+4. **D29: fixtures.ts TestUser.blockedReason vs prisma schema reconcile** — low-priority cleanup. evaluateUserStatus consumes a status shape that includes blockedReason (always null in practice); the test helper mirrors this shape but it diverges from the prisma write shape.
+5. **Native iOS smoke** — when user expands Capacitor build to iOS. Same logical flow as Android Day 5.1; different WebView (WKWebView), different cookie quirks, different default User-Agent.
+
+### Deploy plan unchanged
+
+Day 8 atomic merge `hardening/sprint` → `main`. Pre-merge action item still in place: provision `JWT_REFRESH_SECRET` in Railway dashboard (`openssl rand -base64 48`), verified by the env.ts post-parse guard (Day 5 S7 smoke).
+
+---
+
 ## 2026-05-13 — Session 92 — Hardening Sprint Day 5: Refresh Token Rotation + Admin Cookie Bug Fix
 
 **Goal:** Replace the Day 2.5 "renew same 7-day JWT" /refresh with a true industry-standard rotation pattern (Auth0/Clerk-style) — short-lived access tokens (15min) + long-lived rotating refresh tokens (30d) + one-time use + theft detection. Plus fix the admin cookie routing bug (Day 5 audit ND #2) and add native (Capacitor) silent-refresh support.
