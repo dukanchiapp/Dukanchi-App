@@ -6,9 +6,9 @@ export class UserController {
     try {
       const { userId } = req.params;
       const store = await UserService.getUserStore(userId);
-      res.json(store);
+      return res.json(store);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch user store" });
+      return res.status(500).json({ error: "Failed to fetch user store" });
     }
   }
 
@@ -24,9 +24,9 @@ export class UserController {
         return res.status(404).json({ error: "User not found" });
       }
 
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch user" });
+      return res.status(500).json({ error: "Failed to fetch user" });
     }
   }
 
@@ -41,12 +41,12 @@ export class UserController {
 
       const { name, phone, email } = req.body;
       const user = await UserService.updateUserProfile(id, { name, phone, email });
-      res.json(user);
+      return res.json(user);
     } catch (error: any) {
       if (error.message.includes("phone number is already in use")) {
         return res.status(400).json({ error: error.message });
       }
-      res.status(500).json({ error: "Failed to update user profile" });
+      return res.status(500).json({ error: "Failed to update user profile" });
     }
   }
 
@@ -57,9 +57,9 @@ export class UserController {
         return res.status(403).json({ error: "Forbidden" });
       }
       const stores = await UserService.getFollowedStores(req.params.id);
-      res.json(stores);
+      return res.json(stores);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch followed stores" });
+      return res.status(500).json({ error: "Failed to fetch followed stores" });
     }
   }
 
@@ -71,18 +71,18 @@ export class UserController {
         return res.status(403).json({ error: "Forbidden" });
       }
       const result = await UserService.getSavedItems(req.params.id);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch saved items" });
+      return res.status(500).json({ error: "Failed to fetch saved items" });
     }
   }
 
   static async getReviews(req: Request, res: Response) {
     try {
       const reviews = await UserService.getReviews(req.params.id);
-      res.json(reviews);
+      return res.json(reviews);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch reviews" });
+      return res.status(500).json({ error: "Failed to fetch reviews" });
     }
   }
 
@@ -94,9 +94,9 @@ export class UserController {
         return res.status(403).json({ error: "Forbidden" });
       }
       const history = await UserService.getSearchHistory(req.params.id);
-      res.json(history);
+      return res.json(history);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch search history" });
+      return res.status(500).json({ error: "Failed to fetch search history" });
     }
   }
 
@@ -108,9 +108,9 @@ export class UserController {
         return res.status(403).json({ error: "Forbidden" });
       }
       const locations = await UserService.getLocations(req.params.id);
-      res.json(locations);
+      return res.json(locations);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch saved locations" });
+      return res.status(500).json({ error: "Failed to fetch saved locations" });
     }
   }
 }

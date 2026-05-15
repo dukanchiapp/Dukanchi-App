@@ -1,3 +1,13 @@
+// Observability inits — Day 4 / Session 90.
+// Both gracefully no-op when their respective env vars (VITE_SENTRY_DSN,
+// VITE_POSTHOG_KEY) are unset. Imported FIRST so they're ready before
+// any React component runs (Sentry instruments React errors via its
+// integration registration, which needs to happen pre-render).
+import { initFrontendSentry } from './lib/sentry-frontend';
+import { initPostHog } from './lib/posthog';
+initFrontendSentry();
+initPostHog();
+
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';

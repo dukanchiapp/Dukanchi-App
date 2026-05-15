@@ -1,0 +1,41 @@
+# Dukanchi Prettier ignore — Day 7 / Session 94 / Phase 3.
+# Mirrors eslint.config.js ignores so check/fix scope stays consistent.
+
+node_modules
+dist
+dist-server
+build
+coverage
+admin-panel/dist
+admin-panel/node_modules
+android
+public
+prisma/migrations
+
+# Generated lockfiles + binaries — never format
+package-lock.json
+*.lock
+
+# Gitignored scratchpads
+temp
+
+# Claude Code worktrees + code-review graph caches — stale repo mirrors
+.claude
+.code-review-graph
+
+# Markdown changelogs / session logs — auto-format would churn the
+# carefully formatted tables and inline code blocks
+SESSION_LOG.md
+STATUS.md
+DECISIONS.md
+RUNBOOK.md
+README.md
+APP_DOCUMENTATION.md
+ARCHITECTURE.md
+AUDIT_REPORT_PHASE_0_4.md
+CLAUDE.md
+SESSIONS.md
+
+# Static HTML
+index.html
+public/**/*.html

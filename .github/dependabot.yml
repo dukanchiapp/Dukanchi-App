@@ -1,0 +1,74 @@
+# Dukanchi Dependabot — Day 6 / Session 93 / Phase 1
+#
+# Closes the Dependabot side of ND-D6-6. Day 6 Phase 2 separately handles
+# the existing xlsx HIGH-severity advisories via direct exceljs migration;
+# Dependabot from here forward keeps the dep tree fresh for FUTURE
+# advisories.
+#
+# Strategy:
+#   - Weekly checks (Monday morning IST-friendly) — not daily (PR noise)
+#   - Minor + patch grouped into ONE PR per ecosystem (auto-mergeable
+#     after CI green if user chooses)
+#   - Major updates as SEPARATE PRs (require manual review)
+#   - Two npm ecosystems: root + admin-panel subproject (separate
+#     package.json files — Dependabot needs explicit entries for both)
+#   - GitHub Actions also tracked (monthly) — keeps actions/checkout etc. current
+
+version: 2
+
+updates:
+  # ── Root npm package (backend + PWA frontend) ────────────────────────────
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '04:00'
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - npm-root
+    commit-message:
+      prefix: chore(deps)
+      include: scope
+
+  # ── Admin panel subproject (separate package.json) ───────────────────────
+  - package-ecosystem: npm
+    directory: /admin-panel
+    schedule:
+      interval: weekly
+      day: monday
+      time: '04:00'
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+      - npm-admin-panel
+    commit-message:
+      prefix: chore(deps-admin)
+      include: scope
+
+  # ── GitHub Actions versions ──────────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: chore(ci)
+      include: scope

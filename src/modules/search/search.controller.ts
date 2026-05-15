@@ -19,9 +19,9 @@ export class SearchController {
 
       const allowedRoles = SearchController.getAllowedRoles(userRole);
       const result = await SearchService.performStandardSearch(String(q).trim(), allowedRoles);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to perform search" });
+      return res.status(500).json({ error: "Failed to perform search" });
     }
   }
 
@@ -31,9 +31,9 @@ export class SearchController {
       if (!q || String(q).trim().length < 1) return res.json({ suggestions: [] });
       
       const suggestions = await SearchService.getSuggestions(String(q).trim());
-      res.json({ suggestions });
+      return res.json({ suggestions });
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch suggestions" });
+      return res.status(500).json({ error: "Failed to fetch suggestions" });
     }
   }
 
@@ -46,10 +46,10 @@ export class SearchController {
       const allowedRoles = SearchController.getAllowedRoles(userRole);
 
       const result = await SearchService.performAISearch(String(q).trim(), allowedRoles);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
       logger.error({ err: error }, "AI search error");
-      res.status(500).json({ error: "Failed to perform search" });
+      return res.status(500).json({ error: "Failed to perform search" });
     }
   }
 
@@ -58,10 +58,10 @@ export class SearchController {
       const userId = (req as any).user.userId;
       const { query } = req.body;
       const result = await SearchService.saveSearchHistory(userId, query);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === "Query is required") return res.status(400).json({ error: "Query is required" });
-      res.status(500).json({ error: "Failed to save search history" });
+      return res.status(500).json({ error: "Failed to save search history" });
     }
   }
 
@@ -69,9 +69,9 @@ export class SearchController {
     try {
       const userId = (req as any).user.userId;
       const result = await SearchService.clearSearchHistory(userId);
-      res.json(result);
+      return res.json(result);
     } catch (error) {
-      res.status(500).json({ error: "Failed to clear search history" });
+      return res.status(500).json({ error: "Failed to clear search history" });
     }
   }
 }

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Sparkles, X, Loader2, Mic, MicOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
+import { captureEvent } from '../../lib/posthog';
 
 interface AiBioModalProps {
   open: boolean;
@@ -79,6 +80,8 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
             const data = await res.json();
             const transcript = [data.productName, data.caption].filter(Boolean).join(' — ');
             if (transcript) setUserContext(prev => prev ? `${prev} ${transcript}` : transcript);
+            // PostHog: ai_feature_used (store bio voice transcription).
+            captureEvent('ai_feature_used', { feature: 'store_bio_voice', has_transcript: !!transcript });
           } else {
             showToast('Voice transcription failed, manually likho', { type: 'error' });
           }

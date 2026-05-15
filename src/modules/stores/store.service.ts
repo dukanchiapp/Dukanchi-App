@@ -63,7 +63,10 @@ export class StoreService {
     const skip = (page - 1) * limit;
     const B2B = ['retailer', 'supplier', 'brand', 'manufacturer'];
     const visibleRoles = viewerRole === 'customer' ? ['retailer'] : B2B;
-    const where: any = { owner: { isBlocked: false, role: { in: visibleRoles } } };
+    // Soft-delete cascade: hide stores whose owners are in any deleted state
+    // (deleted_pending OR deleted_expired). Stores reappear automatically if
+    // the owner calls /api/account/restore within their 30-day grace.
+    const where: any = { owner: { isBlocked: false, deletedAt: null, role: { in: visibleRoles } } };
     if (category) where.category = category;
     if (excludeOwnerId) {
       where.ownerId = { not: excludeOwnerId };
@@ -76,10 +79,19 @@ export class StoreService {
   }
 
   static async getStoreById(id: string, currentUserId?: string) {
-    const store = await prisma.store.findUnique({
-      where: { id },
+    // Soft-delete cascade: a store whose owner is in ANY deleted state is
+    // hidden from public access. Decision (Step 5 / Session 88): "Option A"
+    // — 404 for both deleted_pending and deleted_expired, simpler than
+    // a "may be inactive" banner for grace-period stores. If owner restores
+    // within 30 days, store reappears automatically.
+    //
+    // Uses findFirst (not findUnique) because Prisma's findUnique cannot
+    // filter on relation fields. Performance impact is negligible — `id`
+    // is still the PK and is the dominant filter.
+    const store = await prisma.store.findFirst({
+      where: { id, owner: { deletedAt: null } },
       include: {
-        owner: { select: { role: true, isBlocked: true } },
+        owner: { select: { role: true, isBlocked: true, deletedAt: true } },
         _count: {
           select: { posts: true, products: true, followers: true }
         },
@@ -116,7 +128,10 @@ export class StoreService {
     const skip = (page - 1) * limit;
     const B2B = ['retailer', 'supplier', 'brand', 'manufacturer'];
     const visibleRoles = viewerRole === 'customer' ? ['retailer'] : B2B;
-    const blockedFilter = { storeId, store: { owner: { isBlocked: false, role: { in: visibleRoles } } } };
+    // Soft-delete cascade applied here too (defense in depth — the store
+    // detail page already 404s for deleted owners; this filter ensures the
+    // posts query is also a no-op if anyone reaches it directly).
+    const blockedFilter = { storeId, store: { owner: { isBlocked: false, deletedAt: null, role: { in: visibleRoles } } } };
     const [posts, total] = await Promise.all([
       prisma.post.findMany({
         where: blockedFilter,
@@ -147,7 +162,9 @@ export class StoreService {
   }
 
   static async getProducts(search?: string, category?: string, storeId?: string) {
-    const where: any = { store: { owner: { isBlocked: false } } };
+    // Soft-delete cascade: products of deleted-owner stores are hidden.
+    // Same policy as getStores — keeps the surface area consistent.
+    const where: any = { store: { owner: { isBlocked: false, deletedAt: null } } };
 
     if (search) {
       where.OR = [

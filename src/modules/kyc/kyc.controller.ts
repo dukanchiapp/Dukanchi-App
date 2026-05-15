@@ -9,9 +9,9 @@ export class KycController {
     try {
       const userId = (req as any).user.userId;
       const user = await KycService.submitKyc(userId, req.body);
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      res.status(500).json({ error: "Failed to submit KYC" });
+      return res.status(500).json({ error: "Failed to submit KYC" });
     }
   }
 
@@ -19,9 +19,9 @@ export class KycController {
     try {
       const userId = (req as any).user.userId;
       const user = await KycService.getKycStatus(userId);
-      res.json(user);
+      return res.json(user);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch KYC status" });
+      return res.status(500).json({ error: "Failed to fetch KYC status" });
     }
   }
 }

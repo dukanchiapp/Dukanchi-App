@@ -11,7 +11,7 @@ import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerCompon
 
 const GoogleMap = GoogleMapComponent as any;
 const Marker = MarkerComponent as any;
-import { MapPin, Navigation, X, Clock, Phone, Settings, Search, Store, LocateFixed, ChevronUp, ChevronDown } from 'lucide-react';
+import { MapPin, Navigation, X, Clock, Phone, Settings, Search, Store, LocateFixed, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
@@ -19,7 +19,6 @@ import { useUserLocation } from '../context/LocationContext';
 import { CATEGORIES, CATEGORY_CHIPS, matchCategory } from '../constants/categories';
 
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
-const DEFAULT_CENTER = { lat: 20.5937, lng: 78.9629 };
 
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },

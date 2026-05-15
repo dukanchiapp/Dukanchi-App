@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Dukanchi pre-commit hook — Day 6 / Session 93 / Phase 1
+#
+# Fast checks only. Runs lint-staged which delegates per-file rules to
+# .lintstagedrc.json + scripts/precommit-checks.sh.
+#
+# Heavy checks (full project typecheck) live in pre-push so they only
+# run once per push, not per commit. Tests stay in CI (don't slow local
+# push).
+#
+# Bypass for emergency: git commit --no-verify
+
+npx lint-staged

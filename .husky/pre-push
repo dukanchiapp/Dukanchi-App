@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+# Dukanchi pre-push hook — Day 6 / Session 93 / Phase 1
+#
+# Runs the full project typecheck before push reaches remote. Rule G
+# compliant — invokes both tsconfig.app.json and tsconfig.server.json.
+#
+# Tests are NOT run here (kept in CI to avoid 1-2s slowdown per push).
+# Tests for the suite live at npm test.
+#
+# Bypass for emergency: git push --no-verify
+# (use sparingly — bypass means CI is the only safety net)
+
+npm run typecheck

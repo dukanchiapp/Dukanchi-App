@@ -8,11 +8,12 @@ import { AiBioModal } from '../components/dashboard/AiBioModal';
 import { StoreFormFields } from '../components/dashboard/StoreFormFields';
 import { KycUploadForm } from '../components/dashboard/KycUploadForm';
 import { apiFetch } from '../lib/api';
+import { captureEvent } from '../lib/posthog';
 
 export default function RetailerDashboard() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
-  const { showToast, showConfirm } = useToast();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState<string>('');
   const [store, setStore] = useState<any>(null);
@@ -140,6 +141,14 @@ export default function RetailerDashboard() {
         const updatedStore = await res.json();
         setStore(updatedStore);
         if (!storeId && updatedStore.id) {
+          // PostHog: store_created fires only on CREATE (POST), not UPDATE (PUT).
+          // The `!storeId` guard distinguishes the two — storeId is falsy
+          // here only when this is a first-time store creation.
+          captureEvent('store_created', {
+            category: selectedCategory || null,
+            has_logo: !!logoUrl,
+            is_24_hours: is24Hours,
+          });
           setStoreId(updatedStore.id);
           if (logoUrl) {
             try {

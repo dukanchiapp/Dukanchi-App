@@ -1,7 +1,9 @@
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
+import { env } from "../../config/env";
+import { invalidateUserStatusCache } from "../../middlewares/user-status";
 import bcrypt from "bcrypt";
-import xlsx from "xlsx";
+import ExcelJS from "exceljs";
 
 const ADMIN_STATS_KEY = 'admin:stats';
 const ADMIN_STATS_TTL = 60;
@@ -67,7 +69,7 @@ export class AdminService {
 
   static async resetPassword(userId: string, newPassword: string) {
     if (!newPassword || newPassword.length < 6) throw new Error("Password must be at least 6 characters");
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, env.BCRYPT_ROUNDS);
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashed },
@@ -88,9 +90,11 @@ export class AdminService {
       select: { id: true, name: true, role: true, isBlocked: true },
     });
 
-    // Invalidate blocked-status cache so changes take effect immediately
+    // Invalidate the unified userStatus cache so block/unblock takes effect
+    // immediately. invalidateUserStatusCache catches its own errors + Sentry-
+    // captures, so this won't throw even if Redis is down.
     if (isBlocked !== undefined) {
-      try { await pubClient.del(`blocked:${id}`); } catch { /* non-fatal */ }
+      await invalidateUserStatusCache(id);
     }
 
     return result;
@@ -108,10 +112,11 @@ export class AdminService {
       data: { isBlocked: !!isBlocked }
     });
 
-    // Invalidate blocked-status cache for all affected users
-    try {
-      await Promise.all(safeUserIds.map(id => pubClient.del(`blocked:${id}`)));
-    } catch { /* non-fatal */ }
+    // Invalidate the unified userStatus cache for every affected user.
+    // Each invalidateUserStatusCache call catches its own errors internally
+    // (logger.warn + Sentry capture), so Promise.all here will resolve cleanly
+    // even if individual Redis calls fail — no Promise.allSettled needed.
+    await Promise.all(safeUserIds.map(id => invalidateUserStatusCache(id)));
 
     return { success: true };
   }
@@ -279,10 +284,19 @@ export class AdminService {
       'Created At': new Date(s.createdAt).toISOString(),
     }));
 
-    const ws = xlsx.utils.json_to_sheet(rows);
-    const wb = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(wb, ws, 'Stores');
-    return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    // Day 6 Phase 2 / Session 93: migrated sheetjs (xlsx) → exceljs.
+    // Trusted-data write path — input is from prisma, not user upload —
+    // so the security gain is from removing xlsx from the dep tree (its
+    // PARSE surface was the attack vector; WRITE was safe). Keeping
+    // exceljs for both read AND write keeps one library in the bundle.
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Stores');
+    if (rows.length > 0) {
+      sheet.columns = Object.keys(rows[0]).map((key) => ({ header: key, key }));
+      rows.forEach((row) => sheet.addRow(row));
+    }
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return Buffer.from(arrayBuffer as ArrayBuffer);
   }
 
   static async getReports(page: number, limit: number) {

@@ -5,6 +5,7 @@ import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle, ShoppingBag, Tag }
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
+import { captureEvent } from '../lib/posthog';
 
 const POST_REF_PREFIX = '__POST_REF__:';
 
@@ -276,6 +277,12 @@ export default function ChatPage() {
       const saved: Message = await res.json();
       const msg: Message = { ...saved, senderId: saved.senderId || currentUserId };
       setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+      // PostHog: chat_message_sent — metrics only (no message text), with
+      // boolean flags for the two non-text fields callers can populate.
+      captureEvent('chat_message_sent', {
+        has_image: !!body.imageUrl,
+        has_text: !!(body.message && body.message.trim()),
+      });
     } else {
       const err = await res.json().catch(() => ({}));
       console.error('Send failed:', res.status, err);

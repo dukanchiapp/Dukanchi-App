@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Phone, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Phone, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import DukanchiLogo from '../components/DukanchiLogo';
 import { apiFetch } from '../lib/api';
@@ -8,7 +8,7 @@ import { apiFetch } from '../lib/api';
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -37,8 +37,16 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Pass isTeamMember flag to context
-      login(data.user, data.token, data.isTeamMember || false);
+      // Day 5: pass BOTH tokens — AuthContext.login persists refreshToken
+      // on native (localStorage); web ignores both (httpOnly cookies set
+      // by server's Set-Cookie). data.accessToken is the new field name;
+      // data.token is the legacy alias for back-compat with older builds.
+      login(
+        data.user,
+        data.accessToken ?? data.token,
+        data.isTeamMember || false,
+        data.refreshToken,
+      );
       navigate('/');
     } catch (err: any) {
       setError(err.message);

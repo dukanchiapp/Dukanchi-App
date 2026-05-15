@@ -16,8 +16,14 @@ export class UserService {
   }
 
   static async getUserProfile(id: string) {
-    return prisma.user.findUnique({
-      where: { id },
+    // Public profile read: hide soft-deleted users from non-admin viewers.
+    // Returns null (→ controller 404) for any user with deletedAt set, in any
+    // state (deleted_pending or deleted_expired). Self-lookup (user fetching
+    // own profile) is gated by authenticateToken in middleware — that path
+    // rejects deleted users before they reach this service, so the filter
+    // here covers cross-user public reads.
+    return prisma.user.findFirst({
+      where: { id, deletedAt: null },
       select: { id: true, name: true, role: true, email: true }
     });
   }
@@ -56,14 +62,25 @@ export class UserService {
       where: { userId },
       orderBy: { createdAt: 'desc' }
     });
-    
-    // For post-type saved items, fetch associated posts
+
+    // For post-type saved items, fetch associated posts.
+    // Per D2 (anonymize policy): we DO NOT filter out posts whose author was
+    // soft-deleted — the user's saved-posts list preserves historical
+    // engagement (matches Reddit/Quora). Instead, we surface the owner's
+    // deletedAt to the frontend so it can render a "Deleted user" label in
+    // place of the author identity.
     const postIds = saved.filter(s => s.type === 'post').map(s => s.referenceId);
     const posts = await prisma.post.findMany({
       where: { id: { in: postIds } },
-      include: { store: true }
+      include: {
+        store: {
+          include: {
+            owner: { select: { id: true, deletedAt: true } },
+          },
+        },
+      },
     });
-    
+
     return { saved, posts };
   }
 

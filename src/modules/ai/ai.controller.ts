@@ -35,7 +35,7 @@ export class AiController {
     }
 
     const result = await analyzeProductImage(imageBase64, mimeType);
-    res.json(result);
+    return res.json(result);
   }
 
   static async transcribeVoice(req: Request, res: Response) {
@@ -54,7 +54,7 @@ export class AiController {
     }
 
     const result = await transcribeAndStructureVoice(audioBase64, mimeType);
-    res.json(result);
+    return res.json(result);
   }
 
   static async generateStoreDesc(req: Request, res: Response) {
@@ -76,6 +76,6 @@ export class AiController {
       category.trim(),
       typeof userContext === 'string' ? userContext : undefined,
     );
-    res.json(result);
+    return res.json(result);
   }
 }

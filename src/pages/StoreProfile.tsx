@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Phone, Clock, MessageCircle, ArrowLeft, Navigation, UserPlus, UserCheck, Share2, X, Star, Heart, Package, ExternalLink } from 'lucide-react';
+import { MapPin, Phone, Clock, MessageCircle, ArrowLeft, Navigation, UserPlus, UserCheck, Share2, Star, Heart, Package } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import ReviewModal from '../components/ReviewModal';
 import RefreshButton from '../components/RefreshButton';
@@ -15,7 +15,7 @@ export default function StoreProfilePage() {
   const { showToast } = useToast();
   const [store, setStore] = useState<any>(null);
   usePageMeta({ title: store?.storeName || 'Store' });
-  const [products, setProducts] = useState<any[]>([]);
+  const [, setProducts] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,6 @@ export default function StoreProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
   const [selectedPost, setSelectedPost] = useState<any>(null);
-  const [productSearch, setProductSearch] = useState('');
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const userStr = localStorage.getItem('user');
@@ -48,12 +47,6 @@ export default function StoreProfilePage() {
     const isLiked = interactions.likedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, likedPostIds: isLiked ? prev.likedPostIds.filter(i => i !== postId) : [...prev.likedPostIds, postId] }));
     try { await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' }); } catch (e) { console.error(e); }
-  };
-
-  const toggleSave = async (postId: string) => {
-    const isSaved = interactions.savedPostIds.includes(postId);
-    setInteractions(prev => ({ ...prev, savedPostIds: isSaved ? prev.savedPostIds.filter(i => i !== postId) : [...prev.savedPostIds, postId] }));
-    try { await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' }); } catch (e) { console.error(e); }
   };
 
   const handleShare = async (post: any) => {
@@ -133,11 +126,6 @@ export default function StoreProfilePage() {
       setFollowersCount(prev => wasFollowing ? prev + 1 : Math.max(0, prev - 1));
     }
   };
-
-  const filteredProducts = products.filter(p =>
-    p.productName?.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.category?.toLowerCase().includes(productSearch.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -600,7 +588,6 @@ export default function StoreProfilePage() {
             <div className="max-w-md mx-auto">
               {sortedPosts.map(post => {
                 const isLiked = interactions.likedPostIds.includes(post.id);
-                const isSaved = interactions.savedPostIds.includes(post.id);
                 const likeCount = getLikeCount(post);
                 return (
                   <div

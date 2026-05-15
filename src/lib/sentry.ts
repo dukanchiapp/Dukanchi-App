@@ -12,8 +12,18 @@ export function initSentry(): void {
 
   const isProduction = process.env.NODE_ENV === "production";
 
+  // Release tag — Day 4 / Session 90 / Edit 3.
+  // Railway exposes RAILWAY_GIT_COMMIT_SHA at runtime; fall back to the
+  // package.json version (npm injects npm_package_version), then 'unknown'.
+  // Lets us correlate a Sentry error to a specific deploy in the Sentry UI.
+  const release =
+    process.env.RAILWAY_GIT_COMMIT_SHA ||
+    process.env.npm_package_version ||
+    'unknown';
+
   Sentry.init({
     dsn,
+    release,
     environment: process.env.NODE_ENV || "development",
     integrations: [
       Sentry.httpIntegration(),
@@ -33,5 +43,5 @@ export function initSentry(): void {
     },
   });
 
-  logger.info({ sentryEnv: process.env.NODE_ENV }, "Sentry initialized");
+  logger.info({ sentryEnv: process.env.NODE_ENV, release }, "Sentry initialized");
 }

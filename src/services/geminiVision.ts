@@ -42,8 +42,11 @@ export async function analyzeProductImage(
   const defaults: ImageAnalysisResult = { caption: '', suggestedPrice: null, category: 'General', productName: '', tags: [] };
   const t0 = Date.now();
   try {
+    // 30s timeout — Subtask 3.5. AbortSignal.timeout is Node 17.3+ native.
+    // SDK supports config.abortSignal (see GenerateContentConfig in @google/genai).
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
+      config: { abortSignal: AbortSignal.timeout(30_000) },
       contents: [
         {
           parts: [
@@ -92,8 +95,10 @@ export async function transcribeAndStructureVoice(
   const defaults: VoiceStructureResult = { caption: '', price: null, productName: '', category: 'General' };
   const t0 = Date.now();
   try {
+    // 30s timeout — Subtask 3.5.
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
+      config: { abortSignal: AbortSignal.timeout(30_000) },
       contents: [
         {
           parts: [
@@ -141,8 +146,10 @@ export async function generateStoreDescription(
   const t0 = Date.now();
   try {
     const description = userContext?.trim() || 'general store';
+    // 30s timeout — Subtask 3.5.
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
+      config: { abortSignal: AbortSignal.timeout(30_000) },
       contents: [
         {
           parts: [

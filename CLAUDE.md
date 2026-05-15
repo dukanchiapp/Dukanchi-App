@@ -120,6 +120,72 @@ curl -s -i <production-endpoint> | head -5
 
 If still failing after a second attempt, STOP and report — don't claim the session succeeded.
 
+### Rule F — Local Smoke Test Isolation
+
+Local backend smoke tests (`npm run dev`) MUST use `DATABASE_URL_TEST` when testing any write-path endpoint (signup, login that mints token, account/delete, account/restore, any POST/PATCH/DELETE).
+
+- Mechanism: `DATABASE_URL=$DATABASE_URL_TEST npm run dev`
+- Production endpoint is ONLY tested via curl after Railway redeploy, never from local code
+- For pure read-only / auth-rejection smokes (T1 wrong-creds, T3 no-auth), default `DATABASE_URL` is acceptable but discouraged
+- Pre-flight check before any write-path smoke: confirm endpoint host matches test branch
+
+Origin: Session 88 / Day 2.5 — a smoke-test signup against the local dev server (connected to prod via main `.env`) accidentally created a `Test` user on production. Forensic cleanup landed via 5 safeguards; rule codified here to prevent recurrence.
+
+### Rule F.2 — Storage Isolation
+
+Rule F's principle (TEST vs PROD separation for write-path smokes) extends to non-DB storage backends. Currently `R2_BUCKET_NAME` (and the four AWS_* credentials) are shared between TEST and PROD in `.env`. Any local smoke test that exercises an upload-write path (POST `/api/upload`, POST `/api/admin/settings/upload`, etc.) WILL create real objects in the production R2 bucket.
+
+Until storage backends are separated, write-path upload smokes follow one of:
+
+- **(a) Use a dedicated test bucket env** — set `R2_BUCKET_NAME_TEST` and have the smoke runner export it as `R2_BUCKET_NAME` for the duration of the smoke. Preferred long-term — eliminates cleanup burden entirely. (Day 4+/Day 2.7 candidate to wire up.)
+- **(b) Accept artifact creation + clean up explicitly** — run the smoke, capture the storage keys returned in response bodies, delete them via `@aws-sdk/client-s3 DeleteObjectsCommand` before commit. Today's precedent (Session 89.5).
+- **(c) Skip the smoke** — for write-path tests that would create artifacts when no test bucket is available AND no explicit cleanup is planned, skip the smoke and document the gap.
+
+The minimum acceptable bar is (b): smoke-then-cleanup-before-commit. (a) is preferred; (c) is the fallback when neither is feasible. Silent leakage into the prod bucket — discovering it days later — is NOT acceptable.
+
+Origin: Session 89.5 / Day 2.6 — 9 placeholder JPEGs (Day 2.6 Item 2 rate-limit burst smoke) + 2 stragglers (Day 3 Subtask 3.3 smoke T1 + T5) leaked into the prod `dukanchi-prod` R2 bucket. Cleaned forensically via a one-off `temp/r2-cleanup-day26.ts` script; rule codified here to prevent recurrence on the storage surface.
+
+### Rule G — Verification Protocol
+
+Always use `npm run typecheck` for TypeScript verification, NEVER `npx tsc --noEmit` alone. The root `tsconfig.json` is a composite reference — it does NOT enforce strict project configs. Running `tsc --noEmit` against it can report "0 errors" while the strict project configs fail.
+
+`npm run typecheck` runs BOTH:
+- `tsc -p tsconfig.app.json --noEmit` — the frontend project (React app, strict include list, lib DOM)
+- `tsc -p tsconfig.server.json --noEmit` — the backend project (Node, strict include list, no DOM)
+
+Per-project configs have stricter rules:
+- Explicit `include` lists for `src/lib/*.ts` (mixed frontend/backend lib — neither project includes the other's files via glob)
+- `noFallthroughCasesInSwitch`, `noImplicitReturns` (TS7030), and other compile-time checks the root config doesn't always apply
+- Project-aware path resolution (`@/*` aliases differ per project)
+
+Origin: Session 92.1 / Day 5.1 — Day 4 `c7c0ef0` + Day 5 `e6d0608` shipped 4 strict-config typecheck errors (missing import, 2 missing tsconfig.app.json includes, TS7030 implicit fallthrough) that Phase D verifications missed because they used `npx tsc --noEmit`. Surfaced by Phase 3 Step 1 `npm run build` (which runs `npm run typecheck && npm run build:web`). Rule codified here to prevent recurrence.
+
+## Two-AI Workflow — Response Conventions
+
+### Opus Summary Convention
+
+When Claude Code's output for a step would exceed ~30 lines, default to a "Summary for Opus" block at the end of the response:
+- 4-6 bullet points covering: (a) what's done, (b) decisions made, (c) deviations/surprises with NDXX numbers, (d) Phase E queue impact, (e) what's pending approval
+- Full details (diffs, file contents) remain in the body — the summary is a TL;DR for the strategic loop (Opus chat) to catch up without parsing the whole message
+
+Reduces token usage + cognitive load on the strategic loop without losing fidelity.
+
+### Vitest Conventions
+
+When using `vi.mock()` with values referenced from outside the factory, wrap them in `vi.hoisted(() => ({...}))`. Top-level `const` causes hoisting reference errors because `vi.mock` is hoisted before regular const initialization.
+
+Example:
+```ts
+const { TEST_JWT_SECRET } = vi.hoisted(() => ({
+  TEST_JWT_SECRET: "test-jwt-secret-32-chars-long-padding",
+}));
+vi.mock("../config/env", () => ({
+  env: { JWT_SECRET: TEST_JWT_SECRET },
+}));
+```
+
+Origin: Session 88 / ND27 — first vitest test (`auth.middleware.test.ts`) failed on a top-level `const TEST_JWT_SECRET` used inside a `vi.mock` factory.
+
 ## Key File Map
 - All routes registered: src/app.ts
 - Auth middleware: src/middleware/auth.ts

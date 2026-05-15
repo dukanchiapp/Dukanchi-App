@@ -75,3 +75,9 @@ export const submitKycSchema = z.object({
   storeName: z.string().min(2, 'Store name must be at least 2 characters'),
   storePhoto: z.string().min(1).optional(),
 }).passthrough();
+
+// Account deletion (Day 2 hardening) — reason is optional, capped at 500 chars
+// to match the User.deletionReason VARCHAR(500) DB column (defense in depth).
+export const deleteAccountSchema = z.object({
+  reason: z.string().max(500, 'Reason must be 500 characters or fewer').optional(),
+}).passthrough();

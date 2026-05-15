@@ -5,6 +5,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
+import multer from "multer";
 import { env, getAllowedOrigins, isNgrokOrigin } from "./config/env";
 import { logger } from "./lib/logger";
 
@@ -23,8 +24,9 @@ import { aiRoutes } from './modules/ai/ai.routes';
 import { askNearbyRoutes } from './modules/ask-nearby/ask-nearby.routes';
 import { landingPublicRoutes, landingAdminRoutes } from './modules/landing/landing.routes';
 import pushRoutes from './modules/push/push.routes';
+import { accountRoutes } from './modules/account/account.routes';
 
-import { upload, getUploadedFileUrl } from "./middlewares/upload.middleware";
+import { upload, getUploadedFileUrl, verifyAndPersistUpload, FILE_SIZE_LIMIT_BYTES } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
 import { fallthroughErrorHandler } from "./middlewares/error.middleware";
 import { generalLimiter, uploadLimiter } from "./middlewares/rate-limiter.middleware";
@@ -73,9 +75,9 @@ app.use((req, res, next) => {
   }
   res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, ngrok-skip-browser-warning');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie, ngrok-skip-browser-warning, X-Refresh-Token');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
+  return next();
 });
 
 // ── 4. Pino HTTP request logger ───────────────────────────────────────────────
@@ -92,7 +94,14 @@ app.use(
       if (res.statusCode >= 400) return 'warn';
       return 'info';
     },
-    redact: ['req.headers.authorization', 'req.headers.cookie'],
+    redact: [
+      'req.headers.authorization',
+      'req.headers.cookie',
+      // Day 5 / Session 92 / Phase 4 Q6: native clients send the refresh
+      // token as X-Refresh-Token when cookies aren't reliable (Capacitor
+      // WebView). Same secrecy class as cookies — redact from request logs.
+      'req.headers["x-refresh-token"]',
+    ],
     serializers: {
       req(req) {
         return { method: req.method, url: req.url, id: req.id };
@@ -101,9 +110,50 @@ app.use(
   })
 );
 
+// ── 4b. Request ID propagation — Day 4 / Session 90 / Edits 1+2 ──────────────
+// pinoHttp generates req.id per-request (Pino's default UUID v4). Propagate it:
+//   (a) to the X-Request-Id response header — visible to clients so a user
+//       support ticket can quote the ID and we can trace it across logs.
+//   (b) to the Sentry scope as a tag — when an exception is captured anywhere
+//       downstream, Sentry's event UI shows the request_id alongside it,
+//       making log↔Sentry correlation trivial.
+// Must run AFTER pinoHttp (which generates req.id) and BEFORE route handlers.
+app.use((req, res, next) => {
+  const requestId = (req as any).id;
+  if (requestId) {
+    res.setHeader('X-Request-Id', String(requestId));
+    Sentry.getCurrentScope().setTag('request_id', String(requestId));
+  }
+  next();
+});
+
 // ── 5. Body parsers ───────────────────────────────────────────────────────────
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ limit: "50mb", extended: true }));
+//
+// Two-tier body-size policy (Day 3 / Session 89 / Subtask 3.2):
+//   - AI routes that accept base64 (image/audio) get a 10MB JSON parser
+//     mounted BEFORE the global parser. Express middleware skips re-parsing
+//     once req.body is set, so these requests are parsed exactly once at the
+//     higher limit. Frontend compresses images to 1200px @ 0.80 quality
+//     (~130-670KB base64 typical); 10MB is generous headroom.
+//   - All other routes use the global 1MB parser. Tight enough to close the
+//     DoS vector the previous 50MB setting created (unauthenticated POSTs
+//     would accept arbitrary 50MB payloads); generous enough for typical
+//     JSON CRUD payloads (<<100KB).
+//
+// Nginx fronts production at client_max_body_size 20M — these Express limits
+// are defense-in-depth, and they govern non-Cloudflare environments (dev,
+// future deploys, anyone bypassing the proxy).
+//
+// 413 responses are caught and converted to JSON by the dedicated handler
+// at the end of this file (before the Sentry error middleware).
+
+// AI base64 routes — must be registered BEFORE the global 1MB parser
+app.use('/api/ai/analyze-image', express.json({ limit: '10mb' }));
+app.use('/api/ai/transcribe-voice', express.json({ limit: '10mb' }));
+
+// Global default
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
@@ -155,6 +205,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/ask-nearby', askNearbyRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/account', accountRoutes);
 app.use('/api', landingPublicRoutes);
 app.use('/api/admin', landingAdminRoutes);
 app.use('/api/complaints', complaintRoutes);
@@ -164,22 +215,29 @@ app.use('/api/app-settings', settingsRoutes);
 
 // ── 8. Misc endpoints ─────────────────────────────────────────────────────────
 // NOTE: /api/auth/me is the correct endpoint (auth.routes.ts, uses authenticateAny for both app + admin cookies)
-app.post("/api/upload", authenticateToken, uploadLimiter, upload.single("file"), (req: any, res) => {
-  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
-  const url = getUploadedFileUrl(req.file);
-  res.json({ url });
-});
+app.post(
+  "/api/upload",
+  authenticateToken,
+  uploadLimiter,
+  upload.single("file"),
+  verifyAndPersistUpload,
+  (req: any, res) => {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const url = getUploadedFileUrl(req.file);
+    return res.json({ url });
+  },
+);
 
 // ── 9. Static landing page — served before Vite middleware so it bypasses the SPA ─
 app.get('/landing', (_req, res) => {
-  res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
+  return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
 // ── 9b. Admin panel — static files + SPA fallback ────────────────────────────
 const adminDistPath = path.resolve(process.cwd(), 'admin-panel', 'dist');
 app.use('/admin-panel', express.static(adminDistPath));
 app.get('/admin-panel/*splat', (_req, res) => {
-  res.sendFile(path.join(adminDistPath, 'index.html'));
+  return res.sendFile(path.join(adminDistPath, 'index.html'));
 });
 
 // ── 10. Debug/test routes (dev only) ──────────────────────────────────────────────
@@ -189,6 +247,90 @@ if (process.env.NODE_ENV !== "production") {
   });
   logger.info("Debug route /api/debug-sentry enabled (dev only)");
 }
+
+// ── 11a. Multer error handler (Day 3 / Session 89 / Subtask 3.3) ──────────────
+// Multer throws MulterError (with `code` like LIMIT_FILE_SIZE) and custom
+// fileFilter rejections throw plain Error with `code` we attached
+// (INVALID_MIME, INVALID_FILENAME). None of these set `err.status`, so the
+// 413 handler below would miss them. Map each to the right HTTP shape.
+//
+// Rule A: every response is JSON. Rule B: every rejection branch logs via pino.
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Day 2.6 Item 3: structured-log correlation fields (req.user is set by
+  // authenticateToken / authenticateAdminToken earlier in the chain, before
+  // Multer runs, so it's available even though we're in an error handler).
+  const userId = (req as any).user?.userId ?? null;
+  const route = req.originalUrl;
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      logger.warn(
+        { event: 'upload.rejected.size', userId, route, code: err.code, field: err.field },
+        "Multer: file size limit exceeded",
+      );
+      return res.status(413).json({
+        error: "File too large",
+        code: "FILE_TOO_LARGE",
+        limit: FILE_SIZE_LIMIT_BYTES,
+      });
+    }
+    if (err.code === "LIMIT_UNEXPECTED_FILE") {
+      logger.warn(
+        { event: 'upload.rejected.field', userId, route, code: err.code, field: err.field },
+        "Multer: unexpected file field",
+      );
+      return res.status(400).json({ error: "Unexpected file field", code: "UNEXPECTED_FIELD" });
+    }
+    logger.warn(
+      { event: 'upload.rejected.multer_other', userId, route, code: err.code, message: err.message },
+      "Multer error (generic)",
+    );
+    return res.status(400).json({ error: err.message, code: "UPLOAD_ERROR" });
+  }
+  // Custom errors raised from fileFilter (plain Error + .code we set)
+  if (err && err.code === "INVALID_MIME") {
+    logger.warn(
+      { event: 'upload.rejected.mime_claim', userId, route, code: 'INVALID_MIME', message: err.message },
+      "Upload rejected: claimed MIME not in whitelist",
+    );
+    return res.status(415).json({ error: "File type not allowed", code: "INVALID_MIME" });
+  }
+  if (err && err.code === "INVALID_FILENAME") {
+    logger.warn(
+      { event: 'upload.rejected.filename', userId, route, code: 'INVALID_FILENAME', message: err.message },
+      "Upload rejected: filename sanitization",
+    );
+    return res.status(400).json({ error: err.message, code: "INVALID_FILENAME" });
+  }
+  return next(err);
+});
+
+// ── 11b. Payload-too-large handler (Day 3 / Session 89 / Subtask 3.2) ─────────
+// body-parser throws PayloadTooLargeError with type='entity.too.large' and
+// status=413 when a request body exceeds the configured limit. Without this
+// handler, the error falls through to fallthroughErrorHandler which returns
+// plain text "Internal Server Error\n" — a Rule A violation (API routes must
+// return JSON) and a 500 misclassification of what's really a 413.
+//
+// This handler MUST be registered before Sentry.setupExpressErrorHandler so
+// it can short-circuit the 413 case as a user-facing response, not as an
+// alertable error. Other errors fall through via `next(err)` and reach Sentry.
+//
+// Rule B: logger.warn with structured context — never silent.
+app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err && (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413)) {
+    logger.warn(
+      { type: err.type, limit: err.limit, length: err.length, message: err.message },
+      'Payload too large rejected at body-parser',
+    );
+    return res.status(413).json({
+      error: 'Payload too large',
+      code: 'PAYLOAD_TOO_LARGE',
+      limit: err.limit,
+    });
+  }
+  return next(err);
+});
 
 // ── 12. Sentry error handler — must be BEFORE any other error middleware ──────
 Sentry.setupExpressErrorHandler(app);

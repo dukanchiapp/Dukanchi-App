@@ -7,6 +7,7 @@ import {
 import ImageCropper from '../ImageCropper';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
+import { captureEvent } from '../../lib/posthog';
 
 interface PostsGridProps {
   sortedPosts: any[];
@@ -154,7 +155,6 @@ export function PostsGrid({
   const compressImageToBase64 = async (url: string): Promise<{ base64: string; mimeType: string }> => {
     const res = await fetch(url);
     const blob = await res.blob();
-    const mimeType = blob.type || 'image/jpeg';
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -192,6 +192,8 @@ export function PostsGrid({
       if (data.caption) setNewPostCaption(data.caption);
       if (data.suggestedPrice) setNewPostPrice(String(data.suggestedPrice));
       if (data.productName || data.category) setAiSuggestion({ productName: data.productName || '', category: data.category || '' });
+      // PostHog: ai_feature_used (photo→post). Only success path.
+      captureEvent('ai_feature_used', { feature: 'photo_to_post', has_caption: !!data.caption });
     } catch {
       showToast('AI abhi available nahi, manually bharo', { type: 'error' });
     } finally {
@@ -219,6 +221,8 @@ export function PostsGrid({
       if (data.caption) setNewPostCaption(data.caption);
       if (data.price) setNewPostPrice(String(data.price));
       if (data.productName || data.category) setAiSuggestion({ productName: data.productName || '', category: data.category || '' });
+      // PostHog: ai_feature_used (voice→post). Only success path.
+      captureEvent('ai_feature_used', { feature: 'voice_to_post', has_caption: !!data.caption });
       showToast('Voice se capture hua — check karo', { type: 'success' });
     } catch {
       showToast('AI abhi available nahi, manually bharo', { type: 'error' });
@@ -262,6 +266,13 @@ export function PostsGrid({
       });
       if (res.ok) {
         const newPost = await res.json();
+        // PostHog: post_created (explicit user action, NOT the auto "welcome"
+        // post that RetailerDashboard creates on first-time store setup).
+        captureEvent('post_created', {
+          has_image: !!newPostImage,
+          has_price: !!newPostPrice,
+          caption_length: (newPostCaption || '').length,
+        });
         onPostsChange(prev => [newPost, ...prev]);
         setShowNewPostModal(false);
         setNewPostCaption(''); setNewPostImage(''); setNewPostPrice(''); setAiSuggestion(null);

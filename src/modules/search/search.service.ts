@@ -5,6 +5,7 @@ import { inferCategory } from "../../services/categoryInference";
 import { refreshVocabulary, correctSpelling, getSuggestions } from "../../services/fuzzySearch";
 import { generateEmbedding } from "../../services/geminiEmbeddings";
 import { env } from "../../config/env";
+import { visibleOwnerFilter } from "../../middlewares/user-status";
 
 export class SearchService {
   static async performStandardSearch(searchStr: string, allowedRoles: string[]) {
@@ -32,7 +33,7 @@ export class SearchService {
     let [products, stores] = await Promise.all([
       prisma.product.findMany({
         where: {
-          store: { owner: { role: { in: allowedRoles } }, ...storeCatFilter },
+          store: { owner: visibleOwnerFilter(allowedRoles), ...storeCatFilter },
           OR: searchConditions,
         },
         select: {
@@ -51,7 +52,7 @@ export class SearchService {
       }),
       prisma.store.findMany({
         where: {
-          owner: { role: { in: allowedRoles } },
+          owner: visibleOwnerFilter(allowedRoles),
           OR: [
             { storeName: { contains: searchStr, mode: 'insensitive' } },
             { category: { contains: searchStr, mode: 'insensitive' } },
@@ -91,7 +92,7 @@ export class SearchService {
           const semanticProducts = await prisma.product.findMany({
             where: {
               id: { in: semanticProductIds.map(p => p.id) },
-              store: { owner: { role: { in: allowedRoles } } },
+              store: { owner: visibleOwnerFilter(allowedRoles) },
             },
             select: {
               id: true, productName: true, brand: true, category: true, price: true,
@@ -124,7 +125,7 @@ export class SearchService {
     const storeIdsFromProducts = [...new Set((products as any[]).map(p => p.storeId))].filter(id => !existingStoreIds.has(id));
     if (storeIdsFromProducts.length > 0) {
       const extraStores = await prisma.store.findMany({
-        where: { id: { in: storeIdsFromProducts }, owner: { role: { in: allowedRoles } } },
+        where: { id: { in: storeIdsFromProducts }, owner: visibleOwnerFilter(allowedRoles) },
         include: { owner: { select: { role: true, id: true } } },
         orderBy: { averageRating: 'desc' },
       });
@@ -133,6 +134,15 @@ export class SearchService {
 
     console.log(`[SEARCH standard] q="${searchStr}" → ${products.length} products, ${stores.length} stores (${storeIdsFromProducts.length} lifted from products)`);
     const result = { products, stores, source };
+    // Cache TTL 60s — soft-delete visibility may lag up to 60s in search
+    // results (a retailer who deletes their account may still appear in
+    // search hits cached just before the delete). Matches the userStatus
+    // cache TTL pattern in user-status.ts. Trade-off accepted (Step 6 /
+    // Session 88): invalidating all search cache keys on /delete would
+    // require tracking which keys mention which users — prohibitively
+    // expensive vs the slight staleness window.
+    // NOTE: silent-catch below is on the cache write (fire-and-forget) —
+    // queued for Step 7 silent-catch cleanup along with S4.
     pubClient.set(searchCacheKey, JSON.stringify(result), { EX: 60 }).catch(() => {});
     return result;
   }
@@ -150,6 +160,7 @@ export class SearchService {
     let detectedCategory: string | null = null;
     if (env.GEMINI_API_KEY && env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
       try {
+        // 30s timeout — Subtask 3.5. Prevents pile-up if Gemini stalls.
         const geminiRes = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`, {
             method: 'POST',
@@ -161,11 +172,13 @@ export class SearchService {
                 }]
               }],
               generationConfig: { maxOutputTokens: 100, temperature: 0.1 }
-            })
+            }),
+            signal: AbortSignal.timeout(30_000),
           }
         );
         if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
+          type GeminiTextResp = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+          const geminiData = (await geminiRes.json()) as GeminiTextResp;
           const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
           const jsonMatch = text.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
@@ -201,7 +214,7 @@ export class SearchService {
       prisma.product.findMany({
         where: {
           store: {
-            owner: { role: { in: allowedRoles } },
+            owner: visibleOwnerFilter(allowedRoles),
             ...storeCategoryFilter,
           },
           OR: [
@@ -217,7 +230,7 @@ export class SearchService {
       }),
       prisma.store.findMany({
         where: {
-          owner: { role: { in: allowedRoles } },
+          owner: visibleOwnerFilter(allowedRoles),
           ...storeCategoryFilter,
           OR: [
             { storeName: { contains: searchStr, mode: 'insensitive' } },
@@ -238,7 +251,7 @@ export class SearchService {
       const [fallbackProducts, fallbackStores] = await Promise.all([
         prisma.product.findMany({
           where: {
-            store: { owner: { role: { in: allowedRoles } } },
+            store: { owner: visibleOwnerFilter(allowedRoles) },
             OR: [
               { productName: { contains: searchStr, mode: 'insensitive' } },
               { brand: { contains: searchStr, mode: 'insensitive' } },
@@ -252,7 +265,7 @@ export class SearchService {
         }),
         prisma.store.findMany({
           where: {
-            owner: { role: { in: allowedRoles } },
+            owner: visibleOwnerFilter(allowedRoles),
             OR: [
               { storeName: { contains: searchStr, mode: 'insensitive' } },
               { category: { contains: searchStr, mode: 'insensitive' } },
@@ -271,7 +284,7 @@ export class SearchService {
       let mergedFbStores: any[] = [...fallbackStores];
       if (fbExtraIds.length > 0) {
         const fbExtra = await prisma.store.findMany({
-          where: { id: { in: fbExtraIds }, owner: { role: { in: allowedRoles } } },
+          where: { id: { in: fbExtraIds }, owner: visibleOwnerFilter(allowedRoles) },
           include: { owner: { select: { role: true, id: true } } },
           orderBy: { averageRating: 'desc' },
         });
@@ -287,7 +300,7 @@ export class SearchService {
     let mergedStores: any[] = [...stores];
     if (extraStoreIds.length > 0) {
       const extraStores = await prisma.store.findMany({
-        where: { id: { in: extraStoreIds }, owner: { role: { in: allowedRoles } } },
+        where: { id: { in: extraStoreIds }, owner: visibleOwnerFilter(allowedRoles) },
         include: { owner: { select: { role: true, id: true } } },
         orderBy: { averageRating: 'desc' },
       });

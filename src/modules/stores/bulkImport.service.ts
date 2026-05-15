@@ -1,9 +1,45 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { Readable } from 'stream';
 import { prisma } from '../../config/prisma';
 import { pubClient } from '../../config/redis';
 import { embedProductBatch } from '../../services/geminiEmbeddings';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
+
+// ── exceljs cell-value normalization helper ────────────────────────────────
+// exceljs returns cell.value as a discriminated union — strings, numbers,
+// Date objects, { formula, result } for formula cells, { richText } for
+// rich text, hyperlinks, etc. The bulk-import use case treats everything
+// as trimmed text, so normalize at the boundary.
+function stringifyCellValue(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (typeof v === 'string') return v.trim();
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v).trim();
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'object') {
+    const obj = v as Record<string, unknown>;
+    // Formula cell: { formula, result }
+    if ('result' in obj) return stringifyCellValue(obj.result);
+    // Rich text: { richText: [{ text, font }, ...] }
+    if ('richText' in obj && Array.isArray(obj.richText)) {
+      return (obj.richText as Array<{ text?: string }>)
+        .map((r) => r.text ?? '')
+        .join('')
+        .trim();
+    }
+    // Hyperlink: { text, hyperlink }
+    if ('text' in obj) return String(obj.text ?? '').trim();
+  }
+  return String(v).trim();
+}
+
+// ── File-format detection from buffer ──────────────────────────────────────
+// xlsx files are ZIP archives → start with "PK" magic bytes (0x50 0x4B).
+// Anything else is treated as CSV (multer filter already rejects non-.xlsx
+// /.csv at the route layer, so this is just a routing helper).
+function isXlsxBuffer(buf: Buffer): boolean {
+  return buf.length >= 2 && buf[0] === 0x50 && buf[1] === 0x4b;
+}
 
 export interface ColumnMapping {
   productName: string;
@@ -26,36 +62,71 @@ const rateLimitKey = (storeId: string) =>
   `bulk_import:${storeId}:${new Date().toISOString().slice(0, 10)}`;
 
 export class BulkImportService {
-  static parseExcelFile(buffer: Buffer): { headers: string[]; rows: Record<string, any>[] } {
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) throw new Error('Excel file has no sheets');
+  /**
+   * Parse an uploaded .xlsx or .csv buffer into headers + rows.
+   *
+   * Day 6 Phase 2 / Session 93: replaced sheetjs (xlsx) with exceljs to
+   * close 1 HIGH-severity advisory (Prototype Pollution + ReDoS in xlsx,
+   * no fix available from upstream). exceljs is async — caller in
+   * store.controller.ts:219 must `await` the result.
+   *
+   * Format auto-detected from buffer magic bytes (xlsx is a ZIP archive
+   * starting with "PK"). Multer filter at store.routes.ts:15 already
+   * restricts to .xlsx / .csv at upload time (Day 6 Phase 2 dropped
+   * .xls — exceljs doesn't support the legacy binary format).
+   */
+  static async parseExcelFile(
+    buffer: Buffer,
+  ): Promise<{ headers: string[]; rows: Record<string, any>[] }> {
+    const workbook = new ExcelJS.Workbook();
 
-    const sheet = workbook.Sheets[sheetName];
-    const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-
-    if (rawRows.length < 2) throw new Error('File must have a header row and at least one data row');
-
-    const headers = (rawRows[0] as any[])
-      .map(h => String(h).trim())
-      .filter(Boolean);
-    if (!headers.length) throw new Error('No column headers found in the first row');
-
-    const dataRows = rawRows.slice(1).filter(row =>
-      row.some((cell: any) => String(cell).trim())
-    );
-
-    if (dataRows.length > MAX_ROWS) {
-      throw new Error(`Max ${MAX_ROWS} rows per upload. Your file has ${dataRows.length} rows.`);
+    if (isXlsxBuffer(buffer)) {
+      await workbook.xlsx.load(buffer);
+    } else {
+      // CSV path — exceljs csv reader expects a Readable stream.
+      const stream = Readable.from(buffer);
+      await workbook.csv.read(stream);
     }
 
-    const rows = dataRows.map(row => {
+    const sheet = workbook.worksheets[0];
+    if (!sheet) throw new Error('Excel file has no sheets');
+
+    // exceljs row.values is 1-indexed (index 0 is undefined as a placeholder),
+    // so .slice(1) drops the leading undefined to align with column index 0.
+    const headerRow = sheet.getRow(1);
+    if (!headerRow || headerRow.cellCount === 0) {
+      throw new Error('File must have a header row and at least one data row');
+    }
+    const headerValues = (headerRow.values as unknown[]).slice(1);
+    const headers = headerValues.map((v) => stringifyCellValue(v)).filter(Boolean);
+    if (!headers.length) {
+      throw new Error('No column headers found in the first row');
+    }
+
+    // Collect data rows (skip empty rows; cap at MAX_ROWS).
+    const rows: Record<string, any>[] = [];
+    let dataRowCount = 0;
+    sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return; // header
+      const values = (row.values as unknown[]).slice(1);
+      // Skip rows where every cell is blank after stringify
+      const hasContent = values.some((v) => stringifyCellValue(v) !== '');
+      if (!hasContent) return;
+      dataRowCount++;
+      if (dataRowCount > MAX_ROWS) return; // we throw outside the loop
       const obj: Record<string, any> = {};
       headers.forEach((h, i) => {
-        obj[h] = row[i] !== undefined ? String(row[i]).trim() : '';
+        obj[h] = stringifyCellValue(values[i]);
       });
-      return obj;
+      rows.push(obj);
     });
+
+    if (dataRowCount === 0) {
+      throw new Error('File must have a header row and at least one data row');
+    }
+    if (dataRowCount > MAX_ROWS) {
+      throw new Error(`Max ${MAX_ROWS} rows per upload. Your file has ${dataRowCount} rows.`);
+    }
 
     return { headers, rows };
   }
@@ -75,16 +146,19 @@ Return ONLY a valid JSON object. No markdown, no explanation.
 Example: {"productName":"Item Name","price":"MRP","category":"Category"}
 If a field cannot be mapped, omit it. productName must always be included.`;
 
+      // 30s timeout — Subtask 3.5. Bulk-import column mapping must not hang.
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+          signal: AbortSignal.timeout(30_000),
         }
       );
 
-      const data = await res.json();
+      type GeminiTextResp = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+      const data = (await res.json()) as GeminiTextResp;
       const text: string = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error('No JSON in Gemini response');

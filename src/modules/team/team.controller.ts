@@ -9,10 +9,10 @@ export class TeamController {
       const teamMemberId = (req as any).user.teamMemberId;
 
       const members = await TeamService.getTeamMembers(storeId, userId, teamMemberId);
-      res.json(members);
+      return res.json(members);
     } catch (error: any) {
       if (error.message === "Only the owner can manage the team") return res.status(403).json({ error: error.message });
-      res.status(500).json({ error: "Failed to fetch team members" });
+      return res.status(500).json({ error: "Failed to fetch team members" });
     }
   }
 
@@ -22,7 +22,7 @@ export class TeamController {
       const teamMemberId = (req as any).user.teamMemberId;
 
       const member = await TeamService.addTeamMember(req.body, userId, teamMemberId);
-      res.json(member);
+      return res.json(member);
     } catch (error: any) {
       if (error.message === "Only the owner can add team members") return res.status(403).json({ error: error.message });
       if (error.message === "Phone and password are required") return res.status(400).json({ error: error.message });
@@ -31,7 +31,7 @@ export class TeamController {
       if (error.message === "A team member with this phone number already exists" || error.code === 'P2002') {
         return res.status(400).json({ error: "Phone number already in use" });
       }
-      res.status(500).json({ error: "Failed to add team member" });
+      return res.status(500).json({ error: "Failed to add team member" });
     }
   }
 
@@ -41,12 +41,12 @@ export class TeamController {
       const teamMemberId = (req as any).user.teamMemberId;
 
       const result = await TeamService.removeTeamMember(req.params.id, userId, teamMemberId);
-      res.json(result);
+      return res.json(result);
     } catch (error: any) {
       if (error.message === "Team members cannot remove other members") return res.status(403).json({ error: error.message });
       if (error.message === "Team member not found") return res.status(404).json({ error: error.message });
       if (error.message === "Only the owner can remove team members") return res.status(403).json({ error: error.message });
-      res.status(500).json({ error: "Failed to remove team member" });
+      return res.status(500).json({ error: "Failed to remove team member" });
     }
   }
 }

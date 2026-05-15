@@ -2,6 +2,9 @@ node_modules/
 build/
 dist/
 coverage/
+*.tsbuildinfo
+typecheck-web.txt
+typecheck-server.txt
 .DS_Store
 *.log
 .env*
@@ -18,3 +21,20 @@ test-postgres.mjs
 android/local.properties
 android/app/release/
 android/app/debug/
+
+# Firebase / Google Services (contains API keys)
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+**/google-services.json
+**/GoogleService-Info.plist
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.tsbuildinfo
+typecheck-errors.txt
+
+# Local forensic snapshots (Session 88 incident response, etc.) — never committed
+temp/

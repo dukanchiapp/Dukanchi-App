@@ -18,10 +18,13 @@ export class MiscService {
 
   static async getStoreReviews(storeId: string, page: number, limit: number) {
     const skip = (page - 1) * limit;
+    // Day 2.5 / D2 anonymize: reviews from deleted users stay visible (the
+    // content is public-value; only the author's identity needs hiding).
+    // Backend exposes deletedAt; frontend renders "Deleted user" when set.
     const [reviews, total] = await Promise.all([
       prisma.review.findMany({
         where: { storeId },
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { select: { id: true, name: true, deletedAt: true } } },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -33,10 +36,11 @@ export class MiscService {
 
   static async getProductReviews(productId: string, page: number, limit: number) {
     const skip = (page - 1) * limit;
+    // Day 2.5 / D2 anonymize — same policy as getStoreReviews.
     const [reviews, total] = await Promise.all([
       prisma.review.findMany({
         where: { productId },
-        include: { user: { select: { id: true, name: true } } },
+        include: { user: { select: { id: true, name: true, deletedAt: true } } },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,

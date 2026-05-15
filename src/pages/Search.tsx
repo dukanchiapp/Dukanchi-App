@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, Mic, ArrowUpRight, ChevronRight } from 'lucide-react';
+import { Search as SearchIcon, Filter, MapPin, Store, X, SlidersHorizontal, Navigation, Clock, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppHeader from '../components/AppHeader';
 import { useAuth } from '../context/AuthContext';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
-import { useUserLocation, reverseGeocode } from '../context/LocationContext';
+import { useUserLocation } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import { apiFetch } from '../lib/api';
+import { captureEvent } from '../lib/posthog';
 
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { StoreCardSkeleton } from '../components/Skeleton';
@@ -150,12 +151,19 @@ export default function SearchPage() {
     apiFetch(`/api/search/ai?q=${encodeURIComponent(debouncedQuery)}`)
       .then(res => (res.ok ? res.json() : { products: [], stores: [] }))
       .then(data => {
-        setResults({
-          products: Array.isArray(data.products) ? data.products : [],
-          stores: Array.isArray(data.stores) ? data.stores : [],
-        });
+        const products = Array.isArray(data.products) ? data.products : [];
+        const stores = Array.isArray(data.stores) ? data.stores : [];
+        setResults({ products, stores });
         setCorrectedQuery(data.correctedQuery || null);
         setLoading(false);
+        // PostHog: search_performed — capture metrics ONLY, not the query text
+        // (privacy: search queries may contain PII like phone numbers, addresses).
+        captureEvent('search_performed', {
+          query_length: debouncedQuery.length,
+          products_count: products.length,
+          stores_count: stores.length,
+          had_correction: !!data.correctedQuery,
+        });
       })
       .catch(() => setLoading(false));
   }, [debouncedQuery]);

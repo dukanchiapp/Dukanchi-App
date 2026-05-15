@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { AdminController } from "./admin.controller";
 import { authenticateAdminToken, requireAdmin } from "../../middlewares/auth.middleware";
-import { upload } from "../../middlewares/upload.middleware";
+import { upload, verifyAndPersistUpload } from "../../middlewares/upload.middleware";
+import { uploadLimiter } from "../../middlewares/rate-limiter.middleware";
 
 const router = Router();
 
@@ -32,7 +33,18 @@ router.get("/chats/history", authenticateAdminToken, requireAdmin, AdminControll
 
 router.get("/settings", authenticateAdminToken, requireAdmin, AdminController.getSettings);
 router.put("/settings", authenticateAdminToken, requireAdmin, AdminController.updateSettings);
-router.post("/settings/upload", authenticateAdminToken, requireAdmin, upload.single("image"), AdminController.uploadSettingsImage);
+router.post(
+  "/settings/upload",
+  authenticateAdminToken,
+  requireAdmin,
+  // Day 2.6 Item 2: uploadLimiter (10/min Redis-backed) — admin already has
+  // strong auth, but if an admin cookie ever leaks, this caps damage at
+  // 10 uploads/min instead of 300 (generalLimiter ceiling).
+  uploadLimiter,
+  upload.single("image"),
+  verifyAndPersistUpload,
+  AdminController.uploadSettingsImage,
+);
 
 router.get("/complaints", authenticateAdminToken, requireAdmin, AdminController.getComplaints);
 router.put("/complaints/:id", authenticateAdminToken, requireAdmin, AdminController.updateComplaint);

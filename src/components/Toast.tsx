@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -19,6 +19,7 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
       const timer = setTimeout(onClose, 5000);
       return () => clearTimeout(timer);
     }
+    return;
   }, [onClose, confirm]);
 
   const icons = {
