@@ -6,6 +6,89 @@
 
 ---
 
+## 2026-05-16 — Session 95 — Hardening Sprint Day 8: Atomic Merge + Production Verification (SPRINT CLOSED)
+
+**Goal:** Atomically merge the 60-commit `hardening/sprint` branch into `main`, deploy to production via Railway, verify with the Rule E smoke battery + Sentry release verification. Final day of the 8-day Hardening Sprint.
+
+**Status:** **DAY 8 COMPLETE — HARDENING SPRINT CLOSED.** 60 commits + 1 merge commit landed on `main` in a single `--no-ff` atomic merge. Production HEAD advanced `32f5525 → 28a5614`. **Zero customer-facing downtime** — Railway auto-rollback held production on the old HEAD through a first-deploy healthcheck failure (missing `JWT_REFRESH_SECRET` env var), which was fixed and redeployed clean.
+
+**Production runtime CHANGED (first time this sprint).** `origin/main` HEAD `32f5525` → `28a5614`. All Days 1–7 hardening work is now live in production.
+
+> Session window: started 2026-05-15 late evening, completed early hours 2026-05-16.
+
+---
+
+### 1. Pre-Flight Actions (4 user manual actions — all completed via dashboards)
+
+- ✅ **Branch protection on `main`** — classic rule, no force-push, no deletion
+- ✅ **`CODECOV_TOKEN`** added to GitHub Actions secrets
+- ✅ **UptimeRobot monitor** for `/health` — 5-min interval, US West region
+- ✅ **Sentry secrets** added to GitHub Actions + Railway:
+  - `SENTRY_AUTH_TOKEN` (scopes: project:read, project:releases, org:read)
+  - `SENTRY_ORG = dukanchi`
+  - `SENTRY_PROJECT = node-express`
+
+### 2. Atomic Merge
+
+- Command: `git merge hardening/sprint --no-ff`
+- Merge commit SHA: **`28a5614`** — `feat: Hardening Sprint atomic merge — Days 1-8 (60 commits)`
+- Files changed: **127** (79 modified + 48 added)
+- Lines: **+15,421 / −2,006**
+- Husky pre-push hook ran `typecheck:web` + `typecheck:server` — **0 errors**
+- Conflict-free (`ort` strategy — `main` had zero commits since the branch point)
+- Push: `32f5525..28a5614  main -> main` — branch protection did not block the owner direct-push
+
+### 3. Crisis + Fix — first-deploy healthcheck failure
+
+- **First deploy attempt:** failed healthcheck after 4:13 (Docker build OK, Sentry init OK)
+- **Root cause:** `JWT_REFRESH_SECRET` env var missing on Railway. The strict env validation added during earlier hardening (Day 5 / Session 92 — `env.ts` post-parse guard) kicked in on this deploy and hard-failed boot.
+- **Log signal (clear, unambiguous):** `❌ JWT_REFRESH_SECRET must be set to a production value (≥32 chars)`
+- **Fix:** `openssl rand -base64 48` → value added to Railway env vars
+- **Second deploy:** SUCCESS (~5 min after env var added)
+- **Zero downtime:** Railway auto-rollback held production on `32f5525` throughout the failed-deploy window — customers never saw a broken state
+- **Verdict:** the strict-env guard worked **exactly as designed** — it caught a missing-secret misconfiguration that, under pre-hardening code, would have booted silently on a dev-fallback secret (a real security vulnerability)
+
+### 4. Smoke Battery (Rule E — 5 production curls against https://dukanchi.com)
+
+| # | Check | Result |
+|---|---|---|
+| 1 | `GET /health` status + timing | ✅ 200, 1.46s |
+| 2 | `GET /health` body | ✅ `{"status":"ok"}` valid JSON |
+| 3 | `POST /api/auth/login` invalid payload | ✅ 400 Zod validation (NOT 500) |
+| 4 | `GET /api/posts` no auth | ✅ 401 "Access denied" |
+| 5 | `GET /` SPA root | ✅ 200, `last-modified` matches deploy time, helmet + HSTS headers present |
+
+All 5 endpoints healthy. Curl 3 returned 400 (not 401) because the smoke-script payload used `otp` where the schema requires `password` — the endpoint is healthy and rejecting bad input gracefully (see Finding 2).
+
+### 5. Verification (manual via dashboards)
+
+- ✅ **Sentry release `28a5614f591e`** — 333 files, 86 source maps uploaded, 100% crash-free
+- ✅ **UptimeRobot** — zero downtime through the entire ~8-hour session; 100% uptime maintained
+- ✅ Production endpoints all serving merged code (verified via `last-modified` header timestamp)
+
+### 6. Deviations / Findings
+
+1. **`ALLOWED_ORIGINS` env still leads with `http://localhost:3000`** (dev default) on production. P3 hygiene — harmless for same-origin browser traffic; pre-existing config, not introduced by this merge.
+2. **Smoke-script Curl 3 used the wrong payload** (`otp` vs `password`) — Dukanchi login schema is `phone` + `password` only. RUNBOOK §6 smoke script needs the corrected payload.
+3. **`CODECOV_TOKEN` was visible in a screenshot** during Pre-Flight Action 2 — rotate the token within 24h as post-Day-8 hygiene.
+4. **`JWT_REFRESH_SECRET` strict validation worked exactly as designed** — caught a missing-env-var that would have been a silent security vulnerability under pre-hardening code. Positive finding, not a defect.
+
+### 7. Post-Day-8 TODOs (priority order)
+
+- **P1** — Rotate `CODECOV_TOKEN` (24h hygiene from screenshot exposure)
+- **P2** — Update RUNBOOK §6 smoke script — Curl 3 payload (`password`, not `otp`)
+- **P3** — `ALLOWED_ORIGINS` env cleanup (remove `localhost:3000` from prod)
+- **P3** — Add CI status checks to the branch protection rule (now that `ci` runs on `main`)
+
+### Sprint Close
+
+- **Time elapsed:** ~8 hours (Day 7 carry-over + Day 8 pre-flight + crisis debug + closure)
+- **Hardening Sprint Days 1–8: COMPLETE.** 11 working days (1, 2, 2.5, 3, 2.6, 4, 2.7, 5, 5.1, 6, 7) of hardening, atomically shipped Day 8.
+- **Production runtime:** `28a5614` — advanced from the `32f5525` baseline held since Session 85 / Day 0.
+- **Day 8 OFFICIALLY CLOSED.**
+
+---
+
 ## 2026-05-14 — Session 94 — Hardening Sprint Day 7: Deploy Hardening + Coverage Foundation (5 phases shipped)
 
 **Goal:** Land Day 7 of the Hardening Sprint — close the 5 findings from the Day 7 pre-flight audit, advance test coverage, fix admin-panel dev workflow, set up ESLint + Prettier. Pure infrastructure + tests session; production runtime unchanged.

@@ -1,19 +1,42 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-14 | Session 94 closed | Branch: hardening/sprint @ Day 7 head (5 commits this session, all pushed, all CI green; 60 commits ahead of main) | Prod runs main @ 32f5525
+> Last updated: 2026-05-16 | Session 95 closed | **Hardening Sprint Days 1-8 COMPLETE** — atomically merged to main + deployed | Prod runs main @ 28a5614
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Production State
 - **URL:** https://dukanchi.com (Cloudflare proxied, SSL Full Strict, TLS 1.2 min)
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
-- **Production code:** running `origin/main` HEAD `32f5525` (Session 85 — Sentry production-grade)
-- **Production DB schema:** Day 2 migrations APPLIED via `psql -f` (Session 87) — User soft-delete cols + Store GIST index + Product HNSW index + cube/earthdistance extensions live. **Additive schema, safe with older code.**
-- **Production application code is BEHIND the schema**: Session 85 code doesn't reference any of Day 2's new columns/indexes. Intentional state until Day 8 atomic merge.
+- **Production code:** running `origin/main` HEAD `28a5614` (Session 95 — Hardening Sprint atomic merge, Days 1-8)
+- **Production DB schema:** Day 2 migrations APPLIED via `psql -f` (Session 87) — User soft-delete cols + Store GIST index + Product HNSW index + cube/earthdistance extensions live.
+- **Code ↔ schema ALIGNED** ✅ — Day 8 atomic merge (`28a5614`) brought production application code up to the Day 2 schema. The intentional schema-ahead-of-code gap held since Session 87 is now closed.
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
 - **B2B2C visibility:** Fully spec-compliant ✅ (Session 76)
 
-## Hardening sprint code (on `hardening/sprint`, NOT yet on production)
+## Day 8 — Atomic Merge & Production Verification (Session 95)
+
+**Merge:** `28a5614` — `hardening/sprint` → `main` via `git merge --no-ff`, 60 commits, conflict-free (`ort`). 127 files (79 modified + 48 added), +15,421 / −2,006. Husky pre-push typecheck 0 errors.
+
+**Crisis handled:** first deploy failed healthcheck (4:13) — `JWT_REFRESH_SECRET` missing on Railway; the Day 5 strict-env guard hard-failed boot **exactly as designed**. Fixed via `openssl rand -base64 48` → Railway env. Second deploy SUCCESS. Railway auto-rollback held prod on `32f5525` throughout — **zero customer-facing downtime**.
+
+### Pre-Flight Infrastructure — all DONE ✅
+- ✅ **Branch protection on `main`** — ACTIVE (classic rule, no force-push, no deletion)
+- ✅ **`CODECOV_TOKEN`** — added to GitHub Actions secrets
+- ✅ **UptimeRobot** — monitoring `/health` (5-min interval, US West)
+- ✅ **Sentry full stack live** — DSN runtime + `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` (`dukanchi`) / `SENTRY_PROJECT` (`node-express`) in GitHub Actions + Railway
+
+### Production Verification — PASSED ✅
+- ✅ **Rule E smoke battery 5/5 GREEN** — `/health` 200 (1.46s), health body valid JSON, `POST /api/auth/login` 400 Zod-validation (not 500), `GET /api/posts` 401 "Access denied", `GET /` SPA 200 + helmet + HSTS headers
+- ✅ **Sentry release `28a5614f591e`** — 333 files, 86 source maps uploaded, 100% crash-free
+- ✅ **UptimeRobot** — zero downtime through the entire ~8-hour deploy window; 100% uptime maintained
+
+### Post-Day-8 TODOs (priority order)
+- **P1** — Rotate `CODECOV_TOKEN` within 24h (token visible in a screenshot during pre-flight Action 2)
+- **P2** — Update RUNBOOK §6 smoke script — Curl 3 payload uses `password`, not `otp` (login schema is phone + password only)
+- **P3** — `ALLOWED_ORIGINS` env cleanup — remove `http://localhost:3000` dev default from production
+- **P3** — Add CI status check (`ci`) to the `main` branch protection rule (now that `ci` runs on `main` post-merge)
+
+## Hardening Sprint — Days 1-8 COMPLETE (live on production @ `28a5614`)
 
 - **Day 1 (Session 86):** TypeScript strict mode + tsconfig split — 114 → 0 type errors ✅
 - **Day 2 (Session 87):** DB schema migrations + minimal `/api/account/{delete,restore}` endpoints ✅
@@ -80,14 +103,17 @@
   - **Metrics:** Tests 42 → **81** (+39, +93%). 5 CI runs all green. Typecheck 0 errors throughout. Branch advanced 54 → **60 ahead of `origin/main`**.
   - **All 5 Day 7 NDs closed** (ND-D7-1 through ND-D7-5). No new NDs surfaced. All 6 Q-D7 decisions approved with defaults.
 
-All Days 1+2+2.5+3+2.6+4+2.7+5+5.1+6+7 **committed AND pushed** to `origin/hardening/sprint`.
+- **Day 8 (Session 95):** Atomic Merge + Production Verification — **SPRINT CLOSED** ✅
+  - `28a5614` — `feat`: Hardening Sprint atomic merge — Days 1-8 (60 commits). Conflict-free `--no-ff` merge. 127 files, +15,421 / −2,006.
+  - Production HEAD `32f5525` → `28a5614` — first production runtime change of the entire sprint.
+  - First deploy hit a healthcheck failure (`JWT_REFRESH_SECRET` missing on Railway); the Day 5 strict-env guard caught it; fixed + redeployed in <5 min; zero downtime via Railway auto-rollback.
+  - Rule E smoke 5/5 GREEN; Sentry release `28a5614f591e` verified; UptimeRobot 100% uptime.
 
-Branch is **60 commits ahead of `origin/main`** (was 54 at start of Session 94; +5 phase commits + 1 closure commit = 6, all pushed).
+All Days 1–8 of the Hardening Sprint are **merged to `main` and live in production** (`28a5614`).
 
-## Active Sprint: Hardening Sprint (Days 1–7 of 8 — 95% complete)
+## Active Sprint: Hardening Sprint — Days 1-8 COMPLETE (100%) ✅
 
-**Branch:** `hardening/sprint` @ Day 6 head (all pushed)
-**Deploy plan:** **Day 8 atomic merge** `hardening/sprint` → `main` → Railway redeploy + full Rule E verification (RUNBOOK §6 checklist)
+**Status:** SPRINT CLOSED. `hardening/sprint` merged to `main` via atomic `--no-ff` merge (`28a5614`); production deployed + Rule E verified.
 
 | Day | Topic | Status |
 |---|---|---|
@@ -101,8 +127,8 @@ Branch is **60 commits ahead of `origin/main`** (was 54 at start of Session 94; 
 | 5 (Session 92) | Auth Refinements — access/refresh split, rotation, reuse detection, server-side logout, X-Refresh-Token header for native | ✅ Done, pushed |
 | 5.1 (Session 92.1) | Native APK live smoke — T1 validated on Vivo X200; +3 production fixes shipped; Rule G codified | ✅ Done, pushed |
 | 6 (Session 93) | Tooling & CI Foundation — GH Actions + Husky + Dependabot + coverage + bundle monitoring + xlsx→exceljs + README/RUNBOOK rewrite + Sentry/uptime docs + build guard | ✅ Done, pushed |
-| **7 (Session 94)** | **Deploy Hardening — R2 strategy correction + admin-panel port 5174 + ESLint v9 + Prettier + coverage ramp (42 → 81 tests; 4.30 → 7.26% statements)** | **✅ Done, pushed** |
-| 8 (Next) | Atomic merge to main + production deploy + Rule E verification + user manual actions (CODECOV_TOKEN / Sentry secrets / UptimeRobot / branch protection) | ⏳ Pending |
+| 7 (Session 94) | Deploy Hardening — R2 strategy correction + admin-panel port 5174 + ESLint v9 + Prettier + coverage ramp (42 → 81 tests; 4.30 → 7.26% statements) | ✅ Done, pushed |
+| **8 (Session 95)** | **Atomic merge `hardening/sprint` → `main` (60 commits, `28a5614`) + Railway deploy + Rule E smoke 5/5 + Sentry release verified + 4 pre-flight manual actions DONE** | **✅ Done, merged + LIVE** |
 
 **Path B decision (Session 87)** — Project has no `_prisma_migrations` table on prod or test. Migrations applied via `psql -f`. Baseline-then-track setup queued as **Day 2.7** dedicated session.
 
@@ -110,21 +136,16 @@ Branch is **60 commits ahead of `origin/main`** (was 54 at start of Session 94; 
 
 ## Next 3 Actions
 
-1. **Day 8 — Atomic merge + deploy (next session)** — all Day 7 work complete; ready to merge. **Pre-merge BLOCKERS (4 user manual actions, ~16 min total)** per RUNBOOK §6:
-   - Provision `CODECOV_TOKEN` (GitHub repo secret) — ~3 min via codecov.io OAuth
-   - Provision `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` + `SENTRY_PROJECT` in **both** Railway env + GitHub Actions secrets — ~5 min
-   - Sign up UptimeRobot + add `/health` 5-min monitor — ~5 min
-   - Branch protection rules on `main` — require PR + required check = `ci` + no force-push — ~3 min
+1. **Post-Day-8 hygiene** — see "Post-Day-8 TODOs" above. **P1 (rotate `CODECOV_TOKEN` within 24h) is time-sensitive**; P2/P3 are at-convenience.
 
-   Then atomic merge: `git checkout main && git merge hardening/sprint --no-ff && git push origin main` → Railway auto-redeploys (~6-8 min) → run Rule E 5-curl smoke battery (RUNBOOK §6) → confirm Sentry release tagged with Railway SHA + source maps readable → cleanup `temp/accidental-user-snapshot-*.json` after green deploy.
+2. **Day 8+ cleanup sweeps (now via PR per branch protection):**
+   - ESLint baseline cleanup (448 problems; 333 `no-explicit-any` primary) → promote CI lint to hard-gate after
+   - Prettier baseline cleanup (single `npm run format:fix`, 174 files, mechanical commit, no logic change)
+   - Coverage ramp continuation — service-layer unmock for posts/search/messages (+10-15pt) + frontend jsdom infra (+5-10pt)
 
-2. **Day 8+ atomic cleanup sweeps (parallel-mergeable post-Day-8):**
-   - ESLint baseline cleanup (333 `no-explicit-any` + 67 `no-unused-vars` etc.) → promote CI lint to hard-gate after
-   - Prettier baseline cleanup (single `npm run format:fix` touches 174 files; mechanical commit, no logic change)
-   - Service-layer unmock for posts/search/messages → estimated +10-15pt coverage
-   - Frontend test infra (jsdom + RTL) + 5-10 React page tests → estimated +5-10pt coverage
+3. **Phase 0.5 — God Tier Vision kickoff** — Week 1-2 Discovery v2 (voice + image search). Branch off fresh from `main` @ `28a5614`.
 
-3. **Post-deploy — Phase 0.5 God Tier Vision kickoff** — Week 1-2 Discovery v2 (voice + image search). Branch off fresh from `main` post-Day-8.
+> **Note:** `main` now has branch protection (require PR). All future merges go through PRs — the Day 8 atomic merge was the last direct push.
 
 ## Phase 0.5 — God Tier Vision (8 weeks, queued after Hardening Sprint)
 - Week 1-2: Discovery v2 — Voice + Image search
@@ -137,14 +158,14 @@ Branch is **60 commits ahead of `origin/main`** (was 54 at start of Session 94; 
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
 - [ ] Railway project still named "handsome-charm"
-- [ ] `hardening/sprint` is **60 commits ahead of `origin/main`** — intentional, merges at Day 8
+- [x] ~~`hardening/sprint` is 60 commits ahead of `origin/main`~~ ✅ MERGED at Day 8 (`28a5614`). Branch retained for now; can be archived once Day 8+ cleanup sweeps land.
 - [ ] **Day 5.2 — Bundled-mode Capacitor smoke** queued (~30 min). Build APK without server.url override (production-mirror mode); exercises cross-origin X-Refresh-Token CORS path on real device. Fills the Day 5.1 D20 gap (server.url smoke was same-origin, didn't directly test prod cross-origin path).
-- [ ] **Day 5 deploy pre-flight TODO**: Provision `JWT_REFRESH_SECRET` in Railway dashboard before Day 8 merge. Generate via `openssl rand -base64 48`. Server hard-fails boot in production if still using the dev fallback (env.ts post-parse guard, verified live in S7 smoke).
+- [x] ~~**Day 5 deploy pre-flight TODO**: Provision `JWT_REFRESH_SECRET` in Railway~~ ✅ DONE during Day 8 deploy. The `env.ts` strict guard hard-failed the first deploy boot (missing var) — **worked exactly as designed** — caught + fixed in <5 min via `openssl rand -base64 48`. Railway auto-rollback held prod on `32f5525`; zero downtime.
 - [ ] **Day 5.1 follow-up session**: Native (Capacitor) APK rebuild + manual test of silent-refresh flow on a real device. Backend + frontend code is 100% testable via mocks + curl, but the full native localStorage → X-Refresh-Token → retry round-trip needs a real device.
 - [ ] Neon test branch `hardening-day2-test` auto-expires May 19 — fine, served its purpose
-- [ ] Schema-ahead-of-code state on production — safe (additive Day 2 migrations) until Day 8
+- [x] ~~Schema-ahead-of-code state on production~~ ✅ RESOLVED — Day 8 atomic merge aligned production code with the Day 2 schema.
 - [ ] Day 2.7 (baseline `_prisma_migrations` table on prod + test coverage sprint) — separate focused session
-- [ ] `temp/accidental-user-snapshot-2026-05-12T13-26-19Z.json` — forensic record from Session 88 incident, gitignored, keep until Day 8 deploy success then `rm`
+- [ ] `temp/accidental-user-snapshot-2026-05-12T13-26-19Z.json` — forensic record from Session 88. Day 8 deploy succeeded → now eligible for `rm` (gitignored; cleanup at convenience).
 - [ ] Day 3 backlog flagged but deferred:
   - ~~Scope 3 upload extras~~ ✅ shipped in Day 2.6 / Session 89.5 (Items 2+3; Item 1 PDF whitelist documented as ND — no use case)
   - Admin password length floor 6 chars (admin.service.ts:70) → separate concern
