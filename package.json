@@ -109,7 +109,7 @@
     "autoprefixer": "^10.4.21",
     "canvas": "^3.2.3",
     "eslint": "^9.39.4",
-    "eslint-config-prettier": "^9.1.2",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
