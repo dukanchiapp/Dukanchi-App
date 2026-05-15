@@ -139,7 +139,7 @@ jobs:
           cache: 'npm'
 
       - name: Report compressed bundle size delta
-        uses: preactjs/compressed-size-action@v2
+        uses: preactjs/compressed-size-action@v3
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           # `npm run build` runs typecheck + build:web — same as CI gate above.
