@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Phone, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import DukanchiLogo from '../components/DukanchiLogo';
 import { apiFetch } from '../lib/api';
+import { FIcon, FLogo } from '../components/futuristic';
+
+/* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
+   View layer restyled to the deep-space glass system. The auth flow —
+   /api/auth/login call, token handling, login() + navigate — is verbatim. */
+
+const inputStyle: CSSProperties = {
+  width: '100%', padding: '12px 14px 12px 42px', fontSize: 13,
+  background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+  borderRadius: 12, color: 'var(--f-text-1)', fontFamily: 'inherit', outline: 'none',
+};
+
+const inputIcon: CSSProperties = {
+  position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+  display: 'flex', pointerEvents: 'none',
+};
 
 export default function LoginPage() {
   const [phone, setPhone] = useState('');
@@ -56,49 +71,47 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] relative overflow-hidden">
-      <div className="w-full max-w-md px-6 py-12 relative z-10">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
+    <div
+      className="f-bg-aurora"
+      style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}
+    >
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <div className="f-glass f-glass-edge" style={{ borderRadius: 28, padding: 32, background: 'var(--f-glass-bg)' }}>
 
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <DukanchiLogo />
-              <span className="text-xl font-bold tracking-tight text-gray-900">Dukanchi</span>
+          {/* Brand */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <FLogo size={40} />
+              <span className="f-display" style={{ fontSize: 22, color: 'var(--f-text-1)' }}>Dukanchi</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1.5">
-              Wapas aagaye!
-            </h1>
-            <p className="text-gray-500 text-sm">apna bazaar, apni dukaan</p>
+            <h1 className="f-display" style={{ fontSize: 26, color: 'var(--f-text-1)', margin: '0 0 6px' }}>Wapas aagaye!</h1>
+            <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: 0 }}>apna bazaar, apni dukaan</p>
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div className="space-y-4">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Phone size={20} />
-                </div>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ position: 'relative' }}>
+                <div style={inputIcon}><FIcon name="phone" size={18} color="var(--f-text-3)" /></div>
                 <input
                   type="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
                   placeholder="Phone number"
+                  style={inputStyle}
                 />
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={20} />
-                </div>
+              <div style={{ position: 'relative' }}>
+                <div style={inputIcon}><FIcon name="lock" size={18} color="var(--f-text-3)" /></div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
                   placeholder="Password"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -106,22 +119,27 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center bg-[#FF6B35] text-white font-medium py-3.5 rounded-full hover:bg-[#E85D2A] disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF6B35] transition-all duration-200 shadow-lg shadow-[#FF6B35]/20 group"
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: 13, borderRadius: 9999, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
+                background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
+                boxShadow: '0 0 24px rgba(255,107,53,0.40)', opacity: isLoading ? 0.7 : 1,
+              }}
             >
               {isLoading ? (
                 <>
-                  <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" />
+                  <span className="animate-spin" style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
                   Logging in...
                 </>
               ) : (
-                <>Log In <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" /></>
+                <>Log In <FIcon name="arrowR" size={18} color="white" /></>
               )}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-gray-600">
+          <p style={{ marginTop: 28, textAlign: 'center', fontSize: 13, color: 'var(--f-text-3)' }}>
             Don't have an account?{' '}
-            <Link to="/signup" className="font-semibold text-[#FF6B35] hover:text-[#E85D2A] transition-colors">
+            <Link to="/signup" style={{ fontWeight: 700, color: 'var(--f-orange-light)', textDecoration: 'none' }}>
               Sign up
             </Link>
           </p>

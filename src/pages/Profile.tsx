@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, Clock, Settings, LogOut, ChevronRight, History, Star, AlertTriangle, HelpCircle, Bookmark, UserCheck, Store } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import type { CSSProperties } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import KYCForm from '../components/KYCForm';
 import StarRating from '../components/StarRating';
 import { getStoreStatus } from '../lib/storeUtils';
@@ -14,6 +13,31 @@ import { StoreInfoCard } from '../components/profile/StoreInfoCard';
 import { PostsGrid } from '../components/profile/PostsGrid';
 import { ReviewsTab } from '../components/profile/ReviewsTab';
 import { apiFetch } from '../lib/api';
+import { FIcon } from '../components/futuristic';
+
+/* ── Futuristic v2 skin · Phase 8 / feat/futuristic-redesign ──
+   View layer restyled to the deep-space glass system. Store + KYC + posts +
+   reviews fetching, like/save/share handlers, and the new-post trigger are
+   all preserved verbatim from the production page. */
+
+const kycLogout: CSSProperties = {
+  marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+  background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--f-text-3)',
+  fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+};
+
+const kycPrimaryBtn: CSSProperties = {
+  width: '100%', padding: 15, borderRadius: 16, border: 'none', cursor: 'pointer',
+  background: 'var(--f-grad-primary)', color: 'white', fontSize: 15, fontWeight: 700,
+  fontFamily: 'inherit', boxShadow: '0 0 24px rgba(255,107,53,0.40)',
+};
+
+const coverFab: CSSProperties = {
+  width: 36, height: 36, borderRadius: 12, background: 'var(--f-fab-bg)',
+  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid var(--f-glass-border-2)', display: 'flex', alignItems: 'center',
+  justifyContent: 'center', cursor: 'pointer',
+};
 
 export default function ProfilePage() {
   usePageMeta({ title: 'My Profile' });
@@ -139,9 +163,11 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen" style={{ background: 'white' }}>
-        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
-          style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-bg-deep)' }}>
+        <div
+          className="animate-spin"
+          style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--f-glass-border-2)', borderTopColor: 'var(--f-magenta)' }}
+        />
       </div>
     );
   }
@@ -152,55 +178,108 @@ export default function ProfilePage() {
   // ── CUSTOMER PROFILE VIEW ──────────────────────────────────────────────────
   if (!isBusinessAccount) {
     return (
-      <div style={{ background: 'white', minHeight: '100vh', paddingBottom: 80 }}>
-        <div className="max-w-md mx-auto">
-          <div className="sticky top-0 z-20 px-4 pt-5 pb-3" style={{ background: 'white' }}>
-            <div className="flex items-center justify-between">
-              <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Profile</h1>
-              <div className="flex items-center gap-2">
-                <RefreshButton />
-                <NotificationBell />
-                <Link to="/settings"><Settings size={20} style={{ color: 'var(--dk-text-primary)' }} /></Link>
-              </div>
+      <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
+
+          {/* Header */}
+          <div style={{
+            position: 'sticky', top: 0, zIndex: 20, padding: '18px 16px 12px',
+            background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <h1 className="f-display" style={{ fontSize: 30, color: 'var(--f-text-1)', margin: 0 }}>Profile</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <RefreshButton />
+              <NotificationBell />
+              <Link to="/settings" style={coverFab} aria-label="Settings">
+                <FIcon name="settings" size={18} color="var(--f-text-1)" />
+              </Link>
             </div>
           </div>
-          <div className="px-4">
-            <div className="flex flex-col items-center py-6">
-              <div className="flex items-center justify-center mb-3 font-bold" style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--dk-accent)', color: 'white', fontSize: 32 }}>
+
+          <div style={{ padding: '0 16px' }}>
+            {/* Identity */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0' }}>
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 12, background: 'var(--f-grad-primary)', color: 'white', fontWeight: 800, fontSize: 32,
+                boxShadow: '0 0 28px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.30)',
+              }}>
                 {user?.name?.charAt(0)}
               </div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', marginBottom: 2 }}>{user?.name}</h2>
-              {user?.email && <p style={{ fontSize: 13, color: 'var(--dk-text-tertiary)' }}>{user.email}</p>}
-              <button onClick={() => navigate('/settings')} className="mt-4 px-6 py-2 rounded-full font-semibold text-sm" style={{ background: 'var(--dk-surface)', color: 'var(--dk-text-primary)', border: '0.5px solid var(--dk-border)' }}>
+              <h2 className="f-display" style={{ fontSize: 21, color: 'var(--f-text-1)', margin: '0 0 2px' }}>{user?.name}</h2>
+              {user?.email && <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: 0 }}>{user.email}</p>}
+              <button
+                onClick={() => navigate('/settings')}
+                className="f-glass"
+                style={{ marginTop: 16, padding: '8px 22px', borderRadius: 9999, background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
                 Edit Details
               </button>
             </div>
-            <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '0.5px solid var(--dk-border)', background: 'white' }}>
-              {[
-                { icon: <UserCheck size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Following Stores' },
-                { icon: <Bookmark size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Saved Posts & Stores' },
-                { icon: <MapPin size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Saved Locations' },
-                { icon: <History size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'Search History' },
-                { icon: <Star size={18} style={{ color: 'var(--dk-accent)' }} />, label: 'My Reviews' },
-              ].map((item, i, arr) => (
-                <div key={item.label} onClick={() => navigate('/settings')} className="flex items-center justify-between px-4 py-3.5 cursor-pointer" style={{ borderBottom: i < arr.length - 1 ? '0.5px solid var(--dk-border)' : 'none' }}>
-                  <div className="flex items-center gap-3">{item.icon}<span style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}>{item.label}</span></div>
-                  <ChevronRight size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+
+            {/* Menu — account */}
+            <div className="f-glass" style={{ borderRadius: 18, marginBottom: 12, background: 'var(--f-glass-bg)', overflow: 'hidden' }}>
+              {([
+                { icon: 'userCheck', label: 'Following Stores' },
+                { icon: 'bookmark', label: 'Saved Posts & Stores' },
+                { icon: 'mapPin', label: 'Saved Locations' },
+                { icon: 'history', label: 'Search History' },
+                { icon: 'star', label: 'My Reviews' },
+              ] as const).map((item, i, arr) => (
+                <div
+                  key={item.label}
+                  onClick={() => navigate('/settings')}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', cursor: 'pointer',
+                    borderBottom: i < arr.length - 1 ? '1px solid var(--f-glass-border)' : 'none',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <FIcon name={item.icon} size={18} color="var(--f-magenta-light)" />
+                    <span style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{item.label}</span>
+                  </div>
+                  <FIcon name="chevR" size={16} color="var(--f-text-3)" />
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl overflow-hidden mb-4" style={{ border: '0.5px solid var(--dk-border)', background: 'white' }}>
-              <div onClick={() => navigate('/support', { state: { activeTab: 'help' } })} className="flex items-center justify-between px-4 py-3.5 cursor-pointer" style={{ borderBottom: '0.5px solid var(--dk-border)' }}>
-                <div className="flex items-center gap-3"><HelpCircle size={18} style={{ color: 'var(--dk-text-tertiary)' }} /><span style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}>Help & Feedback</span></div>
-                <ChevronRight size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+
+            {/* Menu — support */}
+            <div className="f-glass" style={{ borderRadius: 18, marginBottom: 16, background: 'var(--f-glass-bg)', overflow: 'hidden' }}>
+              <div
+                onClick={() => navigate('/support', { state: { activeTab: 'help' } })}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', cursor: 'pointer', borderBottom: '1px solid var(--f-glass-border)' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <FIcon name="help" size={18} color="var(--f-text-3)" />
+                  <span style={{ fontSize: 14, color: 'var(--f-text-1)' }}>Help & Feedback</span>
+                </div>
+                <FIcon name="chevR" size={16} color="var(--f-text-3)" />
               </div>
-              <div onClick={() => navigate('/support', { state: { activeTab: 'complaints' } })} className="flex items-center justify-between px-4 py-3.5 cursor-pointer">
-                <div className="flex items-center gap-3"><AlertTriangle size={18} style={{ color: '#EF4444' }} /><span style={{ fontSize: 14, color: '#EF4444' }}>Complaint Box</span></div>
-                <ChevronRight size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+              <div
+                onClick={() => navigate('/support', { state: { activeTab: 'complaints' } })}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <FIcon name="alertTriangle" size={18} color="var(--f-danger)" />
+                  <span style={{ fontSize: 14, color: 'var(--f-danger)' }}>Complaint Box</span>
+                </div>
+                <FIcon name="chevR" size={16} color="var(--f-text-3)" />
               </div>
             </div>
-            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm mb-6" style={{ background: 'white', border: '0.5px solid #FECACA', color: '#EF4444' }}>
-              <LogOut size={16} /> Log Out
+
+            {/* Log out */}
+            <button
+              onClick={handleLogout}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: '14px', borderRadius: 16, marginBottom: 24, cursor: 'pointer', fontFamily: 'inherit',
+                background: 'rgba(255,77,106,0.10)', border: '1px solid rgba(255,77,106,0.32)',
+                color: 'var(--f-danger)', fontSize: 13, fontWeight: 700,
+              }}
+            >
+              <FIcon name="logout" size={16} color="var(--f-danger)" /> Log Out
             </button>
           </div>
         </div>
@@ -215,57 +294,98 @@ export default function ProfilePage() {
     }
     if (kycStatus === 'pending') {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
-          <div className="absolute top-0 -left-6 w-80 h-80 bg-amber-200 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-blob" />
-          <div className="absolute top-0 -right-4 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-blob animation-delay-2000" />
-          <div className="w-full max-w-md px-6 py-12 relative z-10 text-center">
-            <div className="w-24 h-24 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl shadow-amber-100 border border-white/40">
-              <Clock size={40} className="text-amber-500" />
+        <div className="f-bg-aurora" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}>
+          <div style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
+            <div style={{
+              width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+              boxShadow: '0 0 36px rgba(255,107,53,0.30)',
+            }}>
+              <FIcon name="clock" size={40} color="var(--f-orange-light)" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Application Under Review</h2>
-            {kycStoreName && <p className="text-indigo-600 font-semibold mb-2">{kycStoreName}</p>}
-            <p className="text-gray-500 mb-6 text-sm px-4">Your KYC application has been submitted and is currently being reviewed. This usually takes 1–2 business days.</p>
-            <button onClick={handleLogout} className="text-gray-500 font-semibold flex items-center mx-auto"><LogOut size={18} className="mr-2" /> Log Out</button>
+            <h2 className="f-display" style={{ fontSize: 28, color: 'var(--f-text-1)', margin: '0 0 12px' }}>Application Under Review</h2>
+            {kycStoreName && <p style={{ color: 'var(--f-magenta-light)', fontWeight: 700, margin: '0 0 8px' }}>{kycStoreName}</p>}
+            <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.6, margin: '0 0 8px' }}>
+              Your KYC application has been submitted and is currently being reviewed. This usually takes 1–2 business days.
+            </p>
+            <button onClick={handleLogout} style={kycLogout}>
+              <FIcon name="logout" size={16} color="var(--f-text-3)" /> Log Out
+            </button>
           </div>
         </div>
       );
     }
     if (kycStatus === 'approved') {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="w-full max-w-md px-6 py-12 text-center">
-            <div className="w-24 h-24 bg-white/80 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl"><Store size={40} className="text-emerald-600" /></div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">KYC Approved!</h2>
-            <p className="text-gray-500 mb-8 text-sm px-4">Your business has been verified. Complete your store profile to go live.</p>
-            <button onClick={() => navigate('/retailer/dashboard')} className="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg mb-3">Complete Your Store Profile</button>
-            <button onClick={handleLogout} className="mt-3 text-gray-500 font-semibold flex items-center mx-auto"><LogOut size={18} className="mr-2" /> Log Out</button>
+        <div className="f-bg-aurora" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}>
+          <div style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
+            <div style={{
+              width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+              boxShadow: '0 0 36px rgba(46,231,161,0.30)',
+            }}>
+              <FIcon name="storeIc" size={40} color="var(--f-success)" />
+            </div>
+            <h2 className="f-display" style={{ fontSize: 28, color: 'var(--f-text-1)', margin: '0 0 12px' }}>KYC Approved!</h2>
+            <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.6, margin: '0 0 28px' }}>
+              Your business has been verified. Complete your store profile to go live.
+            </p>
+            <button onClick={() => navigate('/retailer/dashboard')} style={kycPrimaryBtn}>Complete Your Store Profile</button>
+            <button onClick={handleLogout} style={kycLogout}>
+              <FIcon name="logout" size={16} color="var(--f-text-3)" /> Log Out
+            </button>
           </div>
         </div>
       );
     }
     if (kycStatus === 'rejected') {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="w-full max-w-md px-6 py-12 text-center">
-            <div className="w-24 h-24 bg-white/80 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl"><AlertTriangle size={40} className="text-red-500" /></div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Application Rejected</h2>
-            <p className="text-gray-500 mb-4 text-sm px-4">Please review the reason below and resubmit.</p>
-            {kycNotes && <div className="bg-red-50 border border-red-100 rounded-2xl px-5 py-4 mb-8 text-left"><p className="text-xs font-semibold text-red-700 uppercase tracking-wider mb-1">Reason</p><p className="text-sm text-red-800">{kycNotes}</p></div>}
-            <button onClick={() => setShowKYC(true)} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg mb-3">Resubmit KYC Application</button>
-            <button onClick={handleLogout} className="mt-3 text-gray-500 font-semibold flex items-center mx-auto"><LogOut size={18} className="mr-2" /> Log Out</button>
+        <div className="f-bg-aurora" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}>
+          <div style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
+            <div style={{
+              width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+              boxShadow: '0 0 36px rgba(255,77,106,0.30)',
+            }}>
+              <FIcon name="alertTriangle" size={40} color="var(--f-danger)" />
+            </div>
+            <h2 className="f-display" style={{ fontSize: 28, color: 'var(--f-text-1)', margin: '0 0 12px' }}>Application Rejected</h2>
+            <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.6, margin: '0 0 16px' }}>Please review the reason below and resubmit.</p>
+            {kycNotes && (
+              <div style={{
+                background: 'rgba(255,77,106,0.10)', border: '1px solid rgba(255,77,106,0.32)', borderRadius: 16,
+                padding: '14px 18px', marginBottom: 28, textAlign: 'left',
+              }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--f-danger)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 4px' }}>Reason</p>
+                <p style={{ fontSize: 13, color: '#FF8FA3', margin: 0 }}>{kycNotes}</p>
+              </div>
+            )}
+            <button onClick={() => setShowKYC(true)} style={kycPrimaryBtn}>Resubmit KYC Application</button>
+            <button onClick={handleLogout} style={kycLogout}>
+              <FIcon name="logout" size={16} color="var(--f-text-3)" /> Log Out
+            </button>
           </div>
         </div>
       );
     }
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 relative overflow-hidden">
-        <div className="absolute top-0 -left-6 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-2xl opacity-30 animate-blob" />
-        <div className="w-full max-w-md px-6 py-12 relative z-10 text-center">
-          <div className="w-24 h-24 bg-white/80 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl"><Store size={40} className="text-indigo-600" /></div>
-          <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-3">Business Profile Not Setup</h2>
-          <p className="text-gray-500 mb-10 text-sm px-4">Complete the Initial KYC to verify your business and open your digital storefront.</p>
-          <button onClick={() => setShowKYC(true)} className="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-lg">Set Up Your Store</button>
-          <button onClick={handleLogout} className="mt-6 text-gray-500 font-semibold flex items-center mx-auto"><LogOut size={18} className="mr-2" /> Log Out</button>
+      <div className="f-bg-aurora" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}>
+        <div style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
+          <div style={{
+            width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+            boxShadow: '0 0 36px rgba(255,42,140,0.30)',
+          }}>
+            <FIcon name="storeIc" size={40} color="var(--f-magenta-light)" />
+          </div>
+          <h2 className="f-display f-grad-text" style={{ fontSize: 28, margin: '0 0 12px' }}>Business Profile Not Setup</h2>
+          <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.6, margin: '0 0 32px' }}>
+            Complete the Initial KYC to verify your business and open your digital storefront.
+          </p>
+          <button onClick={() => setShowKYC(true)} style={kycPrimaryBtn}>Set Up Your Store</button>
+          <button onClick={handleLogout} style={kycLogout}>
+            <FIcon name="logout" size={16} color="var(--f-text-3)" /> Log Out
+          </button>
         </div>
       </div>
     );
@@ -283,23 +403,21 @@ export default function ProfilePage() {
 
   if (isProfileEmpty && kycStatus === 'approved') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md px-6 py-12 text-center">
-          <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-            <Store size={40} className="text-emerald-600" />
+      <div className="f-bg-aurora" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}>
+        <div style={{ width: '100%', maxWidth: 400, textAlign: 'center' }}>
+          <div style={{
+            width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+            boxShadow: '0 0 36px rgba(46,231,161,0.30)',
+          }}>
+            <FIcon name="storeIc" size={40} color="var(--f-success)" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">KYC Approved! 🎉</h2>
-          <p className="text-gray-500 mb-8 text-sm px-4">
-            Aapka business verify ho gaya hai. Ab apna store profile complete karein
-            taaki customers aapko dhund saken.
+          <h2 className="f-display" style={{ fontSize: 28, color: 'var(--f-text-1)', margin: '0 0 12px' }}>KYC Approved! 🎉</h2>
+          <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.6, margin: '0 0 28px' }}>
+            Aapka business verify ho gaya hai. Ab apna store profile complete karein taaki customers aapko dhund saken.
           </p>
-          <button
-            onClick={() => navigate('/retailer/dashboard')}
-            className="w-full bg-emerald-600 text-white font-bold py-4 rounded-2xl shadow-lg"
-          >
-            Complete Your Store Profile
-          </button>
-          <p className="text-xs text-gray-400 mt-4">
+          <button onClick={() => navigate('/retailer/dashboard')} style={kycPrimaryBtn}>Complete Your Store Profile</button>
+          <p style={{ fontSize: 11, color: 'var(--f-text-4)', marginTop: 16 }}>
             Profile complete karne ke baad aap posts daal sakte hain
           </p>
         </div>
@@ -319,94 +437,114 @@ export default function ProfilePage() {
   });
 
   return (
-    <div style={{ background: 'white', minHeight: '100vh', paddingBottom: 80 }}>
-      <div className="max-w-md mx-auto">
+    <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
         {/* Cover */}
-        <div className="relative" style={{ height: 180 }}>
-          <div className="absolute inset-0 overflow-hidden">
-            {store.coverUrl ? (
-              <img src={store.coverUrl} className="w-full h-full object-cover" alt="" />
-            ) : store.logoUrl ? (
-              <img src={store.logoUrl} className="w-full h-full object-cover" style={{ filter: 'blur(14px) brightness(0.5)', transform: 'scale(1.2)' }} alt="" />
-            ) : (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF6B35 0%, #FFA94D 100%)' }} />
-            )}
-          </div>
-          <div className="absolute top-0 right-0 flex items-center gap-2 px-4 pt-12 z-10">
+        <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
+          {store.coverUrl ? (
+            <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : store.logoUrl ? (
+            <img src={store.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.4)', transform: 'scale(1.2)' }} />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF2A8C 0%, #6B33FF 55%, #00E5FF 100%)' }} />
+          )}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(circle at 18% 25%, rgba(255,107,53,0.40), transparent 45%),
+              radial-gradient(circle at 85% 15%, rgba(255,42,140,0.45), transparent 50%),
+              linear-gradient(180deg, rgba(6,8,20,0.15) 0%, rgba(6,8,20,0.55) 60%, var(--f-bg-deep) 100%)`,
+          }} />
+          <div style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '48px 14px 0', zIndex: 2 }}>
             <NotificationBell />
-            <Link to="/settings" state={{ activeTab: 'bulk_upload' }}>
-              <div className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}>
-                <Settings size={18} color="white" />
-              </div>
+            <Link to="/settings" state={{ activeTab: 'bulk_upload' }} style={coverFab} aria-label="Settings">
+              <FIcon name="settings" size={18} color="white" />
             </Link>
           </div>
-          <div className="absolute" style={{ bottom: -28, left: 16, width: 72, height: 72, borderRadius: 18, overflow: 'hidden', border: '3px solid white', background: 'var(--dk-surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}>
-            {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt="logo" /> : <div className="w-full h-full flex items-center justify-center font-bold text-2xl" style={{ color: 'var(--dk-accent)' }}>{store.storeName?.charAt(0)}</div>}
+          <div style={{
+            position: 'absolute', bottom: -28, left: 16, width: 72, height: 72, borderRadius: 18, overflow: 'hidden',
+            border: '3px solid var(--f-bg-deep)', background: 'var(--f-grad-primary)',
+            boxShadow: '0 0 24px rgba(255,42,140,0.45), 0 8px 24px rgba(0,0,0,0.55)',
+          }}>
+            {store.logoUrl
+              ? <img src={store.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 28, color: 'white' }}>{store.storeName?.charAt(0)}</div>}
           </div>
         </div>
 
         {/* Store name + info */}
-        <div className="px-4 pt-10 pb-3">
-          <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', lineHeight: '1.2' }}>{store.storeName}</h1>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <StarRating rating={store.averageRating ?? 0} size={16} />
-                  {store.averageRating != null && store.averageRating > 0 && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>{store.averageRating.toFixed(1)}</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {user?.role && user.role !== 'customer' && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide" style={{ background: 'var(--dk-accent)', color: 'white' }}>
-                    {user.role === 'retailer' ? 'Retail' : user.role}
-                  </span>
-                )}
-                <span style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{store.category}</span>
-              </div>
-              {store.description && <p className="mt-1.5" style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>{store.description}</p>}
+        <div style={{ padding: '40px 16px 12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+            <h1 className="f-display" style={{ fontSize: 22, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <StarRating rating={store.averageRating ?? 0} size={15} />
+              {store.averageRating != null && store.averageRating > 0 && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-2)' }}>{store.averageRating.toFixed(1)}</span>
+              )}
             </div>
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: store.description ? 8 : 0 }}>
+            {user?.role && user.role !== 'customer' && (
+              <span style={{
+                padding: '3px 10px', borderRadius: 9999, fontSize: 9, fontWeight: 800, letterSpacing: 0.8,
+                textTransform: 'uppercase', background: 'var(--f-grad-primary)', color: 'white',
+                boxShadow: '0 0 12px rgba(255,42,140,0.45)',
+              }}>
+                {user.role === 'retailer' ? 'Retail' : user.role}
+              </span>
+            )}
+            <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{store.category}</span>
+          </div>
+          {store.description && (
+            <p style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.5, margin: 0 }}>{store.description}</p>
+          )}
 
+          {/* Completion banner */}
           {completionPct < 100 && (
-            <div className="flex items-center gap-3 mt-4 p-3 rounded-2xl" style={{ background: 'rgba(255,107,53,0.08)', border: '0.5px solid rgba(255,107,53,0.2)' }}>
-              <div className="flex items-center justify-center flex-shrink-0" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--dk-accent)' }}><span style={{ fontSize: 18 }}>⚡</span></div>
-              <div className="flex-1 min-w-0">
-                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Profile {completionPct}% complete</p>
-                <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>Complete your profile to get more customers</p>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, padding: 12, borderRadius: 16,
+              background: 'rgba(255,107,53,0.10)', border: '1px solid rgba(255,107,53,0.28)',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', background: 'var(--f-grad-primary)', boxShadow: '0 0 14px rgba(255,107,53,0.4)',
+              }}>
+                <FIcon name="zap" size={18} color="white" fill="white" />
               </div>
-              <Link to="/retailer/dashboard" style={{ fontSize: 12, fontWeight: 700, color: 'var(--dk-accent)', flexShrink: 0 }}>Fix</Link>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--f-text-1)', margin: 0 }}>Profile {completionPct}% complete</p>
+                <p style={{ fontSize: 11, color: 'var(--f-text-3)', margin: '1px 0 0' }}>Complete your profile to get more customers</p>
+              </div>
+              <Link to="/retailer/dashboard" style={{ fontSize: 12, fontWeight: 700, color: 'var(--f-orange-light)', flexShrink: 0, textDecoration: 'none' }}>Fix</Link>
             </div>
           )}
 
           <StoreInfoCard store={store} storeStatus={storeStatus} />
 
           {/* Stats */}
-          <div className="flex mt-4 rounded-2xl overflow-hidden" style={{ border: '0.5px solid var(--dk-border)' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
             {[
               { label: 'Posts', value: sortedPosts.length },
               { label: 'Followers', value: store._count?.followers || 0 },
               { label: 'Chats', value: chatCount },
-            ].map((stat, i, arr) => (
-              <React.Fragment key={stat.label}>
-                <div className="flex-1 flex flex-col items-center py-3" style={{ background: 'white' }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{stat.value}</span>
-                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>{stat.label}</span>
-                </div>
-                {i < arr.length - 1 && <div style={{ width: '0.5px', background: 'var(--dk-border)' }} />}
-              </React.Fragment>
+            ].map(stat => (
+              <div key={stat.label} className="f-glass" style={{ flex: 1, padding: '13px 8px', borderRadius: 14, textAlign: 'center', background: 'var(--f-glass-bg)' }}>
+                <div className="f-mono" style={{ fontSize: 21, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.02em' }}>{stat.value}</div>
+                <div style={{ fontSize: 10, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 2 }}>{stat.label}</div>
+              </div>
             ))}
           </div>
 
           {/* Edit profile + New Post buttons */}
-          <div className="flex gap-2 mt-4">
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
             <Link
               to="/retailer/dashboard"
-              className="flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm"
-              style={{ background: 'var(--dk-bg-soft)', color: 'var(--dk-accent)', border: '0.5px solid var(--dk-border)' }}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '11px 14px',
+                borderRadius: 12, textDecoration: 'none', background: 'var(--f-glass-bg-2)',
+                border: '1px solid var(--f-glass-border)', color: 'var(--f-text-1)', fontSize: 13, fontWeight: 700,
+              }}
             >
               Edit Profile
             </Link>
@@ -415,34 +553,62 @@ export default function ProfilePage() {
                 const btn = document.querySelector('[data-new-post-trigger]') as HTMLButtonElement;
                 if (btn) btn.click();
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm"
-              style={{ background: '#1A1A1A', color: 'white' }}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 14px',
+                borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                background: 'var(--f-grad-primary)', color: 'white', fontSize: 13, fontWeight: 700,
+                boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+              }}
             >
-              + New Post
+              <FIcon name="plus" size={14} color="white" /> New Post
             </button>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="sticky z-10 flex border-b" style={{ top: 0, background: 'white', borderColor: 'var(--dk-border)' }}>
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 10, display: 'flex',
+          background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          borderBottom: '1px solid var(--f-glass-border)',
+        }}>
           <button
             onClick={() => setActiveTab('posts')}
-            className="flex-1 flex items-center justify-center gap-1 py-3"
-            style={{ fontSize: 13, fontWeight: activeTab === 'posts' ? 700 : 400, color: activeTab === 'posts' ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)', borderBottom: activeTab === 'posts' ? '2px solid var(--dk-accent)' : '2px solid transparent' }}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0',
+              background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+              borderBottom: activeTab === 'posts' ? '2px solid var(--f-orange)' : '2px solid transparent',
+              color: activeTab === 'posts' ? 'var(--f-text-1)' : 'var(--f-text-3)',
+              fontSize: 13.5, fontWeight: activeTab === 'posts' ? 800 : 500,
+            }}
           >
             Posts
-            <span className="px-1.5 py-0.5 rounded-full" style={{ fontSize: 10, fontWeight: 600, background: activeTab === 'posts' ? 'var(--dk-accent)' : 'var(--dk-surface)', color: activeTab === 'posts' ? 'white' : 'var(--dk-text-tertiary)' }}>
+            <span style={{
+              fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
+              background: activeTab === 'posts' ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
+              color: activeTab === 'posts' ? 'white' : 'var(--f-text-3)',
+              boxShadow: activeTab === 'posts' ? '0 0 8px rgba(255,42,140,0.4)' : 'none',
+            }}>
               {sortedPosts.length}
             </span>
           </button>
           {!store.hideRatings && (
             <button
               onClick={() => setActiveTab('reviews')}
-              className="flex-1 flex items-center justify-center gap-1 py-3"
-              style={{ fontSize: 13, fontWeight: activeTab === 'reviews' ? 700 : 400, color: activeTab === 'reviews' ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)', borderBottom: activeTab === 'reviews' ? '2px solid var(--dk-accent)' : '2px solid transparent' }}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0',
+                background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                borderBottom: activeTab === 'reviews' ? '2px solid var(--f-orange)' : '2px solid transparent',
+                color: activeTab === 'reviews' ? 'var(--f-text-1)' : 'var(--f-text-3)',
+                fontSize: 13.5, fontWeight: activeTab === 'reviews' ? 800 : 500,
+              }}
             >
               Reviews
-              <span className="px-1.5 py-0.5 rounded-full" style={{ fontSize: 10, fontWeight: 600, background: activeTab === 'reviews' ? 'var(--dk-accent)' : 'var(--dk-surface)', color: activeTab === 'reviews' ? 'white' : 'var(--dk-text-tertiary)' }}>
+              <span style={{
+                fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
+                background: activeTab === 'reviews' ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
+                color: activeTab === 'reviews' ? 'white' : 'var(--f-text-3)',
+                boxShadow: activeTab === 'reviews' ? '0 0 8px rgba(255,42,140,0.4)' : 'none',
+              }}>
                 {reviews.length}
               </span>
             </button>
@@ -450,7 +616,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab content */}
-        <div className="min-h-72">
+        <div style={{ minHeight: 280 }}>
           {activeTab === 'posts' && (
             <PostsGrid
               sortedPosts={sortedPosts}

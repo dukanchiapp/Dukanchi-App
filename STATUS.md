@@ -1,7 +1,24 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-16 | Session 95 closed | **Hardening Sprint Days 1-8 COMPLETE** — atomically merged to main + deployed | Prod runs main @ 28a5614
+> Last updated: 2026-05-17 | Session 96 | **Futuristic v2 redesign** code-complete on `feat/futuristic-redesign` — PR open, awaiting review | Prod runs main @ 28a5614 (unchanged)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
+
+## Active Branch: feat/futuristic-redesign — Futuristic v2 Redesign (Session 96)
+
+**Status:** Code-complete — 10 phases, all verified green (typecheck 0 · tests 81/81 · build ✓). Committed to `feat/futuristic-redesign`; PR open against `main` — awaiting review/merge. **No production change** — prod still `main @ 28a5614`.
+
+Customer-app visual redesign to the futuristic v2 direction (deep-space dark + frosted glass + orange→magenta gradient) from the `dukanchi-design-system` handoff. **View-layer only** — every screen's data/auth/Socket.IO/Maps/CMS wiring preserved verbatim (Rule 4).
+
+- NEW: `src/futuristic.css` (`--f-*` tokens) + `src/components/futuristic/` (typed primitives)
+- Restyled: Home, Search, Map, StoreProfile, Chat, Messages, Profile, Login, Signup, LandingPage + shared chrome (BottomNav, RefreshButton, NotificationBell, ConversationRow, profile/*)
+- Landing: Three.js spatial hero — CDN-loaded with graceful fallback (zero npm dependency)
+
+**Scope boundary:** RetailerDashboard, UserSettings, Support, NotFound NOT redesigned (not in the handoff) — remain cream-themed.
+
+**Open follow-ups:**
+- `LandingPage.tsx` restyled but not currently routed (pre-existing orphan; live `/landing` = static `public/landing.html`) — routing strategy TBD.
+- Native APK rebuild + manual smoke-test pending — large UI change the APK renders; web-verified only.
+- Native status-bar colour still cream (App.tsx `StatusBar.setBackgroundColor`) — left for the mixed-theme interim.
 
 ## Production State
 - **URL:** https://dukanchi.com (Cloudflare proxied, SSL Full Strict, TLS 1.2 min)
@@ -136,7 +153,7 @@ All Days 1–8 of the Hardening Sprint are **merged to `main` and live in produc
 
 ## Next 3 Actions
 
-1. **Post-Day-8 hygiene** — see "Post-Day-8 TODOs" above. **P1 (rotate `CODECOV_TOKEN` within 24h) is time-sensitive**; P2/P3 are at-convenience.
+1. **Review + merge the `feat/futuristic-redesign` PR** — Futuristic v2 redesign (Session 96), all 10 phases verified green. Post-merge: decide `LandingPage.tsx` routing strategy, queue a native APK rebuild + smoke-test (large UI change — web-verified only), and run the Post-Day-8 hygiene TODOs above.
 
 2. **Day 8+ cleanup sweeps (now via PR per branch protection):**
    - ESLint baseline cleanup (448 problems; 333 `no-explicit-any` primary) → promote CI lint to hard-gate after

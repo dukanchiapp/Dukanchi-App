@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Send, Paperclip, X, Loader2, AlertCircle, ShoppingBag, Tag } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
+import { FIcon } from '../components/futuristic';
+
+/* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
+   View layer restyled to the deep-space glass system. Socket.IO connection,
+   message history fetch, reconnection-aware refetch, image upload, and the
+   post-reference enquiry flow are all preserved verbatim. */
 
 const POST_REF_PREFIX = '__POST_REF__:';
 
@@ -19,27 +24,34 @@ function decodePostRef(text: string) {
 
 function PostRefCard({ text, onTap }: { text: string; onTap: (post: any) => void }) {
   const post = decodePostRef(text);
-  if (!post) return <p className="text-xs text-gray-400 italic">[Post]</p>;
+  if (!post) return <p style={{ fontSize: 11, color: 'var(--f-text-3)', fontStyle: 'italic', margin: 0 }}>[Post]</p>;
   return (
     <button
       onClick={() => onTap(post)}
-      className="group relative flex items-center overflow-hidden rounded-2xl border border-white/25 bg-white/15 max-w-[230px] text-left active:scale-95 transition-transform"
+      style={{
+        display: 'flex', alignItems: 'center', overflow: 'hidden', maxWidth: 230, textAlign: 'left',
+        borderRadius: 14, border: '1px solid var(--f-glass-border-2)', background: 'rgba(0,0,0,0.28)',
+        cursor: 'pointer', padding: 0,
+      }}
     >
       {post.imageUrl && (
-        <img src={post.imageUrl} alt="post" className="w-16 h-16 object-cover flex-shrink-0" />
+        <img src={post.imageUrl} alt="post" style={{ width: 64, height: 64, objectFit: 'cover', flexShrink: 0 }} />
       )}
-      <div className="px-3 py-2 min-w-0 flex-1">
-        <span className="inline-flex items-center space-x-1 bg-white/20 rounded-full px-2 py-0.5 mb-1">
-          <Tag size={8} className="opacity-80" />
-          <span className="text-[8px] font-bold uppercase tracking-widest opacity-90">Post</span>
+      <div style={{ padding: '8px 12px', minWidth: 0, flex: 1 }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 4,
+          background: 'var(--f-grad-primary)', borderRadius: 9999, padding: '2px 8px',
+        }}>
+          <FIcon name="tag" size={8} color="white" />
+          <span style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'white' }}>Post</span>
         </span>
         {post.price && (
-          <p className="text-sm font-extrabold leading-tight">₹{Number(post.price).toLocaleString()}</p>
+          <p style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: '#fff', margin: 0 }}>₹{Number(post.price).toLocaleString()}</p>
         )}
         {post.caption && (
-          <p className="text-[11px] leading-tight truncate opacity-75 mt-0.5">{post.caption}</p>
+          <p style={{ fontSize: 11, lineHeight: 1.2, color: 'rgba(255,255,255,0.78)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.caption}</p>
         )}
-        <p className="text-[9px] opacity-50 mt-1">Tap to preview</p>
+        <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }}>Tap to preview</p>
       </div>
     </button>
   );
@@ -52,31 +64,35 @@ function PostPreviewOverlay({ post, onClose }: {
   return (
     <div className="absolute inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/70" />
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }} />
 
       {/* Sheet */}
       <div
-        className="relative rounded-t-[2rem] overflow-hidden bg-white shadow-2xl"
         onClick={e => e.stopPropagation()}
+        style={{
+          position: 'relative', borderRadius: '28px 28px 0 0', overflow: 'hidden',
+          background: 'var(--f-modal-bg)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          borderTop: '1px solid var(--f-glass-border)', boxShadow: '0 -16px 48px rgba(0,0,0,0.6)',
+        }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 9999, background: 'var(--f-text-4)' }} />
         </div>
 
         {/* Image with price overlay */}
-        <div className="relative mx-4 mt-2 rounded-2xl overflow-hidden bg-gray-100">
+        <div style={{ position: 'relative', margin: '8px 16px 0', borderRadius: 16, overflow: 'hidden', background: 'var(--f-bg-elev)' }}>
           {post.imageUrl
-            ? <img src={post.imageUrl} alt="post" className="w-full object-cover" style={{ maxHeight: '42vh' }} />
-            : <div className="w-full h-48 flex items-center justify-center">
-                <ShoppingBag size={40} className="text-gray-300" />
+            ? <img src={post.imageUrl} alt="post" style={{ width: '100%', objectFit: 'cover', maxHeight: '42vh', display: 'block' }} />
+            : <div style={{ width: '100%', height: 192, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FIcon name="cart" size={40} color="var(--f-text-4)" />
               </div>
           }
           {post.price && (
-            <div className="absolute bottom-3 left-3">
-              <div className="bg-black/70 backdrop-blur-sm text-white rounded-xl px-3 py-1.5 flex items-center space-x-1.5">
-                <Tag size={12} className="text-indigo-300" />
-                <span className="text-base font-extrabold tracking-tight">
+            <div style={{ position: 'absolute', bottom: 12, left: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '6px 12px' }}>
+                <FIcon name="tag" size={12} color="var(--f-magenta-light)" />
+                <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em', color: '#fff' }}>
                   ₹{Number(post.price).toLocaleString()}
                 </span>
               </div>
@@ -85,21 +101,25 @@ function PostPreviewOverlay({ post, onClose }: {
           {/* Close button over image */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center active:bg-black/70 transition-colors"
+            style={{
+              position: 'absolute', top: 12, right: 12, width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(8px)', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
           >
-            <X size={15} className="text-white" />
+            <FIcon name="x" size={15} color="#fff" />
           </button>
         </div>
 
         {/* Caption */}
         {post.caption && (
-          <div className="px-5 pt-4 pb-2">
-            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wider mb-1">Caption</p>
-            <p className="text-sm text-gray-700 leading-relaxed">{post.caption}</p>
+          <div style={{ padding: '16px 20px 8px' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--f-magenta-light)', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 4px' }}>Caption</p>
+            <p style={{ fontSize: 14, color: 'var(--f-text-2)', lineHeight: 1.5, margin: 0 }}>{post.caption}</p>
           </div>
         )}
 
-        <div className="h-6" />
+        <div style={{ height: 24 }} />
       </div>
     </div>
   );
@@ -111,17 +131,20 @@ function ReferredPostBanner({ post, onDismiss }: {
   onDismiss: () => void;
 }) {
   return (
-    <div className="mx-4 mb-2 flex items-center space-x-3 bg-indigo-50 border border-indigo-100 rounded-2xl p-2.5">
+    <div style={{
+      margin: '0 14px 8px', display: 'flex', alignItems: 'center', gap: 12, padding: 10,
+      background: 'rgba(255,107,53,0.10)', border: '1px solid rgba(255,107,53,0.28)', borderRadius: 16,
+    }}>
       {post.imageUrl && (
-        <img src={post.imageUrl} alt="post" className="w-12 h-12 object-cover rounded-xl flex-shrink-0 border border-indigo-100" />
+        <img src={post.imageUrl} alt="post" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 12, flexShrink: 0, border: '1px solid rgba(255,107,53,0.30)' }} />
       )}
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-0.5">Enquiring about</p>
-        {post.price && <p className="text-sm font-bold text-gray-900">₹{Number(post.price).toLocaleString()}</p>}
-        {post.caption && <p className="text-xs text-gray-600 truncate">{post.caption}</p>}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--f-orange-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>Enquiring about</p>
+        {post.price && <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0 }}>₹{Number(post.price).toLocaleString()}</p>}
+        {post.caption && <p style={{ fontSize: 12, color: 'var(--f-text-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.caption}</p>}
       </div>
-      <button onClick={onDismiss} className="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0">
-        <X size={14} />
+      <button onClick={onDismiss} style={{ padding: 4, background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex' }}>
+        <FIcon name="x" size={14} color="var(--f-text-3)" />
       </button>
     </div>
   );
@@ -332,40 +355,64 @@ export default function ChatPage() {
     setIsSending(false);
   };
 
+  const sendDisabled = (!newMessage.trim() && !imageFile) || isSending;
+
   return (
-    <div className="max-w-md mx-auto bg-gray-50 h-screen flex flex-col relative">
+    <div style={{
+      maxWidth: 480, margin: '0 auto', height: '100vh', display: 'flex', flexDirection: 'column',
+      position: 'relative', backgroundColor: 'var(--f-bg-deep)', backgroundImage: 'var(--f-page-bg)',
+      fontFamily: 'var(--f-font)',
+    }}>
       {previewPost && (
         <PostPreviewOverlay post={previewPost} onClose={() => setPreviewPost(null)} />
       )}
-      <header className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 shadow-sm z-10">
-        <div className="flex items-center space-x-3">
-          <Link to="/messages" className="p-2 -ml-2 text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
-            <ArrowLeft size={20} />
-          </Link>
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold overflow-hidden">
-              {receiverLogo
-                ? <img src={receiverLogo} alt="receiver logo" className="w-full h-full object-cover" />
-                : receiverInitial || '?'
-              }
-            </div>
-            <div>
-              <h1 className="font-bold text-gray-900 leading-tight">{receiverName || 'Loading...'}</h1>
+
+      {/* ── Header ── */}
+      <header style={{
+        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 10px', zIndex: 5,
+        background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+        borderBottom: '1px solid var(--f-glass-border)',
+      }}>
+        <Link
+          to="/messages"
+          className="f-glass"
+          style={{ width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textDecoration: 'none' }}
+          aria-label="Back to messages"
+        >
+          <FIcon name="chevL" size={20} color="var(--f-text-1)" />
+        </Link>
+        <div className="f-glass" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 16, minWidth: 0 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+            background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', fontWeight: 800, fontSize: 14, boxShadow: '0 0 14px rgba(255,42,140,0.45)',
+          }}>
+            {receiverLogo
+              ? <img src={receiverLogo} alt="receiver logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (receiverInitial || '?')}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {receiverName || 'Loading...'}
             </div>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
-        <div className="text-center my-4">
-          <span className="text-xs font-medium text-gray-400 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-wider">
+      {/* ── Messages ── */}
+      <main style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em',
+            background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)', padding: '4px 12px', borderRadius: 9999,
+          }}>
             {new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
           </span>
         </div>
 
         {messages.length === 0 && !referredPost && (
-          <div className="text-center py-10 text-gray-400 text-sm">
-            <p>No messages yet. Say hi! 👋</p>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--f-text-3)', fontSize: 13 }}>
+            <p style={{ margin: 0 }}>No messages yet. Say hi! 👋</p>
           </div>
         )}
 
@@ -374,75 +421,123 @@ export default function ChatPage() {
           const isPostRef = typeof msg.message === 'string' && msg.message.startsWith(POST_REF_PREFIX);
 
           return (
-            <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm ${
-                isMe
-                  ? 'bg-indigo-600 text-white rounded-tr-sm'
-                  : 'bg-white text-gray-800 border border-gray-100 shadow-sm rounded-tl-sm'
-              } ${isPostRef ? 'px-2 py-2' : ''}`}>
+            <div
+              key={msg.id || idx}
+              style={{
+                display: 'flex', flexDirection: 'column', maxWidth: '85%',
+                alignItems: isMe ? 'flex-end' : 'flex-start',
+                alignSelf: isMe ? 'flex-end' : 'flex-start',
+              }}
+            >
+              <div style={{
+                padding: isPostRef ? 6 : '10px 14px', fontSize: 13.5, lineHeight: 1.4,
+                color: isMe ? '#fff' : 'var(--f-text-1)',
+                background: isMe ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-3)',
+                border: isMe ? 'none' : '1px solid var(--f-glass-border)',
+                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                boxShadow: isMe ? '0 0 18px rgba(255,42,140,0.28)' : 'none',
+                backdropFilter: isMe ? 'none' : 'blur(20px)',
+                WebkitBackdropFilter: isMe ? 'none' : 'blur(20px)',
+              }}>
                 {isPostRef ? (
                   <PostRefCard text={msg.message!} onTap={setPreviewPost} />
                 ) : (
                   <>
                     {msg.imageUrl && (
-                      <div className="mb-2 rounded-lg overflow-hidden border border-white/20">
-                        <img src={msg.imageUrl} alt="attachment" className="w-full max-h-48 object-cover" loading="lazy" />
+                      <div style={{ marginBottom: 6, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+                        <img src={msg.imageUrl} alt="attachment" loading="lazy" style={{ width: '100%', maxHeight: 192, objectFit: 'cover', display: 'block' }} />
                       </div>
                     )}
-                    {msg.message && <p>{msg.message}</p>}
+                    {msg.message && <p style={{ margin: 0 }}>{msg.message}</p>}
                   </>
                 )}
-                <p className={`text-[10px] mt-1 text-right ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>
-                  {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
-                </p>
               </div>
+              <span className="f-mono" style={{ fontSize: 9, color: 'var(--f-text-4)', marginTop: 3, padding: '0 4px' }}>
+                {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
+              </span>
             </div>
           );
         })}
         <div ref={messagesEndRef} />
       </main>
 
-      <footer className="bg-white border-t border-gray-100 pb-safe relative">
+      {/* ── Composer ── */}
+      <footer
+        className="pb-safe"
+        style={{
+          position: 'relative', background: 'var(--f-sticky-bg)',
+          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          borderTop: '1px solid var(--f-glass-border)',
+        }}
+      >
         {/* Referred post banner — shown above input until first message is sent */}
         {referredPost && (
           <ReferredPostBanner post={referredPost} onDismiss={() => setReferredPost(null)} />
         )}
 
         {uploadError && (
-          <div className="mx-4 mb-2 flex items-center space-x-2 bg-red-50 border border-red-100 rounded-xl px-3 py-2 text-xs text-red-600">
-            <AlertCircle size={14} className="flex-shrink-0" />
-            <span>{uploadError}</span>
-            <button type="button" onClick={() => setUploadError('')} className="ml-auto"><X size={12} /></button>
+          <div style={{
+            margin: '8px 14px', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+            background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.35)', borderRadius: 12,
+            fontSize: 12, color: '#FF8FA3',
+          }}>
+            <FIcon name="alert" size={14} color="#FF8FA3" />
+            <span style={{ flex: 1 }}>{uploadError}</span>
+            <button type="button" onClick={() => setUploadError('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
+              <FIcon name="x" size={12} color="#FF8FA3" />
+            </button>
           </div>
         )}
+
         {imagePreview && (
-          <div className="absolute bottom-full left-0 right-0 bg-white p-3 border-t border-gray-100 flex items-center shadow-lg rounded-t-xl z-20">
-            <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
-              <img src={imagePreview} className="w-full h-full object-cover" />
-              <button onClick={clearImagePreview} className="absolute top-1 right-1 bg-black/60 rounded-full p-0.5 hover:bg-black/80 transition-colors" type="button">
-                <X size={12} className="text-white" />
+          <div style={{
+            position: 'absolute', bottom: '100%', left: 0, right: 0, padding: 12, display: 'flex', alignItems: 'center',
+            background: 'var(--f-modal-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            borderTop: '1px solid var(--f-glass-border)', borderBottom: '1px solid var(--f-glass-border)',
+            borderRadius: '14px 14px 0 0', zIndex: 20,
+          }}>
+            <div style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--f-glass-border-2)' }}>
+              <img src={imagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <button
+                type="button"
+                onClick={clearImagePreview}
+                style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: 'pointer', display: 'flex' }}
+              >
+                <FIcon name="x" size={12} color="#fff" />
               </button>
             </div>
           </div>
         )}
-        <form onSubmit={handleSend} className="flex items-center space-x-2 p-4">
-          <label className="p-2 text-gray-400 hover:bg-gray-50 rounded-full cursor-pointer transition-colors relative">
-            <Paperclip size={24} />
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+
+        <form onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
+          <label className="f-glass" style={{ width: 42, height: 42, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+            <FIcon name="paperclip" size={20} color="var(--f-text-2)" />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={referredPost ? 'Ask about this post…' : 'Type a message...'}
-            className="flex-1 bg-gray-100 border-transparent rounded-full px-4 py-3 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm"
+            style={{
+              flex: 1, padding: '12px 16px', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+              borderRadius: 9999, color: 'var(--f-text-1)', fontSize: 14, fontFamily: 'inherit', outline: 'none',
+            }}
           />
           <button
             type="submit"
-            disabled={(!newMessage.trim() && !imageFile) || isSending}
-            className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0 shadow-sm"
+            disabled={sendDisabled}
+            style={{
+              width: 42, height: 42, borderRadius: 14, border: 'none', flexShrink: 0,
+              cursor: sendDisabled ? 'not-allowed' : 'pointer',
+              opacity: sendDisabled ? 0.5 : 1,
+              background: 'var(--f-grad-primary)', boxShadow: '0 0 16px rgba(255,42,140,0.5)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
           >
-            {isSending ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} className="ml-1" />}
+            {isSending
+              ? <div className="animate-spin" style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff' }} />
+              : <FIcon name="send" size={16} color="#fff" fill="#fff" />}
           </button>
         </form>
       </footer>

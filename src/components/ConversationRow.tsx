@@ -1,5 +1,9 @@
 import React from 'react';
 import { Conversation } from '../types';
+import { FIcon } from './futuristic';
+
+/* Futuristic v2 skin · Phase 7 / feat/futuristic-redesign.
+   Glass conversation row. Prop contract + React.memo comparator preserved. */
 
 interface Props {
   conversation: Conversation;
@@ -10,54 +14,57 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
   return (
     <div
       onClick={() => onClick(conv.userId, conv.name)}
-      className="flex items-center gap-3 p-3 bg-white rounded-xl cursor-pointer"
-      style={{ border: '0.5px solid var(--dk-border)' }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 14, padding: '13px 14px', cursor: 'pointer',
+        borderRadius: 18, background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border-2)',
+        backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10)',
+      }}
     >
-      <div className="relative flex-shrink-0">
-        <div
-          className="overflow-hidden"
-          style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--dk-surface)' }}
-        >
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14, overflow: 'hidden',
+          background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 0 16px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.30)',
+        }}>
           {conv.logoUrl ? (
-            <img src={conv.logoUrl} className="w-full h-full object-cover" alt="logo" loading="lazy" decoding="async" />
+            <img src={conv.logoUrl} alt="logo" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <div
-              className="w-full h-full flex items-center justify-center font-bold text-lg"
-              style={{ color: 'var(--dk-accent)' }}
-            >
-              {conv.name?.charAt(0)}
-            </div>
+            <span style={{ color: 'white', fontWeight: 800, fontSize: 18 }}>{conv.name?.charAt(0)}</span>
           )}
         </div>
         {conv.unread > 0 && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white">
+          <div style={{
+            position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, padding: '0 5px',
+            borderRadius: 9999, background: 'var(--f-danger)', border: '2px solid var(--f-bg-deep)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800,
+            color: 'white', boxShadow: '0 0 10px rgba(255,77,106,0.6)',
+          }}>
             {conv.unread}
           </div>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex justify-between items-baseline">
-          <h3
-            className="font-semibold truncate"
-            style={{ fontSize: 14, color: 'var(--dk-text-primary)' }}
-          >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+          <h3 style={{
+            fontSize: 14.5, fontWeight: 700, color: 'var(--f-text-1)', letterSpacing: '-0.01em',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0,
+          }}>
             {conv.name}
           </h3>
-          <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', flexShrink: 0, marginLeft: 8 }}>
+          <span className="f-mono" style={{ fontSize: 10, color: 'var(--f-text-3)', flexShrink: 0 }}>
             {conv.timestamp}
           </span>
         </div>
-        <p
-          className="truncate mt-0.5"
-          style={{
-            fontSize: 12,
-            color: conv.unread > 0 ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)',
-            fontWeight: conv.unread > 0 ? 600 : 400,
-          }}
-        >
+        <p style={{
+          fontSize: 12.5, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          color: conv.unread > 0 ? 'var(--f-text-1)' : 'var(--f-text-3)',
+          fontWeight: conv.unread > 0 ? 600 : 400, marginBottom: 0,
+        }}>
           {conv.lastMessage}
         </p>
       </div>
+      <FIcon name="chevR" size={16} color="var(--f-text-3)" />
     </div>
   );
 }, (prev, next) =>

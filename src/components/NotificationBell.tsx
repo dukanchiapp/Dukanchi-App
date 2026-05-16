@@ -1,6 +1,10 @@
 import { useState } from 'react';
-import { Bell, Check, Box } from 'lucide-react';
 import { useNotifications, Notification } from '../context/NotificationContext';
+import { FIcon } from './futuristic';
+
+/* ── Futuristic v2 skin · Phase 10 / feat/futuristic-redesign ──
+   View layer restyled to the deep-space glass system. The notification
+   context wiring (read state, mark-read, mark-all-read) is verbatim. */
 
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
@@ -15,70 +19,101 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="relative">
-      <button 
+    <div style={{ position: 'relative' }}>
+      <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-500 hover:text-indigo-600 transition-colors rounded-full hover:bg-indigo-50"
+        style={{
+          position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 36, height: 36, borderRadius: 12, cursor: 'pointer',
+          background: 'transparent', border: 'none', color: 'var(--f-text-1)',
+        }}
+        aria-label="Notifications"
       >
-        <Bell size={24} />
+        <FIcon name="bell" size={22} color="currentColor" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
+          <span style={{
+            position: 'absolute', top: 2, right: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            minWidth: 16, height: 16, padding: '0 4px', borderRadius: 9999,
+            background: 'var(--f-danger)', color: 'white', fontSize: 9, fontWeight: 800,
+            border: '2px solid var(--f-bg-deep)', boxShadow: '0 0 8px rgba(255,77,106,0.6)',
+          }}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-          <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-            <h3 className="font-bold text-gray-900">Notifications</h3>
+        <div style={{
+          position: 'absolute', right: 0, marginTop: 8, width: 320, zIndex: 50, overflow: 'hidden',
+          borderRadius: 18, background: 'var(--f-modal-bg)', border: '1px solid var(--f-glass-border-2)',
+          backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
+        }}>
+          <div style={{
+            padding: 14, borderBottom: '1px solid var(--f-glass-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0 }}>Notifications</h3>
             {unreadCount > 0 && (
-              <button 
+              <button
                 onClick={markAllAsRead}
-                className="text-xs text-indigo-600 font-semibold hover:text-indigo-800 flex items-center"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 4, background: 'transparent', border: 'none',
+                  cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--f-magenta-light)', fontFamily: 'inherit',
+                }}
               >
-                <Check size={14} className="mr-1" /> Mark all read
+                <FIcon name="check" size={13} color="var(--f-magenta-light)" /> Mark all read
               </button>
             )}
           </div>
-          
-          <div className="max-h-[60vh] overflow-y-auto">
+
+          <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 flex flex-col items-center">
-                <Bell size={32} className="text-gray-300 mb-3" />
-                <p className="text-sm">You're all caught up!</p>
+              <div style={{ padding: 32, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <FIcon name="bell" size={32} color="var(--f-text-4)" />
+                <p style={{ fontSize: 13, color: 'var(--f-text-3)', marginTop: 12 }}>You're all caught up!</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-50">
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {notifications.map((notif) => (
-                  <li 
+                  <li
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer flex gap-3
-                      ${!notif.isRead ? 'bg-indigo-50/30' : ''}
-                    `}
+                    style={{
+                      padding: 14, cursor: 'pointer', display: 'flex', gap: 12,
+                      borderBottom: '1px solid var(--f-glass-border)',
+                      background: !notif.isRead ? 'rgba(255,42,140,0.06)' : 'transparent',
+                    }}
                   >
-                    <div className="mt-1">
-                      {notif.type === 'NEW_POST' ? (
-                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                          <Box size={16} />
-                        </div>
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center">
-                          <Bell size={16} />
-                        </div>
-                      )}
+                    <div style={{ marginTop: 2 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: notif.type === 'NEW_POST' ? 'rgba(255,42,140,0.15)' : 'var(--f-glass-bg-2)',
+                      }}>
+                        <FIcon
+                          name={notif.type === 'NEW_POST' ? 'image' : 'bell'}
+                          size={15}
+                          color={notif.type === 'NEW_POST' ? 'var(--f-magenta-light)' : 'var(--f-text-3)'}
+                        />
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className={`text-sm ${!notif.isRead ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontSize: 13, lineHeight: 1.4, margin: 0,
+                        color: !notif.isRead ? 'var(--f-text-1)' : 'var(--f-text-3)',
+                        fontWeight: !notif.isRead ? 600 : 400,
+                      }}>
                         {notif.content}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p style={{ fontSize: 11, color: 'var(--f-text-4)', marginTop: 4, marginBottom: 0 }}>
                         {new Date(notif.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     {!notif.isRead && (
-                      <div className="w-2 h-2 rounded-full bg-indigo-600 mt-2"></div>
+                      <div style={{
+                        width: 8, height: 8, borderRadius: '50%', background: 'var(--f-magenta)',
+                        marginTop: 6, flexShrink: 0, boxShadow: '0 0 8px rgba(255,42,140,0.6)',
+                      }} />
                     )}
                   </li>
                 ))}
