@@ -17,7 +17,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchShowDuration: 3000,
       launchAutoHide: false,         // Hide programmatically — feels smoother
-      backgroundColor: '#FAFAF8',    // Dukanchi cream background
+      backgroundColor: '#060814',    // Futuristic v2 deep-space background
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,            // No spinner — cleaner brand moment
@@ -25,8 +25,8 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
     StatusBar: {
-      backgroundColor: '#FAFAF8',
-      style: 'DARK',  // Dark icons on light background
+      backgroundColor: '#060814',
+      style: 'LIGHT',  // Light icons on deep-space dark background (futuristic v2)
       overlaysWebView: false,
     },
     Keyboard: {

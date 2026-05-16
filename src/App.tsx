@@ -132,9 +132,9 @@ export default function App() {
         const { App: CapApp } = await import('@capacitor/app');
         const { Keyboard } = await import('@capacitor/keyboard');
 
-        // Status bar: dark icons on cream background to match app
-        await StatusBar.setStyle({ style: Style.Dark });
-        await StatusBar.setBackgroundColor({ color: '#FAFAF8' });
+        // Status bar: light icons on deep-space dark background (futuristic v2)
+        await StatusBar.setStyle({ style: Style.Light });
+        await StatusBar.setBackgroundColor({ color: '#060814' });
 
         // Keyboard: ensure inputs scroll into view on focus (default Android is jumpy)
         Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
@@ -173,7 +173,7 @@ export default function App() {
           <LocationProvider>
           <NotificationProvider>
             <FlowController />
-            <div className="min-h-screen pb-16" style={{ background: 'var(--dk-bg)' }}>
+            <div className="min-h-screen" style={{ background: 'var(--f-bg-deep)' }}>
               <BrowserModeBanner />
               <Suspense fallback={
                 <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-bg-deep)' }}>
