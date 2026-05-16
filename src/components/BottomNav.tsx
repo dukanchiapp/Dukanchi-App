@@ -1,12 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, MapPin, MessageCircle, User } from 'lucide-react';
+import { FIcon, type FIconName } from './futuristic';
 
-const navItems = [
-  { path: '/', icon: Home, label: 'Home' },
-  { path: '/search', icon: Search, label: 'Search' },
-  { path: '/map', icon: MapPin, label: 'Map' },
-  { path: '/messages', icon: MessageCircle, label: 'Chat' },
-  { path: '/profile', icon: User, label: 'Profile' },
+/* ── Futuristic v2 skin · Phase 10 / feat/futuristic-redesign ──
+   Floating glass bottom navigation. Routes, active-tab detection, and the
+   hide-on-auth/chat/landing logic are preserved verbatim. */
+
+const navItems: { path: string; icon: FIconName; label: string }[] = [
+  { path: '/', icon: 'home', label: 'Home' },
+  { path: '/search', icon: 'search', label: 'Search' },
+  { path: '/map', icon: 'mapPin', label: 'Map' },
+  { path: '/messages', icon: 'msg', label: 'Chat' },
+  { path: '/profile', icon: 'user', label: 'Profile' },
 ];
 
 export default function BottomNav() {
@@ -24,37 +28,53 @@ export default function BottomNav() {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 pb-safe z-40"
-      style={{ background: 'var(--dk-bg)', borderTop: '0.5px solid var(--dk-border)' }}
+      style={{ pointerEvents: 'none' }}
     >
-      <div className="flex justify-around items-center h-16 max-w-md mx-auto">
-        {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive =
-            location.pathname === path ||
-            (path !== '/' && location.pathname.startsWith(path));
-          return (
-            <Link
-              key={path}
-              to={path}
-              className="flex flex-col items-center justify-center w-full h-full gap-1"
-            >
-              <Icon
-                size={22}
-                fill={isActive ? '#FF6B35' : 'none'}
-                color={isActive ? '#FF6B35' : '#888'}
-                strokeWidth={isActive ? 0 : 2}
-              />
-              <span
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 14px 8px' }}>
+        <div
+          style={{
+            pointerEvents: 'auto',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+            padding: '8px 6px', borderRadius: 30,
+            background: 'rgba(20,20,40,0.62)',
+            border: '1px solid var(--f-glass-border-2)',
+            backdropFilter: 'blur(28px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+            boxShadow: '0 -2px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10)',
+          }}
+        >
+          {navItems.map(({ path, icon, label }) => {
+            const isActive =
+              location.pathname === path ||
+              (path !== '/' && location.pathname.startsWith(path));
+            return (
+              <Link
+                key={path}
+                to={path}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
-                  fontSize: 10,
-                  fontWeight: 500,
-                  color: isActive ? '#FF6B35' : '#888',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                  padding: '6px 14px', borderRadius: 16, textDecoration: 'none',
+                  background: isActive ? 'rgba(255,255,255,0.10)' : 'transparent',
+                  transition: 'background 250ms var(--f-ease)',
                 }}
               >
-                {label}
-              </span>
-            </Link>
-          );
-        })}
+                <FIcon
+                  name={icon}
+                  size={21}
+                  color={isActive ? 'var(--f-magenta)' : 'rgba(244,242,235,0.55)'}
+                  stroke={isActive ? 2.4 : 2}
+                />
+                <span style={{
+                  fontSize: 9.5, fontWeight: 600, letterSpacing: 0.3,
+                  color: isActive ? 'var(--f-text-1)' : 'rgba(244,242,235,0.55)',
+                }}>
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

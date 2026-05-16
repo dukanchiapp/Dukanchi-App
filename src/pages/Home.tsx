@@ -1,16 +1,34 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MapPin, Store as StoreIcon, SlidersHorizontal, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import AppHeader from '../components/AppHeader';
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useUserLocation } from '../context/LocationContext';
 import LocationPicker from '../components/LocationPicker';
-import { PostCardSkeleton } from '../components/Skeleton';
-import { PostCard } from '../components/PostCard';
 import { useFeed } from '../hooks/useFeed';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
+import { FIcon } from '../components/futuristic/FIcon';
+import { FLogo } from '../components/futuristic/FLogo';
+import { FLocationStrip } from '../components/futuristic/FLocationStrip';
+import { FPostCard } from '../components/futuristic/FPostCard';
+
+// Futuristic (v2) carousel chevron — glass circle. Shared L/R style.
+const fChevBtn: CSSProperties = {
+  position: 'absolute',
+  top: '50%',
+  transform: 'translateY(-50%)',
+  width: 30,
+  height: 30,
+  borderRadius: '50%',
+  border: 'none',
+  cursor: 'pointer',
+  background: 'rgba(0,0,0,0.45)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
 export default function HomePage() {
   usePageMeta({ title: 'Home' });
@@ -252,44 +270,90 @@ export default function HomePage() {
   ];
 
   return (
-    <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--f-bg-deep)',
+        backgroundImage: 'var(--f-page-bg)',
+        paddingBottom: 80,
+        fontFamily: 'var(--f-font)',
+      }}
+    >
       <div className="max-w-md mx-auto">
 
         {/* ── Sticky top block (Header + Location) ── */}
-        <div ref={topBarRef} className="sticky top-0 z-30" style={{ background: 'var(--dk-bg)' }}>
-          <AppHeader />
+        <div
+          ref={topBarRef}
+          className="sticky top-0 z-30"
+          style={{
+            background: 'var(--f-sticky-bg)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+          }}
+        >
           <div
-            className="px-4 py-2 flex items-center justify-between"
-            style={{ background: 'var(--dk-bg-soft)' }}
+            style={{
+              padding: '14px 16px 12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
           >
-            <div className="flex items-center gap-1.5">
-              <MapPin size={13} style={{ color: 'var(--dk-accent)', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: 'var(--dk-text-secondary)' }}>
-                Showing stores near{' '}
-                <strong style={{ color: 'var(--dk-text-primary)', fontWeight: 600 }}>
-                  {userLocCtx ? userLocCtx.name : 'your area'}
-                </strong>
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <FLogo size={36} />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 800,
+                    color: 'var(--f-text-1)',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.15,
+                  }}
+                >
+                  Dukanchi
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--f-text-3)', lineHeight: 1.15 }}>
+                  apna bazaar, apni dukaan
+                </span>
+              </div>
             </div>
-            <button
-              style={{ fontSize: 12, color: 'var(--dk-accent)', fontWeight: 600 }}
-              onClick={() => setShowLocationPicker(true)}
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 14,
+                background: 'var(--f-glass-bg-2)',
+                border: '1px solid var(--f-glass-border)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              Change
-            </button>
+              <FIcon name="bell" size={18} color="var(--f-text-1)" />
+            </div>
           </div>
+          <FLocationStrip
+            name={userLocCtx ? userLocCtx.name : 'your area'}
+            onChange={() => setShowLocationPicker(true)}
+          />
         </div>
 
         {/* ── Carousel banner ── */}
         {carouselImages.length > 0 && (
-          <div className="px-4 py-2" style={{ background: 'var(--dk-bg)' }}>
+          <div style={{ padding: '12px 14px' }}>
             <div
               style={{
                 position: 'relative',
-                borderRadius: 'var(--dk-radius-xl)',
+                borderRadius: 22,
                 overflow: 'hidden',
                 aspectRatio: '2.2 / 1',
-                background: '#e5e7eb',
+                background: 'var(--f-bg-elev)',
+                border: '1px solid rgba(255,42,140,0.30)',
+                boxShadow:
+                  '0 0 32px rgba(255,42,140,0.22), inset 0 1px 0 rgba(255,255,255,0.15)',
               }}
             >
               <div
@@ -314,61 +378,47 @@ export default function HomePage() {
 
               {carouselImages.length > 1 && (
                 <>
-                  <button
-                    onClick={() => goCarousel('prev')}
+                  <button onClick={() => goCarousel('prev')} style={{ ...fChevBtn, left: 8 }}>
+                    <FIcon name="chevL" size={16} color="white" />
+                  </button>
+                  <button onClick={() => goCarousel('next')} style={{ ...fChevBtn, right: 8 }}>
+                    <FIcon name="chevR" size={16} color="white" />
+                  </button>
+                  <div
                     style={{
-                      position: 'absolute', left: 6, top: '50%', transform: 'translateY(-50%)',
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.35)', color: 'white',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer',
+                      position: 'absolute',
+                      bottom: 8,
+                      left: 0,
+                      right: 0,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: 5,
                     }}
                   >
-                    <ChevronLeft size={16} />
-                  </button>
-                  <button
-                    onClick={() => goCarousel('next')}
-                    style={{
-                      position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: 'rgba(0,0,0,0.35)', color: 'white',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      backdropFilter: 'blur(4px)', border: 'none', cursor: 'pointer',
-                    }}
-                  >
-                    <ChevronRight size={16} />
-                  </button>
+                    {carouselImages.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          if (carouselTimer.current) clearInterval(carouselTimer.current);
+                          setCarouselIdx(i);
+                          carouselTimer.current = setInterval(() => {
+                            setCarouselIdx(prev => (prev + 1) % carouselImages.length);
+                          }, 4000);
+                        }}
+                        style={{
+                          width: i === carouselIdx ? 18 : 6,
+                          height: 6,
+                          borderRadius: 3,
+                          background: i === carouselIdx ? 'white' : 'rgba(255,255,255,0.4)',
+                          transition: 'all 0.3s ease',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                        }}
+                      />
+                    ))}
+                  </div>
                 </>
-              )}
-
-              {carouselImages.length > 1 && (
-                <div
-                  style={{
-                    position: 'absolute', bottom: 8, left: 0, right: 0,
-                    display: 'flex', justifyContent: 'center', gap: 5,
-                  }}
-                >
-                  {carouselImages.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        if (carouselTimer.current) clearInterval(carouselTimer.current);
-                        setCarouselIdx(i);
-                        carouselTimer.current = setInterval(() => { setCarouselIdx(prev => (prev + 1) % carouselImages.length); }, 4000);
-                      }}
-                      style={{
-                        width: i === carouselIdx ? 18 : 6,
-                        height: 6,
-                        borderRadius: 3,
-                        background: i === carouselIdx ? 'white' : 'rgba(255,255,255,0.5)',
-                        transition: 'all 0.3s ease',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
-                    />
-                  ))}
-                </div>
               )}
             </div>
           </div>
@@ -376,41 +426,96 @@ export default function HomePage() {
 
         {/* ── Tabs + distance filter ── */}
         <div
-          className="sticky z-20 px-4 py-2.5 flex items-center justify-between"
-          style={{ top: topBarHeight, background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}
+          className="sticky z-20"
+          style={{
+            top: topBarHeight,
+            padding: '10px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'var(--f-sticky-bg)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderBottom: '1px solid var(--f-glass-border)',
+          }}
         >
-          <div className="flex p-0.5 rounded-full gap-0.5" style={{ background: 'var(--dk-surface)' }}>
+          <div
+            style={{
+              display: 'flex',
+              padding: 3,
+              borderRadius: 9999,
+              gap: 2,
+              background: 'var(--f-glass-bg)',
+              border: '1px solid var(--f-glass-border)',
+            }}
+          >
             {tabs.map(tab => (
               <button
                 key={tab.key}
                 onClick={() => setFeedType(tab.key)}
-                className="px-4 py-1.5 rounded-full text-xs font-semibold transition-colors"
-                style={
-                  feedType === tab.key
-                    ? { background: '#1A1A1A', color: 'white' }
-                    : { background: 'transparent', color: '#555' }
-                }
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 9999,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border: 'none',
+                  background:
+                    feedType === tab.key
+                      ? 'linear-gradient(135deg, #FF6B35, #FF2A8C)'
+                      : 'transparent',
+                  color: feedType === tab.key ? 'white' : 'var(--f-text-2)',
+                  boxShadow:
+                    feedType === tab.key ? '0 0 14px rgba(255,42,140,0.40)' : 'none',
+                }}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="p-1.5 rounded-full"
-              style={{ color: 'var(--dk-text-secondary)' }}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 12,
+                border: '1px solid var(--f-glass-border)',
+                background: 'var(--f-glass-bg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
             >
-              <SlidersHorizontal size={16} />
+              <FIcon name="sliders" size={15} color="var(--f-text-1)" />
             </button>
             {showFilters && (
               <div
-                className="absolute right-0 top-9 w-44 bg-white shadow-xl rounded-xl py-2 z-30"
-                style={{ border: '1px solid var(--dk-border)' }}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 40,
+                  width: 176,
+                  borderRadius: 14,
+                  padding: '8px 0',
+                  zIndex: 30,
+                  background: 'var(--f-modal-bg)',
+                  border: '1px solid var(--f-glass-border-2)',
+                  backdropFilter: 'blur(28px)',
+                  WebkitBackdropFilter: 'blur(28px)',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                }}
               >
                 <div
-                  className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: 'var(--dk-text-tertiary)' }}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.8,
+                    color: 'var(--f-text-3)',
+                  }}
                 >
                   Distance
                 </div>
@@ -421,12 +526,23 @@ export default function HomePage() {
                   <button
                     key={opt.key}
                     onClick={() => { setLocationRange(opt.key); setShowFilters(false); }}
-                    className="w-full text-left px-4 py-2 text-sm flex justify-between items-center hover:bg-gray-50"
-                    style={{ color: 'var(--dk-text-primary)' }}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '8px 16px',
+                      fontSize: 13,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--f-text-1)',
+                    }}
                   >
                     {opt.label}
                     {locationRange === opt.key && (
-                      <Check size={14} style={{ color: 'var(--dk-accent)' }} />
+                      <FIcon name="check" size={14} color="#FF6BB4" />
                     )}
                   </button>
                 ))}
@@ -436,18 +552,51 @@ export default function HomePage() {
         </div>
 
         {/* ── Feed ── */}
-        <main className="px-4 pt-4 space-y-4">
+        <main style={{ padding: '14px 14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {loading ? (
-            <div style={{ paddingTop: 8 }}>
-              {[1, 2, 3].map(i => <PostCardSkeleton key={i} />)}
-            </div>
+            [1, 2, 3].map(i => (
+              <div key={i} className="f-glass" style={{ borderRadius: 22, overflow: 'hidden' }}>
+                <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      background: 'var(--f-glass-bg-2)',
+                    }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div
+                      style={{
+                        width: '50%',
+                        height: 11,
+                        borderRadius: 6,
+                        background: 'var(--f-glass-bg-2)',
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '70%',
+                        height: 9,
+                        borderRadius: 6,
+                        background: 'var(--f-glass-bg)',
+                        marginTop: 6,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ aspectRatio: '4/5', background: 'var(--f-glass-bg)' }} />
+              </div>
+            ))
           ) : posts.length === 0 ? (
-            <div className="text-center py-16">
-              <StoreIcon className="mx-auto mb-3" size={44} style={{ color: 'var(--dk-border-strong)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--dk-text-secondary)' }}>
+            <div style={{ textAlign: 'center', padding: '64px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <FIcon name="storeIc" size={44} color="var(--f-text-4)" />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-2)' }}>
                 {feedType === 'saved' ? 'No saved posts yet.' : 'No posts found.'}
               </p>
-              <p className="text-xs mt-1" style={{ color: 'var(--dk-text-tertiary)' }}>
+              <p style={{ fontSize: 12, color: 'var(--f-text-3)', marginTop: 4 }}>
                 {feedType === 'saved'
                   ? 'Bookmark posts to see them here.'
                   : 'Try adjusting your filters or follow more stores.'}
@@ -455,7 +604,7 @@ export default function HomePage() {
             </div>
           ) : (
             posts.map(post => (
-              <PostCard
+              <FPostCard
                 key={post.id}
                 post={post}
                 isLiked={interactions.likedPostIds.includes(post.id)}
@@ -477,17 +626,20 @@ export default function HomePage() {
           <div ref={sentinelRef} style={{ height: 1 }} />
 
           {loadingMore && (
-            <div className="flex justify-center py-6">
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                 {[0, 1, 2].map(i => (
                   <div
                     key={i}
                     style={{
-                      width: 8, height: 8, borderRadius: '50%',
-                      background: 'var(--dk-accent)',
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: '#FF2A8C',
+                      boxShadow: '0 0 10px rgba(255,42,140,0.7)',
                       animation: 'pulse 1.2s ease-in-out infinite',
                       animationDelay: `${i * 0.2}s`,
-                      opacity: 0.7,
+                      opacity: 0.8,
                     }}
                   />
                 ))}
@@ -496,9 +648,17 @@ export default function HomePage() {
           )}
 
           {!hasMore && posts.length > 0 && !loadingMore && (
-            <div className="flex flex-col items-center py-8 gap-1">
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '32px 0',
+                gap: 4,
+              }}
+            >
               <span style={{ fontSize: 20 }}>🎉</span>
-              <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>Sab posts dekh liye!</p>
+              <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>Sab posts dekh liye!</p>
             </div>
           )}
         </main>

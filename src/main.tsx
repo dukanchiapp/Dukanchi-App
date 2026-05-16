@@ -12,6 +12,10 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+// Futuristic v2 design tokens (--f-* namespace, glass primitives, animations).
+// Additive — consumed by the futuristic redesign screens; no effect on
+// existing screens until they adopt the --f-* system.
+import './futuristic.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

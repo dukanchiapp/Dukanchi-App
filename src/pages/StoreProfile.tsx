@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MapPin, Phone, Clock, MessageCircle, ArrowLeft, Navigation, UserPlus, UserCheck, Share2, Star, Heart, Package } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import ReviewModal from '../components/ReviewModal';
 import RefreshButton from '../components/RefreshButton';
@@ -8,6 +8,34 @@ import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { apiFetch } from '../lib/api';
+import { FIcon } from '../components/futuristic';
+
+/* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
+   View layer restyled to the deep-space glass system. All store/post/review
+   fetching, follow + like + share handlers, and the post-detail modal wiring
+   are preserved verbatim from the production page. */
+
+const coverFab: CSSProperties = {
+  width: 38,
+  height: 38,
+  borderRadius: 12,
+  background: 'var(--f-fab-bg)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid var(--f-glass-border-2)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  flexShrink: 0,
+};
+
+const detailRow: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 10,
+  padding: '5px 0',
+};
 
 export default function StoreProfilePage() {
   const { id } = useParams();
@@ -129,29 +157,41 @@ export default function StoreProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen" style={{ background: 'white' }}>
-        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
-          style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }} />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-bg-deep)' }}>
+        <div
+          className="animate-spin"
+          style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--f-glass-border-2)', borderTopColor: 'var(--f-magenta)' }}
+        />
       </div>
     );
   }
 
   if (!store) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-6 text-center" style={{ background: 'var(--dk-bg)' }}>
-        <div className="flex items-center justify-center mb-4" style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--dk-surface)', border: '1px solid var(--dk-border)' }}>
-          <Package size={32} style={{ color: 'var(--dk-text-tertiary)' }} />
+      <div style={{
+        minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '0 24px', textAlign: 'center', background: 'var(--f-bg-deep)', backgroundImage: 'var(--f-page-bg)',
+        fontFamily: 'var(--f-font)',
+      }}>
+        <div style={{
+          width: 72, height: 72, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 16, background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+        }}>
+          <FIcon name="storeIc" size={32} color="var(--f-text-3)" />
         </div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', marginBottom: 6 }}>Store not found</h2>
-        <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', marginBottom: 24, maxWidth: 280 }}>
+        <h2 className="f-display" style={{ fontSize: 22, color: 'var(--f-text-1)', margin: '0 0 8px' }}>Store not found</h2>
+        <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: '0 0 24px', maxWidth: 280 }}>
           This store may have been removed or the link is invalid.
         </p>
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm"
-          style={{ background: 'var(--dk-accent)', color: 'white' }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '12px 22px', borderRadius: 12, border: 'none',
+            cursor: 'pointer', background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700,
+            fontFamily: 'inherit', boxShadow: '0 0 20px rgba(255,42,140,0.4)',
+          }}
         >
-          <ArrowLeft size={16} /> Go Back
+          <FIcon name="chevL" size={16} color="white" /> Go Back
         </button>
       </div>
     );
@@ -167,38 +207,50 @@ export default function StoreProfilePage() {
     ...(showReviews ? [{ key: 'reviews', label: 'Reviews', count: reviews.length }] : []),
   ];
 
+  const stats: { v: string | number; l: string }[] = [
+    { v: store._count?.posts || posts.length, l: 'Posts' },
+    { v: followersCount, l: 'Followers' },
+    ...(showReviews ? [{ v: store.averageRating ? store.averageRating.toFixed(1) : '—', l: 'Rating' }] : []),
+  ];
+
   return (
-    <div style={{ background: 'white', minHeight: '100vh', paddingBottom: 80 }}>
-      <div className="max-w-md mx-auto">
+    <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
+      {/* Aurora wash */}
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
+
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
         {/* ── Cover + Logo ── */}
-        <div className="relative" style={{ height: 200 }}>
-          {/* Cover image */}
-          <div className="absolute inset-0 overflow-hidden">
-            {store.coverUrl ? (
-              <img src={store.coverUrl} className="w-full h-full object-cover" alt="" />
-            ) : store.logoUrl ? (
-              <img
-                src={store.logoUrl}
-                className="w-full h-full object-cover"
-                style={{ filter: 'blur(12px) brightness(0.55)', transform: 'scale(1.15)' }}
-                alt=""
-              />
-            ) : (
-              <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF6B35 0%, #FFA94D 100%)' }} />
-            )}
-          </div>
+        <div style={{ position: 'relative', height: 200, overflow: 'hidden' }}>
+          {store.coverUrl ? (
+            <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : store.logoUrl ? (
+            <img
+              src={store.logoUrl}
+              alt=""
+              style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px) brightness(0.4)', transform: 'scale(1.15)' }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF2A8C 0%, #6B33FF 55%, #00E5FF 100%)' }} />
+          )}
 
-          {/* Floating back + refresh + share */}
-          <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 pt-12 z-10">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center justify-center"
-              style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
-            >
-              <ArrowLeft size={18} color="white" />
+          {/* Glow + fade-to-deep overlay */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(circle at 18% 25%, rgba(255,107,53,0.40), transparent 45%),
+              radial-gradient(circle at 85% 15%, rgba(255,42,140,0.45), transparent 50%),
+              linear-gradient(180deg, rgba(6,8,20,0.15) 0%, rgba(6,8,20,0.55) 60%, var(--f-bg-deep) 100%)`,
+          }} />
+
+          {/* Floating top bar */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '48px 14px 0',
+          }}>
+            <button onClick={() => navigate(-1)} style={coverFab} aria-label="Back">
+              <FIcon name="chevL" size={18} color="white" />
             </button>
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <RefreshButton />
               <button
                 onClick={() => {
@@ -206,23 +258,24 @@ export default function StoreProfilePage() {
                   if (navigator.share) navigator.share({ title: store.storeName, url });
                   else { navigator.clipboard.writeText(url); showToast('Link copied!', { type: 'success' }); }
                 }}
-                className="flex items-center justify-center"
-                style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
+                style={coverFab}
+                aria-label="Share"
               >
-                <Share2 size={18} color="white" />
+                <FIcon name="share" size={16} color="white" />
               </button>
             </div>
           </div>
 
           {/* Logo overlapping cover bottom */}
-          <div
-            className="absolute"
-            style={{ bottom: -28, left: 16, width: 72, height: 72, borderRadius: 18, overflow: 'hidden', border: '3px solid white', background: 'var(--dk-surface)', boxShadow: '0 4px 16px rgba(0,0,0,0.18)' }}
-          >
+          <div style={{
+            position: 'absolute', bottom: -28, left: 18, width: 72, height: 72, borderRadius: 18, overflow: 'hidden',
+            border: '3px solid var(--f-bg-deep)', background: 'var(--f-grad-primary)',
+            boxShadow: '0 0 24px rgba(255,42,140,0.45), 0 8px 24px rgba(0,0,0,0.55)',
+          }}>
             {store.logoUrl ? (
-              <img src={store.logoUrl} className="w-full h-full object-cover" alt="logo" />
+              <img src={store.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <div className="w-full h-full flex items-center justify-center font-bold text-2xl" style={{ color: 'var(--dk-accent)' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 28, color: 'white' }}>
                 {store.storeName?.charAt(0)}
               </div>
             )}
@@ -230,169 +283,126 @@ export default function StoreProfilePage() {
         </div>
 
         {/* ── Store info ── */}
-        <div className="px-4 pt-10 pb-4">
-          {/* Name + badge */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--dk-text-primary)', lineHeight: '1.2' }}>
-                  {store.storeName}
-                </h1>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <StarRating rating={store.averageRating ?? 0} size={16} />
-                  {store.averageRating != null && store.averageRating > 0 && (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>
-                      {store.averageRating.toFixed(1)}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {store.owner?.role && store.owner.role !== 'customer' && (
-                  <span
-                    className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide"
-                    style={{ background: 'var(--dk-accent)', color: 'white' }}
-                  >
-                    {store.owner.role === 'retailer' ? 'Retail' : store.owner.role}
-                  </span>
-                )}
-                {store.category && (
-                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>{store.category}</span>
-                )}
-              </div>
-              {store.description && (
-                <p className="mt-1.5" style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>
-                  {store.description}
-                </p>
+        <div style={{ padding: '40px 18px 16px' }}>
+          {/* Name + rating */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+            <h1 className="f-display" style={{ fontSize: 24, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <StarRating rating={store.averageRating ?? 0} size={15} />
+              {store.averageRating != null && store.averageRating > 0 && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-2)' }}>{store.averageRating.toFixed(1)}</span>
               )}
             </div>
           </div>
 
-          {/* Stats card */}
-          <div
-            className="flex mt-4 rounded-2xl overflow-hidden"
-            style={{ border: '0.5px solid var(--dk-border)' }}
-          >
-            <div className="flex-1 flex flex-col items-center py-3" style={{ background: 'white' }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
-                {store._count?.posts || posts.length}
+          {/* Role + category */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: store.description ? 10 : 14 }}>
+            {store.owner?.role && store.owner.role !== 'customer' && (
+              <span style={{
+                padding: '3px 10px', borderRadius: 9999, fontSize: 9, fontWeight: 800, letterSpacing: 0.8,
+                textTransform: 'uppercase', background: 'var(--f-grad-primary)', color: 'white',
+                boxShadow: '0 0 12px rgba(255,42,140,0.45)',
+              }}>
+                {store.owner.role === 'retailer' ? 'Retail' : store.owner.role}
               </span>
-              <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>Posts</span>
-            </div>
-            <div style={{ width: '0.5px', background: 'var(--dk-border)' }} />
-            <div className="flex-1 flex flex-col items-center py-3" style={{ background: 'white' }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{followersCount}</span>
-              <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>Followers</span>
-            </div>
-            {showReviews && (
-              <>
-                <div style={{ width: '0.5px', background: 'var(--dk-border)' }} />
-                <div className="flex-1 flex flex-col items-center py-3" style={{ background: 'white' }}>
-                  <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
-                    {store.averageRating ? store.averageRating.toFixed(1) : '—'}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}>Rating</span>
-                </div>
-              </>
             )}
+            {store.category && <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{store.category}</span>}
+          </div>
+
+          {store.description && (
+            <p style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.55, margin: '0 0 14px' }}>{store.description}</p>
+          )}
+
+          {/* Stats */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            {stats.map(stat => (
+              <div key={stat.l} className="f-glass" style={{ flex: 1, padding: '13px 8px', borderRadius: 14, textAlign: 'center', background: 'var(--f-glass-bg)' }}>
+                <div className="f-mono" style={{ fontSize: 21, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.02em' }}>{stat.v}</div>
+                <div style={{ fontSize: 10, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 2 }}>{stat.l}</div>
+              </div>
+            ))}
           </div>
 
           {/* Details card */}
-          <div
-            className="mt-4 space-y-2 p-3 rounded-2xl"
-            style={{ background: '#F5F5F5', border: '0.5px solid var(--dk-border)' }}
-          >
-            {/* Address */}
+          <div className="f-glass f-glass-edge" style={{ padding: '12px 14px', borderRadius: 16, background: 'var(--f-glass-bg)' }}>
             {store.address && (
-              <div className="flex items-start gap-2">
-                <MapPin size={14} style={{ color: 'var(--dk-accent)', flexShrink: 0, marginTop: 1 }} />
-                <span style={{ fontSize: 12, color: 'var(--dk-text-secondary)', fontWeight: 500 }}>{store.address}</span>
+              <div style={detailRow}>
+                <FIcon name="mapPin" size={14} color="var(--f-magenta-light)" />
+                <span style={{ fontSize: 12.5, color: 'var(--f-text-1)', fontWeight: 500 }}>{store.address}</span>
               </div>
             )}
-            {/* Postal + City/State */}
             {(store.postalCode || store.city || store.state) && (
-              <div className="flex items-start gap-2" style={{ paddingLeft: 22 }}>
-                <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>
+              <div style={{ ...detailRow, paddingLeft: 24 }}>
+                <span style={{ fontSize: 11, color: 'var(--f-text-3)' }}>
                   {store.postalCode && <span>{store.postalCode}</span>}
                   {(store.city || store.state) && <span>{store.postalCode ? ' · ' : ''}{[store.city, store.state].filter(Boolean).join(', ')}</span>}
                 </span>
               </div>
             )}
-            {/* Phone */}
             {store.phoneVisible !== false && store.phone && (
-              <div className="flex items-center gap-2">
-                <Phone size={14} style={{ color: 'var(--dk-accent)', flexShrink: 0 }} />
-                <a href={`tel:${store.phone}`} style={{ fontSize: 12, color: 'var(--dk-text-secondary)' }}>{store.phone}</a>
+              <div style={detailRow}>
+                <FIcon name="phone" size={14} color="var(--f-magenta-light)" />
+                <a href={`tel:${store.phone}`} style={{ fontSize: 12.5, color: 'var(--f-text-2)', textDecoration: 'none' }}>{store.phone}</a>
               </div>
             )}
-            {/* Open/Closed status */}
             {storeStatus && (
-              <div className="flex items-center gap-2">
-                <Clock size={14} style={{ color: statusColor(storeStatus.color), flexShrink: 0 }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: statusColor(storeStatus.color) }}>
-                  {storeStatus.label}
-                </span>
+              <div style={detailRow}>
+                <FIcon name="clock" size={14} color={statusColor(storeStatus.color)} />
+                <span style={{ fontSize: 12.5, fontWeight: 600, color: statusColor(storeStatus.color) }}>{storeStatus.label}</span>
               </div>
             )}
-            {/* Hours */}
             {(store.openingTime || store.closingTime) && !store.is24Hours && (
-              <div className="flex items-center gap-2">
-                <Clock size={14} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>
+              <div style={detailRow}>
+                <FIcon name="clock" size={14} color="var(--f-text-3)" />
+                <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
                   Hours: {store.openingTime || '--:--'} – {store.closingTime || '--:--'}
                 </span>
               </div>
             )}
-            {/* Working days */}
             {store.workingDays && (
-              <div className="flex items-center gap-2">
-                <MapPin size={14} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0, opacity: 0 }} />
-                <span style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{store.workingDays}</span>
+              <div style={{ ...detailRow, paddingLeft: 24 }}>
+                <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{store.workingDays}</span>
               </div>
             )}
-            {/* Direction to Store */}
             {store.latitude && store.longitude && store.latitude !== 0 && (
               <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  background: '#1A1A1A',
-                  color: 'white',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  borderRadius: 14,
-                  padding: '12px 0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  textDecoration: 'none',
-                  marginTop: 8,
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8,
+                  padding: '11px 14px', borderRadius: 12, background: 'rgba(255,107,53,0.14)',
+                  border: '1px solid rgba(255,107,53,0.38)', color: 'var(--f-orange-light)', fontSize: 13,
+                  fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(255,107,53,0.18)',
                 }}
               >
-                <Navigation size={16} />
+                <FIcon name="navigation" size={14} color="var(--f-orange-light)" />
                 Direction to Store
               </a>
             )}
           </div>
 
           {/* Action buttons */}
-          <div className="flex gap-2 mt-4">
+          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
             {isOwner ? (
               <>
                 <Link
                   to="/profile"
-                  className="flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm"
-                  style={{ background: '#1A1A1A', color: 'white' }}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '11px 14px', borderRadius: 12, textDecoration: 'none', background: 'var(--f-grad-primary)',
+                    color: 'white', fontSize: 13, fontWeight: 700, boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+                  }}
                 >
-                  New Post
+                  <FIcon name="plus" size={14} color="white" /> New Post
                 </Link>
                 <Link
                   to="/retailer/dashboard"
-                  className="flex-1 flex items-center justify-center py-2.5 rounded-xl font-semibold text-sm"
-                  style={{ background: 'var(--dk-bg-soft)', color: 'var(--dk-accent)', border: '0.5px solid var(--dk-border)' }}
+                  style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '11px 14px',
+                    borderRadius: 12, textDecoration: 'none', background: 'var(--f-glass-bg-2)',
+                    border: '1px solid var(--f-glass-border)', color: 'var(--f-text-1)', fontSize: 13, fontWeight: 700,
+                  }}
                 >
                   Edit Profile
                 </Link>
@@ -401,31 +411,41 @@ export default function StoreProfilePage() {
               <>
                 <button
                   onClick={toggleFollow}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm"
                   style={{
-                    background: isFollowing ? 'var(--dk-surface)' : 'var(--dk-accent)',
-                    color: isFollowing ? 'var(--dk-text-primary)' : 'white',
-                    border: isFollowing ? '0.5px solid var(--dk-border)' : 'none',
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '11px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+                    border: isFollowing ? '1px solid var(--f-glass-border)' : 'none',
+                    background: isFollowing ? 'var(--f-glass-bg-2)' : 'var(--f-grad-primary)',
+                    color: isFollowing ? 'var(--f-text-1)' : 'white', fontSize: 13, fontWeight: 700,
+                    boxShadow: isFollowing ? 'none' : '0 0 16px rgba(255,42,140,0.35)',
                   }}
                 >
-                  {isFollowing ? <><UserCheck size={15} />Following</> : <><UserPlus size={15} />Follow</>}
+                  {isFollowing
+                    ? <><FIcon name="check" size={15} color="var(--f-text-1)" />Following</>
+                    : <><FIcon name="plus" size={15} color="white" />Follow</>}
                 </button>
                 {store.chatEnabled !== false && (
                   <Link
                     to={`/chat/${store.ownerId}`}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-semibold text-sm"
-                    style={{ background: '#1A1A1A', color: 'white' }}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      padding: '11px 14px', borderRadius: 12, textDecoration: 'none', background: 'var(--f-glass-bg-2)',
+                      border: '1px solid var(--f-glass-border-2)', color: 'var(--f-text-1)', fontSize: 13, fontWeight: 700,
+                    }}
                   >
-                    <MessageCircle size={15} />Chat
+                    <FIcon name="msg" size={15} color="var(--f-magenta-light)" />Chat
                   </Link>
                 )}
                 {store.phone && store.phoneVisible !== false && (
                   <a
                     href={`tel:${store.phone}`}
-                    className="flex items-center justify-center"
-                    style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', flexShrink: 0 }}
+                    style={{
+                      width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: 12, background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)', flexShrink: 0,
+                    }}
+                    aria-label="Call store"
                   >
-                    <Phone size={18} style={{ color: 'var(--dk-text-secondary)' }} />
+                    <FIcon name="phone" size={17} color="var(--f-text-2)" />
                   </a>
                 )}
               </>
@@ -434,32 +454,30 @@ export default function StoreProfilePage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div
-          className="sticky z-10 flex border-b"
-          style={{ top: 0, background: 'white', borderColor: 'var(--dk-border)' }}
-        >
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 10, display: 'flex',
+          background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          borderBottom: '1px solid var(--f-glass-border)',
+        }}>
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className="flex-1 flex items-center justify-center gap-1 py-3"
               style={{
-                fontSize: 13,
-                fontWeight: activeTab === tab.key ? 700 : 400,
-                color: activeTab === tab.key ? 'var(--dk-text-primary)' : 'var(--dk-text-tertiary)',
-                borderBottom: activeTab === tab.key ? '2px solid var(--dk-accent)' : '2px solid transparent',
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 0',
+                background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                borderBottom: activeTab === tab.key ? '2px solid var(--f-orange)' : '2px solid transparent',
+                color: activeTab === tab.key ? 'var(--f-text-1)' : 'var(--f-text-3)',
+                fontSize: 13.5, fontWeight: activeTab === tab.key ? 800 : 500,
               }}
             >
               {tab.label}
-              <span
-                className="px-1.5 py-0.5 rounded-full"
-                style={{
-                  fontSize: 10,
-                  fontWeight: 600,
-                  background: activeTab === tab.key ? 'var(--dk-accent)' : 'var(--dk-surface)',
-                  color: activeTab === tab.key ? 'white' : 'var(--dk-text-tertiary)',
-                }}
-              >
+              <span style={{
+                fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
+                background: activeTab === tab.key ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
+                color: activeTab === tab.key ? 'white' : 'var(--f-text-3)',
+                boxShadow: activeTab === tab.key ? '0 0 8px rgba(255,42,140,0.4)' : 'none',
+              }}>
                 {tab.count}
               </span>
             </button>
@@ -467,46 +485,47 @@ export default function StoreProfilePage() {
         </div>
 
         {/* ── Tab content ── */}
-        <div className="min-h-72">
+        <div style={{ minHeight: 280 }}>
 
           {/* Posts grid */}
           {activeTab === 'posts' && (
-            <div className="grid grid-cols-3 gap-0.5">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3, padding: 3 }}>
               {sortedPosts.map(post => (
                 <div
                   key={post.id}
-                  className="aspect-[3/4] relative cursor-pointer"
                   onClick={() => setSelectedPost(post)}
+                  style={{ position: 'relative', aspectRatio: '3/4', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', background: 'var(--f-bg-elev)' }}
                 >
                   <img
                     src={post.imageUrl}
                     alt={post.caption || 'Post'}
-                    className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
                     loading="lazy"
                     decoding="async"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   {post.isPinned && (
-                    <div
-                      className="absolute top-1.5 right-1.5 flex items-center justify-center"
-                      style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--dk-accent)' }}
-                    >
-                      <Star size={11} fill="white" color="white" strokeWidth={0} />
+                    <div style={{
+                      position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: 'var(--f-grad-primary)', boxShadow: '0 0 10px rgba(255,42,140,0.5)',
+                    }}>
+                      <FIcon name="star" size={11} color="white" fill="white" />
                     </div>
                   )}
                   {(post.product?.price || post.price) && (
-                    <div
-                      className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded"
-                      style={{ background: 'rgba(0,0,0,0.65)', fontSize: 10, fontWeight: 600, color: 'white' }}
-                    >
+                    <div style={{
+                      position: 'absolute', bottom: 6, left: 6, padding: '2px 7px', borderRadius: 6,
+                      background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', fontSize: 10, fontWeight: 700, color: 'white',
+                    }}>
                       ₹{Number(post.product?.price || post.price).toLocaleString()}
                     </div>
                   )}
                 </div>
               ))}
               {posts.length === 0 && (
-                <div className="col-span-3 py-16 text-center">
-                  <p style={{ fontSize: 13, color: 'var(--dk-text-tertiary)' }}>No posts yet</p>
+                <div style={{ gridColumn: '1 / -1', padding: '56px 0', textAlign: 'center' }}>
+                  <p style={{ fontSize: 13, color: 'var(--f-text-3)' }}>No posts yet</p>
                 </div>
               )}
             </div>
@@ -514,19 +533,15 @@ export default function StoreProfilePage() {
 
           {/* Reviews */}
           {activeTab === 'reviews' && showReviews && (
-            <div className="px-4 py-3">
-              {/* Rating summary */}
+            <div style={{ padding: '14px 16px' }}>
               {store.averageRating ? (
-                <div
-                  className="flex items-center gap-4 p-4 rounded-2xl mb-4"
-                  style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}
-                >
-                  <div className="text-center">
-                    <p style={{ fontSize: 40, fontWeight: 700, color: 'var(--dk-text-primary)', lineHeight: 1 }}>
+                <div className="f-glass" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, marginBottom: 14, background: 'var(--f-glass-bg)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <p className="f-mono" style={{ fontSize: 38, fontWeight: 800, color: 'var(--f-text-1)', lineHeight: 1, margin: 0 }}>
                       {store.averageRating.toFixed(1)}
                     </p>
-                    <StarRating rating={store.averageRating} size={14} />
-                    <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>{store.reviewCount} reviews</p>
+                    <div style={{ marginTop: 4 }}><StarRating rating={store.averageRating} size={13} /></div>
+                    <p style={{ fontSize: 11, color: 'var(--f-text-3)', marginTop: 3 }}>{store.reviewCount} reviews</p>
                   </div>
                 </div>
               ) : null}
@@ -534,34 +549,37 @@ export default function StoreProfilePage() {
               {!isOwner && currentUserRole === 'customer' && (
                 <button
                   onClick={() => setIsReviewModalOpen(true)}
-                  className="w-full mb-4 py-3 rounded-xl font-semibold text-sm"
-                  style={{ background: 'var(--dk-accent)', color: 'white' }}
+                  style={{
+                    width: '100%', marginBottom: 14, padding: 12, borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: 'var(--f-grad-primary)', color: 'white', fontSize: 13, fontWeight: 700,
+                    fontFamily: 'inherit', boxShadow: '0 0 18px rgba(255,42,140,0.35)',
+                  }}
                 >
                   Write a Review
                 </button>
               )}
 
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {reviews.map(review => (
-                  <div key={review.id} className="p-4 rounded-xl" style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}>
-                    <div className="flex justify-between items-start mb-2">
+                  <div key={review.id} className="f-glass" style={{ padding: 14, borderRadius: 14, background: 'var(--f-glass-bg)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                       <div>
-                        <span className="font-semibold" style={{ fontSize: 13, color: 'var(--dk-text-primary)' }}>{review.user.name}</span>
-                        <div className="mt-0.5"><StarRating rating={review.rating} size={12} /></div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>{review.user.name}</span>
+                        <div style={{ marginTop: 3 }}><StarRating rating={review.rating} size={12} /></div>
                       </div>
-                      <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>
-                        {new Date(review.createdAt).toLocaleDateString()}
-                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--f-text-3)' }}>{new Date(review.createdAt).toLocaleDateString()}</span>
                     </div>
                     {review.comment && (
-                      <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>{review.comment}</p>
+                      <p style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.5, margin: 0 }}>{review.comment}</p>
                     )}
                   </div>
                 ))}
                 {reviews.length === 0 && (
-                  <div className="py-12 text-center">
-                    <Star size={36} style={{ color: 'var(--dk-border-strong)', margin: '0 auto 8px' }} />
-                    <p style={{ fontSize: 13, color: 'var(--dk-text-tertiary)' }}>No reviews yet</p>
+                  <div style={{ padding: '44px 0', textAlign: 'center' }}>
+                    <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+                      <FIcon name="star" size={34} color="var(--f-text-4)" />
+                    </div>
+                    <p style={{ fontSize: 13, color: 'var(--f-text-3)' }}>No reviews yet</p>
                   </div>
                 )}
               </div>
@@ -572,20 +590,21 @@ export default function StoreProfilePage() {
 
       {/* ── Post detail modal ── */}
       {selectedPost && (
-        <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'white' }}>
-          <header
-            className="flex items-center justify-between px-4 py-3"
-            style={{ background: 'white', borderBottom: '0.5px solid var(--dk-border)' }}
-          >
-            <button onClick={() => setSelectedPost(null)}>
-              <ArrowLeft size={22} style={{ color: 'var(--dk-text-primary)' }} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: 'var(--f-bg-deep)' }}>
+          <header style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px',
+            background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            borderBottom: '1px solid var(--f-glass-border)',
+          }}>
+            <button onClick={() => setSelectedPost(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }} aria-label="Close">
+              <FIcon name="chevL" size={22} color="var(--f-text-1)" />
             </button>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{store.storeName}</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--f-text-1)' }}>{store.storeName}</span>
             <div style={{ width: 22 }} />
           </header>
 
-          <div className="flex-1 overflow-y-auto pb-20">
-            <div className="max-w-md mx-auto">
+          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 80 }}>
+            <div style={{ maxWidth: 480, margin: '0 auto' }}>
               {sortedPosts.map(post => {
                 const isLiked = interactions.likedPostIds.includes(post.id);
                 const likeCount = getLikeCount(post);
@@ -593,53 +612,69 @@ export default function StoreProfilePage() {
                   <div
                     key={post.id}
                     id={`post-${post.id}`}
-                    className="mb-3 scroll-mt-20"
-                    style={{ background: 'white', borderBottom: '0.5px solid var(--dk-border)' }}
+                    style={{ marginBottom: 8, scrollMarginTop: 80, borderBottom: '1px solid var(--f-glass-border)' }}
                   >
                     {/* Post header */}
-                    <div className="flex items-center gap-3 p-3">
-                      <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--dk-accent)', flexShrink: 0 }}>
-                        <img src={store.logoUrl} className="w-full h-full object-cover" alt="store" loading="lazy" decoding="async" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--f-magenta)', flexShrink: 0 }}>
+                        {store.logoUrl ? (
+                          <img src={store.logoUrl} alt="store" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-grad-primary)', color: 'white', fontWeight: 800 }}>
+                            {store.storeName?.charAt(0)}
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }}>{store.storeName}</p>
-                        <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)' }}>{new Date(post.createdAt).toLocaleDateString()}</p>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</p>
+                        <p style={{ fontSize: 10, color: 'var(--f-text-3)', margin: 0 }}>{new Date(post.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
 
                     {/* Image */}
-                    <div style={{ background: 'black' }}>
-                      <img src={post.imageUrl} alt={post.caption || 'Post'} className="w-full h-auto max-h-[500px] object-contain" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
+                    <div style={{ background: '#000' }}>
+                      <img
+                        src={post.imageUrl}
+                        alt={post.caption || 'Post'}
+                        referrerPolicy="no-referrer"
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: '100%', height: 'auto', maxHeight: 500, objectFit: 'contain', display: 'block' }}
+                      />
                     </div>
 
                     {/* Actions */}
-                    <div className="px-4 py-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-4">
-                          <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1">
-                            <Heart size={22} fill={isLiked ? '#EF4444' : 'none'} color={isLiked ? '#EF4444' : 'var(--dk-text-primary)'} strokeWidth={isLiked ? 0 : 2} />
-                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>{likeCount}</span>
+                    <div style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                          <button
+                            onClick={() => toggleLike(post.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                          >
+                            <FIcon name="heart" size={22} color={isLiked ? 'var(--f-danger)' : 'var(--f-text-1)'} fill={isLiked ? 'var(--f-danger)' : 'none'} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--f-text-2)' }}>{likeCount}</span>
                           </button>
                           {store.chatEnabled !== false && !isOwner && (
-                            <Link to={`/chat/${store.ownerId}`}>
-                              <MessageCircle size={22} style={{ color: 'var(--dk-text-primary)' }} />
+                            <Link to={`/chat/${store.ownerId}`} style={{ display: 'flex' }}>
+                              <FIcon name="msg" size={22} color="var(--f-text-1)" />
                             </Link>
                           )}
-                          <button onClick={() => handleShare(post)}>
-                            <Share2 size={22} style={{ color: 'var(--dk-text-primary)' }} />
+                          <button
+                            onClick={() => handleShare(post)}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}
+                          >
+                            <FIcon name="share" size={21} color="var(--f-text-1)" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-3">
-                          {(post.product?.price || post.price) && (
-                            <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
-                              ₹{Number(post.product?.price || post.price).toLocaleString()}
-                            </span>
-                          )}
-                        </div>
+                        {(post.product?.price || post.price) && (
+                          <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--f-text-1)' }}>
+                            ₹{Number(post.product?.price || post.price).toLocaleString()}
+                          </span>
+                        )}
                       </div>
                       {post.caption && (
-                        <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', lineHeight: '1.5' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--dk-text-primary)', marginRight: 6 }}>{store.storeName}</span>
+                        <p style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.5, margin: 0 }}>
+                          <span style={{ fontWeight: 700, color: 'var(--f-text-1)', marginRight: 6 }}>{store.storeName}</span>
                           {post.caption}
                         </p>
                       )}

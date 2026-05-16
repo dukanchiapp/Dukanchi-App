@@ -4,33 +4,50 @@
 //    localhost:3000/*  |  localhost:5173/*  |  192.168.1.*/*  |  *.ngrok-free.dev/*  |  *.ngrok.io/*
 // OR: Set restriction to "None" for development (re-restrict before production)
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ShimmerBox } from '../components/Skeleton';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { apiFetch } from '../lib/api';
 import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerComponent } from '@react-google-maps/api';
-
-const GoogleMap = GoogleMapComponent as any;
-const Marker = MarkerComponent as any;
-import { MapPin, Navigation, X, Clock, Phone, Settings, Search, Store, LocateFixed, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import AppHeader from '../components/AppHeader';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation } from '../context/LocationContext';
 import { CATEGORIES, CATEGORY_CHIPS, matchCategory } from '../constants/categories';
+import { FIcon } from '../components/futuristic/FIcon';
+import { FLogo } from '../components/futuristic/FLogo';
+
+const GoogleMap = GoogleMapComponent as any;
+const Marker = MarkerComponent as any;
 
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
 
+// Futuristic (v2) deep-space dark map style.
 const MAP_STYLES: google.maps.MapTypeStyle[] = [
+  { elementType: 'geometry', stylers: [{ color: '#0E1224' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0A0612' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#9B94AA' }] },
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },
-  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
-  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#e8e8e8' }] },
-  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
-  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
-  { featureType: 'landscape', stylers: [{ color: '#f8f8f8' }] },
-  { featureType: 'water', stylers: [{ color: '#c9e8f5' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1A0C1F' }] },
+  { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#2A1A30' }] },
+  { featureType: 'road.arterial', elementType: 'labels.text.fill', stylers: [{ color: '#9B94AA' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#3A2030' }] },
+  { featureType: 'landscape', stylers: [{ color: '#0A0612' }] },
+  { featureType: 'water', stylers: [{ color: '#14091F' }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#2A1A30' }] },
 ];
 
+const fabStyle = {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  border: '1px solid var(--f-glass-border-2)',
+  background: 'var(--f-fab-bg)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+} as const;
 
 export default function MapPage() {
   usePageMeta({ title: 'Map' });
@@ -124,30 +141,71 @@ export default function MapPage() {
     : null;
 
   return (
-    <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--f-bg-deep)',
+        backgroundImage: 'var(--f-page-bg)',
+        paddingBottom: 80,
+        fontFamily: 'var(--f-font)',
+      }}
+    >
       <div className="max-w-md mx-auto">
 
         {/* ── Header ── */}
-        <div className="sticky top-0 z-20 px-4 pt-5 pb-3" style={{ background: 'var(--dk-bg)' }}>
-          <AppHeader />
+        <div
+          className="sticky top-0 z-20 px-4 pt-3 pb-3"
+          style={{
+            background: 'var(--f-sticky-bg)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderBottom: '1px solid var(--f-glass-border)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <FLogo size={36} />
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                  Dukanchi
+                </span>
+                <span style={{ fontSize: 10, color: 'var(--f-text-3)', lineHeight: 1.15 }}>apna bazaar, apni dukaan</span>
+              </div>
+            </div>
+            <div
+              style={{
+                width: 40, height: 40, borderRadius: 14,
+                background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)',
+                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <FIcon name="bell" size={18} color="var(--f-text-1)" />
+            </div>
+          </div>
 
           {/* Search */}
           <div
-            className="flex items-center gap-2 px-3 mt-3"
-            style={{ background: 'var(--dk-surface)', borderRadius: 'var(--dk-radius-md)', height: 44 }}
+            className="flex items-center gap-2 px-3"
+            style={{
+              background: 'var(--f-glass-bg)',
+              border: '1px solid var(--f-glass-border)',
+              borderRadius: 14,
+              height: 44,
+            }}
           >
-            <Search size={16} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
+            <FIcon name="search" size={16} color="var(--f-text-3)" />
             <input
               type="text"
               placeholder="Search stores near you..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: 'var(--dk-text-primary)' }}
+              style={{ color: 'var(--f-text-1)' }}
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')}>
-                <X size={14} style={{ color: 'var(--dk-text-tertiary)' }} />
+                <FIcon name="x" size={14} color="var(--f-text-3)" />
               </button>
             )}
           </div>
@@ -161,10 +219,11 @@ export default function MapPage() {
                   key={chip.value}
                   onClick={() => setSelectedCategory(chip.value)}
                   className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold"
-                  style={{
-                    background: active ? '#1A1A1A' : 'var(--dk-surface)',
-                    color: active ? 'white' : 'var(--dk-text-secondary)',
-                  }}
+                  style={
+                    active
+                      ? { background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', border: '1px solid rgba(255,42,140,0.55)', boxShadow: '0 0 12px rgba(255,42,140,0.30)' }
+                      : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
+                  }
                 >
                   {chip.emoji && <span>{chip.emoji}</span>}
                   {chip.label}
@@ -175,22 +234,27 @@ export default function MapPage() {
         </div>
 
         {/* ── Map container ── */}
-        <div className="px-4">
+        <div className="px-4 pt-3">
           <div
             className="relative overflow-hidden"
-            style={{ borderRadius: 20, height: 380 }}
+            style={{
+              borderRadius: 20,
+              height: 380,
+              border: '1px solid var(--f-glass-border-2)',
+              boxShadow: '0 0 32px rgba(255,42,140,0.12)',
+            }}
           >
             {loadError ? (
               <div
                 className="w-full h-full flex items-center justify-center"
-                style={{ background: 'var(--dk-surface)' }}
+                style={{ background: 'var(--f-bg-elev)' }}
               >
                 <div className="text-center px-4">
-                  <p style={{ fontSize: 13, color: 'var(--dk-text-secondary)', fontWeight: 600 }}>Map load nahi hua</p>
-                  <p style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>
+                  <p style={{ fontSize: 13, color: 'var(--f-text-2)', fontWeight: 600 }}>Map load nahi hua</p>
+                  <p style={{ fontSize: 11, color: 'var(--f-text-3)', marginTop: 4 }}>
                     Google Maps API key configure karein — console.cloud.google.com
                   </p>
-                  <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>
+                  <p style={{ fontSize: 10, color: 'var(--f-text-4)', marginTop: 2 }}>
                     HTTP referrers mein apna domain add karein
                   </p>
                 </div>
@@ -247,14 +311,14 @@ export default function MapPage() {
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center"
-                style={{ background: 'var(--dk-surface)' }}
+                style={{ background: 'var(--f-bg-elev)' }}
               >
                 <div className="text-center">
                   <div
                     className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin mx-auto mb-2"
-                    style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }}
+                    style={{ borderColor: 'var(--f-glass-border-2)', borderTopColor: '#FF2A8C' }}
                   />
-                  <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>Loading map…</p>
+                  <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>Loading map…</p>
                 </div>
               </div>
             )}
@@ -262,11 +326,18 @@ export default function MapPage() {
             {/* Store count pill */}
             <div
               className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5"
-              style={{ background: 'white', borderRadius: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+              style={{
+                background: 'var(--f-fab-bg)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 9999,
+                border: '1px solid rgba(255,42,140,0.30)',
+                boxShadow: '0 0 14px rgba(255,42,140,0.25)',
+              }}
             >
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#FF6B35', flexShrink: 0 }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#1A1A1A' }}>
-                {validStores.length} stores nearby
+              <span style={{ color: '#FF2A8C', fontSize: 11, textShadow: '0 0 8px #FF2A8C' }}>●</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-1)' }}>
+                <span style={{ color: '#FF6BB4', fontWeight: 800 }}>{validStores.length}</span> stores nearby
               </span>
             </div>
 
@@ -274,16 +345,12 @@ export default function MapPage() {
             <div className="absolute bottom-3 right-3 flex flex-col gap-2">
               <button
                 onClick={recenterMap}
-                className="flex items-center justify-center"
-                style={{ width: 36, height: 36, borderRadius: 10, background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
+                style={{ ...fabStyle, border: '1px solid rgba(255,107,53,0.45)', boxShadow: '0 0 16px rgba(255,107,53,0.4)' }}
               >
-                <LocateFixed size={16} style={{ color: '#FF6B35' }} />
+                <FIcon name="crosshair" size={18} color="#FF6B35" />
               </button>
-              <button
-                className="flex items-center justify-center"
-                style={{ width: 36, height: 36, borderRadius: 10, background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}
-              >
-                <Settings size={16} style={{ color: '#555' }} />
+              <button style={fabStyle}>
+                <FIcon name="settings" size={18} color="var(--f-text-1)" />
               </button>
             </div>
           </div>
@@ -291,20 +358,22 @@ export default function MapPage() {
 
         {/* ── Selected store card ── */}
         {selectedStore && (
-          <div className="px-4 mt-0">
-            <div
-              className="rounded-2xl p-4"
-              style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}
-            >
+          <div className="px-4 mt-3">
+            <div className="f-glass" style={{ borderRadius: 18, padding: 16 }}>
               <div className="flex items-start gap-3">
                 <div
                   className="flex-shrink-0 overflow-hidden"
-                  style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--dk-surface)' }}
+                  style={{
+                    width: 52, height: 52, borderRadius: 14,
+                    background: selectedStore.logoUrl ? '#000' : 'var(--f-glass-bg-2)',
+                    border: '2px solid #FF2A8C',
+                    boxShadow: '0 0 14px rgba(255,42,140,0.35)',
+                  }}
                 >
                   {selectedStore.logoUrl ? (
                     <img src={selectedStore.logoUrl} className="w-full h-full object-cover" alt="logo" loading="lazy" decoding="async" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: 'var(--dk-accent)' }}>
+                    <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: '#FF6BB4' }}>
                       {selectedStore.storeName?.charAt(0)}
                     </div>
                   )}
@@ -312,38 +381,38 @@ export default function MapPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-semibold truncate" style={{ fontSize: 15, color: '#1A1A1A' }}>{selectedStore.storeName}</p>
+                      <p className="font-bold truncate" style={{ fontSize: 15, color: 'var(--f-text-1)' }}>{selectedStore.storeName}</p>
                       {selectedStore.category && (
-                        <p style={{ fontSize: 12, color: 'var(--dk-accent)', fontWeight: 600, marginTop: 1 }}>{selectedStore.category}</p>
+                        <p style={{ fontSize: 12, color: '#FF6BB4', fontWeight: 600, marginTop: 1 }}>{selectedStore.category}</p>
                       )}
                     </div>
                     <button onClick={() => setSelectedStore(null)}>
-                      <X size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+                      <FIcon name="x" size={16} color="var(--f-text-3)" />
                     </button>
                   </div>
                   <div className="mt-2 space-y-1">
                     {selectedStoreDistance && (
                       <div className="flex items-center gap-1.5">
-                        <MapPin size={12} style={{ color: 'var(--dk-accent)', flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: 'var(--dk-text-secondary)' }}>{selectedStoreDistance} away</span>
+                        <FIcon name="mapPin" size={12} color="#FF6BB4" />
+                        <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{selectedStoreDistance} away</span>
                       </div>
                     )}
                     {storeStatus && (
                       <div className="flex items-center gap-1.5">
-                        <Clock size={12} style={{ color: storeStatus.isOpen ? '#10B981' : '#EF4444', flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: storeStatus.isOpen ? '#10B981' : '#EF4444', fontWeight: 600 }}>{storeStatus.label}</span>
+                        <FIcon name="clock" size={12} color={statusColor(storeStatus.color)} />
+                        <span style={{ fontSize: 12, color: statusColor(storeStatus.color), fontWeight: 600 }}>{storeStatus.label}</span>
                       </div>
                     )}
                     {selectedStore.address && (
                       <div className="flex items-center gap-1.5">
-                        <MapPin size={12} style={{ color: 'var(--dk-text-tertiary)', flexShrink: 0 }} />
-                        <span className="truncate" style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{selectedStore.address}</span>
+                        <FIcon name="mapPin" size={12} color="var(--f-text-3)" />
+                        <span className="truncate" style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.address}</span>
                       </div>
                     )}
                     {selectedStore.phone && (
                       <div className="flex items-center gap-1.5">
-                        <Phone size={12} style={{ color: 'var(--dk-text-tertiary)' }} />
-                        <span style={{ fontSize: 12, color: 'var(--dk-text-tertiary)' }}>{selectedStore.phone}</span>
+                        <FIcon name="phone" size={12} color="var(--f-text-3)" />
+                        <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.phone}</span>
                       </div>
                     )}
                   </div>
@@ -352,20 +421,20 @@ export default function MapPage() {
               <div className="flex gap-2 mt-3">
                 <Link
                   to={`/store/${selectedStore.id}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
-                  style={{ background: 'var(--dk-surface)', color: '#1A1A1A' }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
+                  style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}
                 >
-                  <Store size={14} />
+                  <FIcon name="storeIc" size={14} color="var(--f-text-1)" />
                   View Store
                 </Link>
                 <a
                   href={selectedStore.latitude && selectedStore.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${selectedStore.latitude},${selectedStore.longitude}` : '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold"
-                  style={{ background: '#1A1A1A', color: 'white' }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
+                  style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.4)' }}
                 >
-                  <Navigation size={14} />
+                  <FIcon name="navigation" size={14} color="white" />
                   Navigate
                 </a>
               </div>
@@ -389,40 +458,65 @@ export default function MapPage() {
             }}
           >
             <div style={{ pointerEvents: 'auto' }}>
-              {/* ── Expanded: header on top, white bg, scrollable list ── */}
+              {/* ── Expanded: header on top, scrollable list ── */}
               {listExpanded && (
-                <div style={{ background: 'white', borderRadius: 20, border: '0.5px solid var(--dk-border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '55vh', marginBottom: 8 }}>
-                  {/* Header — pinned at top */}
-                  <button onClick={() => setListExpanded(false)} className="w-full flex items-center justify-between py-3 px-4 flex-shrink-0" style={{ borderBottom: '0.5px solid var(--dk-border)' }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Stores near you · <span style={{ color: 'var(--dk-accent)' }}>{validStores.length}</span></p>
-                    <ChevronDown size={16} style={{ color: 'var(--dk-text-tertiary)' }} />
+                <div
+                  style={{
+                    background: 'var(--f-modal-bg)',
+                    backdropFilter: 'blur(28px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+                    borderRadius: 20,
+                    border: '1px solid var(--f-glass-border-2)',
+                    boxShadow: '0 -10px 30px rgba(0,0,0,0.4)',
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    maxHeight: '55vh',
+                    marginBottom: 8,
+                  }}
+                >
+                  <button
+                    onClick={() => setListExpanded(false)}
+                    className="w-full flex items-center justify-between py-3 px-4 flex-shrink-0"
+                    style={{ borderBottom: '1px solid var(--f-glass-border)' }}
+                  >
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
+                      Stores near you · <span style={{ color: '#FF6BB4' }}>{validStores.length}</span>
+                    </p>
+                    <FIcon name="chevD" size={16} color="var(--f-text-3)" />
                   </button>
-                  {/* Scrollable list */}
                   <div className="overflow-y-auto overscroll-contain" style={{ scrollbarWidth: 'thin', padding: '8px 12px' }}>
                     <div className="space-y-2">
                       {validStores.map((store) => {
                         const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : null;
                         const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
                         return (
-                          <div key={store.id} className="rounded-2xl overflow-hidden" style={{ background: 'var(--dk-bg)', border: selectedStore?.id === store.id ? '1.5px solid var(--dk-accent)' : '0.5px solid var(--dk-border)' }}>
+                          <div
+                            key={store.id}
+                            className="rounded-2xl overflow-hidden"
+                            style={{
+                              background: 'var(--f-glass-bg)',
+                              border: selectedStore?.id === store.id ? '1.5px solid rgba(255,42,140,0.55)' : '1px solid var(--f-glass-border)',
+                            }}
+                          >
                             <button onClick={() => { flyToStore(store); setListExpanded(false); }} className="w-full text-left p-3">
                               <div className="flex items-center gap-3">
-                                <div className="flex-shrink-0 overflow-hidden" style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--dk-surface)' }}>
+                                <div className="flex-shrink-0 overflow-hidden" style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--f-glass-bg-2)' }}>
                                   {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} loading="lazy" decoding="async" /> : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 20 }}>🏪</div>}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-semibold truncate" style={{ fontSize: 14, color: '#1A1A1A' }}>{store.storeName}</p>
-                                  {store.category && <p style={{ fontSize: 11, color: 'var(--dk-accent)', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
+                                  <p className="font-bold truncate" style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{store.storeName}</p>
+                                  {store.category && <p style={{ fontSize: 11, color: '#FF6BB4', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
                                   <div className="flex items-center gap-3 mt-1">
-                                    {dist && <div className="flex items-center gap-1"><MapPin size={11} style={{ color: 'var(--dk-accent)' }} /><span style={{ fontSize: 11, color: 'var(--dk-text-secondary)' }}>{dist}</span></div>}
+                                    {dist && <div className="flex items-center gap-1"><FIcon name="mapPin" size={11} color="#FF6BB4" /><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
                                     {sStatus && <span style={{ fontSize: 11, fontWeight: 600, color: statusColor(sStatus.color) }}>● {sStatus.label}</span>}
                                   </div>
                                 </div>
                               </div>
                             </button>
                             <div className="flex gap-2 px-3 pb-3">
-                              <Link to={`/store/${store.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold" style={{ background: 'white', color: '#1A1A1A', border: '0.5px solid var(--dk-border)' }}><Store size={12} /> View Store</Link>
-                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-semibold" style={{ background: '#1A1A1A', color: 'white' }}><Navigation size={12} /> Navigate</a>
+                              <Link to={`/store/${store.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}><FIcon name="storeIc" size={12} color="var(--f-text-1)" /> View Store</Link>
+                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white' }}><FIcon name="navigation" size={12} color="white" /> Navigate</a>
                             </div>
                           </div>
                         );
@@ -434,21 +528,34 @@ export default function MapPage() {
 
               {/* ── Collapsed: header + horizontal cards ── */}
               {!listExpanded && (
-                <div style={{ background: 'white', borderRadius: 20, border: '0.5px solid var(--dk-border)', boxShadow: '0 -2px 16px rgba(0,0,0,0.10)', overflow: 'hidden' }}>
-                  <button onClick={() => setListExpanded(true)} className="w-full flex items-center justify-between py-3 px-4" style={{ borderBottom: '0.5px solid var(--dk-border)' }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Stores near you · <span style={{ color: 'var(--dk-accent)' }}>{validStores.length}</span></p>
-                    <span style={{ fontSize: 11, color: 'var(--dk-text-tertiary)' }}>▲ Swipe up</span>
+                <div
+                  style={{
+                    background: 'var(--f-modal-bg)',
+                    backdropFilter: 'blur(28px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+                    borderRadius: 20,
+                    border: '1px solid var(--f-glass-border-2)',
+                    boxShadow: '0 -10px 30px rgba(0,0,0,0.4)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button onClick={() => setListExpanded(true)} className="w-full flex items-center justify-between py-3 px-4" style={{ borderBottom: '1px solid var(--f-glass-border)' }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
+                      Stores near you · <span style={{ color: '#FF6BB4' }}>{validStores.length}</span>
+                    </p>
+                    <span style={{ fontSize: 11, color: 'var(--f-text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <FIcon name="arrowUp" size={10} color="var(--f-text-3)" /> Swipe up
+                    </span>
                   </button>
 
                   <div className="flex gap-3 overflow-x-auto py-3 px-3" style={{ scrollbarWidth: 'none' }}>
                     {storesLoading ? (
                       [1, 2, 3].map(i => (
-                        <div key={i} className="flex-shrink-0" style={{ width: 160, borderRadius: 14, overflow: 'hidden', border: '0.5px solid #f0f0f0' }}>
-                          <ShimmerBox width="100%" height={56} radius={0} />
-                          <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                            <ShimmerBox width="80%" height={12} />
-                            <ShimmerBox width="55%" height={10} />
-                            <ShimmerBox width="65%" height={10} />
+                        <div key={i} className="flex-shrink-0" style={{ width: 160, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--f-glass-border)' }}>
+                          <div style={{ width: '100%', height: 56, background: 'var(--f-glass-bg-2)' }} />
+                          <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ width: '80%', height: 11, borderRadius: 6, background: 'var(--f-glass-bg-2)' }} />
+                            <div style={{ width: '55%', height: 9, borderRadius: 6, background: 'var(--f-glass-bg)' }} />
                           </div>
                         </div>
                       ))
@@ -457,17 +564,27 @@ export default function MapPage() {
                       const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
                       const catDef2 = CATEGORIES.find(c => matchCategory(store.category, c.value));
                       return (
-                        <button key={store.id} onClick={() => flyToStore(store)} className="flex-shrink-0 text-left overflow-hidden" style={{ width: 145, background: 'var(--dk-bg)', borderRadius: 14, border: selectedStore?.id === store.id ? '1.5px solid var(--dk-accent)' : '0.5px solid var(--dk-border)' }}>
-                          <div style={{ width: '100%', height: 56, background: 'var(--dk-surface)', position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden' }}>
+                        <button
+                          key={store.id}
+                          onClick={() => flyToStore(store)}
+                          className="flex-shrink-0 text-left overflow-hidden"
+                          style={{
+                            width: 145,
+                            background: 'var(--f-glass-bg)',
+                            borderRadius: 14,
+                            border: selectedStore?.id === store.id ? '1.5px solid rgba(255,42,140,0.55)' : '1px solid var(--f-glass-border)',
+                          }}
+                        >
+                          <div style={{ width: '100%', height: 56, background: 'var(--f-glass-bg-2)', position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden' }}>
                             {store.logoUrl ? <img src={store.logoUrl} className="w-full h-full object-cover" alt={store.storeName} loading="lazy" decoding="async" /> : <div className="w-full h-full flex items-center justify-center" style={{ fontSize: 24 }}>🏪</div>}
                           </div>
                           <div className="px-2.5 py-2">
-                            <p className="truncate font-bold" style={{ fontSize: 12, color: '#1A1A1A' }}>{store.storeName}</p>
+                            <p className="truncate font-bold" style={{ fontSize: 12, color: 'var(--f-text-1)' }}>{store.storeName}</p>
                             <div className="flex items-center gap-1 mt-1">
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: sStatus ? statusColor(sStatus.color) : '#EF4444', flexShrink: 0 }} />
-                              <span style={{ fontSize: 10, fontWeight: 600, color: sStatus ? statusColor(sStatus.color) : '#EF4444' }}>{sStatus?.label ?? 'Closed'}</span>
+                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: sStatus ? statusColor(sStatus.color) : '#FF4D6A', flexShrink: 0 }} />
+                              <span style={{ fontSize: 10, fontWeight: 600, color: sStatus ? statusColor(sStatus.color) : '#FF4D6A' }}>{sStatus?.label ?? 'Closed'}</span>
                             </div>
-                            <p style={{ fontSize: 10, color: 'var(--dk-text-tertiary)', marginTop: 2 }}>{dist}{catDef2 ? ` · ${catDef2.emoji} ${catDef2.label}` : ''}</p>
+                            <p style={{ fontSize: 10, color: 'var(--f-text-3)', marginTop: 2 }}>{dist}{catDef2 ? ` · ${catDef2.emoji} ${catDef2.label}` : ''}</p>
                           </div>
                         </button>
                       );
@@ -482,9 +599,11 @@ export default function MapPage() {
         {/* Empty state */}
         {!isLoaded || !userLocation ? null : validStores.length === 0 && (
           <div className="text-center py-16 px-4">
-            <MapPin size={40} style={{ color: 'var(--dk-border-strong)', margin: '0 auto 8px' }} />
-            <p style={{ fontSize: 14, color: 'var(--dk-text-secondary)', fontWeight: 600 }}>No stores found nearby</p>
-            <p style={{ fontSize: 12, color: 'var(--dk-text-tertiary)', marginTop: 4 }}>Try changing the category filter</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <FIcon name="mapPin" size={40} color="var(--f-text-4)" />
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--f-text-2)', fontWeight: 600 }}>No stores found nearby</p>
+            <p style={{ fontSize: 12, color: 'var(--f-text-3)', marginTop: 4 }}>Try changing the category filter</p>
           </div>
         )}
 

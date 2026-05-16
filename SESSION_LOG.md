@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-05-17 — Session 96 — Futuristic v2 Design-System Redesign (feat/futuristic-redesign)
+
+**Goal:** Implement the `dukanchi-design-system` handoff — restyle the customer app to the futuristic v2 direction (deep-space dark + frosted glass + orange→magenta gradient, "Vision-OS" aesthetic).
+
+**Status:** Code-complete. 10 phases, each verified green (typecheck 0 · tests 81/81 · build ✓). On `feat/futuristic-redesign` (off `main @ f5ad7c3`); PR opened against `main`. **No production change** — prod still `main @ 28a5614`.
+
+**Approach:** View-layer-only restyle. Every screen's data fetch, auth, Socket.IO, Google Maps, AI and landing-CMS wiring preserved verbatim (Rule 4). Handoff kit JSX adapted into typed production React — never blind-copied.
+
+**Phases:**
+- P1 — `src/futuristic.css` (`--f-*` tokens, glass primitives, keyframes) + `main.tsx` import
+- P2 — `src/components/futuristic/` typed primitives (FIcon set, FLogo, FPostCard, FBottomNav, …)
+- P3 Home · P4 Search · P5 Map (Google Maps intact + dark map style)
+- P6 StoreProfile + Chat · P7 Messages + Login + Signup
+- P8 Profile + StoreInfoCard + ReviewsTab + PostsGrid
+- P9 LandingPage + Three.js spatial hero (CDN `three@0.149.0`, graceful fallback — no npm dep)
+- P10 App shell — BottomNav (glass pill), RefreshButton, NotificationBell, App.tsx Suspense fallback
+
+**Files:** NEW — `src/futuristic.css`, `src/components/futuristic/` (13 files). MODIFIED — pages: Home, Search, Map, StoreProfile, Chat, Messages, Profile, Login, Signup, LandingPage; components: BottomNav, RefreshButton, NotificationBell, ConversationRow, profile/{PostsGrid,ReviewsTab,StoreInfoCard}; shell: App.tsx (Suspense fallback only — native block untouched), main.tsx (1-line CSS import).
+
+**Anti-silent-failure audit:** Rule A — zero new `apiFetch` paths, `src/app.ts` untouched. Rule B — zero new silent catches (pre-existing ones preserved verbatim). Rule C — `capacitor.config.ts` untouched. Rule E — zero backend change → no prod curl needed.
+
+**Scope boundary / follow-ups:**
+- RetailerDashboard, UserSettings, Support, NotFound NOT redesigned (not in handoff) — remain cream.
+- `LandingPage.tsx` restyled but not currently routed (pre-existing orphan; live `/landing` = static `public/landing.html`) — routing strategy TBD.
+- Native APK rebuild + manual smoke-test PENDING — large UI change the APK renders; web-verified only (Rule D).
+- Native status-bar colour still cream — left for the mixed-theme interim.
+
+**Verification:** `npm run typecheck` 0 errors (web + server) · `npm test` 81/81 · `npm run build` ✓.
+
+**Commit:** `feat: futuristic v2 design-system redesign — customer app restyle` (this commit).
+
+---
+
 ## 2026-05-16 — Session 95 — Hardening Sprint Day 8: Atomic Merge + Production Verification (SPRINT CLOSED)
 
 **Goal:** Atomically merge the 60-commit `hardening/sprint` branch into `main`, deploy to production via Railway, verify with the Rule E smoke battery + Sentry release verification. Final day of the 8-day Hardening Sprint.

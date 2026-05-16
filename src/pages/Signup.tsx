@@ -1,10 +1,28 @@
 import React, { useState } from 'react';
+import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Phone, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import DukanchiLogo from '../components/DukanchiLogo';
 import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
+import { FIcon, FLogo } from '../components/futuristic';
+
+/* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
+   View layer restyled to the deep-space glass system. The auth flow —
+   field validation, /api/auth/users call, PostHog event, login() +
+   navigate — is preserved verbatim. */
+
+const inputStyle: CSSProperties = {
+  width: '100%', padding: '12px 14px 12px 42px', fontSize: 13,
+  background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
+  borderRadius: 12, color: 'var(--f-text-1)', fontFamily: 'inherit', outline: 'none',
+};
+
+const inputIcon: CSSProperties = {
+  position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+  display: 'flex', pointerEvents: 'none',
+};
+
+const optStyle: CSSProperties = { background: '#0E1224', color: '#F4F2EB' };
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -65,85 +83,96 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] relative overflow-hidden">
-      <div className="w-full max-w-md px-6 py-12 relative z-10">
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/20">
+    <div
+      className="f-bg-aurora"
+      style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}
+    >
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <div className="f-glass f-glass-edge" style={{ borderRadius: 28, padding: 32, background: 'var(--f-glass-bg)' }}>
 
-          <div className="flex flex-col items-center text-center mb-10">
-            <div className="flex items-center gap-3 mb-4">
-              <DukanchiLogo />
-              <span className="text-xl font-bold tracking-tight text-gray-900">Dukanchi</span>
+          {/* Brand */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <FLogo size={40} />
+              <span className="f-display" style={{ fontSize: 22, color: 'var(--f-text-1)' }}>Dukanchi</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-1.5">
-              Shuru karte hain!
-            </h1>
-            <p className="text-gray-500 text-sm">Aapka local market, ab aapke haath mein</p>
+            <h1 className="f-display" style={{ fontSize: 26, color: 'var(--f-text-1)', margin: '0 0 6px' }}>Shuru karte hain!</h1>
+            <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: 0 }}>Aapka local market, ab aapke haath mein</p>
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm flex items-start">
-               <span className="font-semibold mr-2">Error:</span>
-              <span>{error}</span>
+            <div style={{
+              marginBottom: 20, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 8,
+              background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.35)', borderRadius: 12,
+              fontSize: 13, color: '#FF8FA3',
+            }}>
+              <FIcon name="alert" size={15} color="#FF8FA3" />
+              <span><span style={{ fontWeight: 700, marginRight: 4 }}>Error:</span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleSignup} className="space-y-5">
-            <div className="space-y-4">
-            <div>
-              <label htmlFor="account-type" className="block text-sm font-medium text-gray-700 mb-1">Hi, please select your profile.</label>
-              <select
-                id="account-type"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent transition-all outline-none text-sm text-gray-900"
-              >
-                <option value="customer">Customer</option>
-                <option value="retailer">Retail Shop</option>
-                <option value="supplier">Supplier</option>
-                <option value="brand">Brand</option>
-                <option value="manufacturer">Manufacturer</option>
-              </select>
-            </div>
-
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <User size={20} />
+          <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label htmlFor="account-type" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--f-text-2)', marginBottom: 6 }}>
+                  Hi, please select your profile.
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    id="account-type"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    style={{
+                      width: '100%', padding: '12px 38px 12px 14px', fontSize: 13, background: 'var(--f-glass-bg)',
+                      border: '1px solid var(--f-glass-border)', borderRadius: 12, color: 'var(--f-text-1)',
+                      fontFamily: 'inherit', outline: 'none', appearance: 'none', WebkitAppearance: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    <option value="customer" style={optStyle}>Customer</option>
+                    <option value="retailer" style={optStyle}>Retail Shop</option>
+                    <option value="supplier" style={optStyle}>Supplier</option>
+                    <option value="brand" style={optStyle}>Brand</option>
+                    <option value="manufacturer" style={optStyle}>Manufacturer</option>
+                  </select>
+                  <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', pointerEvents: 'none' }}>
+                    <FIcon name="chevD" size={16} color="var(--f-text-3)" />
+                  </div>
                 </div>
+              </div>
+
+              <div style={{ position: 'relative' }}>
+                <div style={inputIcon}><FIcon name="user" size={18} color="var(--f-text-3)" /></div>
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
                   placeholder="Full Name *"
+                  style={inputStyle}
                 />
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Phone size={20} />
-                </div>
+              <div style={{ position: 'relative' }}>
+                <div style={inputIcon}><FIcon name="phone" size={18} color="var(--f-text-3)" /></div>
                 <input
                   type="tel"
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
                   placeholder="Phone Number *"
+                  style={inputStyle}
                 />
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={20} />
-                </div>
+              <div style={{ position: 'relative' }}>
+                <div style={inputIcon}><FIcon name="lock" size={18} color="var(--f-text-3)" /></div>
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm"
                   placeholder="Password *"
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -151,22 +180,27 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center bg-[#FF6B35] text-white font-medium py-3.5 rounded-full hover:bg-[#E85D2A] disabled:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF6B35] transition-all duration-200 shadow-lg shadow-[#FF6B35]/20 group"
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                padding: 13, borderRadius: 9999, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
+                background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
+                boxShadow: '0 0 24px rgba(255,107,53,0.40)', opacity: isLoading ? 0.7 : 1,
+              }}
             >
               {isLoading ? (
                 <>
-                  <span className="inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin mr-2" />
+                  <span className="animate-spin" style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff' }} />
                   Signing Up...
                 </>
               ) : (
-                <>Sign Up <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" /></>
+                <>Sign Up <FIcon name="arrowR" size={18} color="white" /></>
               )}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-gray-600">
+          <p style={{ marginTop: 28, textAlign: 'center', fontSize: 13, color: 'var(--f-text-3)' }}>
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-[#FF6B35] hover:text-[#E85D2A] transition-colors">
+            <Link to="/login" style={{ fontWeight: 700, color: 'var(--f-orange-light)', textDecoration: 'none' }}>
               Log in
             </Link>
           </p>

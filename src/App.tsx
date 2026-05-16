@@ -176,8 +176,8 @@ export default function App() {
             <div className="min-h-screen pb-16" style={{ background: 'var(--dk-bg)' }}>
               <BrowserModeBanner />
               <Suspense fallback={
-                <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--dk-border)', borderTopColor: 'var(--dk-accent)', borderRadius: '50%' }} />
+                <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-bg-deep)' }}>
+                  <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--f-glass-border-2)', borderTopColor: 'var(--f-magenta)', borderRadius: '50%' }} />
                 </div>
               }>
               <Routes>
