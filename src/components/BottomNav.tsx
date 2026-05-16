@@ -54,19 +54,28 @@ export default function BottomNav() {
                 aria-current={isActive ? 'page' : undefined}
                 style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  padding: '6px 14px', borderRadius: 16, textDecoration: 'none',
-                  background: isActive ? 'rgba(255,255,255,0.10)' : 'transparent',
-                  transition: 'background 250ms var(--f-ease)',
+                  padding: '3px 10px', textDecoration: 'none',
                 }}
               >
-                <FIcon
-                  name={icon}
-                  size={21}
-                  color={isActive ? 'var(--f-magenta)' : 'rgba(244,242,235,0.55)'}
-                  stroke={isActive ? 2.4 : 2}
-                />
+                <div style={{
+                  width: 36, height: 36, borderRadius: 12,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isActive ? 'var(--f-grad-primary)' : 'transparent',
+                  boxShadow: isActive
+                    ? '0 0 16px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.30)'
+                    : 'none',
+                  transition: 'background 250ms var(--f-ease)',
+                }}>
+                  <FIcon
+                    name={icon}
+                    size={20}
+                    color={isActive ? 'white' : 'rgba(244,242,235,0.55)'}
+                    fill={isActive ? 'white' : 'none'}
+                    stroke={isActive ? 0 : 2}
+                  />
+                </div>
                 <span style={{
-                  fontSize: 9.5, fontWeight: 600, letterSpacing: 0.3,
+                  fontSize: 9.5, fontWeight: isActive ? 800 : 600, letterSpacing: 0.3,
                   color: isActive ? 'var(--f-text-1)' : 'rgba(244,242,235,0.55)',
                 }}>
                   {label}

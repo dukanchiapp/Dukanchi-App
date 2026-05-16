@@ -322,7 +322,7 @@ export default function HomePage() {
               style={{
                 width: 40,
                 height: 40,
-                borderRadius: 14,
+                borderRadius: '50%',
                 background: 'var(--f-glass-bg-2)',
                 border: '1px solid var(--f-glass-border)',
                 backdropFilter: 'blur(20px)',
@@ -332,7 +332,7 @@ export default function HomePage() {
                 justifyContent: 'center',
               }}
             >
-              <FIcon name="bell" size={18} color="var(--f-text-1)" />
+              <FIcon name="bell" size={18} color="#FFD96B" fill="#FFD96B" />
             </div>
           </div>
           <FLocationStrip
@@ -439,39 +439,32 @@ export default function HomePage() {
             borderBottom: '1px solid var(--f-glass-border)',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              padding: 3,
-              borderRadius: 9999,
-              gap: 2,
-              background: 'var(--f-glass-bg)',
-              border: '1px solid var(--f-glass-border)',
-            }}
-          >
-            {tabs.map(tab => (
-              <button
-                key={tab.key}
-                onClick={() => setFeedType(tab.key)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 9999,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  border: 'none',
-                  background:
-                    feedType === tab.key
-                      ? 'linear-gradient(135deg, #FF6B35, #FF2A8C)'
-                      : 'transparent',
-                  color: feedType === tab.key ? 'white' : 'var(--f-text-2)',
-                  boxShadow:
-                    feedType === tab.key ? '0 0 14px rgba(255,42,140,0.40)' : 'none',
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {tabs.map(tab => {
+              const active = feedType === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  onClick={() => setFeedType(tab.key)}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 9999,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    background: active ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
+                    color: active ? 'white' : 'var(--f-text-2)',
+                    border: active
+                      ? '1px solid rgba(255,42,140,0.55)'
+                      : '1px solid var(--f-glass-border)',
+                    boxShadow: active ? '0 0 14px rgba(255,42,140,0.40)' : 'none',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
           <div style={{ position: 'relative' }}>
             <button
