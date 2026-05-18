@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { FIcon, FLogo } from '../components/futuristic';
+import { LegalLinks } from '../components/legal/LegalLinks';
 
 /* ── Futuristic v2 skin · Phase 9 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. The landing CMS wiring
@@ -534,7 +535,10 @@ export default function LandingPage() {
             <span className="f-display" style={{ fontSize: 17, color: 'var(--f-text-1)' }}>Dukanchi</span>
           </div>
           <p style={{ fontSize: 12, color: 'var(--f-text-3)', margin: '0 0 6px' }}>{c(d, 'footer.sub')}</p>
-          <p style={{ fontSize: 11, color: 'var(--f-text-4)', margin: '0 0 10px' }}>{c(d, 'footer.tagline')}</p>
+          <p style={{ fontSize: 11, color: 'var(--f-text-4)', margin: '0 0 14px' }}>{c(d, 'footer.tagline')}</p>
+          <div style={{ marginBottom: 14 }}>
+            <LegalLinks variant="footer" />
+          </div>
           <p style={{ fontSize: 11, color: 'var(--f-text-4)', margin: 0 }}>{c(d, 'footer.copyright')}</p>
         </footer>
       </div>

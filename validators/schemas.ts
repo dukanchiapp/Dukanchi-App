@@ -8,6 +8,12 @@ export const signupSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   role: z.enum(['customer', 'retailer', 'supplier', 'brand', 'manufacturer']),
   location: z.string().optional(),
+  // Legal Phase A — DPDP consent. The frontend sends `consent: true` only
+  // after the user ticks the (unticked-by-default) signup consent checkbox;
+  // z.literal(true) rejects a missing or false value as a 400.
+  consent: z.literal(true, {
+    message: 'You must accept the Terms of Service and Privacy Policy to sign up',
+  }),
 }).passthrough();
 
 export const loginSchema = z.object({

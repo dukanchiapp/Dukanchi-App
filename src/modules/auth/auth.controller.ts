@@ -168,7 +168,12 @@ async function blacklistAccessTokenIfPresent(
 export class AuthController {
   static async signup(req: Request, res: Response) {
     try {
-      const result = await AuthService.signup(req.body);
+      // Pass request-derived consent provenance — the service hashes the IP
+      // with IP_SALT and records it on the LegalConsent ledger row.
+      const result = await AuthService.signup(req.body, {
+        ip: req.ip,
+        userAgent: req.get("user-agent"),
+      });
       const isHttps = detectIsHttps(req);
 
       setAuthCookies(

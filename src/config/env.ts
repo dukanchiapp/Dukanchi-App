@@ -34,6 +34,22 @@ const envSchema = z.object({
   // is backwards-compatible — existing rounds-10 hashes continue to validate
   // via bcrypt.compare's per-hash cost auto-detection. No data migration needed.
   BCRYPT_ROUNDS: z.coerce.number().int().min(10).max(14).default(12),
+  // IP hashing salt — Legal Phase A.
+  // LegalConsent rows store a salted SHA-256 hash of the signup IP, never
+  // the raw address (raw IP is personal data under the DPDP Act). The salt
+  // makes the hash non-reversible against a precomputed table of the IPv4
+  // space.
+  //
+  // Same graceful-degradation pattern as JWT_REFRESH_SECRET: a clearly-
+  // marked dev fallback keeps local boot frictionless; the production
+  // hard-fail below refuses to boot if the fallback is still active.
+  //
+  // To generate a production value:
+  //   openssl rand -hex 24
+  IP_SALT: z
+    .string()
+    .min(32, "IP_SALT must be at least 32 characters long")
+    .default("dev-only-ip-salt-do-not-use-in-production-3e9f1a"),
   REDIS_URL: z.string().url().default('redis://localhost:6379'),
   // Optional plain strings — empty string ("") is treated as undefined for Railway compat
   ALLOWED_ORIGINS: z.string().optional().transform(v => v === '' ? undefined : v),
@@ -72,6 +88,18 @@ if (env.NODE_ENV === "production" && env.JWT_REFRESH_SECRET === DEV_REFRESH_FALL
   console.error(
     "❌ JWT_REFRESH_SECRET must be set to a production value (≥32 chars). " +
       "Generate via: openssl rand -base64 48",
+  );
+  process.exit(1);
+}
+
+// Production hard-fail: refuse to boot if IP_SALT is still the dev-only
+// fallback. Same defense rationale as JWT_REFRESH_SECRET above — Legal
+// Phase A.
+const DEV_IP_SALT_FALLBACK = "dev-only-ip-salt-do-not-use-in-production-3e9f1a";
+if (env.NODE_ENV === "production" && env.IP_SALT === DEV_IP_SALT_FALLBACK) {
+  console.error(
+    "❌ IP_SALT must be set to a production value (≥32 chars). " +
+      "Generate via: openssl rand -hex 24",
   );
   process.exit(1);
 }

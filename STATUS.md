@@ -1,7 +1,47 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-18 | Session 96 | **Futuristic v2 redesign** merged + LIVE — PRs #17/#18/#19 deployed | Prod runs main @ 0658ee5
+> Last updated: 2026-05-18 | Session 97 | **Legal Phase A** complete on `feat/legal-phase-a` — PR open, pending founder review + deploy gates | Prod runs main @ 0658ee5
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
+
+## Legal Phase A — 18 May 2026
+
+Status: ✅ Complete (pending deploy gates)
+Branch: feat/legal-phase-a
+Tests: 96/96 (was 85; +11 for legal consent + DPDP coverage)
+
+### Routes live (10 pages)
+- /legal/privacy (EN + HI)
+- /legal/terms (EN + HI)
+- /legal/account-deletion (EN + HI)
+- /legal/grievance (EN + HI)
+- /legal/cookies (EN + HI)
+
+### Integration surfaces
+- Customer profile → Legal menu section
+- Retailer profile → "Legal & Privacy" card at foot
+- LandingPage (public/landing.html + src/pages/LandingPage.tsx) → footer Legal column
+- Signup form → consent checkbox enforced + backend recorded
+
+### Backend additions
+- LegalConsent table (additive Prisma migration: 20260518120000_add_legal_consent)
+- Signup controller: transactional consent recording (1 consent row per signup, atomic with user.create)
+- IP_SALT env (.min(32), fail-fast in production, dev fallback only)
+- Audit log line (`legal.consent.recorded`) per consent record
+
+### Pending pre-launch
+- [ ] Apply migration to production DB (`prisma migrate deploy`)
+- [ ] Fill grievance officer details (name + email + phone + postal)
+- [ ] Fill registered company address
+- [ ] Fill jurisdiction city
+- [ ] Native APK rebuild + redistribute (signup payload changed)
+- [ ] Confirm PostHog retention setting
+
+### Phase B follow-ups
+- Hard-delete cron job (currently soft-delete only, GRACE_DAYS=30)
+- DNT signal handling
+- Children's verifiable parental consent flow
+- Lawyer review of baseline content
+- Static rendering for SEO
 
 ## Futuristic v2 Redesign — MERGED & LIVE (Session 96)
 

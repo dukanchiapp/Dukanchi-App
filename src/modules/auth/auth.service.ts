@@ -10,8 +10,33 @@ import {
 } from "../../middlewares/user-status";
 import { generateRefreshToken } from "../../services/refreshToken.service";
 import { ACCESS_TOKEN_TTL_SECONDS } from "../../lib/redis-keys";
+import { logger } from "../../lib/logger";
+import {
+  CURRENT_TERMS_VERSION,
+  CURRENT_PRIVACY_VERSION,
+} from "../../lib/legal/versions";
 
 const ADMIN_STATS_KEY = 'admin:stats';
+
+/**
+ * Salted, non-reversible hash of a signup IP — Legal Phase A.
+ *
+ * The raw IP is personal data under the DPDP Act, so it is never persisted.
+ * A SHA-256 of (IP_SALT + ip) lets the consent ledger prove a distinct
+ * consent event without retaining the address itself. Returns null when no
+ * IP is available (e.g. a malformed proxy chain) — the consent record is
+ * still written; only the provenance hash is absent.
+ */
+function hashIp(ip: string | undefined): string | null {
+  if (!ip) return null;
+  return crypto.createHash("sha256").update(env.IP_SALT + ip).digest("hex");
+}
+
+/** Request-derived consent provenance, passed from the controller. */
+export interface SignupMeta {
+  ip?: string;
+  userAgent?: string;
+}
 
 /**
  * Mint a fresh access token — Day 5 / Session 92.
@@ -80,7 +105,7 @@ const evaluateRow = (row: { isBlocked: boolean; deletedAt: Date | null }) =>
   });
 
 export class AuthService {
-  static async signup(data: any) {
+  static async signup(data: any, meta: SignupMeta = {}) {
     const { name, phone, password, role, location } = data;
 
     const existingUser = await prisma.user.findUnique({ where: { phone } });
@@ -113,9 +138,39 @@ export class AuthService {
     // bcrypt encodes the cost per-hash, so bumping the env later is safe.
     const hashedPassword = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
 
-    const user = await prisma.user.create({
-      data: { name, phone, password: hashedPassword, role, location }
+    // User row + DPDP consent ledger row are written in ONE transaction:
+    // signup must never persist a user without a consent record, nor a
+    // consent record without its user. The Terms/Privacy versions are
+    // stamped server-side from the live constants — the client cannot forge
+    // which version was accepted; it only sends `consent: true` (Zod-gated).
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { name, phone, password: hashedPassword, role, location },
+      });
+      await tx.legalConsent.create({
+        data: {
+          userId: created.id,
+          termsVersion: CURRENT_TERMS_VERSION,
+          privacyVersion: CURRENT_PRIVACY_VERSION,
+          ipHash: hashIp(meta.ip),
+          // VarChar(512) in the schema — truncate so an oversized UA header
+          // can never fail the signup transaction.
+          userAgent: meta.userAgent ? meta.userAgent.slice(0, 512) : null,
+        },
+      });
+      return created;
     });
+
+    // DPDP audit trail — one structured line per recorded consent event.
+    logger.info(
+      {
+        event: "legal.consent.recorded",
+        userId: user.id,
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+      },
+      "DPDP consent recorded at signup",
+    );
 
     // Day 5: issue access (15min, JWT_SECRET) + refresh (30d, JWT_REFRESH_SECRET).
     // Refresh token starts a new family for this user's signup session.

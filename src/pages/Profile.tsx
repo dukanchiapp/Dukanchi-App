@@ -14,6 +14,7 @@ import { PostsGrid } from '../components/profile/PostsGrid';
 import { ReviewsTab } from '../components/profile/ReviewsTab';
 import { apiFetch } from '../lib/api';
 import { FIcon } from '../components/futuristic';
+import { LegalLinks } from '../components/legal/LegalLinks';
 
 /* ── Futuristic v2 skin · Phase 8 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Store + KYC + posts +
@@ -268,6 +269,9 @@ export default function ProfilePage() {
                 <FIcon name="chevR" size={16} color="var(--f-text-3)" />
               </div>
             </div>
+
+            {/* Menu — legal (DPDP public documents) */}
+            <LegalLinks variant="menu" />
 
             {/* Log out */}
             <button
@@ -634,6 +638,18 @@ export default function ProfilePage() {
           {activeTab === 'reviews' && !store.hideRatings && (
             <ReviewsTab reviews={reviews} />
           )}
+        </div>
+
+        {/* Legal — DPDP public documents. The retailer profile is a flat page
+            with no menu list, so legal access is a labelled card at the foot. */}
+        <div style={{ padding: '20px 16px 0' }}>
+          <p style={{
+            fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
+            textTransform: 'uppercase', color: 'var(--f-text-3)', margin: '0 0 10px',
+          }}>
+            Legal &amp; Privacy
+          </p>
+          <LegalLinks variant="menu" />
         </div>
       </div>
     </div>

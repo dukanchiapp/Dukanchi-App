@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { FIcon, FLogo } from '../components/futuristic';
+import { ConsentCheckbox } from '../components/legal/ConsentCheckbox';
 
 /* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. The auth flow —
@@ -29,6 +30,7 @@ export default function SignupPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('customer');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -45,6 +47,7 @@ export default function SignupPage() {
     if (!trimmedName) { setError('Full name is required.'); return; }
     if (!trimmedPhone) { setError('Phone number is required.'); return; }
     if (!password) { setError('Password is required.'); return; }
+    if (!consent) { setError('Aage badhne ke liye Terms aur Privacy Policy accept karein.'); return; }
 
     setIsLoading(true);
 
@@ -52,7 +55,7 @@ export default function SignupPage() {
       const response = await apiFetch('/api/auth/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmedName, phone: trimmedPhone, password, role }),
+        body: JSON.stringify({ name: trimmedName, phone: trimmedPhone, password, role, consent: true }),
       });
 
       const text = await response.text();
@@ -177,14 +180,16 @@ export default function SignupPage() {
               </div>
             </div>
 
+            <ConsentCheckbox checked={consent} onChange={setConsent} disabled={isLoading} />
+
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !consent}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                padding: 13, borderRadius: 9999, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
+                padding: 13, borderRadius: 9999, border: 'none', cursor: (isLoading || !consent) ? 'not-allowed' : 'pointer',
                 background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
-                boxShadow: '0 0 24px rgba(255,107,53,0.40)', opacity: isLoading ? 0.7 : 1,
+                boxShadow: '0 0 24px rgba(255,107,53,0.40)', opacity: (isLoading || !consent) ? 0.7 : 1,
               }}
             >
               {isLoading ? (
