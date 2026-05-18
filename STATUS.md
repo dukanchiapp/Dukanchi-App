@@ -1,30 +1,31 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-17 | Session 96 | **Futuristic v2 redesign** code-complete on `feat/futuristic-redesign` — PR open, awaiting review | Prod runs main @ 28a5614 (unchanged)
+> Last updated: 2026-05-18 | Session 96 | **Futuristic v2 redesign** merged + LIVE — PRs #17/#18/#19 deployed | Prod runs main @ 0658ee5
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
-## Active Branch: feat/futuristic-redesign — Futuristic v2 Redesign (Session 96)
+## Futuristic v2 Redesign — MERGED & LIVE (Session 96)
 
-**Status:** Code-complete — 10 phases, all verified green (typecheck 0 · tests 81/81 · build ✓). Committed to `feat/futuristic-redesign`; PR open against `main` — awaiting review/merge. **No production change** — prod still `main @ 28a5614`.
+**Status:** ✅ Complete and deployed to production (dukanchi.com). Three PRs merged to `main`, each verified green (typecheck 0 · tests 81/81 · build ✓) and confirmed live via asset-hash change:
 
-Customer-app visual redesign to the futuristic v2 direction (deep-space dark + frosted glass + orange→magenta gradient) from the `dukanchi-design-system` handoff. **View-layer only** — every screen's data/auth/Socket.IO/Maps/CMS wiring preserved verbatim (Rule 4).
+- **PR #17** — futuristic v2 redesign (10 phases): `src/futuristic.css` (`--f-*` tokens) + `src/components/futuristic/` primitives; restyled Home, Search, Map, StoreProfile, Chat, Messages, Profile, Login, Signup, LandingPage + shared chrome (BottomNav, RefreshButton, NotificationBell, ConversationRow, profile/*). Three.js spatial hero on the landing (CDN-loaded, graceful fallback). **View-layer only** — all data/auth/Socket.IO/Maps/CMS wiring preserved verbatim (Rule 4).
+- **PR #18** — dark app shell + native chrome: shell background → deep-space dark + dropped the legacy `pb-16` (fixed a cream strip under dark pages); `capacitor.config.ts` + `App.tsx` splash/status-bar → `#060814` dark.
+- **PR #19** — Home + nav polish to the founder-approved mockup: circular gold header bell, "{area} nearby" location pill, three standalone tab pills, gradient-tile active bottom-nav.
 
-- NEW: `src/futuristic.css` (`--f-*` tokens) + `src/components/futuristic/` (typed primitives)
-- Restyled: Home, Search, Map, StoreProfile, Chat, Messages, Profile, Login, Signup, LandingPage + shared chrome (BottomNav, RefreshButton, NotificationBell, ConversationRow, profile/*)
-- Landing: Three.js spatial hero — CDN-loaded with graceful fallback (zero npm dependency)
+Direction: deep-space dark + frosted glass + orange→magenta gradient ("Vision-OS"). From the `dukanchi-design-system` handoff.
 
-**Scope boundary:** RetailerDashboard, UserSettings, Support, NotFound NOT redesigned (not in the handoff) — remain cream-themed.
+**Scope boundary — still cream-themed** (not in the handoff): RetailerDashboard, UserSettings, Support, NotFound, and the `BrowserModeBanner` (top install strip).
 
-**Open follow-ups:**
-- `LandingPage.tsx` restyled but not currently routed (pre-existing orphan; live `/landing` = static `public/landing.html`) — routing strategy TBD.
-- Native APK rebuild + manual smoke-test pending — large UI change the APK renders; web-verified only.
-- Native status-bar colour still cream (App.tsx `StatusBar.setBackgroundColor`) — left for the mixed-theme interim.
+**Open follow-ups (design backlog):**
+- `LandingPage.tsx` restyled but NOT routed (pre-existing orphan; live `/landing` = static `public/landing.html`) — landing strategy TBD.
+- Native APK: `npm run sync:android` done; **Android Studio rebuild + on-device smoke-test pending** — web-verified only.
+- Native splash PNG image still cream-era (capacitor.config splash/status-bar colours already dark).
+- The 4 still-cream screens above + `BrowserModeBanner` — restyle to futuristic v2 when scoped.
 
 ## Production State
 - **URL:** https://dukanchi.com (Cloudflare proxied, SSL Full Strict, TLS 1.2 min)
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
-- **Production code:** running `origin/main` HEAD `28a5614` (Session 95 — Hardening Sprint atomic merge, Days 1-8)
+- **Production code:** running `origin/main` HEAD `0658ee5` (Session 96 — Futuristic v2 redesign, PRs #17/#18/#19 merged + deployed; Hardening Sprint Days 1-8 underneath at `28a5614`)
 - **Production DB schema:** Day 2 migrations APPLIED via `psql -f` (Session 87) — User soft-delete cols + Store GIST index + Product HNSW index + cube/earthdistance extensions live.
 - **Code ↔ schema ALIGNED** ✅ — Day 8 atomic merge (`28a5614`) brought production application code up to the Day 2 schema. The intentional schema-ahead-of-code gap held since Session 87 is now closed.
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
@@ -153,7 +154,7 @@ All Days 1–8 of the Hardening Sprint are **merged to `main` and live in produc
 
 ## Next 3 Actions
 
-1. **Review + merge the `feat/futuristic-redesign` PR** — Futuristic v2 redesign (Session 96), all 10 phases verified green. Post-merge: decide `LandingPage.tsx` routing strategy, queue a native APK rebuild + smoke-test (large UI change — web-verified only), and run the Post-Day-8 hygiene TODOs above.
+1. **Futuristic v2 follow-ups** — redesign PRs #17/#18/#19 are merged + live. Remaining: Android Studio APK rebuild + on-device smoke-test (web-verified only); decide `LandingPage.tsx` routing; design backlog — restyle the 4 still-cream screens (RetailerDashboard / UserSettings / Support / NotFound) + `BrowserModeBanner`.
 
 2. **Day 8+ cleanup sweeps (now via PR per branch protection):**
    - ESLint baseline cleanup (448 problems; 333 `no-explicit-any` primary) → promote CI lint to hard-gate after
