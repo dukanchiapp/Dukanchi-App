@@ -104,6 +104,30 @@ if (env.NODE_ENV === "production" && env.IP_SALT === DEV_IP_SALT_FALLBACK) {
   process.exit(1);
 }
 
+// Non-production hard-fail: refuse to start a dev/test process against a
+// known production database. Inverted vs. the secret checks above — it
+// fires when NODE_ENV is NOT production.
+//
+// Defends against the incident where a `npm run dev` ran for ~44h attached
+// to the production Neon endpoint because `.env` defaulted to a prod
+// DATABASE_URL. The hints are endpoint slugs (hostname fragments), NOT
+// credentials — safe to commit. Extend the list when prod endpoints change.
+const PROD_DB_ENDPOINT_HINTS = ["ep-cool-fire"];
+if (env.NODE_ENV !== "production") {
+  const looksLikeProd = PROD_DB_ENDPOINT_HINTS.some((hint) =>
+    env.DATABASE_URL.includes(hint),
+  );
+  if (looksLikeProd) {
+    console.error(
+      "❌ Refusing to start a non-production process with a production DATABASE_URL.\n" +
+        "   DATABASE_URL contains a known production endpoint hint.\n" +
+        "   Point DATABASE_URL at a test/local database, or set NODE_ENV=production\n" +
+        "   (only on a real production host).",
+    );
+    process.exit(1);
+  }
+}
+
 export const getAllowedOrigins = (): string[] => {
   if (env.ALLOWED_ORIGINS) {
     return env.ALLOWED_ORIGINS.split(',').map((o) => o.trim());
