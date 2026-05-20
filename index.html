@@ -62,8 +62,12 @@
           return;
         }
 
-        // Browser user (not browser-mode) on app routes → go to landing
-        if (!isStandalone && !browserMode && path !== '/landing') {
+        // Browser user (not browser-mode) on app routes → go to landing.
+        // /legal/* is exempt: DPDP legal docs must be publicly reachable
+        // before signup. Keep this prefix in sync with
+        // src/constants/publicRoutes.ts (a static script cannot import it).
+        if (!isStandalone && !browserMode && path !== '/landing' &&
+            path.indexOf('/legal/') !== 0) {
           window.location.replace('/landing');
         }
       })();

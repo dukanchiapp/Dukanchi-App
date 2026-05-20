@@ -19,6 +19,12 @@ const RetailerDashboard = lazy(() => import('./pages/RetailerDashboard'));
 const ChatPage = lazy(() => import('./pages/Chat'));
 const UserSettings = lazy(() => import('./pages/UserSettings'));
 const SupportPage = lazy(() => import('./pages/Support'));
+// Legal Phase A — public DPDP documents (lazy: react-markdown stays off the main chunk)
+const LegalPrivacyPage = lazy(() => import('./pages/legal/PrivacyPage'));
+const LegalTermsPage = lazy(() => import('./pages/legal/TermsPage'));
+const LegalAccountDeletionPage = lazy(() => import('./pages/legal/AccountDeletionPage'));
+const LegalGrievancePage = lazy(() => import('./pages/legal/GrievancePage'));
+const LegalCookiesPage = lazy(() => import('./pages/legal/CookiesPage'));
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -33,6 +39,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 import { useLocation } from 'react-router-dom';
 import { isNative } from './lib/api';
+import { isPublicPath } from './constants/publicRoutes';
 
 
 function FlowController() {
@@ -74,8 +81,10 @@ function FlowController() {
     // Logged in → no redirect needed
     if (!!user) return;
 
-    // Standalone + not logged in → go to /signup unless already on auth page
-    if (location.pathname !== '/login' && location.pathname !== '/signup') {
+    // Standalone + not logged in → go to /signup, unless on a public route
+    // (auth pages + /legal/* — DPDP docs must be readable pre-signup;
+    // see src/constants/publicRoutes.ts)
+    if (!isPublicPath(location.pathname)) {
       navigate('/signup', { replace: true });
     }
   }, [user, isLoading, location.pathname, navigate, isStandalone]);
@@ -193,6 +202,12 @@ export default function App() {
                 <Route path="/chat/:userId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><UserSettings /></ProtectedRoute>} />
                 <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+                {/* Legal Phase A — public, no auth required */}
+                <Route path="/legal/privacy" element={<LegalPrivacyPage />} />
+                <Route path="/legal/terms" element={<LegalTermsPage />} />
+                <Route path="/legal/account-deletion" element={<LegalAccountDeletionPage />} />
+                <Route path="/legal/grievance" element={<LegalGrievancePage />} />
+                <Route path="/legal/cookies" element={<LegalCookiesPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
               </Suspense>

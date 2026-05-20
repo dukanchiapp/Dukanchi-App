@@ -55,8 +55,33 @@ model User {
   askNearbyRequests AskNearbyRequest[] @relation("AskNearbyCustomer")
   pushSubscriptions PushSubscription[]
   fcmTokens         FcmToken[]
+  legalConsents     LegalConsent[]
 
   @@index([deletedAt])
+}
+
+// Legal Phase A — DPDP consent ledger.
+// One row per affirmative consent event (today: signup). Records WHICH
+// document versions the user accepted plus a minimal, non-reversible
+// provenance trail. The raw signup IP is never stored — only a salted
+// SHA-256 hash (IP_SALT), so a distinct consent event is provable without
+// retaining the address itself (raw IP is personal data under the DPDP Act).
+// Additive: the User table is unchanged; only the virtual back-relation
+// above is new.
+model LegalConsent {
+  id             String   @id @default(uuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  termsVersion   String
+  privacyVersion String
+
+  ipHash         String?
+  userAgent      String?  @db.VarChar(512)
+
+  consentedAt    DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Store {

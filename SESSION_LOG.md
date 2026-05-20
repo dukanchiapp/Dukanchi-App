@@ -6,6 +6,66 @@
 
 ---
 
+## 2026-05-18 — Session 97 — Legal Phase A: DPDP docs + signup consent + backend ledger (feat/legal-phase-a)
+
+**Goal:** Ship a DPDP Act 2023 baseline — five legal documents (EN + HI), in-app
+discoverability, and a signup consent flow backed by a consent ledger.
+
+**Work (Steps 1–6.5, branch `feat/legal-phase-a`):**
+- **Step 1 — scaffold:** 22 files — `src/content/legal/` (10 markdown docs),
+  `src/pages/legal/` (5 route pages), `src/components/legal/`, `src/lib/legal/`.
+- **Step 2 — routing + chrome:** `/legal/*` lazy routes in `App.tsx`,
+  `publicRoutes.ts` guard allow-list (+ index.html pre-React guard exemption —
+  DPDP docs must be readable pre-signup), `LegalLayout` (TOC + bilingual chrome
+  + error boundary), `LanguageToggle` (`?lang=` query param), `MarkdownRenderer`
+  (react-markdown + remark-gfm, lazy — kept off the main chunk).
+- **Step 3 — content:** 10 DPDP-grounded markdown docs (privacy / terms /
+  account-deletion / grievance / cookies × EN + HI). Baseline only —
+  `[TODO: ...]` placeholders for founder-specific details; "pending legal
+  review" shown on every page.
+- **Step 4 — frontend integration:** `ConsentCheckbox` (unticked-by-default,
+  signup) + `LegalLinks` (one source of truth, `menu`/`footer` variants);
+  customer profile Legal menu section; LandingPage.tsx + `public/landing.html`
+  footer legal links; signup submit consent-gated.
+- **Step 5 — backend:** additive `LegalConsent` Prisma model (User gets a
+  back-relation only — no scalar change) + migration
+  `20260518120000_add_legal_consent`; signup `consent: z.literal(true)` Zod
+  gate; `AuthService.signup` writes the user row + one consent row in a single
+  `$transaction`; doc versions stamped server-side from `versions.ts` (client
+  cannot forge them); salted SHA-256 IP hash (raw IP never stored); `IP_SALT`
+  env (fail-fast); `legal.consent.recorded` audit log line per signup.
+- **Step 6 — tests:** `signup-consent.test.ts` — 11 tests (Zod consent gate,
+  transactional ledger write, IP-hash-not-raw, UA truncation, server-side
+  version stamping). 85 → 96.
+- **Step 6.5 — retailer gap:** retailer profile is a flat page (no menu list);
+  added a labelled "Legal & Privacy" card at its foot reusing
+  `<LegalLinks variant="menu" />`.
+
+**Deviations (ND-1…4 — all closed):**
+- **ND-1** — This session ran in a worktree but `feat/legal-phase-a` (with the
+  uncommitted Steps 1-3 work) lives in the main repo dir; worked directly there
+  so the branch context is correct. Accepted.
+- **ND-2** — `src/pages/LandingPage.tsx` is not routed (live landing is the
+  static `public/landing.html`); added legal links to BOTH. Improvement.
+- **ND-3** — `IP_SALT` fail-fast: implemented the JWT_REFRESH_SECRET pattern
+  (dev fallback + production hard-fail), then tightened `.min(16)` → `.min(32)`
+  to match `JWT_SECRET`. Three boot probes confirm: unset/short → `exit(1)`,
+  valid 64-char → boots. Resolved.
+- **ND-4** — Zod v4 `z.literal(true, { message })` syntax (errorMap shorthand
+  changed in v4). Pure version adaptation. Resolved.
+
+**BLOCKER (carried into the PR description):** the migration is created but NOT
+applied to any database — `.env` `DATABASE_URL` points at production (Session 88
+precedent) and there is no auto-migrate hook. Post-merge, before traffic:
+`prisma migrate deploy` + set a production `IP_SALT`. Without these, signup 500s
+(table missing) or the server refuses to boot (IP_SALT).
+
+**Verification:** typecheck 0 · tests 96/96 · build ✓. Rule G followed
+(`npm run typecheck` used throughout, never bare `npx tsc --noEmit`). Rule F
+honoured — no test or smoke touched a real DB.
+
+**Commit:** see PR `feat/legal-phase-a` → `main` (not merged — founder reviews).
+
 ## 2026-05-17 — Session 96 — Futuristic v2 Design-System Redesign (feat/futuristic-redesign)
 
 **Goal:** Implement the `dukanchi-design-system` handoff — restyle the customer app to the futuristic v2 direction (deep-space dark + frosted glass + orange→magenta gradient, "Vision-OS" aesthetic).
