@@ -66,6 +66,7 @@ vi.mock("../../lib/logger", () => ({
 
 vi.mock("@sentry/node", () => ({
   captureException: vi.fn(),
+  captureMessage: vi.fn(),
   addBreadcrumb: vi.fn(),
   setUser: vi.fn(),
 }));
