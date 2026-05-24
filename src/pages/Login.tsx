@@ -62,6 +62,16 @@ export default function LoginPage() {
         data.isTeamMember || false,
         data.refreshToken,
       );
+      // Role-based post-login destination. Admin → server-rendered admin SPA
+      // at /admin-panel/ (hard nav — it's not a React Router route, so
+      // navigate() would fall through to the *-catchall NotFound page).
+      // window.location.replace keeps the back-button from looping to /login.
+      // Trailing slash skips Express's 301 from /admin-panel → /admin-panel/.
+      // Everyone else stays in the customer SPA → home/feed.
+      if (data.user.role === 'admin') {
+        window.location.replace('/admin-panel/');
+        return;
+      }
       navigate('/');
     } catch (err: any) {
       setError(err.message);
