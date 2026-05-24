@@ -85,10 +85,8 @@ These Terms are governed by and interpreted in accordance with the laws of India
 
 ## 12. Jurisdiction
 
-The courts of [TODO: jurisdiction city], India, have exclusive jurisdiction over any dispute arising from these Terms or your use of Dukanchi.
+The courts of Mumbai, India, have exclusive jurisdiction over any dispute arising from these Terms or your use of Dukanchi.
 
 ## 13. Changes to These Terms
 
 We may update these Terms from time to time. If we make a material change, we will give at least **30 days' notice** through the app or by other reasonable means. If you continue to use Dukanchi after a change takes effect, you accept the updated Terms.
-
-<!-- TODO: jurisdiction city -->

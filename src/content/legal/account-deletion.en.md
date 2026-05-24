@@ -14,7 +14,7 @@ The easiest way to delete your account is from within the app:
 
 You may also be asked for an optional reason for leaving (up to 500 characters). Giving a reason is not required.
 
-If for any reason you cannot use the in-app option, you may email us at [TODO: grievance officer email] with the subject line **"Account Deletion Request"**, using the phone number or email registered on your Dukanchi account so we can identify you.
+If for any reason you cannot use the in-app option, you may email us at dukanchiapp@gmail.com with the subject line **"Account Deletion Request"**, using the phone number or email registered on your Dukanchi account so we can identify you.
 
 ## 2. What Happens When You Request Deletion
 
@@ -60,5 +60,3 @@ Once the 30-day grace window has ended and permanent deletion has taken place, *
 ## 7. Questions
 
 If you have any questions about deleting your account or about the data we keep, please contact our Grievance Officer. Details are on the [Grievance Officer page](/legal/grievance).
-
-<!-- TODO: grievance officer email -->

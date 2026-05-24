@@ -34,7 +34,7 @@ Important points about our PostHog use:
 - PostHog stores its data in your browser's **localStorage, not in cookies**.
 - We do **not** send raw user text — your search queries, chat messages, and captions are not sent to PostHog. Only derived metrics are sent.
 - **Session recording is disabled.**
-- Retention setting: [TODO: confirm PostHog retention setting].
+- Retention setting: 2 years.
 
 ## 4. Error Tracking: Sentry
 
@@ -58,10 +58,8 @@ You have control over cookies and browser storage:
 
 - **Clear site data.** Your browser's "clear site data" option clears both Dukanchi's localStorage and its cookies. Note that clearing them will sign you out.
 - **PostHog opt-out.** To opt out of PostHog analytics, email our Grievance Officer.
-- **Do Not Track.** Some browsers send a "Do Not Track" signal. [TODO: implement DNT handling].
+- **Do Not Track.** Some browsers send a "Do Not Track" signal. We do not currently honor Do Not Track signals. We will revisit this in a future update.
 
 ## 8. Updates
 
 We may update this Cookie and Data Usage Policy from time to time. The "Last Updated" date at the top of this page shows when it was last revised. If we make a material change, we will give reasonable notice through the app.
-
-<!-- TODO: confirm PostHog retention setting; implement DNT handling -->

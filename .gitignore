@@ -38,3 +38,8 @@ typecheck-errors.txt
 
 # Local forensic snapshots (Session 88 incident response, etc.) — never committed
 temp/
+.env.fly-secrets
+
+# Founder-supplied PII for legal docs — values get inlined into src/content/legal/
+# at build time; the source file MUST NEVER ship in the image or the repo.
+legal-values.txt
