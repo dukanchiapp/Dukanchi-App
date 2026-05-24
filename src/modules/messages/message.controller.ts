@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { MessageService, ChatRejectionError } from "./message.service";
 import { unavailableError } from "../../middlewares/user-status";
 import { logger } from "../../lib/logger";
@@ -18,6 +19,9 @@ export class MessageController {
       return res.json(result);
     } catch (error) {
       logger.error({ err: error }, 'Failed to fetch messages');
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: 'Failed to fetch messages' });
     }
   }
@@ -28,6 +32,13 @@ export class MessageController {
       const convos = await MessageService.getConversations(userId);
       return res.json(convos);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "message.getConversations failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch conversations" });
     }
   }

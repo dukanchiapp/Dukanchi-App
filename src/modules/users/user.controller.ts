@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { UserService } from "./user.service";
+import { logger } from "../../lib/logger";
 
 export class UserController {
   static async getUserStore(req: Request, res: Response) {
@@ -8,6 +10,13 @@ export class UserController {
       const store = await UserService.getUserStore(userId);
       return res.json(store);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getStore failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch user store" });
     }
   }
@@ -26,6 +35,13 @@ export class UserController {
 
       return res.json(user);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getProfile failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch user" });
     }
   }
@@ -59,6 +75,13 @@ export class UserController {
       const stores = await UserService.getFollowedStores(req.params.id);
       return res.json(stores);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getFollowing failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch followed stores" });
     }
   }
@@ -73,6 +96,13 @@ export class UserController {
       const result = await UserService.getSavedItems(req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getSaved failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch saved items" });
     }
   }
@@ -82,6 +112,13 @@ export class UserController {
       const reviews = await UserService.getReviews(req.params.id);
       return res.json(reviews);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getReviews failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch reviews" });
     }
   }
@@ -96,6 +133,13 @@ export class UserController {
       const history = await UserService.getSearchHistory(req.params.id);
       return res.json(history);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getSearchHistory failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch search history" });
     }
   }
@@ -110,6 +154,13 @@ export class UserController {
       const locations = await UserService.getLocations(req.params.id);
       return res.json(locations);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "user.getLocations failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch saved locations" });
     }
   }

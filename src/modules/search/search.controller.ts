@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { SearchService } from "./search.service";
 import { logger } from "../../lib/logger";
 
@@ -21,6 +22,13 @@ export class SearchController {
       const result = await SearchService.performStandardSearch(String(q).trim(), allowedRoles);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "search.search failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to perform search" });
     }
   }
@@ -33,6 +41,13 @@ export class SearchController {
       const suggestions = await SearchService.getSuggestions(String(q).trim());
       return res.json({ suggestions });
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "search.getSuggestions failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch suggestions" });
     }
   }
@@ -49,6 +64,9 @@ export class SearchController {
       return res.json(result);
     } catch (error) {
       logger.error({ err: error }, "AI search error");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to perform search" });
     }
   }
@@ -71,6 +89,13 @@ export class SearchController {
       const result = await SearchService.clearSearchHistory(userId);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "search.clearSearchHistory failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to clear search history" });
     }
   }

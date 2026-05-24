@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { AdminService } from "./admin.service";
 import { getUploadedFileUrl } from "../../middlewares/upload.middleware";
+import { logger } from "../../lib/logger";
 
 export class AdminController {
   static async getStats(_req: Request, res: Response) {
@@ -8,6 +10,13 @@ export class AdminController {
       const stats = await AdminService.getStats();
       return res.json(stats);
     } catch (error) {
+      logger.error(
+        { err: error, route: _req.originalUrl, userId: (_req as any).user?.userId, method: _req.method },
+        "admin.getStats failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: _req.originalUrl, userId: (_req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch admin stats" });
     }
   }
@@ -18,6 +27,13 @@ export class AdminController {
       const result = await AdminService.getUsers({ search, role, page: parseInt(page as string), limit: parseInt(limit as string) });
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getUsers failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch users" });
     }
   }
@@ -53,6 +69,13 @@ export class AdminController {
       const result = await AdminService.bulkUpdateUsers(userIds, isBlocked, currentUserId);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.bulkUpdateUsers failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to perform bulk update" });
     }
   }
@@ -73,6 +96,13 @@ export class AdminController {
       const result = await AdminService.getStores({ search, page: parseInt(page as string), limit: parseInt(limit as string) });
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getStores failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch stores" });
     }
   }
@@ -82,6 +112,13 @@ export class AdminController {
       const result = await AdminService.deleteStore(req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.deleteStore failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to delete store and its dependencies" });
     }
   }
@@ -91,6 +128,13 @@ export class AdminController {
       const stores = await AdminService.getStoreMembers(req.query.search as string);
       return res.json(stores);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getStoreMembersList failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch store members" });
     }
   }
@@ -123,6 +167,13 @@ export class AdminController {
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
       return res.send(buf);
     } catch (error) {
+      logger.error(
+        { err: error, route: _req.originalUrl, userId: (_req as any).user?.userId, method: _req.method },
+        "admin.exportStores failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: _req.originalUrl, userId: (_req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to export stores" });
     }
   }
@@ -133,6 +184,13 @@ export class AdminController {
       const result = await AdminService.getReports(parseInt(page as string), parseInt(limit as string));
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getReports failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch reports" });
     }
   }
@@ -142,6 +200,13 @@ export class AdminController {
       const result = await AdminService.deleteReport(req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.deleteReport failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to delete report" });
     }
   }
@@ -152,6 +217,13 @@ export class AdminController {
       const result = await AdminService.getChats(parseInt(page as string), parseInt(limit as string));
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getChats failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch admin chats" });
     }
   }
@@ -172,6 +244,13 @@ export class AdminController {
       const settings = await AdminService.getSettings();
       return res.json(settings);
     } catch (error) {
+      logger.error(
+        { err: error, route: _req.originalUrl, userId: (_req as any).user?.userId, method: _req.method },
+        "admin.getSettings failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: _req.originalUrl, userId: (_req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch settings" });
     }
   }
@@ -181,6 +260,13 @@ export class AdminController {
       const settings = await AdminService.updateSettings(req.body);
       return res.json(settings);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.updateSettings failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to update settings" });
     }
   }
@@ -192,6 +278,13 @@ export class AdminController {
       const imageUrl = getUploadedFileUrl(file);
       return res.json({ url: imageUrl });
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.uploadSettingsImage failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to upload image" });
     }
   }
@@ -202,6 +295,13 @@ export class AdminController {
       const result = await AdminService.getComplaints(status as string, parseInt(page as string), parseInt(limit as string));
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getComplaints failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch complaints" });
     }
   }
@@ -212,6 +312,13 @@ export class AdminController {
       const result = await AdminService.updateComplaint(req.params.id, status, adminNotes);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.updateComplaint failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to update complaint" });
     }
   }
@@ -221,6 +328,13 @@ export class AdminController {
       const result = await AdminService.deleteComplaint(req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.deleteComplaint failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to delete complaint" });
     }
   }
@@ -231,6 +345,13 @@ export class AdminController {
       const result = await AdminService.getPosts(search as string, parseInt(page as string), parseInt(limit as string));
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getPosts failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch posts" });
     }
   }
@@ -240,6 +361,13 @@ export class AdminController {
       const result = await AdminService.deletePost(req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.deletePost failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to delete post" });
     }
   }
@@ -250,6 +378,13 @@ export class AdminController {
       const result = await AdminService.getKycList(status as string, parseInt(page as string), parseInt(limit as string));
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.getKycList failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch KYC list" });
     }
   }
@@ -260,6 +395,13 @@ export class AdminController {
       const result = await AdminService.updateKycStatus(req.params.id, status, notes);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "admin.updateKycStatus failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to update KYC status" });
     }
   }

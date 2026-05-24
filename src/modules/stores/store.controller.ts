@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { StoreService } from "./store.service";
 import { BulkImportService } from "./bulkImport.service";
 import { prisma } from "../../config/prisma";
@@ -54,6 +55,9 @@ export class StoreController {
       return res.json(store);
     } catch (error) {
       logger.error({ err: error }, "Failed to create store");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to create store" });
     }
   }
@@ -81,6 +85,9 @@ export class StoreController {
       return res.json(store);
     } catch (error) {
       logger.error({ err: error }, "Failed to update store");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to update store" });
     }
   }
@@ -125,6 +132,9 @@ export class StoreController {
       }
     } catch (error) {
       logger.error({ err: error }, "Pincode lookup error");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to look up pincode" });
     }
   }
@@ -144,6 +154,13 @@ export class StoreController {
       res.set('Cache-Control', 'public, max-age=30');
       return res.json(store);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "store.getStoreById failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch store" });
     }
   }
@@ -186,6 +203,13 @@ export class StoreController {
       const product = await StoreService.createProduct(req.body);
       return res.json(product);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "store.createProduct failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to create product" });
     }
   }
@@ -196,6 +220,13 @@ export class StoreController {
       const products = await StoreService.getProducts(search as string, category as string, storeId as string);
       return res.json(products);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "store.getProducts failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch products" });
     }
   }

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { MiscService } from "./misc.service";
 import { logger } from "../../lib/logger";
 
@@ -11,6 +12,9 @@ export class MiscController {
       return res.json(complaint);
     } catch (error) {
       logger.error({ err: error }, "Failed to create complaint");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to submit complaint" });
     }
   }
@@ -37,6 +41,13 @@ export class MiscController {
       res.set('Cache-Control', 'public, max-age=60');
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "misc.getStoreReviews failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch store reviews" });
     }
   }
@@ -48,6 +59,13 @@ export class MiscController {
       res.set('Cache-Control', 'public, max-age=60');
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "misc.getProductReviews failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch product reviews" });
     }
   }
@@ -72,6 +90,13 @@ export class MiscController {
       res.set('Cache-Control', 'public, max-age=300');
       return res.json(settings);
     } catch (error) {
+      logger.error(
+        { err: error, route: _req.originalUrl, userId: (_req as any).user?.userId, method: _req.method },
+        "misc.getAppSettings failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: _req.originalUrl, userId: (_req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch app settings" });
     }
   }
