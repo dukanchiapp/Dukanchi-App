@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { NotificationService } from "./notification.service";
+import { logger } from "../../lib/logger";
 
 export class NotificationController {
   static async getNotifications(req: Request, res: Response) {
@@ -8,6 +10,13 @@ export class NotificationController {
       const notifications = await NotificationService.getNotifications(userId);
       res.json(notifications);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "notification.list failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       res.status(500).json({ error: "Failed to fetch notifications" });
     }
   }
@@ -18,6 +27,13 @@ export class NotificationController {
       const notification = await NotificationService.markAsRead(req.params.id, userId);
       res.json(notification);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "notification.markAsRead failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       res.status(500).json({ error: "Failed to mark notification as read" });
     }
   }
@@ -28,6 +44,13 @@ export class NotificationController {
       const result = await NotificationService.markAllAsRead(userId);
       res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "notification.markAllAsRead failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       res.status(500).json({ error: "Failed to mark all notifications as read" });
     }
   }

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { PostService } from "./post.service";
 import { pubClient } from "../../config/redis";
 import { logger } from "../../lib/logger";
@@ -18,6 +19,9 @@ export class PostController {
       return res.json(post);
     } catch (error) {
       logger.error({ err: error }, "Failed to create post");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to create post" });
     }
   }
@@ -53,6 +57,13 @@ export class PostController {
 
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "post.getFeed failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch feed" });
     }
   }
@@ -63,6 +74,13 @@ export class PostController {
       const interactions = await PostService.getInteractions(userId);
       return res.json(interactions);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "post.getInteractions failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch interactions" });
     }
   }
@@ -73,6 +91,13 @@ export class PostController {
       const result = await PostService.toggleLike(userId, req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "post.toggleLike failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to toggle like" });
     }
   }
@@ -83,6 +108,13 @@ export class PostController {
       const result = await PostService.toggleSave(userId, req.params.id);
       return res.json(result);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "post.toggleSave failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to toggle save" });
     }
   }

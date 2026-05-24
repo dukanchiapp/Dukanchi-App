@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { KycService } from "./kyc.service";
+import { logger } from "../../lib/logger";
 
 export class KycController {
   static async submitKyc(req: Request, res: Response) {
@@ -11,6 +13,13 @@ export class KycController {
       const user = await KycService.submitKyc(userId, req.body);
       return res.json(user);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "kyc.submit failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to submit KYC" });
     }
   }
@@ -21,6 +30,13 @@ export class KycController {
       const user = await KycService.getKycStatus(userId);
       return res.json(user);
     } catch (error) {
+      logger.error(
+        { err: error, route: req.originalUrl, userId: (req as any).user?.userId, method: req.method },
+        "kyc.getStatus failed",
+      );
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId },
+      });
       return res.status(500).json({ error: "Failed to fetch KYC status" });
     }
   }
