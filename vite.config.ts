@@ -66,6 +66,18 @@ export default defineConfig(({mode}) => {
         manifest: false, // using our own public/manifest.json
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          // Paths that must NEVER be served from the SPA's cached index.html.
+          // Workbox's default NavigationRoute would otherwise intercept every
+          // browser navigation and return the customer SPA — masking the
+          // server-served admin panel, JSON API responses, and direct file
+          // downloads. curl works without a SW; the browser was getting the
+          // customer SPA's NotFound for /admin-panel/ until this denylist
+          // landed.
+          navigateFallbackDenylist: [
+            /^\/admin-panel(\/|$)/, // separate admin SPA, Express-served
+            /^\/api\//,             // JSON API — never an HTML fallback
+            /^\/uploads\//,         // static uploads, served directly by Express
+          ],
           runtimeCaching: [
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
