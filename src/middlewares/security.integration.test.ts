@@ -166,6 +166,55 @@ describe("Upload validation (Day 3.3)", () => {
     expect(res.body.code).toBe("FILE_TOO_LARGE");
     expect(res.body.limit).toBe(FILE_SIZE_LIMIT_BYTES);
   });
+
+  // Tests 15–18 — filename extension whitelist (replaces the old "any second
+  // dot rejects" rule which false-positived on legitimate user filenames).
+  it("[Test 15] multi-dot legitimate filename 'my.vacation.photo.jpg' → 200 (extension whitelist accepts)", async () => {
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "my.vacation.photo.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it("[Test 16] non-image extension 'shell.php' (claimed image/jpeg) → 400 INVALID_FILENAME", async () => {
+    // Filename ends in .php — even when the client claims image/jpeg MIME and
+    // sends real JPEG bytes (a polyglot attempt), the extension whitelist
+    // rejects it before persistence.
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "shell.php", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_FILENAME");
+    expect(res.body.error).toMatch(/extension/i);
+  });
+
+  it("[Test 17] filename with spaces + dotted date 'screenshot 2026-05-24.jpg' → 200 (sanitised, extension OK)", async () => {
+    // The space + dashes are scrubbed to underscores by the [a-zA-Z0-9._-]
+    // catch-all; the trailing .jpg is in the whitelist; the magic-byte check
+    // passes on the real JPEG buffer. Net: 200.
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "screenshot 2026-05-24.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it("[Test 18] basic single-dot 'image.jpeg' → 200 (regression safety — most common case)", async () => {
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "image.jpeg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
 });
 
 describe("Body limit enforcement (Day 3.2)", () => {
