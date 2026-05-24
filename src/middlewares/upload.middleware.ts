@@ -52,6 +52,20 @@ export const IMAGE_MIME_WHITELIST: ReadonlySet<string> = new Set([
   "image/gif",
 ]);
 
+// Trailing-extension whitelist — keyed off the same image types as the MIME
+// whitelist. Used by sanitizeFilename to allow multi-dot legitimate names
+// ("IMG_2024.01.15.jpg") while still rejecting non-image extensions. The
+// polyglot smuggling threat ("evil.php.jpg") is neutralised downstream by
+// magic-byte verification + DETECTED-MIME stored Content-Type, not by the
+// filename — see the file header for the full defense chain.
+export const IMAGE_EXT_WHITELIST: ReadonlySet<string> = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "gif",
+]);
+
 export const FILE_SIZE_LIMIT_BYTES = 10 * 1024 * 1024; // 10 MB
 const MAGIC_BYTE_PEEK = 4100; // sufficient for all formats we accept
 const MAX_BASENAME_LENGTH = 200;
@@ -115,10 +129,17 @@ function sanitizeFilename(rawName: string): string {
     (err as any).code = "INVALID_FILENAME";
     throw err;
   }
-  // Double extension (file.php.jpg) — classic polyglot smuggling.
-  const dotCount = (base.match(/\./g) || []).length;
-  if (dotCount > 1) {
-    const err = new Error("Multiple extensions not allowed");
+  // Trailing extension must be in the image whitelist. Multi-dot filenames
+  // in the basename ("IMG_2024.01.15.jpg", "my.vacation.photo.jpg") are
+  // legitimate user output — the prior "reject any second dot" rule
+  // false-positived on them constantly. Polyglot smuggling is neutralised
+  // by magic-byte verification + DETECTED-MIME-as-stored-Content-Type
+  // (below), so this check is the cheap upfront filter for obviously-wrong
+  // extensions, not the primary defense.
+  const lastDot = base.lastIndexOf(".");
+  const ext = lastDot >= 0 ? base.slice(lastDot + 1).toLowerCase() : "";
+  if (!IMAGE_EXT_WHITELIST.has(ext)) {
+    const err = new Error("File extension not allowed");
     (err as any).code = "INVALID_FILENAME";
     throw err;
   }
