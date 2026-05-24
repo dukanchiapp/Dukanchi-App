@@ -1,6 +1,35 @@
+# What the Docker daemon does NOT send into the build context.
+# Keeps the build fast and the runtime image clean (no secrets, no test
+# artefacts, no IDE / native-platform trees, no local DB snapshots).
+
+# --- node + build outputs ---
 node_modules/
 dist/
+build/
+coverage/
+*.log
+
+# --- VCS + IDE ---
 .git/
+.idea/
+.vscode/
+.DS_Store
+
+# --- env files (NEVER ship secrets via the image layer) ---
 .env
+.env.*
+
+# --- native platforms (not part of the server image) ---
+android/
+ios/
+
+# --- forensic snapshots + local DB ---
 uploads/
 prisma/dev.db
+temp/
+
+# --- misc ---
+*.zip
+# NOTE: `public/landing.html` is intentionally NOT excluded — Vite's build copies
+# it from public/ to dist/landing.html, which Express serves at /landing on prod.
+# If we ever move the landing to a separate CDN, exclude it here.
