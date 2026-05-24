@@ -7,6 +7,8 @@ import pinoHttp from "pino-http";
 import * as Sentry from "@sentry/node";
 import multer from "multer";
 import { env, getAllowedOrigins, isNgrokOrigin } from "./config/env";
+import { prisma } from "./config/prisma";
+import { pubClient } from "./config/redis";
 import { logger } from "./lib/logger";
 
 import { authRoutes } from './modules/auth/auth.routes';
@@ -158,7 +160,50 @@ app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
 
 // ── 6. Health check (before rate limiter — no auth needed) ───────────────────
-app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+// Real probe vs the previous one-liner: checks DB + Redis with a 2s timeout
+// each. Fly's [[http_service.checks]] polls this every 30s; a 503 here is the
+// signal that triggers Fly's auto-restart / rollback per fly.toml. Probe
+// failures log via pino. Sentry capture is intentionally omitted — during a
+// real Neon / Upstash outage this would fire every 30s and drown the Sentry
+// project; the operator gets a single ALERT from Fly's healthcheck instead.
+app.get('/health', async (_req, res) => {
+  let dbStatus = 'unknown';
+  let redisStatus = 'unknown';
+  let allHealthy = true;
+
+  // DB probe — Prisma SELECT 1, 2s ceiling to keep /health snappy.
+  try {
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB timeout')), 2000)),
+    ]);
+    dbStatus = 'up';
+  } catch (err) {
+    dbStatus = 'down';
+    allHealthy = false;
+    logger.error({ err }, 'Health check: DB probe failed');
+  }
+
+  // Redis probe — node-redis client.ping(), same 2s ceiling.
+  try {
+    await Promise.race([
+      pubClient.ping(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Redis timeout')), 2000)),
+    ]);
+    redisStatus = 'up';
+  } catch (err) {
+    redisStatus = 'down';
+    allHealthy = false;
+    logger.error({ err }, 'Health check: Redis probe failed');
+  }
+
+  return res.status(allHealthy ? 200 : 503).json({
+    status: allHealthy ? 'ok' : 'degraded',
+    db: dbStatus,
+    redis: redisStatus,
+    timestamp: Date.now(),
+  });
+});
 
 // ── 7. Global rate limiter — all /api routes ─────────────────────────────────
 app.use('/api', generalLimiter);
