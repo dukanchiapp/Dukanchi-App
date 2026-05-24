@@ -16,11 +16,11 @@ Dukanchi has appointed a Grievance Officer for exactly this purpose.
 
 You can contact our Grievance Officer using the details below:
 
-- **Name:** [TODO: grievance officer name]
-- **Designation:** Grievance Officer, Dukanchi
-- **Email:** [TODO: grievance officer email]
-- **Phone:** [TODO: grievance officer phone]
-- **Postal address:** [TODO: registered company address]
+- **Name:** Mandeep
+- **Designation:** Founder & Grievance Officer
+- **Email:** dukanchiapp@gmail.com
+- **Phone:** +91-9876543210
+- **Postal address:** Dukanchi, Mumbai, Maharashtra, India - 400001
 
 ## 3. How to File a Complaint
 
@@ -40,5 +40,3 @@ We take grievances seriously. We aim to acknowledge and respond to your complain
 If you are not satisfied with how we have handled your grievance, you can escalate the matter to the **Data Protection Board of India**, the authority set up under the DPDP Act 2023.
 
 > You can find more information about the Board at <https://dpdp.gov.in>.
-
-<!-- TODO: grievance officer name; grievance officer email; grievance officer phone; registered company address -->

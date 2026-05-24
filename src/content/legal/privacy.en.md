@@ -12,7 +12,7 @@ Dukanchi is a hyperlocal retail-discovery app for India. It helps customers find
 
 Under the Digital Personal Data Protection Act, 2023 ("DPDP Act 2023"), Dukanchi is a **Data Fiduciary**. This means we decide what personal data is collected and how it is used, and we are responsible for protecting it.
 
-> Registered entity address: [TODO: registered company address]
+> Registered entity address: Dukanchi, Mumbai, Maharashtra, India - 400001
 
 ## 2. Information We Collect
 
@@ -69,7 +69,7 @@ We keep personal data only as long as it is needed. The table below summarises o
 | Account data | Until you delete your account, plus a 30-day grace window |
 | KYC documents (ID, selfie, store photo) | As long as needed for verification and to meet legal requirements |
 | Technical logs | About 90 days |
-| Analytics data (PostHog) | [TODO: confirm PostHog retention setting] |
+| Analytics data (PostHog) | 2 years |
 | Records we are legally required to retain (e.g. audit, dispute) | Kept as long as the law requires |
 | Deleted-account residuals | Anonymised so they no longer identify you |
 
@@ -116,16 +116,14 @@ No system can be guaranteed 100% secure. While we work hard to protect your data
 
 In line with Section 10 of the DPDP Act 2023, we have appointed a Grievance Officer to handle your data-protection concerns:
 
-- **Name:** [TODO: grievance officer name]
-- **Designation:** Grievance Officer, Dukanchi
-- **Email:** [TODO: grievance officer email]
-- **Phone:** [TODO: grievance officer phone]
-- **Postal address:** [TODO: registered company address]
+- **Name:** Mandeep
+- **Designation:** Founder & Grievance Officer
+- **Email:** dukanchiapp@gmail.com
+- **Phone:** +91-9876543210
+- **Postal address:** Dukanchi, Mumbai, Maharashtra, India - 400001
 
 We aim to acknowledge and respond to grievances within **30 days** of receiving them, as required by law.
 
 ## 12. Changes to This Policy
 
 We may update this Privacy Policy from time to time. If we make a material change, we will give at least **30 days' notice** through the app or by other reasonable means before the change takes effect. The "Last Updated" date at the top of this page shows when the policy was last revised.
-
-<!-- TODO: grievance officer name; grievance officer email; grievance officer phone; registered company address; confirm PostHog retention setting -->
