@@ -5,6 +5,7 @@ import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { apiFetch } from '../lib/api';
+import { Sentry } from '../lib/sentry-frontend';
 
 const MIN_DESC_LENGTH = 20;
 
@@ -48,8 +49,9 @@ export default function SupportPage() {
         const data = await res.json();
         showToast(data.error || 'Failed to submit complaint', { type: 'error' });
       }
-    } catch {
+    } catch (err) {
       showToast('Network error. Please try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'support.submitComplaint' } });
     } finally {
       if (mountedRef.current) setSubmitting(false);
     }

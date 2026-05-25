@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
+import { Sentry } from '../../lib/sentry-frontend';
 
 interface AccountDetailsTabProps {
   isRetailer: boolean;
@@ -44,8 +45,9 @@ export const AccountDetailsTab = React.memo(function AccountDetailsTab({ isRetai
               } else {
                 showToast('Failed to update details.', { type: 'error' });
               }
-            } catch {
+            } catch (err) {
               showToast('Error updating details.', { type: 'error' });
+              Sentry.captureException(err, { extra: { context: 'accountDetails.update' } });
             }
           }}
         >

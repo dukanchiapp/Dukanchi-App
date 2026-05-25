@@ -4,6 +4,7 @@ import ImageCropper from '../ImageCropper';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
 import { captureEvent } from '../../lib/posthog';
+import { Sentry } from '../../lib/sentry-frontend';
 import { FIcon } from '../futuristic';
 
 /* ── Futuristic v2 skin · Phase 8 / feat/futuristic-redesign ──
@@ -120,8 +121,9 @@ export function PostsGrid({
       if (!res.ok) throw new Error();
       onPostsChange(prev => prev.filter(p => p.id !== postToDelete));
       if (selectedPost?.id === postToDelete) setSelectedPost(null);
-    } catch {
+    } catch (err) {
       showToast('Failed to delete post', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.delete', postId: postToDelete } });
     } finally {
       setPostToDelete(null);
     }
@@ -169,8 +171,9 @@ export function PostsGrid({
       } else {
         showToast('Failed to update post', { type: 'error' });
       }
-    } catch {
+    } catch (err) {
       showToast('Failed to update post', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.update', postId: editingPost.id } });
     }
     setEditUploading(false);
   };
@@ -317,7 +320,10 @@ export function PostsGrid({
       } else {
         showToast('Failed to create post.', { type: 'error' });
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      showToast('Post create nahi ho paya. Try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.create', storeId } });
+    }
     setNewPostUploading(false);
   };
 
