@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Camera, Building, X, ArrowLeft, Loader2 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
+import { Sentry } from '../lib/sentry-frontend';
 
 export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: () => void, onLogout: () => void, onBack?: () => void }) {
   const [storeName, setStoreName] = useState('');
@@ -31,8 +32,9 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
       } else {
         setErrorMsg('Upload failed. Please try again.');
       }
-    } catch {
+    } catch (err) {
       setErrorMsg('Upload failed. Please check your connection.');
+      Sentry.captureException(err, { extra: { context: 'kycForm.fileUpload', fieldName } });
     } finally {
       setUploadingField(null);
     }
@@ -59,10 +61,11 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
       });
       
       if (!kycRes.ok) throw new Error("Failed to submit KYC");
-      
+
       onComplete();
-    } catch {
+    } catch (err) {
       setErrorMsg('Failed to submit KYC. Please try again.');
+      Sentry.captureException(err, { extra: { context: 'kycForm.submit' } });
     }
     setLoading(false);
   };

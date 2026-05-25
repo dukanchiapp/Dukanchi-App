@@ -13,6 +13,7 @@ import { StoreInfoCard } from '../components/profile/StoreInfoCard';
 import { PostsGrid } from '../components/profile/PostsGrid';
 import { ReviewsTab } from '../components/profile/ReviewsTab';
 import { apiFetch } from '../lib/api';
+import { Sentry } from '../lib/sentry-frontend';
 import { FIcon } from '../components/futuristic';
 import { LegalLinks } from '../components/legal/LegalLinks';
 
@@ -116,7 +117,10 @@ export default function ProfilePage() {
             setKycNotes(kycData.kycNotes || '');
             setKycStoreName(kycData.kycStoreName || '');
           }
-        } catch { /* silent */ }
+        } catch (err) {
+          showToast('KYC status load nahi ho paya. Please refresh.', { type: 'error' });
+          Sentry.captureException(err, { extra: { context: 'profile.fetchKycStatus' } });
+        }
       }
 
       const storeRes = await apiFetch(`/api/users/${currentUserId}/store`);
@@ -150,7 +154,9 @@ export default function ProfilePage() {
         setStore(null);
       }
       setLoading(false);
-    } catch {
+    } catch (err) {
+      showToast('Profile load nahi ho paya. Please refresh.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'profile.fetchStoreData' } });
       setLoading(false);
     }
   };

@@ -9,6 +9,7 @@ import { StoreFormFields } from '../components/dashboard/StoreFormFields';
 import { KycUploadForm } from '../components/dashboard/KycUploadForm';
 import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
+import { Sentry } from '../lib/sentry-frontend';
 
 export default function RetailerDashboard() {
   const [loading, setLoading] = useState(true);
@@ -165,7 +166,10 @@ export default function RetailerDashboard() {
         const errorData = await res.json().catch(() => ({}));
         showToast(errorData.error || 'Failed to update profile.', { type: 'error' });
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      showToast('Store save nahi ho paya. Please try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'retailer.storeSave' } });
+    }
     setSaving(false);
   };
 
@@ -214,8 +218,13 @@ export default function RetailerDashboard() {
         if (type === 'doc') setKycDocUrl(data.url);
         else if (type === 'selfie') setKycSelfieUrl(data.url);
         else setKycStorePhoto(data.url);
+      } else {
+        showToast('KYC document upload nahi ho paya. Try again kariye.', { type: 'error' });
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      showToast('KYC document upload nahi ho paya. Try again kariye.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'retailer.kycUpload', type } });
+    }
     setKycUploading(false);
   };
 
@@ -230,7 +239,10 @@ export default function RetailerDashboard() {
       });
       if (res.ok) { setKycStatus('pending'); showToast('KYC submitted successfully!', { type: 'success' }); }
       else { showToast('Failed to submit KYC. Please try again.', { type: 'error' }); }
-    } catch { /* silent */ }
+    } catch (err) {
+      showToast('KYC submit nahi ho paya. Please try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'retailer.kycSubmit' } });
+    }
     setKycSubmitting(false);
   };
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Upload, Plus } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
+import { Sentry } from '../../lib/sentry-frontend';
 
 interface BulkUploadTabProps {
   store: any;
@@ -34,8 +35,9 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
       } else {
         showToast(data.error || 'Import failed', { type: 'error' });
       }
-    } catch {
+    } catch (err) {
       showToast('Upload failed. Check your connection.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'bulkUpload.import', storeId: store.id } });
     } finally {
       setImportLoading(false);
     }

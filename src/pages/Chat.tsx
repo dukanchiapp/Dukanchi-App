@@ -5,6 +5,8 @@ import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
+import { Sentry } from '../lib/sentry-frontend';
+import { useToast } from '../context/ToastContext';
 import { FIcon } from '../components/futuristic';
 
 /* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
@@ -154,6 +156,7 @@ export default function ChatPage() {
   const { userId } = useParams();
   const location = useLocation();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const currentUserId = user?.id || '';
   const referredPostFromState = (location.state as any)?.referredPost ?? null;
   const userNameFromState = (location.state as any)?.userName ?? '';
@@ -209,7 +212,10 @@ export default function ChatPage() {
     apiFetch(`/api/messages/${userId}`)
       .then(res => res.ok ? res.json() : { messages: [] })
       .then(data => setMessages((Array.isArray(data) ? data : (data.messages ?? [])) as Message[]))
-      .catch(() => {});
+      .catch((err) => {
+        showToast('Chat load nahi ho paya. Please refresh.', { type: 'error' });
+        Sentry.captureException(err, { extra: { context: 'chat.fetchHistory', userId } });
+      });
 
     const socket = io(getSocketUrl(), getSocketAuthOptions());
     socketRef.current = socket;
