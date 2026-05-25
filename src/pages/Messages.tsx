@@ -80,7 +80,10 @@ export default function MessagesPage() {
         console.log('[Messages] suggestions received:', all.map((s: any) => ({ id: s.id, ownerId: s.ownerId, name: s.storeName })));
         setSuggestedStores(all.slice(0, 3));
       })
-      .catch(() => {});
+      .catch((err) => {
+        // Suggested-stores rail is a discovery extra — no toast.
+        Sentry.captureException(err, { extra: { context: 'messages.suggestedStores' } });
+      });
   }, [authLoading, user?.id]);
 
   // Socket: listen for ask_nearby_request (retailer) + ask_nearby_confirmed (customer)

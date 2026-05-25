@@ -98,8 +98,9 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
       recorder.start();
       setIsRecording(true); setRecordingSeconds(0);
       timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch {
+    } catch (err) {
       showToast('Microphone access nahi mila', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'aiBioModal.micAccess' } });
     }
   };
 
