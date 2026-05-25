@@ -90,6 +90,7 @@ const cspDirectives = {
     "https://*.ingest.us.sentry.io",
     "https://nominatim.openstreetmap.org",
     "https://maps.googleapis.com",
+    "https://fonts.googleapis.com", // Maps SDK fetches font CSS via XHR, not <link>
     "wss://dukanchi.com",
     "wss:", // catch-all for Capacitor / socket.io transport fallback
   ],
