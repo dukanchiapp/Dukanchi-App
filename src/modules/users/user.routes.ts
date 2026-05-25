@@ -8,7 +8,7 @@ const router = Router();
 // if we mount this router at /api/users, the routes here should be relative to that.
 // The previous path was app.get("/api/users/:userId/store")
 // Assuming this router is mounted at `app.use('/api/users', userRoutes)`:
-router.get("/:userId/store", UserController.getUserStore); // NOTE: This wasn't authenticated in monolith!
+router.get("/:userId/store", authenticateToken, UserController.getUserStore);
 router.get("/:id", authenticateToken, UserController.getUserProfile);
 router.put("/:id", authenticateToken, UserController.updateUserProfile);
 router.get("/:id/following", authenticateToken, UserController.getFollowing);
