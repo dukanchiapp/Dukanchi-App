@@ -110,9 +110,17 @@ export default defineConfig(({mode}) => {
               sourcemaps: {
                 assets: './dist/**',
               },
-              // Auto-discover release from git SHA in CI, else fall back
+              // Auto-discover release from Fly's per-deploy release version,
+              // else legacy Railway SHA (no-op on Fly), else undefined (lets
+              // the plugin auto-generate a timestamp name). Keeping this in
+              // sync with src/lib/sentry.ts ensures frontend sourcemap uploads
+              // and backend runtime errors share the same release tag.
               release: {
-                name: process.env.RAILWAY_GIT_COMMIT_SHA || undefined,
+                name:
+                  process.env.FLY_RELEASE_VERSION ||
+                  process.env.FLY_MACHINE_VERSION ||
+                  process.env.RAILWAY_GIT_COMMIT_SHA ||
+                  undefined,
               },
             }),
           ]
