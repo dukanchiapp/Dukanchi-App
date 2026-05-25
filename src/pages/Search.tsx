@@ -6,6 +6,7 @@ import { useUserLocation } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
+import { Sentry } from '../lib/sentry-frontend';
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { FIcon } from '../components/futuristic/FIcon';
@@ -238,8 +239,9 @@ export default function SearchPage() {
         lat = parseFloat(data[0].lat);
         lng = parseFloat(data[0].lon);
         areaLabel = askCustomArea.trim();
-      } catch {
+      } catch (err) {
         showToast('Area nahi mila, dobara try karo');
+        Sentry.captureException(err, { extra: { context: 'search.areaGeocoding', area: askCustomArea } });
         setAskGeocodingArea(false);
         return;
       } finally {
@@ -258,8 +260,9 @@ export default function SearchPage() {
       if (!res.ok) { showToast(data.error || 'Kuch problem aayi, dobara try karo'); return; }
       if (data.found === 0) { showToast(data.message || 'Koi matching store nahi mila'); return; }
       setAskResult({ sentTo: data.sentTo, storeNames: data.storeNames });
-    } catch {
+    } catch (err) {
       showToast('Network error, dobara try karo');
+      Sentry.captureException(err, { extra: { context: 'search.askNearbySend' } });
     } finally {
       setAskSending(false);
     }

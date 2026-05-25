@@ -149,8 +149,13 @@ export function PostsGrid({
         const data = await res.json();
         setEditRawImageUrl(data.url);
         setEditShowCropper(true);
+      } else {
+        showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.editImageUpload' } });
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -189,8 +194,13 @@ export function PostsGrid({
         const data = await res.json();
         setRawImageUrl(data.url);
         setShowCropper(true);
+      } else {
+        showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.newPostImageUpload' } });
+    }
   };
 
   const compressImageToBase64 = async (url: string): Promise<{ base64: string; mimeType: string }> => {
@@ -235,8 +245,9 @@ export function PostsGrid({
       if (data.productName || data.category) setAiSuggestion({ productName: data.productName || '', category: data.category || '' });
       // PostHog: ai_feature_used (photo→post). Only success path.
       captureEvent('ai_feature_used', { feature: 'photo_to_post', has_caption: !!data.caption });
-    } catch {
+    } catch (err) {
       showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.aiPhotoToPost' } });
     } finally {
       setAiLoading(false);
     }
@@ -265,8 +276,9 @@ export function PostsGrid({
       // PostHog: ai_feature_used (voice→post). Only success path.
       captureEvent('ai_feature_used', { feature: 'voice_to_post', has_caption: !!data.caption });
       showToast('Voice se capture hua — check karo', { type: 'success' });
-    } catch {
+    } catch (err) {
       showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.aiVoiceToPost' } });
     } finally {
       setAiLoading(false);
     }
@@ -512,7 +524,11 @@ export function PostsGrid({
                       formData.append('file', blob, 'cropped-post.jpg');
                       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
                       if (res.ok) { const data = await res.json(); setNewPostImage(data.url); }
-                    } catch { /* silent */ }
+                      else { showToast('Image upload nahi ho paya. Try again.', { type: 'error' }); }
+                    } catch (err) {
+                      showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
+                      Sentry.captureException(err, { extra: { context: 'postsGrid.cropperUploadNew' } });
+                    }
                     setShowCropper(false); setRawImageUrl('');
                   }}
                   onCancel={() => { setShowCropper(false); setRawImageUrl(''); }}
@@ -631,7 +647,11 @@ export function PostsGrid({
                       formData.append('file', blob, 'edited-post.jpg');
                       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
                       if (res.ok) { const data = await res.json(); setEditImage(data.url); }
-                    } catch { /* silent */ }
+                      else { showToast('Image upload nahi ho paya. Try again.', { type: 'error' }); }
+                    } catch (err) {
+                      showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
+                      Sentry.captureException(err, { extra: { context: 'postsGrid.cropperUploadEdit' } });
+                    }
                     setEditShowCropper(false); setEditRawImageUrl('');
                   }}
                   onCancel={() => { setEditShowCropper(false); setEditRawImageUrl(''); }}

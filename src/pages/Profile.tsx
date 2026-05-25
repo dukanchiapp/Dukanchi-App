@@ -165,7 +165,10 @@ export default function ProfilePage() {
     try {
       const res = await apiFetch('/api/messages/conversations');
       if (res.ok) { const convos = await res.json(); setChatCount(convos.length); }
-    } catch { /* silent */ }
+    } catch (err) {
+      // Background fetch — no toast (badge stays at previous value, low-impact UX).
+      Sentry.captureException(err, { extra: { context: 'profile.fetchChatCount' } });
+    }
   };
 
   if (loading) {
