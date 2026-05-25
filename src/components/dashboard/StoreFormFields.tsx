@@ -3,6 +3,7 @@ import { Camera, MapPin, Navigation, Clock, Check, Sparkles } from 'lucide-react
 import StarRating from '../StarRating';
 import { CATEGORIES } from '../../constants/categories';
 import { apiFetch } from '../../lib/api';
+import { Sentry } from '../../lib/sentry-frontend';
 
 interface StoreFormFieldsProps {
   store: any;
@@ -190,7 +191,11 @@ export function StoreFormFields({
                   setCity(data.city || ''); setState(data.state || '');
                   setCityOptions(data.allCities || []); setStateOptions(data.allStates || []);
                 }
-              } catch { /* silent */ }
+              } catch (err) {
+                // Pincode autofill is a convenience — silent fallback (user can
+                // still type city/state manually). Sentry-only for diagnosis.
+                Sentry.captureException(err, { extra: { context: 'storeFormFields.pincodeLookup', code: val } });
+              }
               setPincodeLoading(false);
             }
           }}

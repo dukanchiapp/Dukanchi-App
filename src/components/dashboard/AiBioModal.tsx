@@ -3,6 +3,7 @@ import { Sparkles, X, Loader2, Mic, MicOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
 import { captureEvent } from '../../lib/posthog';
+import { Sentry } from '../../lib/sentry-frontend';
 
 interface AiBioModalProps {
   open: boolean;
@@ -45,8 +46,9 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
       if (!data.bio?.trim()) { showToast('AI se generate nahi hua, dobara try karo', { type: 'error' }); return; }
       setResult(data);
       setStep('result');
-    } catch {
+    } catch (err) {
       showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'aiBioModal.generateBio' } });
     } finally {
       setLoading(false);
     }
@@ -85,8 +87,9 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
           } else {
             showToast('Voice transcription failed, manually likho', { type: 'error' });
           }
-        } catch {
+        } catch (err) {
           showToast('AI abhi available nahi, manually bharo', { type: 'error' });
+          Sentry.captureException(err, { extra: { context: 'aiBioModal.voiceTranscribe' } });
         } finally {
           setLoading(false);
         }

@@ -182,7 +182,10 @@ export default function RetailerDashboard() {
         try {
           await apiFetch(`/api/stores/${storeId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: lat, longitude: lng }) });
           showToast('📍 Location pinned successfully!', { type: 'success' });
-        } catch { /* silent */ }
+        } catch (err) {
+          showToast('Location save nahi ho paya. Try again.', { type: 'error' });
+          Sentry.captureException(err, { extra: { context: 'retailer.gpsPinSave', storeId } });
+        }
       } else {
         showToast('📍 Location captured! It will be saved when you submit the form.', { type: 'info' });
       }
@@ -195,7 +198,11 @@ export default function RetailerDashboard() {
     try {
       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) { const data = await res.json(); setLogoUrl(data.url); }
-    } catch { /* silent */ }
+      else { showToast('Logo upload nahi ho paya. Try again.', { type: 'error' }); }
+    } catch (err) {
+      showToast('Logo upload nahi ho paya. Try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'retailer.logoUpload' } });
+    }
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,7 +211,11 @@ export default function RetailerDashboard() {
     try {
       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) { const data = await res.json(); setCoverUrl(data.url); }
-    } catch { /* silent */ }
+      else { showToast('Cover photo upload nahi ho paya. Try again.', { type: 'error' }); }
+    } catch (err) {
+      showToast('Cover photo upload nahi ho paya. Try again.', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'retailer.coverUpload' } });
+    }
   };
 
   const handleKycUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'doc' | 'selfie' | 'store') => {

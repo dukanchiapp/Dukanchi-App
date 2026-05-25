@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext';
 import ConversationRow from '../components/ConversationRow';
 import { Conversation } from '../types';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
+import { Sentry } from '../lib/sentry-frontend';
 import { FIcon } from '../components/futuristic';
 
 /* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
@@ -46,7 +47,11 @@ export default function MessagesPage() {
     apiFetch('/api/messages/conversations')
       .then(r => r.ok ? r.json() : [])
       .then(data => setConversations(formatConversations(data as Conversation[])))
-      .catch(() => {});
+      .catch((err) => {
+        // Background reconcile after socket reconnect — no toast (we already
+        // show whatever's in state). Sentry-only for diagnosability.
+        Sentry.captureException(err, { extra: { context: 'messages.refreshConversations' } });
+      });
   }, []);
 
   useEffect(() => {
@@ -54,7 +59,10 @@ export default function MessagesPage() {
     apiFetch('/api/messages/conversations')
       .then(res => res.ok ? res.json() : [])
       .then(data => setConversations(formatConversations(data as Conversation[])))
-      .catch(() => {})
+      .catch((err) => {
+        showToast('Messages load nahi ho payi. Please refresh.', { type: 'error' });
+        Sentry.captureException(err, { extra: { context: 'messages.initialFetch' } });
+      })
       .finally(() => setLoading(false));
   }, [token]);
 
@@ -149,8 +157,9 @@ export default function MessagesPage() {
         showToast('Chat shuru ho gayi! Customer ab aapko message kar sakta hai.');
         refreshConversations();
       }
-    } catch {
+    } catch (err) {
       showToast('Network error');
+      Sentry.captureException(err, { extra: { context: 'messages.askNearbyRespond', responseId, answer } });
     } finally {
       setRespondingIds(prev => { const s = new Set(prev); s.delete(responseId); return s; });
     }

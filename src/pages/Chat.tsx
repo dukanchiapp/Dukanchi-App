@@ -197,12 +197,16 @@ export default function ChatPage() {
             }
           } catch (err) {
             console.error('fetchReceiverStore failed:', err);
+            Sentry.captureException(err, { extra: { context: 'chat.fetchReceiverStore', userId } });
           }
         }
         setReceiverName(userData.name || 'User');
         setReceiverInitial((userData.name || 'U').charAt(0));
       })
-      .catch(() => { setReceiverName('User'); setReceiverInitial('U'); });
+      .catch((err) => {
+        setReceiverName('User'); setReceiverInitial('U');
+        Sentry.captureException(err, { extra: { context: 'chat.fetchReceiverUser', userId } });
+      });
   }, [userId, currentUserId]);
 
   // Load message history once, then switch to Socket.IO for live updates
@@ -243,7 +247,11 @@ export default function ChatPage() {
             const fresh = (Array.isArray(data) ? data : (data.messages ?? [])) as Message[];
             setMessages(fresh);
           })
-          .catch(() => {});
+          .catch((err) => {
+            // Background reconcile on socket reconnect — no toast (existing
+            // messages still visible). Sentry-only.
+            Sentry.captureException(err, { extra: { context: 'chat.reconnectRefetch', userId } });
+          });
       }
     };
     socket.io.on('reconnect', handleReopen);
@@ -338,8 +346,9 @@ export default function ChatPage() {
         } else {
           setUploadError('Image upload failed. Message sent without image.');
         }
-      } catch {
+      } catch (err) {
         setUploadError('Image upload failed. Message sent without image.');
+        Sentry.captureException(err, { extra: { context: 'chat.imageUpload' } });
       }
     }
 
