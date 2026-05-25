@@ -111,7 +111,10 @@ export function PostsGrid({
         const err = await res.json();
         showToast(err.error || 'Maximum 3 pinned posts allowed.', { type: 'error' });
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      // High-frequency engagement — Sentry only, no toast spam.
+      Sentry.captureException(err, { extra: { context: 'postsGrid.togglePin', postId } });
+    }
   };
 
   const confirmDeletePost = async () => {
@@ -300,8 +303,9 @@ export function PostsGrid({
       recorder.start();
       setIsRecording(true); setRecordingSeconds(0);
       recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch {
+    } catch (err) {
       showToast('Microphone access nahi mila', { type: 'error' });
+      Sentry.captureException(err, { extra: { context: 'postsGrid.micAccess' } });
     }
   };
 

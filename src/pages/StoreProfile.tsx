@@ -8,6 +8,7 @@ import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { apiFetch } from '../lib/api';
+import { Sentry } from '../lib/sentry-frontend';
 import { FIcon } from '../components/futuristic';
 
 /* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
@@ -67,7 +68,10 @@ export default function StoreProfilePage() {
       apiFetch(`/api/me/interactions`)
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setInteractions(data); })
-        .catch(() => {});
+        .catch((err) => {
+          // Background hydration — optimistic UI carries on. Sentry-only.
+          Sentry.captureException(err, { extra: { context: 'storeProfile.fetchInteractions' } });
+        });
     }
   }, [currentUserId]);
 

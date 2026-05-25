@@ -7,6 +7,7 @@ import { useFeed } from '../hooks/useFeed';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
+import { Sentry } from '../lib/sentry-frontend';
 import { FIcon } from '../components/futuristic/FIcon';
 import { FLogo } from '../components/futuristic/FLogo';
 import { FLocationStrip } from '../components/futuristic/FLocationStrip';
@@ -80,7 +81,10 @@ export default function HomePage() {
     apiFetch('/api/me/interactions')
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setInteractions(data as Interactions); })
-      .catch(() => {});
+      .catch((err) => {
+        // Background hydration — optimistic UI carries on. Sentry-only.
+        Sentry.captureException(err, { extra: { context: 'home.fetchInteractions' } });
+      });
   }, [token]);
 
   // Fetch saved posts when saved tab is active

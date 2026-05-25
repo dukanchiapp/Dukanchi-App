@@ -81,7 +81,10 @@ export default function SearchPage() {
           return [q.trim(), ...filtered].slice(0, 8);
         });
       })
-      .catch(() => {});
+      .catch((err) => {
+        // History persist is best-effort — no toast (search itself succeeded).
+        Sentry.captureException(err, { extra: { context: 'search.historyPersist' } });
+      });
   };
 
   const removeHistoryItem = (item: string) => {

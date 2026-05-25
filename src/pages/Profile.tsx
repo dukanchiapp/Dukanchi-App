@@ -68,20 +68,28 @@ export default function ProfilePage() {
       apiFetch(`/api/me/interactions`)
         .then(res => res.ok ? res.json() : null)
         .then(data => { if (data) setInteractions(data); })
-        .catch(() => {});
+        .catch((err) => {
+          // Background hydration — no toast (optimistic UI carries on).
+          Sentry.captureException(err, { extra: { context: 'profile.fetchInteractions' } });
+        });
     }
   }, [user]);
 
   const toggleLike = async (postId: string) => {
     const isLiked = interactions.likedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, likedPostIds: isLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId] }));
-    try { await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' }); } catch { /* silent */ }
+    try { await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' }); } catch (err) {
+      // High-frequency engagement action — Sentry only, no toast spam.
+      Sentry.captureException(err, { extra: { context: 'profile.toggleLike', postId } });
+    }
   };
 
   const toggleSave = async (postId: string) => {
     const isSaved = interactions.savedPostIds.includes(postId);
     setInteractions(prev => ({ ...prev, savedPostIds: isSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId] }));
-    try { await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' }); } catch { /* silent */ }
+    try { await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' }); } catch (err) {
+      Sentry.captureException(err, { extra: { context: 'profile.toggleSave', postId } });
+    }
   };
 
   const handleShare = async (post: any) => {
@@ -89,7 +97,11 @@ export default function ProfilePage() {
     try {
       if (navigator.share) await navigator.share(shareData);
       else { await navigator.clipboard.writeText(shareData.url); showToast('Link copied to clipboard!', { type: 'success' }); }
-    } catch { /* silent */ }
+    } catch (err) {
+      // Includes navigator.share AbortError when user dismisses share sheet —
+      // do not toast that, just log. Sentry-only.
+      Sentry.captureException(err, { extra: { context: 'profile.share', postId: post?.id } });
+    }
   };
 
   const getLikeCount = (post: any) => {

@@ -158,7 +158,11 @@ export default function RetailerDashboard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ storeId: updatedStore.id, caption: `Welcome to ${storeName}! We are now open.`, imageUrl: logoUrl, isOpeningPost: true }),
               });
-            } catch { /* silent */ }
+            } catch (err) {
+              // Auto-created welcome post is a bonus content path — store
+              // creation already succeeded above. Sentry-only (no toast).
+              Sentry.captureException(err, { extra: { context: 'retailer.welcomePostAutoCreate', storeId: updatedStore.id } });
+            }
           }
         }
         navigate('/profile');
