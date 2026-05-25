@@ -27,6 +27,7 @@ import { askNearbyRoutes } from './modules/ask-nearby/ask-nearby.routes';
 import { landingPublicRoutes, landingAdminRoutes } from './modules/landing/landing.routes';
 import pushRoutes from './modules/push/push.routes';
 import { accountRoutes } from './modules/account/account.routes';
+import cspReportRoutes from './modules/security/csp-report.routes';
 
 import { upload, getUploadedFileUrl, verifyAndPersistUpload, FILE_SIZE_LIMIT_BYTES } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
@@ -37,19 +38,101 @@ export const app = express();
 app.set('trust proxy', 1);
 
 // ── 1. Security headers ──────────────────────────────────────────────────────
+// CSP applied below in Report-Only mode (monitoring phase). Will flip to
+// enforcing after 24-48h of clean violation reports via /api/csp-report.
+// Note: legacy comment said "handled by Nginx" — there is no Nginx in front
+// of Fly.io post-migration (Express serves directly). Removed in this PR.
+//
+// Discovery doc: docs/audit/csp-discovery.md (PR #38).
+//
+// Policy shape (Phase 1):
+//   - 'unsafe-inline' required for script-src (4 inline blocks in index.html
+//     + landing.html) and style-src (1,160+ React style={{...}} props).
+//     Phase 3 of the rollout tightens these progressively.
+//   - reportOnly: true — header name becomes Content-Security-Policy-Report-Only.
+//     Browsers log violations to /api/csp-report but BLOCK NOTHING.
+//   - R2 public bucket host comes from env.R2_PUBLIC_URL; defensive fallback
+//     to https://*.r2.dev pattern if unset (should never happen on Fly).
+const cspDirectives = {
+  defaultSrc: ["'self'"],
+  scriptSrc: [
+    "'self'",
+    "'unsafe-inline'",
+    "https://*.i.posthog.com",
+    "https://maps.googleapis.com",
+    "https://maps.gstatic.com",
+    "https://unpkg.com",
+  ],
+  styleSrc: [
+    "'self'",
+    "'unsafe-inline'",
+    "https://fonts.googleapis.com",
+  ],
+  imgSrc: [
+    "'self'",
+    "data:",
+    "blob:",
+    "https://*.i.posthog.com",
+    "https://maps.googleapis.com",
+    "https://maps.gstatic.com",
+    "https://images.unsplash.com",
+    "https://picsum.photos",
+    env.R2_PUBLIC_URL || "https://*.r2.dev",
+  ],
+  fontSrc: [
+    "'self'",
+    "https://fonts.gstatic.com",
+  ],
+  connectSrc: [
+    "'self'",
+    "https://*.i.posthog.com",
+    "https://*.ingest.sentry.io",
+    "https://*.ingest.us.sentry.io",
+    "https://nominatim.openstreetmap.org",
+    "https://maps.googleapis.com",
+    "wss://dukanchi.com",
+    "wss:", // catch-all for Capacitor / socket.io transport fallback
+  ],
+  workerSrc: ["'self'", "blob:"],
+  mediaSrc: ["'self'", "blob:"],
+  frameSrc: ["'none'"],
+  frameAncestors: ["'none'"],
+  formAction: ["'self'"],
+  baseUri: ["'self'"],
+  objectSrc: ["'none'"],
+  upgradeInsecureRequests: [],
+  reportUri: ["/api/csp-report"],
+};
+
 if (env.NODE_ENV === 'production') {
-  // Production: full helmet protection (CSP still off — handled by Nginx)
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // Production: full helmet protection + CSP Report-Only.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        reportOnly: true,
+        directives: cspDirectives,
+      },
+    }),
+  );
 } else {
-  // Dev: relaxed for iframe previews, local testing
-  app.use(helmet({ 
-    contentSecurityPolicy: false, 
-    crossOriginResourcePolicy: false, 
-    xFrameOptions: false,
-    crossOriginOpenerPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    hsts: false
-  }));
+  // Dev: same CSP Report-Only policy (so dev surfaces violations the same
+  // way), but relax the unrelated cross-origin headers that broke iframe
+  // previews and local tooling before.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        reportOnly: true,
+        directives: cspDirectives,
+      },
+      crossOriginResourcePolicy: false,
+      xFrameOptions: false,
+      crossOriginOpenerPolicy: false,
+      crossOriginEmbedderPolicy: false,
+      hsts: false,
+    }),
+  );
 }
 
 // ── 2. Compression ───────────────────────────────────────────────────────────
@@ -128,6 +211,14 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// ── 4c. CSP violation report endpoint ─────────────────────────────────────────
+// Must mount BEFORE the global /api rate limiter (line below) so CSP reports
+// always succeed — Chrome stops reporting for a document on any 4xx/5xx, and
+// the general limiter would 429 a noisy page mid-debug. The router uses its
+// own per-IP limiter (100/min) and its own body parser for the
+// application/csp-report content-type.
+app.use('/api', cspReportRoutes);
 
 // ── 5. Body parsers ───────────────────────────────────────────────────────────
 //
