@@ -6,6 +6,68 @@
 
 ---
 
+## 2026-05-28 — Session 100 — PR #34 Admin-Panel Grouped Bump (15 packages)
+
+**Goal:** Refresh the stale 4-day-old Dependabot admin-panel grouped bump (PR #34) — rebase against fresh main (5 commits ahead), verify CI + local gates, merge.
+
+**Status:** ✅ MERGED at `1f15b61`. Open PR count dropped 2 → 1 (only PR #48 broken-CI root npm bump remains). Production HEAD unchanged at `cd18d1a` — admin-panel changes don't trigger Fly deploy on their own (admin-panel ships in next deploy bundle).
+
+| Metric | Value |
+|---|---|
+| PR merged | #34 |
+| Scope | `admin-panel/package.json` + `admin-panel/package-lock.json` (2 files, +437/-358 lines) |
+| Packages bumped | 15 (all minor/patch — no semver-major) |
+| Rebase needed | **YES** (4-day stale; clean rebase, no conflicts) |
+| CI re-runs | 2 (pre-rebase stale CI from 2026-05-24 ignored; post-rebase CI ran fresh on `f010ac5` → success; post-merge CI on main `1f15b61` → success) |
+| Open PRs after | 1 (only #48) |
+| `main` HEAD | `eb3dd8e` → `1f15b61` |
+| Production HEAD | `cd18d1a` (unchanged) |
+
+### Top packages bumped (15 total, minor/patch only)
+
+| Package | Before → After |
+|---|---|
+| `react` + `react-dom` | 19.2.4 → 19.2.6 |
+| `react-router-dom` | 7.13.2 → 7.15.1 |
+| `axios` | 1.14.0 → 1.16.1 |
+| `lucide-react` | 1.7.0 → 1.16.0 |
+| `@tailwindcss/vite` | 4.2.2 → 4.3.0 |
+| `vite` | 8.0.1 → 8.0.14 |
+| `postcss` | 8.5.8 → 8.5.15 |
+| `autoprefixer` | 10.4.27 → 10.5.0 |
+| `@types/react` | 19.2.14 → 19.2.15 |
+| `@vitejs/plugin-react` | 6.0.1 → 6.0.2 |
+| `eslint-plugin-react-hooks` | 7.0.1 → 7.1.1 |
+| `globals` | 17.4.0 → 17.6.0 |
+| `typescript-eslint` | 8.57.0 → 8.59.4 |
+
+### Verification gates (all green)
+
+- **Rebased branch CI** (`f010ac5`): ✅ success (run [26540541227](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26540541227))
+- **Main post-merge CI** (`1f15b61`): ✅ success (run [26540700804](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26540700804))
+- **Root typecheck**: 0 errors (web + server)
+- **Root tests**: 100/100 (17 files, 6.60s)
+- **Admin-panel `npm ci`**: 215 packages, **0 vulnerabilities** ✅
+- **Admin-panel `npm run build`**: ✓ 1815 modules transformed in 1.33s, output 429.61KB / 120.20KB gzip (includes `tsc -b` typecheck step — implicit typecheck pass)
+- **Production health smoke**: HTTP 200, 0.36s, `{"status":"ok","db":"up","redis":"up"}`
+
+### ND-S100-1 — No standalone `typecheck` script in `admin-panel/`
+
+Spec asked for `cd admin-panel && npm run typecheck`. The admin-panel workspace has no `typecheck` script (its `build` is defined as `tsc -b && vite build`, baking typecheck into build). Since `npm run build` succeeded with 1815 modules transformed and zero TypeScript errors, the typecheck requirement is satisfied implicitly. Documented for clarity — no functional gap.
+
+### ND-S100-2 — CI noise on rebased branch (informational only, not blocking)
+
+The rebased branch CI run surfaced two pre-existing items that don't fail CI but are worth tracking:
+
+- **ESLint baseline warning** at `scripts/backfillEmbeddings.ts:14` — "Unexpected any. Specify a different type". This is part of the Day 7 ESLint baseline (Session 94, ND-D7-3 / ND-D7-4) running in `continue-on-error: true` report-only mode. Pre-existing; not introduced by this rebase.
+- **GitHub deprecation notice** — `preactjs/compressed-size-action@v3` (which we just bumped to in PR #5 this morning) still runs on Node 20. GitHub will force-migrate Node 20 actions to Node 24 by 2026-06-02 and remove Node 20 by 2026-09-16. v3 latest still ships Node 20 — upstream maintainer needs to publish a Node 24-compatible release. Track as Day 2+ hygiene; not blocking.
+
+### Remaining open PRs
+
+- **#48** — Dependabot npm root grouped bump × 30 packages, still ❌ broken CI (post-PR-#47 conflict). Dedicated triage required — likely needs rebase + selective bump filtering to dodge the firebase-admin/exceljs uuid chain blockers from ND-T6-1/T6-2.
+
+---
+
 ## 2026-05-28 — Session 99 — PR Backlog Hygiene: 4× GH-Actions bumps batch-merged
 
 **Goal:** Drain the 4 stale Dependabot GH-Actions PRs (#2 / #3 / #4 / #5) that had been sitting green-CI for ~12 days (since 2026-05-15). Pure CI/workflow updates, zero runtime risk. Sequential merge with full CI verification between each step.

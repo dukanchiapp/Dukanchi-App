@@ -1,7 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 99 | **PR backlog hygiene** — 4× GH-Actions Dependabot PRs batch-merged (#2/#3/#4/#5); open PR count 6 → 2 (#34, #48 deferred) | Prod runs main @ `cd18d1a` (unchanged — CI-workflow edits don't trigger deploy)
+> Last updated: 2026-05-28 | Session 100 | **PR #34 admin-panel grouped bump merged** (15 npm packages, all minor/patch; rebased + green CI). Open PR count 2 → 1 (only #48 broken-CI root npm bump remains) | Prod runs main @ `cd18d1a` (unchanged — admin-panel changes ship with next deploy)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
+>
+> **Active hygiene:** admin-panel deps refreshed (react/router/axios/vite minor bumps; 0 vulns post-`npm ci`).
 
 ## Day 1 Launch Sprint — 27 May 2026
 
