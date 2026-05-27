@@ -6,6 +6,403 @@
 
 ---
 
+## 2026-05-27 — Session 98 — Day 1 Launch Sprint: 4 tasks closed + Task 5 prep + outage forensics + ND-A1 discovery
+
+**Goal:** Day 1 of the 7-task launch hardening sprint (post-Hardening-Sprint follow-on). Easy wins first per pre-Day-1 audit prioritisation — test-user cleanup, R2 CORS, VAPID rotation, Sentry alerts. Prep Task 5 (CSP enforce flip) by closing the active Sentry violation backlog. UX cleanup of redundant PWA banners as a bonus.
+
+**Status:** **DAY 1 COMPLETE — 4 of 7 tasks closed, Task 5 prep landed, 1 UX bonus, 1 critical discovery, 1 production outage recovered.** 24–48h Sentry monitoring window started for Task 5 enforce-flip decision.
+
+| Metric | Value |
+|---|---|
+| Tasks closed | 4 of 7 (Tasks 1–4) |
+| Task 5 status | Prep done (PR #43), monitoring window open |
+| PRs merged | 2 (#43 CSP allowlist, #44 PWA banners feature flag) |
+| Production outage | 1 (~11 min total — see §3 forensics) |
+| Critical discoveries | 1 (ND-A1 — browser push SW dead in production) |
+| Tests | 100/100 throughout |
+| Typecheck | 0 errors throughout |
+| Production HEAD | `050dc62` → `eda3a4d` → `9475c90` |
+
+---
+
+### Production HEAD progression
+
+| HEAD | Session moment | Source |
+|---|---|---|
+| `050dc62` | Day 1 START — "Phase B Sentry instrumentation, 9.5/10 launch confidence" per pre-Day-1 audit framing | Day 0 baseline |
+| `eda3a4d` | After PR #43 merge | CSP `fonts.gstatic.com` allowlist fix |
+| `9475c90` | After PR #44 merge — Day 1 END | PWA banners feature flag |
+
+**Deviation ND-D1-DOC1:** Between Session 97 (STATUS.md last-updated HEAD `0658ee5`, May 18) and today's session start (`050dc62`, "Phase B Sentry instrumentation, 9.5/10 launch confidence"), at least one commit landed on main that is not captured in SESSION_LOG. ~9-day window. Not investigated this session — flagged for future backfill during a dedicated docs catch-up session.
+
+---
+
+### 1. Task 1 — Test user cleanup (~10 min)
+
+**Problem:** Pre-Day-1 audit flagged 13 non-admin test/seed users still resident on the production Neon branch, residue from earlier QA passes. Pilot launch with 0 real customers — these would skew analytics and confuse `/health`+`/admin` UI counters.
+
+**Approach:** Neon SQL Editor against production branch (no application code path — direct SQL with strong guards).
+
+**Defensive SQL** (executed via Neon UI):
+```sql
+DELETE FROM "User"
+WHERE "role" != 'admin'
+  AND "createdAt" < NOW()
+RETURNING "id", "phone", "role", "createdAt";
+```
+
+- `role != 'admin'` guard — prevents wiping the admin row
+- `createdAt < NOW()` guard — defensive against clock skew false-positives (no-op semantically but explicit)
+- `RETURNING` — explicit deletion receipt for the session log
+
+**Outcome:**
+- Pre-count: **14** users
+- Deleted: **13** rows (per RETURNING)
+- Post-count: **1** (admin only, untouched) ✅
+- Cascade effects: `LegalConsent`, `Store`, `Post`, `RefreshToken`, `PushSubscription` rows for those users also removed via FK cascade (verified counts dropped to 0/1 for admin)
+
+**Rule F compliance:** This was a deliberate production-DB write executed via Neon's native SQL Editor (UI tool, not `npm run dev`). Rule F covers application-driven write paths; founder-driven SQL via dashboard is the documented exception path.
+
+---
+
+### 2. Task 2 — R2 CORS production (~5 min)
+
+**Problem:** Cloudflare R2 bucket `dukanchi-prod` had no CORS configuration. Browser uploads were working (server-side presigned PUT bypasses browser CORS at the upload boundary) but any future direct-from-browser fetch (e.g. signed-URL image previews from a different origin) would be blocked.
+
+**Configuration applied via Cloudflare dashboard:**
+```json
+[
+  {
+    "AllowedOrigins": [
+      "https://dukanchi.com",
+      "https://www.dukanchi.com",
+      "https://dukanchi-app.fly.dev"
+    ],
+    "AllowedMethods": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+**Notes:**
+- `dukanchi-app.fly.dev` included as a fallback origin for direct Fly URL access during ops/debug.
+- `ETag` exposed to enable client-side cache validation when retrieving R2 objects.
+- `MaxAgeSeconds: 3600` (1h) — reasonable preflight cache; can lengthen later if needed.
+
+**Verification:** Cloudflare dashboard shows config applied. No live curl preflight executed this session (deferred — no current cross-origin browser fetch path to test; first user will be the canary).
+
+---
+
+### 3. Task 3 — VAPID Web Push rotation 🚨 ~~11-min production outage~~ recovered (~45 min total)
+
+**Purpose:** Replace 1-char placeholder VAPID keys flagged in pre-Day-1 audit (`VAPID_PUBLIC_KEY=x`, `VAPID_PRIVATE_KEY=y` — non-functional).
+
+#### 3a. Outage Timeline (UTC)
+
+| Time | Event |
+|---|---|
+| **20:09:52** | First crash: `web-push` validation throws on bad public key during module load |
+| **20:09:55** | Main child process exits code 1 → Fly auto-restart kicks in |
+| **20:09:55 – 20:13:18** | Crash loop — machine reboot every ~3-4 min, all rounds fail at same module-load point |
+| **20:15:02** | Fly proxy starts emitting `"could not find a good candidate within 40 attempts at load balancing"` (LB exhausted retries) |
+| **20:16:57** | Recovery — `fly secrets unset VAPID_PUBLIC_KEY -a dukanchi-app` issued → Version 19 deploy without bad var |
+| **20:17:xx** | `/health` returns 200 — production restored |
+
+- **Hard down (503):** ~7-8 min
+- **Total including degraded LB window:** ~11 min
+
+#### 3b. Root cause
+
+Placeholder text `<paste 88-char public key>` was **literally pasted** into the `fly secrets set` command instead of substituting in a generated key:
+
+```bash
+# What was actually executed (BAD):
+fly secrets set VAPID_PUBLIC_KEY="<paste 88-char public key>" -a dukanchi-app
+```
+
+The literal string `<paste 88-char public key>` is not valid base64url. On next boot, `webpush.setVapidDetails()` validates the public key at module load (`src/services/push.service.ts`) → throws → server fails to start → crash loop.
+
+Single-machine production deployment + module-load-time validation = guaranteed full outage on any bad VAPID secret.
+
+#### 3c. Recovery
+
+```bash
+fly secrets unset VAPID_PUBLIC_KEY -a dukanchi-app
+```
+
+- `env.VAPID_PUBLIC_KEY` becomes `undefined`
+- `src/services/push.service.ts` initialiser guards `if (env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY)` — both being undefined skips `webpush.setVapidDetails()` entirely
+- Server boots clean (push features gracefully disabled — no broken state)
+
+#### 3d. Proper rotation (anti-pattern-free, shell-substitution approach)
+
+Subsequent successful rotation executed without any copy-paste of the actual key:
+
+```bash
+# 1. Generate keys + write to gitignored temp file
+node -e "const w=require('web-push'); const k=w.generateVAPIDKeys();
+  console.log('PUBLIC:',k.publicKey); console.log('PRIVATE:',k.privateKey);
+  require('fs').writeFileSync('/tmp/vapid.json', JSON.stringify(k));"
+
+# 2. Set all three secrets via shell substitution — keys never visible in command history
+fly secrets set \
+  VAPID_PUBLIC_KEY="$(node -p "require('/tmp/vapid.json').publicKey")" \
+  VAPID_PRIVATE_KEY="$(node -p "require('/tmp/vapid.json').privateKey")" \
+  VAPID_MAILTO="mailto:support@dukanchi.com" \
+  -a dukanchi-app
+
+# 3. Clean up temp file
+rm /tmp/vapid.json
+```
+
+**Verification:**
+- `curl https://dukanchi.com/api/push/vapid-public-key` → returned matching new key (87 chars, base64url) ✅
+- DB cleanup: `TRUNCATE "PushSubscription"` (old key-signed subs invalidated by the key rotation; 0 active users at this stage = zero user impact)
+
+**New VAPID public key (production live):**
+```
+BGDgcI8MG3yjwO_fPX2amNEbgjWz-RSCghFn9o-QxrK6BvnLwvD3j_9dK4XSuKq64Oyr6mKaPZASevm08lM6AIk
+```
+
+(Public key is by definition non-secret — safe to inline in SESSION_LOG. Private key remains in Fly secrets only.)
+
+---
+
+### 4. Task 4 — Sentry alert rules (~30 min)
+
+**Problem:** Sentry was capturing events (Day 4 Session 90 wiring), but no alert rules existed — errors landed in the Issues view silently. Founder had no out-of-band notification for new/escalated production errors.
+
+**Setup:**
+- **Project:** `node-express` (single project — backend + frontend both report here; Day 4 separation deferred to post-pilot)
+- **Alert name:** "Production Errors — New + Escalated"
+- **WHEN conditions** (new alert created — initial 4 default conditions narrowed to 2):
+  - `A new issue is created` (kept)
+  - `An issue escalates` (kept)
+  - `An issue is resolved` (**removed** — noise, not actionable)
+  - `A resolved issue becomes unresolved` (**removed** — noise)
+- **Notify:** Member — `dukanchiapp@gmail.com` explicitly (NOT Suggested Assignees — fixed at single recipient to eliminate routing ambiguity)
+- **Throttle:** every trigger (no rate limit — low-volume project, no flood risk)
+- **Connected to** Error Monitor `monitor_id 7259669` (auto-created by Sentry)
+
+**Test:** Sentry's "Send a test notification" → arrived in Gmail inbox within ~5s ✅. Subject line includes project + environment + issue title — readable at-a-glance.
+
+---
+
+### 5. Task 5 prep — CSP allowlist fix (PR #43)
+
+**Discovery:** Sentry issue **NODE-EXPRESS-4** — CSP violation captured via Report-Only telemetry.
+
+```
+blocked_uri:        https://fonts.gstatic.com/s/inter/v20/...woff2
+document_uri:       https://dukanchi.com/sw.js
+source_file:        workbox-dcde9eb3.js
+violated_directive: connect-src
+```
+
+**Root cause analysis:**
+
+The PWA Service Worker (Workbox-generated via `VitePWA` plugin) has runtime caching for `fonts.gstatic.com` configured in `vite.config.ts:90-97`. When the SW fetches the Inter font WOFF2 via `fetch()` **inside the SW context**, that fetch is governed by `connect-src`, **NOT** `font-src`. The `font-src` directive only applies to `@font-face` resolution in the **document's** render context, not to programmatic fetches initiated from a service worker.
+
+Our policy had `fonts.gstatic.com` in `font-src` (covers the document-side load path) but not in `connect-src` (which is the directive the SW fetch is bound by).
+
+**Fix (1-line addition to `src/app.ts` connectSrc array):**
+
+```ts
+"https://fonts.gstatic.com", // PR #41 — Workbox SW fetch context (SW fetch → connect-src, NOT font-src)
+```
+
+**Cosmetic deviation:** Comment says `PR #41` but actual PR was `#43`. Not corrected in this session — hygiene candidate for a separate 1-liner.
+
+**Comprehensive allowlist audit (ruled out speculative origins from prompt template):**
+
+| Origin | Status |
+|---|---|
+| Razorpay (api/checkout) | NOT USED — Dukanchi explicitly does not process payments |
+| Firebase web SDK | NOT USED — `firebase-admin` is backend-only; frontend uses `@capacitor/push-notifications` (Capacitor native bridge → Google Play Services, NOT browser fetch) |
+| Google Tag Manager / GA | NOT USED — zero grep hits |
+| `dukanchi-app.fly.dev` | NOT REFERENCED from frontend (browser always loads `dukanchi.com`) |
+
+The comprehensive update reduced to a single connect-src addition. All other origins already covered by the PR #39 baseline + PR #40 Maps SDK fix.
+
+**Mode:** CSP **remains in `reportOnly: true`** — enforce flip **deferred 24–48h** pending Sentry monitoring window confirming no new violations.
+
+- Time: ~12 min (audit + 1-line edit + PR cycle + deploy + smoke)
+- Production verification: `curl -sI https://dukanchi.com/` → header present; `fonts.gstatic.com` count in policy = **2** (font-src + connect-src) ✅
+
+---
+
+### 6. 🚨 ND-A1 — Dual Service Worker config: browser push DEAD in production
+
+**Discovery moment:** During Task 5 audit + post-deploy browser DevTools validation of the CSP fix.
+
+**Two SW files exist in repo:**
+
+| File | Origin | Has push handler? |
+|---|---|---|
+| `public/sw.js` | Hand-rolled (74 lines), contains `addEventListener('push', ...)` + `notificationclick` | ✅ YES |
+| VitePWA-generated SW | `vite-plugin-pwa` Workbox output at build time (~4497 chars) | ❌ NO |
+
+`VitePWA`'s `generateSW` strategy **overwrites** `public/sw.js` during `vite build`. Production therefore ships the Workbox SW WITHOUT any push event listener.
+
+**Browser-side validation** (DevTools console on `https://dukanchi.com`):
+
+```js
+// Q1 — confirm which SW is registered
+await navigator.serviceWorker.getRegistration();
+// → ServiceWorkerRegistration { scriptURL: "https://dukanchi.com/sw.js" } ✅
+
+// Q4 — fetch + inspect SW source
+const txt = await (await fetch('/sw.js')).text();
+console.log('Has push handler?', /addEventListener\(['"]push['"]/.test(txt));
+console.log('SW size:', txt.length, 'chars');
+// → Has push handler? false | SW size: 4497 chars ❌
+```
+
+**Impact:**
+
+| Surface | Status |
+|---|---|
+| Today's VAPID rotation (backend signing) | ✅ Backend signs push payloads correctly |
+| Browser / PWA push delivery | ❌ Browser SW silently drops them (no push event listener) |
+| Native Android (Capacitor APK + FCM) | ✅ UNAFFECTED — separate pathway: `firebase-admin` → `@capacitor/push-notifications` plugin → Google Play Services |
+
+**Pilot impact assessment: P1 not P0**
+
+- Founder-led GTM onboards retailers offline, with in-app CTAs pushing APK install
+- Majority of pilot users expected on the APK (native FCM works correctly)
+- PWA push fallback is dead — minority impact
+- Today's VAPID rotation **is** legally/correctly done — the dead PWA SW just means no current consumer of those keys browser-side. Backend signing remains correct for when the PWA push path is restored.
+
+**Fix approach (Day 2 P1, ~2 hr):**
+
+1. Switch VitePWA strategy: `generateSW` → `injectManifest`
+2. Create `src/sw.ts` — custom SW with push + notificationclick handlers + Workbox precache imports (`precacheAndRoute` + `cleanupOutdatedCaches`)
+3. Update `vite.config.ts` PWA section accordingly
+
+This preserves Workbox's runtime caching + precache benefits AND keeps the hand-rolled push logic. Standard pattern documented in VitePWA's `injectManifest` mode docs.
+
+---
+
+### 7. UX cleanup — PWA banners feature flag (PR #44, `eda3a4d` → `9475c90`)
+
+**Problem:** Two install prompts cluttering `/home`:
+
+- **TOP** thin banner — `"💡 App install karein better experience ke liye"` (`BrowserModeBanner` inline function at `App.tsx:95-130`)
+- **BOTTOM** orange card — `"⭐ Dukanchi App install karo — faster experience!"` (`PWAInstallPrompt` component)
+
+**Strategic alignment:** GTM is offline founder-driven retailer onboarding — install banners are redundant in the current flow. Cleaner `/home` competes for content attention with actual shop posts.
+
+**Approach:** `VITE_SHOW_PWA_PROMPTS` env flag (default `false` / unset).
+
+| File | Change |
+|---|---|
+| `src/App.tsx:186` | Wrap `<BrowserModeBanner />` in `{import.meta.env.VITE_SHOW_PWA_PROMPTS === 'true' && ...}` |
+| `src/App.tsx:215` | Wrap `<PWAInstallPrompt />` in same conditional |
+| `src/vite-env.d.ts` | Add `readonly VITE_SHOW_PWA_PROMPTS: string;` to ImportMetaEnv |
+| `.env.example` | Add `VITE_SHOW_PWA_PROMPTS=false` with explanatory comment |
+
+**Component code untouched** — `PWAInstallPrompt.tsx` and the inline `BrowserModeBanner` both stay intact. Flipping the flag re-enables instantly.
+
+**DCE win (better than hoped):**
+
+After `npm run build` with `VITE_SHOW_PWA_PROMPTS` unset, terser **fully dead-code-eliminated** both banners from the production bundle. Grep results across `dist/assets/`:
+
+| Marker | Occurrences | Verdict |
+|---|---|---|
+| `"App install karein"` | **0** | ✅ pruned |
+| `"Install Karo"` | **0** | ✅ pruned |
+| `"Baad mein"` | **0** | ✅ pruned |
+| `"💡 App install karein"` (full header text) | **0** | ✅ pruned |
+| `"⭐ Dukanchi App install karo"` (full header text) | **0** | ✅ pruned |
+| `"VITE_SHOW_PWA_PROMPTS"` (env literal) | **0** | ✅ Vite inlined the reference |
+| `"dk-browser-mode"` | 1 (from unrelated helper at `App.tsx:54`, NOT banner) | ✅ resolved |
+
+Mechanism: Vite inlines `import.meta.env.VITE_SHOW_PWA_PROMPTS` at build time as the literal value. Unset → `undefined` → conditional becomes `undefined === 'true'` → `false` → terser prunes the unreachable JSX, the `BrowserModeBanner` function body, and the `PWAInstallPrompt` import + module strings.
+
+**Nuance N5 (documented in commit body for revert path):**
+
+`import.meta.env.VITE_*` are inlined at **BUILD time**, NOT read at runtime. To re-enable banners in production:
+
+1. Set `VITE_SHOW_PWA_PROMPTS=true` in the Docker **build context** (build arg or Fly secret read during `npm run build` stage).
+2. Redeploy (`flyctl deploy`) — fresh build re-inlines the conditional as `true`.
+
+Flipping a runtime Fly env var alone is **insufficient** — the bundle was already built with the conditional resolved to `false`.
+
+**Visual confirmation:** Founder verified mobile viewport — both banners gone ✅.
+
+- Time: ~22 min (audit + 4 edits + gates + PR cycle + deploy + smoke)
+
+---
+
+### 8. Learnings codified (L1–L5)
+
+**L1 — Anti-pattern: Placeholder text in shell commands**
+
+NEVER use `fly secrets set KEY="<paste here>"` style angle-bracket placeholders. They are extremely easy to leave unfilled, and the literal string passes validation at the shell layer (it's just bytes to `fly`) only to crash at the application validation layer.
+
+ALWAYS shell-substitute from a temp file or a `node -p` evaluation:
+
+```bash
+fly secrets set KEY="$(node -p 'require(...)')" -a app
+```
+
+This makes "key never set" the failure mode if the upstream generation fails, rather than "key set to a placeholder".
+
+**L2 — Single-machine production risks**
+
+A bad secret on a single-machine Fly deployment + module-load-time validation = **guaranteed full outage**. Mitigations queued:
+
+- Always have `fly secrets unset KEY` rollback ready before any secret rotation
+- Consider 2+ machines or blue-green deployment for production redundancy (Series A scope — current pilot cost-justifies single machine)
+- Move validation that can crash boot to lazy initialisation where possible (validate on first use, not at module load)
+
+**L3 — Vite env vars are BUILD-TIME inlined, not runtime**
+
+`import.meta.env.VITE_*` references are evaluated at `vite build` time, NOT at request time. Re-enabling DCE'd code requires a **rebuild + redeploy**, not a runtime env-var flip. Document this revert path in any PR that introduces a Vite-env-gated feature (see PR #44 commit body for the canonical example).
+
+**L4 — Service Worker fetch context vs Document fetch context**
+
+SW `fetch()` calls go through the `connect-src` CSP directive, NOT through `font-src` / `img-src` / `style-src` etc. Those directives apply only to the **document's** rendering context, not to programmatic fetches from a service worker. Any SW caching strategy (Workbox `runtimeCaching` etc.) needs its target origins listed in `connect-src` even if those same origins are already in the directive that matches the resource type.
+
+**L5 — VitePWA `generateSW` overwrites hand-rolled SW**
+
+`generateSW` mode emits a Workbox-based SW at `dist/sw.js`, **overwriting** any hand-rolled `public/sw.js` of the same path. Custom SW logic (push handlers, custom message routing, etc.) is silently lost. Solution: switch to `injectManifest` strategy with a custom `src/sw.ts` that imports Workbox precache helpers as needed.
+
+---
+
+### 9. Day 2 backlog
+
+| Priority | Item |
+|---|---|
+| 🆕 **P1** | **ND-A1 fix** — VitePWA strategy switch to `injectManifest` + custom `src/sw.ts` with push handler (~2 hr) |
+| 🟡 **P2** | **Task 5 enforce flip** — after 24-48h CSP Sentry monitoring clean (flip `reportOnly: true` → `false`) |
+| ⏳ **P3** | **Task 6** — `npm audit fix` (17 moderate vulns reported in pre-Day-1 audit) |
+| ⏳ **P3** | **Task 7** — APK rebuild + signed release |
+| 🧹 Hygiene | CSP comment `PR #41` → `PR #43` typo correction (cosmetic 1-liner) |
+| 📊 Observability | Sentry frontend project separation (deferred post-pilot — single `node-express` project acceptable at current scale) |
+| 🛡️ Operational | Production redundancy — 2+ Fly machines or blue-green (Series A prep — L2 follow-through) |
+
+---
+
+### 10. Verification gates (this sprint day)
+
+- **Tests:** 100/100 passing throughout (Rule G — `npm run typecheck` used, never `npx tsc --noEmit` alone)
+- **Typecheck:** 0 errors throughout
+- **Production smokes** (Rule E): all green
+  - `/health` returned `{"status":"ok","db":"up","redis":"up"}` after each deploy
+  - CSP header verified post-PR-#43 (`fonts.gstatic.com` × 2 in policy)
+  - Bundle DCE verified post-PR-#44 (zero banner strings in `/assets/index-*.js`)
+- **PRs merged:** 2 (#43, #44) — both via branch-protection-safe squash-merge through PR + CI cycle
+- **Production HEAD:** `050dc62` (start) → `eda3a4d` (PR #43) → `9475c90` (PR #44)
+
+---
+
+### Session 98 commit (this entry)
+
+`docs(day1): Session 98 closure — Day 1 launch sprint (4 tasks + outage forensics + ND-A1)` — pure documentation, no runtime impact.
+
 ## 2026-05-18 — Session 97 — Legal Phase A: DPDP docs + signup consent + backend ledger (feat/legal-phase-a)
 
 **Goal:** Ship a DPDP Act 2023 baseline — five legal documents (EN + HI), in-app

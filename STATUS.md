@@ -1,7 +1,55 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-18 | Session 97 | **Legal Phase A** complete on `feat/legal-phase-a` — PR open, pending founder review + deploy gates | Prod runs main @ 0658ee5
+> Last updated: 2026-05-27 | Session 98 | **Day 1 Launch Sprint** — 4 of 7 tasks closed + Task 5 prep (PR #43) + UX bonus (PR #44) + ND-A1 discovered + 11-min VAPID outage recovered | Prod runs main @ `9475c90`
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
+
+## Day 1 Launch Sprint — 27 May 2026
+
+Status: ✅ Day 1 complete | 4 of 7 tasks closed | 24-48h Sentry monitoring window open before Task 5 enforce flip
+Production HEAD: `050dc62` → `eda3a4d` (PR #43) → `9475c90` (PR #44)
+
+> **Note:** SESSION_LOG has a gap between Session 97 and Session 98 (~9 days, May 18 → May 27). At least one commit landed on main during that window that is not captured in the log. Backfill candidate for a future dedicated docs catch-up session.
+
+### Tasks closed (4 of 7)
+- ✅ **Task 1** — Test user cleanup (13 non-admin users removed from prod Neon via defensive SQL; post-count = 1 admin only)
+- ✅ **Task 2** — R2 CORS production config (origins: dukanchi.com / www.dukanchi.com / dukanchi-app.fly.dev; ExposeHeaders: ETag)
+- ✅ **Task 3** — VAPID Web Push rotation (recovered from 11-min outage from placeholder-paste; new public key live; PushSubscription truncated)
+- ✅ **Task 4** — Sentry alert rule "Production Errors — New + Escalated" (notify dukanchiapp@gmail.com; test notification verified)
+
+### Task 5 prep (CSP allowlist)
+- PR #43 — `fonts.gstatic.com` added to connect-src (Workbox SW fetch context; prior policy only had it in font-src)
+- CSP remains in **reportOnly mode** — enforce flip pending 24-48h clean Sentry window
+- Audit ruled out speculative origins (Razorpay / Firebase web SDK / GTM not used in browser bundle)
+
+### UX bonus (PR #44 — PWA banners feature flag)
+- Both PWA install prompts on /home (top thin + bottom orange) now gated by `VITE_SHOW_PWA_PROMPTS` env (default false/unset)
+- Terser DCE confirms zero banner strings in production bundle
+- N5: Vite env vars are BUILD-TIME inlined — re-enable requires rebuild + redeploy with the env set in the Docker build context
+
+### 🚨 ND-A1 — Browser push DEAD in production
+- `public/sw.js` (hand-rolled, has push handler) is **overwritten** by VitePWA-generated Workbox SW at `vite build`
+- Production ships Workbox SW WITHOUT a `push` event listener — browser/PWA push silently dropped
+- Native Android (Capacitor APK + FCM) **unaffected** — separate pathway via firebase-admin → @capacitor/push-notifications
+- **Pilot impact:** P1 (not P0) — majority pilot users expected on APK via founder GTM
+- **Fix queued for Day 2 P1 (~2 hr):** VitePWA `generateSW` → `injectManifest` + custom `src/sw.ts`
+
+### Day 2 backlog
+| Priority | Item |
+|---|---|
+| 🆕 **P1** | ND-A1 fix — VitePWA injectManifest + custom src/sw.ts with push handler |
+| 🟡 **P2** | Task 5 enforce flip — after 24-48h CSP monitoring clean |
+| ⏳ **P3** | Task 6 — `npm audit fix` (17 moderate vulns) |
+| ⏳ **P3** | Task 7 — APK rebuild + signed release |
+| 🧹 Hygiene | CSP comment `PR #41` → `PR #43` typo correction |
+| 📊 Observability | Sentry frontend project separation (deferred post-pilot) |
+| 🛡️ Operational | Production redundancy — 2+ Fly machines or blue-green (Series A prep, L2 follow-through) |
+
+### Day 1 Learnings (L1–L5, full text in SESSION_LOG Session 98)
+- **L1** — Anti-pattern: `<paste...>` placeholder text in shell commands → always shell-substitute
+- **L2** — Single-machine production risk — bad secret = guaranteed crash loop = full outage
+- **L3** — Vite env vars are BUILD-TIME inlined — re-enable requires rebuild
+- **L4** — Service Worker `fetch()` → `connect-src` (NOT font-src / img-src / style-src)
+- **L5** — VitePWA `generateSW` overwrites hand-rolled SW — use `injectManifest` to preserve custom handlers
 
 ## Legal Phase A — 18 May 2026
 
@@ -65,7 +113,7 @@ Direction: deep-space dark + frosted glass + orange→magenta gradient ("Vision-
 - **URL:** https://dukanchi.com (Cloudflare proxied, SSL Full Strict, TLS 1.2 min)
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
-- **Production code:** running `origin/main` HEAD `0658ee5` (Session 96 — Futuristic v2 redesign, PRs #17/#18/#19 merged + deployed; Hardening Sprint Days 1-8 underneath at `28a5614`)
+- **Production code:** running `origin/main` HEAD `9475c90` (Session 98 — Day 1 Launch Sprint, PRs #43 CSP + #44 PWA banners feature flag; Session 96 Futuristic v2 + Hardening Sprint Days 1-8 underneath)
 - **Production DB schema:** Day 2 migrations APPLIED via `psql -f` (Session 87) — User soft-delete cols + Store GIST index + Product HNSW index + cube/earthdistance extensions live.
 - **Code ↔ schema ALIGNED** ✅ — Day 8 atomic merge (`28a5614`) brought production application code up to the Day 2 schema. The intentional schema-ahead-of-code gap held since Session 87 is now closed.
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
@@ -212,6 +260,8 @@ All Days 1–8 of the Hardening Sprint are **merged to `main` and live in produc
 - Week 7-8: Pilot launch — Bandra 200 retailers
 
 ## Open Decisions / Risks
+- [ ] 🚨 **ND-A1 (Day 1, Session 98)** — Browser/PWA push delivery is DEAD in production. `public/sw.js` (hand-rolled, has `push` event listener) is overwritten by VitePWA's `generateSW`-output Workbox SW at `vite build`. Native Android (Capacitor + FCM) unaffected. Fix queued as Day 2 P1: switch VitePWA to `injectManifest` + custom `src/sw.ts` (~2 hr).
+- [ ] **ND-D1-DOC1 (Day 1, Session 98)** — SESSION_LOG gap between Session 97 (`0658ee5`, May 18) and Session 98 start (`050dc62`, May 27). At least one main commit landed in that ~9-day window not captured in SESSION_LOG. Backfill candidate for a dedicated docs catch-up session.
 - [ ] Bandra confirmed as pilot (founder may revise)
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)
