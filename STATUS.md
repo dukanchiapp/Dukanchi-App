@@ -1,20 +1,23 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-27 | Session 98 | **Day 1 Launch Sprint** — 4 of 7 tasks closed + Task 5 prep (PR #43) + UX bonus (PR #44) + ND-A1 discovered + 11-min VAPID outage recovered | Prod runs main @ `9475c90`
+> Last updated: 2026-05-27 23:23 IST | Session 98 closing addendum | **Day 1 Launch Sprint EFFECTIVELY COMPLETE** — 6 of 7 tasks fully closed (Task 7 APK rebuild ✅; Task 6 npm audit fix ✅ via PR #47); Task 5 CSP in 24-48h monitoring window before enforce flip | Prod runs main @ `cd18d1a`
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Day 1 Launch Sprint — 27 May 2026
 
-Status: ✅ Day 1 complete | 4 of 7 tasks closed | 24-48h Sentry monitoring window open before Task 5 enforce flip
-Production HEAD: `050dc62` → `eda3a4d` (PR #43) → `9475c90` (PR #44)
+Status: ✅ Day 1 effectively complete | **6 of 7 tasks closed** | Task 5 CSP in 24-48h Sentry monitoring window before enforce flip
+Production HEAD: `050dc62` → `eda3a4d` (PR #43) → `9475c90` (PR #44) → `cd18d1a` (PR #47 npm audit fix); APK signed release built locally (not on `main`)
 
 > **Note:** SESSION_LOG has a gap between Session 97 and Session 98 (~9 days, May 18 → May 27). At least one commit landed on main during that window that is not captured in the log. Backfill candidate for a future dedicated docs catch-up session.
 
-### Tasks closed (4 of 7)
+### Final tally (6 of 7 closed)
 - ✅ **Task 1** — Test user cleanup (13 non-admin users removed from prod Neon via defensive SQL; post-count = 1 admin only)
 - ✅ **Task 2** — R2 CORS production config (origins: dukanchi.com / www.dukanchi.com / dukanchi-app.fly.dev; ExposeHeaders: ETag)
 - ✅ **Task 3** — VAPID Web Push rotation (recovered from 11-min outage from placeholder-paste; new public key live; PushSubscription truncated)
 - ✅ **Task 4** — Sentry alert rule "Production Errors — New + Escalated" (notify dukanchiapp@gmail.com; test notification verified)
+- 🟡 **Task 5** — CSP allowlist (PR #43 prep landed; reportOnly mode; enforce flip pending 24-48h monitoring window)
+- ✅ **Task 6** — `npm audit fix` (PR #47, 18 → 9 vulnerabilities; HIGH `tmp` Path Traversal closed; 9 residual all firebase-admin/exceljs chain, documented as ND-T6-1 + ND-T6-2)
+- ✅ **Task 7** — APK rebuild + signed release (6.7 MB `app-release.apk` + new keystore at `~/Documents/dukanchi-keys/dukanchi-release.jks` outside repo; password in Apple Notes locked; iCloud backup verified; Google Drive backup queued as ND-D2-GDRIVE-BACKUP)
 
 ### Task 5 prep (CSP allowlist)
 - PR #43 — `fonts.gstatic.com` added to connect-src (Workbox SW fetch context; prior policy only had it in font-src)
@@ -36,20 +39,27 @@ Production HEAD: `050dc62` → `eda3a4d` (PR #43) → `9475c90` (PR #44)
 ### Day 2 backlog
 | Priority | Item |
 |---|---|
-| 🆕 **P1** | ND-A1 fix — VitePWA injectManifest + custom src/sw.ts with push handler |
-| 🟡 **P2** | Task 5 enforce flip — after 24-48h CSP monitoring clean |
-| ⏳ **P3** | Task 6 — `npm audit fix` (17 moderate vulns) |
-| ⏳ **P3** | Task 7 — APK rebuild + signed release |
-| 🧹 Hygiene | CSP comment `PR #41` → `PR #43` typo correction |
+| 🆕 **P1** | ND-A1 fix — VitePWA injectManifest + custom src/sw.ts with push handler (~2 hr) |
+| 🟡 **P2** | Task 5 CSP enforce flip — after 24-48h monitoring clean (target: 2026-05-28 23:00 IST onwards; ~15 min) |
+| 🟡 **P2** | **ND-D2-APK-SMOKE** — Install signed APK on real device or Pixel 8 emulator; verify launch → loads dukanchi.com → login → basic flow (~10 min) |
+| ⏳ **P3** | **ND-D1-IDEIGNORE** — Add `android/.idea/` to `.gitignore`; `git rm --cached -r android/.idea/` then commit (~5 min) |
+| ⏳ **P3** | **ND-D2-GDRIVE-BACKUP** — Google Drive redundancy backup for keystore + APK (~5 min) |
+| Parallel | UI enhancement (Mandeep, scope TBD) |
+| Deferred | **ND-D2-VERIFIED-DEV** — Google "Verified Developer" registration via Play Console (pre-Play-Store milestone; within already-planned ₹2.1k Play Console fee) |
+| ~~Closed~~ | ~~Task 6 npm audit fix~~ ✅ via PR #47 |
+| ~~Closed~~ | ~~Task 7 APK rebuild + signed release~~ ✅ |
+| ~~Closed~~ | ~~CSP comment `PR #41` → `PR #43` typo correction~~ ✅ via PR #46 |
 | 📊 Observability | Sentry frontend project separation (deferred post-pilot) |
 | 🛡️ Operational | Production redundancy — 2+ Fly machines or blue-green (Series A prep, L2 follow-through) |
 
-### Day 1 Learnings (L1–L5, full text in SESSION_LOG Session 98)
+### Day 1 Learnings (L1–L7, full text in SESSION_LOG Session 98)
 - **L1** — Anti-pattern: `<paste...>` placeholder text in shell commands → always shell-substitute
 - **L2** — Single-machine production risk — bad secret = guaranteed crash loop = full outage
 - **L3** — Vite env vars are BUILD-TIME inlined — re-enable requires rebuild
 - **L4** — Service Worker `fetch()` → `connect-src` (NOT font-src / img-src / style-src)
 - **L5** — VitePWA `generateSW` overwrites hand-rolled SW — use `injectManifest` to preserve custom handlers
+- **L6** — Keystore creation MUST pair with immediate password-manager save — generate via `openssl rand -hex 20` → save FIRST → then paste into AS dialog (never type fresh)
+- **L7** — Keystore folder MUST live outside git repo — `~/Documents/dukanchi-keys/` is safe; never inside `Dukanchi-App/` even if gitignored (config drift risk)
 
 ## Legal Phase A — 18 May 2026
 
@@ -113,7 +123,7 @@ Direction: deep-space dark + frosted glass + orange→magenta gradient ("Vision-
 - **URL:** https://dukanchi.com (Cloudflare proxied, SSL Full Strict, TLS 1.2 min)
 - **Health:** `/health` → 200 OK
 - **Services:** App + Redis + Neon DB + Cloudflare R2 — all green
-- **Production code:** running `origin/main` HEAD `9475c90` (Session 98 — Day 1 Launch Sprint, PRs #43 CSP + #44 PWA banners feature flag; Session 96 Futuristic v2 + Hardening Sprint Days 1-8 underneath)
+- **Production code:** running `origin/main` HEAD `cd18d1a` (Session 98 — Day 1 Launch Sprint, PRs #43 CSP + #44 PWA banners feature flag + #47 npm audit fix; Session 96 Futuristic v2 + Hardening Sprint Days 1-8 underneath). Task 7 signed APK (6.7 MB) built locally — not committed to repo (lives in `android/app/release/` + iCloud backup).
 - **Production DB schema:** Day 2 migrations APPLIED via `psql -f` (Session 87) — User soft-delete cols + Store GIST index + Product HNSW index + cube/earthdistance extensions live.
 - **Code ↔ schema ALIGNED** ✅ — Day 8 atomic merge (`28a5614`) brought production application code up to the Day 2 schema. The intentional schema-ahead-of-code gap held since Session 87 is now closed.
 - **Phase 0.4 audit hardening:** 19/19 fixes deployed ✅
@@ -262,6 +272,12 @@ All Days 1–8 of the Hardening Sprint are **merged to `main` and live in produc
 ## Open Decisions / Risks
 - [ ] 🚨 **ND-A1 (Day 1, Session 98)** — Browser/PWA push delivery is DEAD in production. `public/sw.js` (hand-rolled, has `push` event listener) is overwritten by VitePWA's `generateSW`-output Workbox SW at `vite build`. Native Android (Capacitor + FCM) unaffected. Fix queued as Day 2 P1: switch VitePWA to `injectManifest` + custom `src/sw.ts` (~2 hr).
 - [ ] **ND-D1-DOC1 (Day 1, Session 98)** — SESSION_LOG gap between Session 97 (`0658ee5`, May 18) and Session 98 start (`050dc62`, May 27). At least one main commit landed in that ~9-day window not captured in SESSION_LOG. Backfill candidate for a dedicated docs catch-up session.
+- [ ] **ND-T6-1 (Day 1, Session 98, Task 6)** — 7 of 9 residual `npm audit` moderate vulns are in the `firebase-admin` dependency chain (firebase-admin direct + @google-cloud/firestore + @google-cloud/storage + google-gax + retry-request + teeny-request + gaxios — all share vulnerable `uuid<11.1.1`). Only fix path is downgrading `firebase-admin` from `>=11.0.0` to `10.3.0` (major drop) — would break FCM native push. Awaiting upstream `firebase-admin` 12.x/13.x with patched uuid.
+- [ ] **ND-T6-2 (Day 1, Session 98, Task 6)** — 2 of 9 residual `npm audit` moderate vulns are `exceljs` (direct) + transitive `uuid`. Only fix path is downgrading `exceljs` from `>=3.5.0` to `3.4.0` (major drop) — would revert the Day 6 xlsx→exceljs migration (commit `e40c854`). Awaiting upstream `exceljs` 4.x with uuid bump.
+- [ ] **ND-D1-IDEIGNORE (Day 1, Session 98, Task 7)** — `android/.idea/` should be gitignored. Currently `android/.idea/misc.xml` is tracked and shows modified on every Android Studio open. Fix: `git rm --cached -r android/.idea/` + add `android/.idea/` to `.gitignore` (~5 min, Day 2 P3).
+- [ ] **ND-D2-VERIFIED-DEV (Day 1, Session 98, Task 7)** — Google "Verified Developer" registration required for Play Store distribution. Android Studio build dialog flagged: "This package name (App ID) is not registered by a verified developer." Zero impact on sideload soft launch; pre-Play-Store milestone. Register via Play Console (within already-planned ₹2.1k Play Console fee).
+- [ ] **ND-D2-GDRIVE-BACKUP (Day 1, Session 98, Task 7)** — Google Drive redundancy backup for keystore + APK (iCloud backup already done). Day 2 P3, ~5 min.
+- [ ] **ND-D2-APK-SMOKE (Day 1, Session 98, Task 7)** — Install signed APK (6.7 MB, `android/app/release/app-release.apk`) on real Android device or Pixel 8 emulator. Verify launch → loads dukanchi.com → login → basic flow. Day 2 P2, ~10 min.
 - [ ] Bandra confirmed as pilot (founder may revise)
 - [ ] Railway free trial ends in ~21 days — paid plan TBD
 - [ ] HSTS enable after 1 month stable production (~June 2026)

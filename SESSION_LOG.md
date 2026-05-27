@@ -6,6 +6,72 @@
 
 ---
 
+## 🌙 Day 1 Closing Addendum (2026-05-27 23:23 IST)
+
+### Task 7 — APK Rebuild + Signed Release: CLOSED ✅
+
+**Decision context:** Day 5.1 keystore credentials lost (path + password not stored in password manager). Founder confirmed Day 5.1 APK was never distributed (only emulator/internal test) → new keystore safe; no backwards-compat break.
+
+**Keystore creation:**
+- Path: `~/Documents/dukanchi-keys/dukanchi-release.jks` (OUTSIDE git repo — security)
+- Alias: `dukanchi`
+- Validity: 25 years
+- App ID: `com.dukanchi.app`
+- Password: `openssl rand -hex 20` (40-char hex, 160-bit entropy)
+- Password storage: Apple Notes locked (Face ID) with full template
+- Certificate: First/Last name, OU=Dukanchi, O=Dukanchi, L=Mumbai, ST=Maharashtra, C=IN
+
+**Build output:**
+- File: `app-release.apk`
+- Size: 6.7 MB (6,661,847 bytes; 6.4M filesystem)
+- Build time: 1m 33s 920ms
+- Location: `android/app/release/`
+- Signing: V1/V2/V3 auto via modern AS + Android Gradle Plugin
+
+**Backup verified (2026-05-27 23:23 IST):**
+- iCloud Drive: `~/Library/Mobile Documents/com~apple~CloudDocs/Dukanchi-Backups/`
+  - `dukanchi-release.jks` (2.7K)
+  - `app-release.apk` (6.4M)
+- Auto-syncs to iPhone Files app
+- Pending: Google Drive redundancy (Day 2)
+
+### New Learnings
+
+**L6 — Keystore creation MUST pair with immediate password-manager save.** Day 5.1 keystore was lost because password was typed during creation dialog without saving anywhere. New SOP: generate via `openssl rand -hex 20` → save in password manager FIRST → then paste into AS dialog. Never type fresh during creation.
+
+**L7 — Keystore folder MUST live outside git repo.** `~/Documents/dukanchi-keys/` is safe. Never place inside `Dukanchi-App/`. Even if .gitignored, future config drift could expose. Physical separation is the only safe boundary.
+
+### New Backlog Items
+
+- **ND-D1-IDEIGNORE** (P3, ~5min) — `android/.idea/` should be in `.gitignore`. Currently `android/.idea/misc.xml` is tracked and shows modified on every AS open. Fix: `git rm --cached -r android/.idea/` + add `android/.idea/` to `.gitignore` + commit.
+- **ND-D2-VERIFIED-DEV** (P3, pre-Play-Store) — Google "Verified Developer" registration required for Play Store distribution. AS build dialog flagged: "This package name (App ID) is not registered by a verified developer." Zero impact on sideload soft launch. Register via Play Console (within already-planned ₹2.1k Play Console fee).
+- **ND-D2-GDRIVE-BACKUP** (P3, ~5min) — Google Drive redundancy backup for keystore + APK.
+- **ND-D2-APK-SMOKE** (P2, ~10min) — Install signed APK on real Android device (or Pixel 8 emulator). Verify launch → loads dukanchi.com → login works → basic flow.
+
+### Day 1 Launch Sprint — FINAL TALLY
+
+| # | Task | Status |
+|---|---|---|
+| 1 | Test user cleanup | ✅ CLOSED |
+| 2 | R2 CORS production | ✅ CLOSED |
+| 3 | VAPID rotation | ✅ CLOSED (11-min outage recovered) |
+| 4 | Sentry alert rules | ✅ CLOSED |
+| 5 | CSP allowlist | 🟡 MONITORING (24-48h window for enforce flip) |
+| 6 | npm audit fix | ✅ CLOSED (PR #47, 18→9 vulns) |
+| 7 | APK rebuild + signed release | ✅ CLOSED (6.7 MB signed APK + keystore) |
+
+**6/7 tasks fully closed. 1 task (CSP) in mandatory monitoring window. Day 1 effectively complete.**
+
+### Day 2 Prioritized Backlog
+
+1. **P1 — ND-A1 Browser push fix** (~2hr) — VitePWA `generateSW` → `injectManifest` migration. Create `src/sw.ts` with custom push handler + Workbox precache imports. Update `vite.config.ts`.
+2. **P2 — Task 5 CSP enforce flip** (~15min) — Window: 2026-05-28 23:00 IST onwards. Re-check Sentry; if zero violations → flip `app.ts` reportOnly: false → PR → deploy.
+3. **P2 — ND-D2-APK-SMOKE** (~10min) — Real device smoke test.
+4. **P3 — ND-D1-IDEIGNORE** (~5min).
+5. **P3 — ND-D2-GDRIVE-BACKUP** (~5min).
+6. **Parallel — UI enhancement** (Mandeep, scope TBD).
+7. **Deferred — ND-D2-VERIFIED-DEV** — Pre-Play-Store milestone.
+
 ## 2026-05-27 — Session 98 — Day 1 Launch Sprint: 4 tasks closed + Task 5 prep + outage forensics + ND-A1 discovery
 
 **Goal:** Day 1 of the 7-task launch hardening sprint (post-Hardening-Sprint follow-on). Easy wins first per pre-Day-1 audit prioritisation — test-user cleanup, R2 CORS, VAPID rotation, Sentry alerts. Prep Task 5 (CSP enforce flip) by closing the active Sentry violation backlog. UX cleanup of redundant PWA banners as a bonus.
