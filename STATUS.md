@@ -1,6 +1,6 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-27 23:23 IST | Session 98 closing addendum | **Day 1 Launch Sprint EFFECTIVELY COMPLETE** — 6 of 7 tasks fully closed (Task 7 APK rebuild ✅; Task 6 npm audit fix ✅ via PR #47); Task 5 CSP in 24-48h monitoring window before enforce flip | Prod runs main @ `cd18d1a`
+> Last updated: 2026-05-28 | Session 99 | **PR backlog hygiene** — 4× GH-Actions Dependabot PRs batch-merged (#2/#3/#4/#5); open PR count 6 → 2 (#34, #48 deferred) | Prod runs main @ `cd18d1a` (unchanged — CI-workflow edits don't trigger deploy)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 
 ## Day 1 Launch Sprint — 27 May 2026

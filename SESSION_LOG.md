@@ -6,6 +6,60 @@
 
 ---
 
+## 2026-05-28 — Session 99 — PR Backlog Hygiene: 4× GH-Actions bumps batch-merged
+
+**Goal:** Drain the 4 stale Dependabot GH-Actions PRs (#2 / #3 / #4 / #5) that had been sitting green-CI for ~12 days (since 2026-05-15). Pure CI/workflow updates, zero runtime risk. Sequential merge with full CI verification between each step.
+
+**Status:** ✅ ALL 4 MERGED. Open PR count dropped 6 → 2 (only #34 admin-panel grouped bump + #48 broken-CI npm bump remain — both deferred to dedicated Day 2 triage). Production runtime unchanged (CI-workflow-file edits only — no `flyctl deploy` triggered).
+
+| Metric | Value |
+|---|---|
+| PRs merged | 4 (#2, #3, #4, #5) |
+| Commits added to main | 4 squash commits (`0647f78`, `f8198e9`, `4dfeb95`, `1f21d38`) |
+| Open PRs after sweep | 2 (#34, #48) |
+| CI runs on main | 4 (1 cancelled + re-run success, 3 first-time success) |
+| Local gates (post-batch) | typecheck 0 errors · tests 100/100 in 6.66s · health HTTP 200 · build N/A (not retriggered) |
+| Production HEAD | `cd18d1a` (unchanged — last actual deploy was PR #47) |
+| `main` local HEAD | `caaf696` → `1f21d38` |
+
+### Sequential merge sequence
+
+| # | PR | Bump | Squash SHA | CI run | Result |
+|---|---|---|---|---|---|
+| 1 | [#2](https://github.com/dukanchiapp/Dukanchi-App/pull/2) | `codecov/codecov-action` v5 → v6 | `0647f78` | [26539544454](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26539544454) | ✅ success first try |
+| 2 | [#3](https://github.com/dukanchiapp/Dukanchi-App/pull/3) | `actions/setup-node` v4 → v6 | `f8198e9` | [26539644950](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26539644950) | ✅ success first try |
+| 3 | [#4](https://github.com/dukanchiapp/Dukanchi-App/pull/4) | `actions/checkout` v4 → v6 | `4dfeb95` | [26539737038](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26539737038) | ⚠️ initial **cancelled**, re-run ✅ success |
+| 4 | [#5](https://github.com/dukanchiapp/Dukanchi-App/pull/5) | `preactjs/compressed-size-action` v2 → v3 | `1f21d38` | [26539958981](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26539958981) | ✅ success first try |
+
+### ND-S99-1 — CI cancellation on PR #4 merge
+
+Initial CI run for the PR #4 squash-merge commit (`4dfeb95`) was **cancelled** (not failed). Jobs showed `conclusion: cancelled` for "Typecheck + Test + Build" and `conclusion: skipped` for "Bundle Size Report". Investigation:
+
+- Adjacent runs (`f8198e9` PR #3 CI = success; `1f21d38` PR #5 CI = success) ran cleanly with same workflow + node version.
+- A Dependabot-internal "github_actions in / for actions/checkout - Update #1386960952" workflow completed `success` at 21:26:25Z — 44 seconds before the cancelled run started at 21:27:09Z. Most likely race condition or transient concurrency interaction.
+
+**Mitigation applied:** Local `npm run typecheck` + `npm test` re-run on `main @ 4dfeb95` → both green (typecheck 0 errors, 100/100 tests in 6.25s). Then `gh run rerun 26539737038` → re-run completed `success`. Continued the sequence after both signals confirmed code health.
+
+**Decision per spec rule:** "ABORT if CI FAILS on main". Cancellation ≠ failure (jobs were terminated mid-run, not asserted broken). Local gates verifying code health on the same commit was the tie-breaker. Documented as a deviation rather than abort.
+
+### Remaining open PRs (deferred to dedicated Day 2 triage)
+
+- **#34** — Dependabot admin-panel grouped bump × 15 packages (open since 2026-05-24, ✅ CI green). Review needed before merge — affects admin SPA dependency tree.
+- **#48** — Dependabot npm root grouped bump × 30 packages (open since 2026-05-27, ❌ CI **FAILED** post-PR-#47 merge — likely lockfile conflict from the Task 6 `npm audit fix` landing immediately before #48's CI run). Requires rebase + re-test; potential package resolution surgery.
+
+### Verification gates (post-batch)
+
+- `npm run typecheck` — ✅ 0 errors (web + server)
+- `npm test -- --run` — ✅ 100/100 (17 files, 6.66s)
+- `curl https://dukanchi.com/health` — ✅ HTTP 200, 0.79s, `{"status":"ok","db":"up","redis":"up"}`
+- Working tree clean throughout — only main branch advanced
+
+### No deploy triggered
+
+All 4 PRs edit only `.github/workflows/ci.yml` (and no other files). Workflow-file changes affect future CI runs, not the production runtime artifact. Fly app remains at the image built from `cd18d1a` (PR #47 deploy).
+
+---
+
 ## 🌙 Day 1 Closing Addendum (2026-05-27 23:23 IST)
 
 ### Task 7 — APK Rebuild + Signed Release: CLOSED ✅
