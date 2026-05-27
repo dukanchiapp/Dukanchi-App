@@ -95,7 +95,7 @@ jobs:
         # Day 6 Phase 3 / Q-D6-8: public-repo tokenless upload.
         # fail_ci_if_error: false — coverage is informational. A Codecov outage
         # or 5xx must not block the hard-gate `ci` job.
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         with:
           files: ./coverage/lcov.info
           flags: unittests
