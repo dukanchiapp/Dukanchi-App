@@ -91,6 +91,7 @@ const cspDirectives = {
     "https://nominatim.openstreetmap.org",
     "https://maps.googleapis.com",
     "https://fonts.googleapis.com", // Maps SDK fetches font CSS via XHR, not <link>
+    "https://fonts.gstatic.com", // PR #41 — Workbox SW fetch context (SW fetch → connect-src, NOT font-src)
     "wss://dukanchi.com",
     "wss:", // catch-all for Capacitor / socket.io transport fallback
   ],
