@@ -183,7 +183,7 @@ export default function App() {
           <NotificationProvider>
             <FlowController />
             <div className="min-h-screen" style={{ background: 'var(--f-bg-deep)' }}>
-              <BrowserModeBanner />
+              {import.meta.env.VITE_SHOW_PWA_PROMPTS === 'true' && <BrowserModeBanner />}
               <Suspense fallback={
                 <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-bg-deep)' }}>
                   <div className="animate-spin" style={{ width: 36, height: 36, border: '3px solid var(--f-glass-border-2)', borderTopColor: 'var(--f-magenta)', borderRadius: '50%' }} />
@@ -212,7 +212,7 @@ export default function App() {
               </Routes>
               </Suspense>
               <BottomNav />
-              <PWAInstallPrompt />
+              {import.meta.env.VITE_SHOW_PWA_PROMPTS === 'true' && <PWAInstallPrompt />}
             </div>
           </NotificationProvider>
           </LocationProvider>
