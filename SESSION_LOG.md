@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-05-29 — Session 117 — AppHeader + BottomNav Futuristic re-skin (paired, screen 2 of re-skin)
+
+**Goal:** Re-skin AppHeader + BottomNav (paired — chrome that renders across screens) to Futuristic v3 IN PLACE, preserving all props/handlers/routing/NotificationBell wiring. Second step of the Tier 5D re-skin.
+
+**Status:** ✅ **BOTTOMNAV RE-SKINNED + LIVE; APPHEADER RESTYLED (but unmounted — see finding).** Fly **v34** complete. BottomNav now has the v3 translucent active pill + lucide icons + `--f-bottom-nav-bg` glass; all 5 routes + active-detection + hide-logic preserved verbatim.
+
+| Metric | Value |
+|---|---|
+| PR merged | #88 (squash) |
+| Squash commit | `f7793e7` |
+| Production HEAD | `33d654c` → **`f7793e7`** |
+| Fly release | **v34** complete |
+| Files changed | 3 (`BottomNav.tsx`, `AppHeader.tsx`, `DukanchiLogo.tsx`) |
+| Lines | +96 / −80 |
+| Tests | **133/133** (unchanged — no unit-test surface on these components) |
+
+### 🔎 Key finding — AppHeader is dead code (flagged for Opus)
+
+`AppHeader.tsx` is **NOT imported or rendered by any screen** (grep across `src/` confirms only its own file references it). The actually-visible screen headers are **inline per-page** — Home/Search/Map/Messages each render their own header JSX. `NotificationBell` is used **directly** by Profile/Support/UserSettings/RetailerDashboard.
+
+**Implication:** Restyling `AppHeader.tsx` has zero visible effect today. **BottomNav was the real visible win** of this PR.
+
+**Decision deferred to Opus:** either (a) wire a single shared `AppHeader` across screens (consolidation), OR (b) keep per-page inline headers and re-skin each header in its own screen session (Home/Search/Map/Messages). This session changed NO screen behavior — AppHeader is restyled to v3 so it's *ready* either way, but per-page headers remain the live chrome.
+
+### BottomNav (LIVE — App.tsx + PWAInstallPrompt)
+
+- **v2 → v3 active state**: solid-gradient 36px tile + white icon → **translucent inset pill** (`linear-gradient(135deg, rgba(255,107,53,0.22), rgba(255,42,140,0.28))` + `1px rgba(255,42,140,0.45)` border + `0 4px 14px magenta` glow + inner highlight) with **magenta `#FF2A8C` icon + `rgba(255,42,140,0.14)` fill**
+- **Icons**: `FIcon` (custom SVG) → **lucide-react** (`Home`/`Search`/`MapPin`/`MessageCircle`/`User`)
+- **Bar**: `var(--f-bottom-nav-bg)` (was hardcoded rgba), 32px radius, 6px lateral (was 14px), `blur(28px) saturate(180%)`, items equal-flex 58px min-height, labels 10/700
+- **Preserved verbatim** (grep-confirmed): all 5 routes (`/`, `/search`, `/map`, `/messages`, `/profile`), active-detection formula (`pathname === path || (path !== '/' && pathname.startsWith(path))`), hide-on-`/chat/`+`/signup`+`/login`+`/landing`, `maxWidth:480` centering, `pb-safe`, `pointerEvents` float trick
+
+### AppHeader (restyled, unmounted)
+
+- Dark-glass bar (`var(--f-sticky-bg)` + blur24) + 40px logo tile + "Dukanchi" 18/800 + "apna bazaar, apni dukaan" 11/500 (`--f-text-3`) + 44×44 glass bell tile wrapping `NotificationBell`
+- **Refresh button REMOVED** — it did a brute `window.location.reload()` (no state/data-fetch logic; design handoff drops it). Safe removal. If a refresh affordance is wanted later it should be a feed-level pull-to-refresh, not a header reload. **NotificationBell wiring (drawer + unread dot) preserved verbatim.**
+
+### DukanchiLogo
+
+- 34px orange→amber rounded tile → **40px brand-gradient (`var(--f-grad-primary)`) tile + glow + द glyph**; added optional `size` prop (default 40). Only consumed by AppHeader → safe to restyle.
+
+### Phase 3 local gates
+
+- ✅ `npm run typecheck` — 0 errors
+- ✅ `npm test -- --run` — **133/133**
+- ✅ `npm run build` — green (58 precache entries — BottomNav no longer pulls the FIcon chunk path here)
+- ✅ `npm run test:e2e` — 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #88 (run 26607848253): `success`
+- ✅ Fly **v34** complete (deploy emitted a local DNS-verification warning — `i/o timeout` to 8.8.8.8 from the dev machine, NOT a deploy failure; "Your app is deployed" + curl confirms healthy)
+- ✅ Post-deploy: `/health` 200 in 550ms · SW push handler intact · CSP `report-only` preserved
+
+### E2E coverage gap (explicit)
+
+BottomNav **hides itself** on `/login` + `/signup` (its own route-guard), and AppHeader is unmounted — so **neither is covered** by the public render-smoke E2E. Founder device test required: all 5 nav routes navigate, active pill on the current tab, bell opens the notification drawer.
+
+### Awaiting
+
+- Opus decision: shared AppHeader vs per-page inline headers
+- Founder device test — bottom nav dark-glass + active pill + 5 routes + bell drawer
+- Opus → next screen: **Home** (L — the main feed screen; carousel + location strip + tabs + filter + feed of re-skinned PostCards)
+
+---
+
 ## 2026-05-29 — Session 116 — PostCard Futuristic re-skin + useClosingSoon (screen 1 of re-skin)
 
 **Goal:** Re-skin `src/components/PostCard.tsx` to the Futuristic v3 spec IN PLACE — preserve every prop, handler, optimistic-update wiring, and real data source. First screen of the Tier 5D re-skin (recommended order: PostCard → AppHeader+BottomNav → …). Visual layer only.
