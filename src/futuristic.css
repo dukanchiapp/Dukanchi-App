@@ -49,6 +49,14 @@
   --f-text-3:         rgba(244, 242, 235, 0.48);
   --f-text-4:         rgba(244, 242, 235, 0.28);
 
+  /* Status (Session 115 — Futuristic v3 bundle).
+     Live store status — used across Home / Messages / Chat header / Map /
+     Profile. Driven by getLiveStatus() — see src/lib/liveStatus.ts. */
+  --f-status-open:    #1FA365;  /* Open — green */
+  --f-status-yellow:  #F59E0B;  /* Closes in 31–60 min — amber */
+  --f-status-orange:  #FF8A4D;  /* Closes in 16–30 min — orange */
+  --f-status-red:     #FF4D6A;  /* Closes in ≤15 min OR any "Closed*" — red */
+
   /* Radii */
   --f-r-sm:           10px;
   --f-r-md:           14px;
@@ -66,6 +74,40 @@
   --f-ease:           cubic-bezier(0.16, 1, 0.3, 1);
   --f-ease-out:       cubic-bezier(0.22, 1, 0.36, 1);
   --f-ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ─── Spacing scale (4-base) — Session 115 — use these, not ad-hoc px ─── */
+  --f-s-1:  4px;
+  --f-s-2:  8px;
+  --f-s-3:  12px;
+  --f-s-4:  16px;
+  --f-s-5:  20px;
+  --f-s-6:  24px;
+  --f-s-8:  32px;
+  --f-s-10: 40px;
+  --f-s-12: 48px;
+
+  /* ─── Type scale (semantic) — Session 115 ─── */
+  --f-t-display: 28px;   /* Big page titles: "Messages", "Dolphin hotel" */
+  --f-t-title:   22px;   /* Section heroes */
+  --f-t-h1:      18px;   /* In-page H1 */
+  --f-t-h2:      15px;   /* Card titles, post-card store name */
+  --f-t-body:    14px;   /* Default body */
+  --f-t-sm:      13px;   /* Secondary body, action labels */
+  --f-t-xs:      12px;   /* Captions, helper, tab labels */
+  --f-t-meta:    11px;   /* Meta strip text, status dots */
+  --f-t-micro:   10px;   /* Eyebrows uppercase, mono timestamps */
+
+  /* ─── Letter-spacing scale — Session 115 ─── */
+  --f-ls-tight:    -0.02em;
+  --f-ls-snug:     -0.01em;
+  --f-ls-normal:   0;
+  --f-ls-eyebrow:  0.08em;
+
+  /* ─── Line-height scale — Session 115 ─── */
+  --f-lh-tight:   1.15;
+  --f-lh-snug:    1.3;
+  --f-lh-body:    1.5;
+  --f-lh-loose:   1.6;
 
   /* Theme-routed surface tones — common reusable values */
   --f-sticky-bg:      rgba(8, 8, 18, 0.65);
