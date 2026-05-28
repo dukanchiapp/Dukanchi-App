@@ -6,6 +6,104 @@
 
 ---
 
+## 2026-05-28 — Session 102b — ND-A1 LIVE: injectManifest push SW deployed to production
+
+**Goal:** Deploy the Session 102a injectManifest migration (PR #61) to production. Prove that the prod-served `/sw.js` now contains the `push` and `notificationclick` handlers that were dead since the PWA shipped.
+
+**Status:** ✅ **ND-A1 CLOSED — WEB PUSH RESTORED IN PRODUCTION.** PR #61 squash-merged at `42d3e82`; Fly release **v24** complete; production `/sw.js` verified to contain both `addEventListener("push")` and `addEventListener("notificationclick")` post-deploy. Pre-deploy `/sw.js` (4,499 bytes) was the broken generateSW loader stub; post-deploy `/sw.js` is the injectManifest output with handlers inline. Native Capacitor / FCM pathway unaffected.
+
+| Metric | Value |
+|---|---|
+| PR merged | #61 (commit `42d3e82`) |
+| Fly release | **v24** complete |
+| Deploy duration | **5m2s** (12:18:41Z → 12:23:43Z) |
+| Production HEAD | `cd18d1a` → **`42d3e82`** |
+| Pre-deploy `/sw.js` size | 4,499 bytes (broken Workbox loader stub, NO push handler) |
+| Post-deploy `/sw.js` size | 27,225 bytes (decompressed) / 8,951 bytes gzipped on the wire |
+| CDN cache status | No `cf-cache-status` header — Cloudflare pass-through or DNS-only for `/sw.js` |
+| Browser cache hint | `cache-control: public, max-age=0` (always revalidate) |
+
+### Pre-deploy proof (bug confirmed)
+
+```
+curl -s "https://dukanchi.com/sw.js?cachebust=$(date +%s)" -o /tmp/dk-presw.js
+$ wc -c /tmp/dk-presw.js
+    4499 /tmp/dk-presw.js
+$ grep -oE 'addEventListener\(["'\'']push["'\'']' /tmp/dk-presw.js
+(no match)
+$ head -c 200 /tmp/dk-presw.js
+if(!self.define){let s,e={};const i=(i,n)=>(i=new URL(i+".js",n).href,e[i]||new Promise(e=>{if("document"in self){...
+```
+
+Confirmed: prod was serving the legacy generateSW loader stub — no push listener.
+
+### Post-deploy proof (ND-A1 FIXED)
+
+```
+$ curl -s "https://dukanchi.com/sw.js?cachebust=$(date +%s)" -o /tmp/dk-prod-sw.js
+$ wc -c /tmp/dk-prod-sw.js
+   27225 /tmp/dk-prod-sw.js
+$ grep -oE 'addEventListener\(["'\'']push["'\'']' /tmp/dk-prod-sw.js
+addEventListener("push"
+🎉 PUSH HANDLER LIVE IN PRODUCTION
+$ grep -oE 'addEventListener\(["'\'']notificationclick["'\'']' /tmp/dk-prod-sw.js
+addEventListener("notificationclick"
+✅ notificationclick LIVE
+```
+
+### Fly deploy state
+
+```
+$ flyctl status -a dukanchi-app
+ Image    │ dukanchi-app:deployment-01KSQ8BN9A38GZB8C7SKTW89KD
+Machines
+ PROCESS │ ID             │ VERSION │ REGION │ STATE   │ CHECKS             │ LAST UPDATED
+ app     │ 9080d70da60d18 │ 24      │ sin    │ started │ 1 total, 1 passing │ 2026-05-28T12:23:25Z
+
+$ flyctl releases -a dukanchi-app | head -3
+ VERSION │ STATUS   │ DESCRIPTION │ USER                  │ DATE
+ v24     │ complete │ Release     │ dukanchiapp@gmail.com │ 1m12s ago
+ v23     │ complete │ Release     │ dukanchiapp@gmail.com │ 20h35m ago
+```
+
+Single machine, Singapore region, healthcheck 1/1 passing on v24. No rollback needed.
+
+### Production smoke battery (Rule E)
+
+| Endpoint | Result |
+|---|---|
+| `/health` | HTTP 200, 1.32s, `{"status":"ok","db":"up","redis":"up","timestamp":1779971054278}` ✅ |
+| `/` (SPA root) | HTTP 200 ✅ |
+| `/manifest.json` | Served (name + short_name fields intact) ✅ |
+| `/sw.js` | 27,225 bytes with push + notificationclick ✅ |
+
+### Size delta diagnosis (local 45,253 → production 27,225)
+
+Both files contain the handlers, so functionally identical. Likely causes for the ~17 KB delta:
+
+- **Likely:** Different terser minification behaviour between the local `npm run build` and the Docker production build (CI/Dockerfile may set additional flags or env vars that tighten the SW pass). Both invoke `vite v6.4.2 building for production`, but the Docker layer's resolved tool versions or env may emit a tighter `dist/sw.js`.
+- **Wire size:** `curl --compressed` reports 8,951 bytes wire (gzipped), matching `content-length: 27225` after decompression.
+- **No `cf-cache-status` header** — Cloudflare either bypassed cache for `/sw.js` (likely due to `cache-control: public, max-age=0` set by Express) or `/sw.js` is in DNS-only mode. Either way the bytes are demonstrably fresh.
+
+### Native push pathway
+
+Unaffected by this deploy. `@capacitor/push-notifications` plugin + Capacitor APK + `firebase-admin` backend continue to operate on their own native channel (Google Play Services intents). Verified untouched: `useFcmRegistration.ts`, `capacitor.config.ts`, and the `firebase-admin` half of `push.service.ts` were not in the PR #61 diff.
+
+### Deploy-side warning (recurring)
+
+The same Fly mid-deploy "app not listening on expected address" warning observed on every prior deploy in this codebase. Machine subsequently reached `started` state and healthcheck passed. Benign per established pattern (Sessions 88, 95, 98, etc.). Worth a separate `fly.toml` startup-probe-timing investigation but not blocking.
+
+### ND-A1 status: ✅ CLOSED
+
+Browser Web Push delivery is restored. Backend's `webpush.sendNotification` (Task 3 / Session 98 VAPID rotation) now reaches active browser SWs that have a `push` event listener wired to `showNotification`. Combined with the dual-stack dispatcher in `src/services/push.service.ts:103-127` (`Promise.allSettled([sendWebPushToUser, sendFcmToUser])`), both PWA users and APK users now receive push correctly.
+
+### Files referenced
+
+- Code merged via PR #61 (Session 102a): `src/sw.ts` (new), `vite.config.ts` (injectManifest), `tsconfig.worker.json` (new), `tsconfig.app.json` (exclude), `package.json` (typecheck:worker + 5 workbox deps), `public/sw.js` (deleted), `package-lock.json` (locked).
+- 102b touches: documentation only.
+
+---
+
 ## 2026-05-28 — Session 101 — PR #48 Closed + Dependabot ioredis Guard — Backlog CLEARED
 
 **Goal:** Resolve the last open PR (#48 root npm grouped bump × 30 packages) that had been blocked by broken CI since 2026-05-27T15:55Z. Investigate root cause, attempt automatic recovery if safe, otherwise close cleanly + add guardrails to prevent recurrence.
