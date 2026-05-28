@@ -64,38 +64,19 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: false, // using our own public/manifest.json
-        workbox: {
+        // ND-A1 (Session 102a): switch generateSW → injectManifest so the
+        // build emits dist/sw.js from src/sw.ts (which carries the push
+        // handler). Previously generateSW overwrote public/sw.js, shipping
+        // a Workbox SW without any push listener → web push silently dead.
+        // Navigation denylist + Google Fonts runtimeCaching previously
+        // configured here have been ported into src/sw.ts as code (Workbox
+        // NavigationRoute + registerRoute calls). Native Capacitor push
+        // unaffected — separate pathway.
+        strategies: 'injectManifest',
+        srcDir: 'src',
+        filename: 'sw.ts',
+        injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-          // Paths that must NEVER be served from the SPA's cached index.html.
-          // Workbox's default NavigationRoute would otherwise intercept every
-          // browser navigation and return the customer SPA — masking the
-          // server-served admin panel, JSON API responses, and direct file
-          // downloads. curl works without a SW; the browser was getting the
-          // customer SPA's NotFound for /admin-panel/ until this denylist
-          // landed.
-          navigateFallbackDenylist: [
-            /^\/admin-panel(\/|$)/, // separate admin SPA, Express-served
-            /^\/api\//,             // JSON API — never an HTML fallback
-            /^\/uploads\//,         // static uploads, served directly by Express
-          ],
-          runtimeCaching: [
-            {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'google-fonts-cache',
-                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              },
-            },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              },
-            },
-          ],
         },
       }),
       // Sentry source-map upload — conditionally appended. Must be LAST plugin
