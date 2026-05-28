@@ -85,6 +85,8 @@ const cspDirectives = {
   ],
   connectSrc: [
     "'self'",
+    "data:", // Session 110 hotfix — PostsGrid image-upload pipeline fetch()es a data: URI to convert cropped image to a Blob; CSP enforce blocked it. report-only window didn't exercise upload flow → caught at founder CP4 device test.
+    "blob:", // Session 110 hotfix — same upload pipeline + native Capacitor image picker returns blob: URLs that are then fetch()-ed before R2 PUT.
     "https://*.i.posthog.com",
     "https://*.ingest.sentry.io",
     "https://*.ingest.us.sentry.io",
