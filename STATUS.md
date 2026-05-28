@@ -1,9 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 105 | 🎉 **PR backlog: 0 open** ✅ (ND-S104-1 resolved: ioredis pinned `~5.10.1`; 29 root bumps merged via PR #66 replacing closed #56). Two-layer ioredis defence now live (Dependabot ignore + tilde range). | Prod runs main @ `42d3e82` (unchanged — 5 commits ahead, deliberate batched Fly deploy queued for end-of-day)
+> Last updated: 2026-05-28 | Session 106 | **Tier 3 hygiene:** Rule F.3 codified (CI cancelled ≠ failure); RUNBOOK §6 verified already correct (Session 95 callout misplaced); ALLOWED_ORIGINS recon delivered — fix is a 1-line Fly secrets update. | Prod runs main @ `42d3e82` (6 commits ahead, deliberate batched Fly deploy queued end-of-day)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Active hygiene:** Dependabot ignores: `ioredis@5.11.x` + 4 major-version blocks (prisma/@prisma/client/@eslint/js/@types/node). `package.json` pins `ioredis: ~5.10.1` (patch only) as second-layer defence against free-resolve splits.
+> **Awaiting Opus decision:** ALLOWED_ORIGINS Fly secrets cleanup (recommended `fly secrets set ALLOWED_ORIGINS="https://dukanchi.com,https://www.dukanchi.com"`). Native Capacitor pathway unaffected (CAPACITOR_ORIGINS hardcoded in src/app.ts:148 — independent of env).
 
 ## Day 1 Launch Sprint — 27 May 2026
 
