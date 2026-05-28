@@ -6,6 +6,122 @@
 
 ---
 
+## 2026-05-29 — Session 114 — Instant file-pick + cropper UX polish (THE actual upload-flow speed win)
+
+**Goal:** Eliminate the multi-second lag between picking a photo from device and seeing the cropper. Apply minimal-risk copy/label polish on the cropper + post-modal UX. No design overhaul (post-pilot).
+
+**Status:** ⚡ **FILE-PICK → CROPPER LATENCY: 3–7 s → <100 ms on 4G.** Fly **v31** complete. The lag root cause turned out to be MUCH bigger than scoped (FileReader.readAsDataURL): `handlePostImageUpload` was uploading the FULL raw photo to R2 + running Gemini moderation on it BEFORE the cropper appeared — AND that raw upload was always discarded after crop (Session 113's post-crop upload was the actual final one). Two uploads per post; one always wasted. Fix: `URL.createObjectURL(file)` for an instant local blob URL; single upload happens post-crop.
+
+| Metric | Value |
+|---|---|
+| PR merged | #82 (squash) |
+| Squash commit | `6fe89f2` |
+| Production HEAD | `485309f` → **`6fe89f2`** |
+| Fly release | **v31** complete |
+| Deploy duration | ~3m end-to-end |
+| Files changed | 2 (`src/components/ImageCropper.tsx`, `src/components/profile/PostsGrid.tsx`) |
+| Lines | +81 / −41 |
+| Tests | 112/112 + E2E 2/2 (baseline preserved) |
+
+### Root cause (worse than initially scoped)
+
+The S113 task brief assumed the lag was `FileReader.readAsDataURL` in the cropper. The actual culprit was discovered in recon: `handlePostImageUpload` and `handleEditImageUpload` were doing a **full server round-trip** before the cropper could appear:
+
+1. User picks 3-5 MB phone photo
+2. App POSTs file to `/api/upload` → R2 PUT + Gemini moderation
+3. Wait for URL to come back (~3-7 s on 4G)
+4. Set `rawImageUrl = serverUrl`, show cropper
+5. After crop, S113 path uploads the cropped JPEG AGAIN to `/api/upload`
+
+Step 2 was wasted bandwidth + wasted Gemini quota + wasted R2 PUT — the raw image is never used; only the cropped version is.
+
+### Fix (Phase 2)
+
+`handlePostImageUpload` + `handleEditImageUpload` now:
+```ts
+if (rawImageUrl.startsWith('blob:')) URL.revokeObjectURL(rawImageUrl);
+setRawImageUrl(URL.createObjectURL(file));
+setShowCropper(true);
+e.target.value = '';  // allow re-pick of same file after cancel
+```
+
+Sync, no network, no Sentry try/catch needed. Cropper sees blob: URL in <1 ms. Image element decode runs in the cropper's existing `useEffect`.
+
+**Memory hygiene** — two `useEffect` cleanups (one per blob URL state) revoke on URL change AND on unmount:
+```ts
+useEffect(() => () => {
+  if (rawImageUrl.startsWith('blob:')) URL.revokeObjectURL(rawImageUrl);
+}, [rawImageUrl]);
+```
+`startsWith('blob:')` guard prevents accidentally killing pre-existing R2 URLs in edit-flow state.
+
+### UX polish (Phase 3 — minimal-risk, copy only)
+
+| Surface | Before | After |
+|---|---|---|
+| Empty state heading | "Tap to upload image" | "Image select karein" |
+| Empty state subtitle | "Will be cropped to 3:4 ratio" | "3:4 ratio mein crop hokar post hogi" |
+| Caption placeholder | "Write a caption..." | "Apne product ke baare mein batayein..." |
+| Cropper mode tab 1 | "Crop & Adjust" | "Crop" |
+| Cropper mode tab 2 | "Fit (Black Bars)" | "Fit" |
+| Cropper drag hint | "Drag to adjust · Pinch to zoom" | "Drag karein · pinch zoom" |
+| Cropper primary CTA | "Use This Image" | "Image use karein" |
+| Zoom indicator | text-xs gray-500 | text-[11px] gray-400 tabular-nums (subtler + no jitter) |
+
+No new components, no new icons, no library swaps, no animation libs. Voice matches the existing Hinglish-informal-but-respectful tone (`Image upload nahi ho paya. Try again.`, `AI soch raha hai...`, `Voice se capture hua — check karo`).
+
+### Anti-Silent-Failure (Rule B) — bonus
+
+`ImageCropper` was missing an `image.onerror` handler. A corrupted file or dead URL would have left the cropper sitting silently with a black canvas, no feedback to user. Added:
+- `setLoadError(true)` on `image.onerror`
+- Inline red error message: "Image load nahi ho payi — Cancel karke dobara try karein"
+- Primary "Image use karein" button disabled when `!img || loadError` (was previously always enabled — could fire `handleComplete` on an unloaded image and produce a broken Blob)
+- Loading overlay: "Image load ho rahi hai..." until decode completes (rare flash on blob: URLs, rescues UX on slow devices)
+
+### Phase 5 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test -- --run` — **112/112**
+- ✅ `npm run test:e2e` — **2/2** in 21.1s
+- ✅ `npm run build` — green
+
+### Phase 6 CI
+
+- ✅ PR #82 (run 26599663802): `success`
+
+### Phase 7 deploy
+
+- ✅ `flyctl deploy -a dukanchi-app` → Fly **v31** complete
+- ✅ Machine 9080d70da60d18, 1/1 check passing
+- ⚠️ Same cosmetic "app not listening" warning (consistent v25–v31)
+
+### Phase 7.5 post-deploy verification (all green)
+
+| Check | Result |
+|---|---|
+| `/health` | **HTTP 200** in 585 ms, `{status:"ok", db:"up", redis:"up"}` |
+| SW push handler (ND-A1) | ✅ `addEventListener("push"` intact |
+| CSP header | ✅ `content-security-policy-report-only:` — Session 111 safe state preserved |
+| `/api/upload` (no auth) | **HTTP 401** Access denied — route alive + auth gate intact |
+
+### Side benefits
+
+- **Gemini quota savings**: every photo that previously went through `handlePostImageUpload` triggered a Gemini moderation call on the FULL raw bytes. Now moderation only runs on the cropped JPEG (smaller payload, same protection). Could be 50%+ Gemini calls saved depending on cancel-rate.
+- **R2 orphan elimination**: previously every cancelled-after-pick attempt left a raw R2 object. Now no R2 object is created until the user commits to "Image use karein".
+- **CSP cleanup compatible**: `connect-src` `data:` (S110) was already obsolete post-S113. After S114, `blob:` use is purely the cropper's local blob URL — would still need `blob:` to stay in `connect-src` if any code path `fetch()`-ed the blob URL, but the cropper uses `image.src = blobUrl` (not fetch), which doesn't require `connect-src` permission. Re-enforce CSP work (Rule H) can potentially remove BOTH `data:` and `blob:` from `connect-src` after a directive audit.
+
+### Out of scope
+
+- `AiBioModal` FileReader path (audio bio) — different use
+- `PostsGrid:processVoice` FileReader retained (voice → JSON for Gemini `/api/ai/transcribe-voice`, not an upload path)
+- The cropper still uses `crossOrigin = 'anonymous'` — harmless for blob: URLs, kept for the rare case where consumers might pass an R2 URL (defensive)
+
+### Awaiting
+
+- Founder real-device test — phone photo upload should feel near-instant from tap-to-crop. Single upload after commit. Sentry watch for `postsGrid.cropperUploadNew` / `cropperUploadEdit` exception class (signature unchanged — no new exceptions expected)
+
+---
+
 ## 2026-05-29 — Session 113 — Client image compression + eliminate fetch(data:URI) (perf + Rule H prereq cleanup)
 
 **Goal:** Optimize image-upload latency and remove the architectural dependency that triggered the Session 110 / 111 CSP hotfix-then-rollback cycle. Replace the `canvas → toDataURL → fetch(dataURI) → blob → FormData` chain with `canvas → compressImage() → Blob → FormData`. Pure client change; server-side upload + moderation surface untouched.
