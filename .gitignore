@@ -36,6 +36,11 @@ ios/App/App/GoogleService-Info.plist
 *.tsbuildinfo
 typecheck-errors.txt
 
+# Playwright E2E (Session 112 — Tier 5B foundation)
+test-results/
+playwright-report/
+playwright/.cache/
+
 # Local forensic snapshots (Session 88 incident response, etc.) — never committed
 temp/
 .env.fly-secrets

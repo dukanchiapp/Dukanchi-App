@@ -160,6 +160,18 @@ If EITHER signal fails (local gate red OR re-run cancelled/failed twice), THEN e
 
 Origin: Session 99 / 2026-05-28 ND-S99-1 — PR #4 (Dependabot GH-Actions bump) merged into main; first CI run on the squash commit returned `conclusion=cancelled` while adjacent merges before and after ran clean. Local typecheck + tests on the cancelled SHA were green; `gh run rerun` succeeded. The cancellation traced to a Dependabot-internal "github_actions in / for actions/checkout - Update" workflow that completed 44s before our CI started — likely concurrency race. Rule codified here to prevent reflexive ABORT on transient platform cancellations.
 
+### Rule H — CSP enforce-flip prerequisites (Sessions 110, 111)
+
+Before flipping `helmet.contentSecurityPolicy.reportOnly: true → false`, three prerequisites are mandatory. CSP enforce broke image upload twice on 2026-05-28 because each of these was skipped.
+
+1. **Exercise EVERY real user flow during the report-only window** — directive theory is insufficient. Sessions 95–107 monitored CSP in report-only for 3.5 days but the window was never exercised against a real upload, so the `connect-src` gap that `PostsGrid.tsx`'s `fetch(data:image/...)` step depends on stayed invisible. Document a flow checklist that includes: signup + login, image upload (R2 round-trip), search (Gemini embeddings + pgvector), chat send/receive (Socket.IO), push subscribe (VAPID), geolocation, maps, OAuth/payments if added. Confirm zero new `Content-Security-Policy-Report-Only` violations across all flows BEFORE flipping.
+
+2. **Solve the SW-cache stale-header propagation problem** — Workbox precaches `index.html`, which freezes the CSP header value at install time. Server-side CSP changes do NOT reach legacy PWA users without explicit cache churn. Adopt **network-first navigation for the HTML document** in `src/sw.ts` (e.g. `NetworkFirst` strategy on `NavigationRoute` for `index.html`) so the CSP header is fetched fresh on every navigation, with cache as fallback. Bump the SW version on the same PR so all existing installs activate the new SW (with network-first nav) BEFORE the enforce header lands.
+
+3. **Keep `git revert` rollback ready** — the enforce commit must be a single squash with no other deploy-shaped changes in the same release window. Session 111 was a clean revert because Session 108's enforce-flip touched only `reportOnly: true → false` on two lines; if it had bundled directive changes or an unrelated security feature, rollback would have been much harder.
+
+Origin: Sessions 110 (2026-05-28 ND-S110-1 connect-src `data:` gap) + 111 (2026-05-28 ND-S111-1 SW-cache stale-header propagation). CSP enforce remains in the backlog as a fresh-day task with the three prerequisites above as scope.
+
 ### Rule G — Verification Protocol
 
 Always use `npm run typecheck` for TypeScript verification, NEVER `npx tsc --noEmit` alone. The root `tsconfig.json` is a composite reference — it does NOT enforce strict project configs. Running `tsc --noEmit` against it can report "0 errors" while the strict project configs fail.
