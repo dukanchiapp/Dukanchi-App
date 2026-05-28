@@ -40,6 +40,7 @@
     "src/config",
     "src/services",
     "src/workers",
+    "src/sw.ts",
     "src/app.ts",
     "src/server.ts",
     "server.ts",
