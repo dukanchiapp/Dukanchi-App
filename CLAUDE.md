@@ -145,6 +145,21 @@ The minimum acceptable bar is (b): smoke-then-cleanup-before-commit. (a) is pref
 
 Origin: Session 89.5 / Day 2.6 — 9 placeholder JPEGs (Day 2.6 Item 2 rate-limit burst smoke) + 2 stragglers (Day 3 Subtask 3.3 smoke T1 + T5) leaked into the prod `dukanchi-prod` R2 bucket. Cleaned forensically via a one-off `temp/r2-cleanup-day26.ts` script; rule codified here to prevent recurrence on the storage surface.
 
+### Rule F.3 — CI cancelled is NOT failure
+
+When a CI run shows `conclusion=cancelled` (platform race condition, superseded by a newer run, concurrency-group eviction, Dependabot-internal workflow side-effects, etc.), do NOT abort the session. Cancelled means the run was terminated before assertions could complete — it does NOT mean the code is broken.
+
+**Validation protocol (require TWO green signals before continuing):**
+
+1. **Local gates on the exact SHA** — `git checkout <sha>` (or stay on the branch at that commit) → run `npm run typecheck` + `npm test -- --run`. Both green = code health proven independent of the cancelled CI run.
+2. **Re-trigger the CI run** — `gh run rerun <run-id>` → re-watch with `gh run watch`. Re-run completing as `success` confirms the cancellation was transient/platform-side.
+
+Only abort on `conclusion=failure` or `conclusion=timed_out` — both of which indicate the run made assertions and one of them broke. `cancelled` indicates the run never got that far.
+
+If EITHER signal fails (local gate red OR re-run cancelled/failed twice), THEN escalate — but the first cancellation alone is not an abort trigger.
+
+Origin: Session 99 / 2026-05-28 ND-S99-1 — PR #4 (Dependabot GH-Actions bump) merged into main; first CI run on the squash commit returned `conclusion=cancelled` while adjacent merges before and after ran clean. Local typecheck + tests on the cancelled SHA were green; `gh run rerun` succeeded. The cancellation traced to a Dependabot-internal "github_actions in / for actions/checkout - Update" workflow that completed 44s before our CI started — likely concurrency race. Rule codified here to prevent reflexive ABORT on transient platform cancellations.
+
 ### Rule G — Verification Protocol
 
 Always use `npm run typecheck` for TypeScript verification, NEVER `npx tsc --noEmit` alone. The root `tsconfig.json` is a composite reference — it does NOT enforce strict project configs. Running `tsc --noEmit` against it can report "0 errors" while the strict project configs fail.

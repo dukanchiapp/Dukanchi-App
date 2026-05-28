@@ -6,6 +6,129 @@
 
 ---
 
+## 2026-05-28 — Session 106 — Tier 3 Hygiene: F.3 rule codified + RUNBOOK §6 verified + ALLOWED_ORIGINS recon
+
+**Goal:** Codify the Session 99 ND-S99-1 "CI cancelled ≠ failure" learning into CLAUDE.md as Rule F.3. Fix RUNBOOK §6 smoke script if it still uses `otp` instead of `password`. Recon `ALLOWED_ORIGINS` location and configuration for an Opus fix decision.
+
+**Status:** ✅ **Tier 3 hygiene sweep complete (docs/config only — no code, no deploy).** Rule F.3 codified. RUNBOOK §6 verified already correct (predated the bug-report). ALLOWED_ORIGINS recon delivered — fix is a one-line Fly secrets update, not a code change. Production runtime unchanged at `42d3e82` (5 commits ahead per batched-deploy queue).
+
+### Edit 1 — CLAUDE.md: Rule F.3 codified
+
+Added new rule between F.2 (Storage Isolation) and Rule G (Verification Protocol) — matches existing section conventions (header + body + "Origin: …" citation):
+
+```
+### Rule F.3 — CI cancelled is NOT failure
+
+When a CI run shows conclusion=cancelled (platform race condition, superseded
+by a newer run, concurrency-group eviction, Dependabot-internal workflow
+side-effects, etc.), do NOT abort the session. Cancelled means the run was
+terminated before assertions could complete — it does NOT mean the code is
+broken.
+
+Validation protocol (require TWO green signals before continuing):
+  1. Local gates on the exact SHA → npm run typecheck + npm test -- --run.
+     Both green = code health proven independent of the cancelled CI run.
+  2. Re-trigger the CI run — gh run rerun <run-id> → re-watch.
+     Re-run completing as success confirms the cancellation was transient.
+
+Only abort on conclusion=failure or conclusion=timed_out — both indicate the
+run made assertions and one of them broke. cancelled indicates the run never
+got that far.
+
+If EITHER signal fails, escalate — but the first cancellation alone is not an
+abort trigger.
+
+Origin: Session 99 / 2026-05-28 ND-S99-1 — PR #4 merge cancellation that was
+mistaken for failure; local gates + rerun both confirmed transient race with a
+Dependabot-internal workflow.
+```
+
+### ND-S106-RUNBOOK — RUNBOOK §6 already correct (Session 95 callout misplaced)
+
+The Session 95 post-mortem listed "P2 — Update RUNBOOK §6 smoke script — Curl 3 payload (`password`, not `otp`)" as a follow-up. Investigation today: **the actual RUNBOOK §6 had no `otp` reference at any point.**
+
+`git log RUNBOOK.md` shows the smoke section was authored on **2026-05-14 / Day 6 (Session 93 / commit `59a87332`)** — 2 days BEFORE the Session 95 Day-8 deploy that surfaced the `otp` bug. The §6 Curl 3 was already `OPTIONS /api/auth/login` (CORS preflight), no body payload.
+
+The `otp`-based Curl 3 that Session 95 actually encountered was almost certainly in an ad-hoc inline smoke script used during the deploy verification, NOT in the committed RUNBOOK. The "RUNBOOK §6 needs fix" call was directionally aimed at the wrong file.
+
+**No edit applied** to RUNBOOK.md. The §6 smoke battery as-shipped (Day 6, commit `59a87332`) is the correct payload — 5 curls:
+
+1. `/health` HEAD
+2. SPA root content-type
+3. CORS preflight for `https://dukanchi.com` origin
+4. CORS preflight for `capacitor://localhost` origin
+5. JSON content on `/api/pincode/400050`
+
+No POST `/api/auth/login` with body in the committed RUNBOOK §6 to fix.
+
+### Edit 2 — ALLOWED_ORIGINS recon (read-only, REPORT — no fix applied)
+
+**Code locations:**
+- Schema: `src/config/env.ts:55` — `ALLOWED_ORIGINS: z.string().optional()` (Fly env var; empty string treated as undefined)
+- Helper: `src/config/env.ts:131-140` — `getAllowedOrigins(): string[]`
+  - If `env.ALLOWED_ORIGINS` set → split by comma, trim, return list
+  - If unset + `NODE_ENV === 'production'` → returns `[]` (rejects all cross-origin)
+  - If unset + dev → returns `['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173']`
+- Consumer: `src/app.ts:152` (CORS middleware) + `src/config/socket.ts:11` (Socket.IO CORS)
+- Capacitor: `src/app.ts:148` — `CAPACITOR_ORIGINS = ['capacitor://localhost', 'http://localhost', 'https://localhost']` — hardcoded list **ALWAYS allowed regardless of `ALLOWED_ORIGINS` env**. This is the native-APK gate.
+
+**Critical safety properties (verified by reading the code):**
+1. **No hardcoded localhost defaults reach production code paths.** The dev list at L139 is gated behind `env.NODE_ENV !== 'production'`. In production, an unset/empty `ALLOWED_ORIGINS` returns `[]`.
+2. **Capacitor native origins are independent.** Cleaning `ALLOWED_ORIGINS` will NOT break native APK push or auth — `CAPACITOR_ORIGINS` at app.ts:148 carries those gates separately.
+3. **Production current state (per Day 8 Session 95 post-mortem):** `ALLOWED_ORIGINS="http://localhost:3000,..."` (leading entry) — a pre-existing Fly env config drift, harmless for same-origin browser traffic but unhygienic.
+
+**Recommended fix (NOT applied — awaiting Opus approval since this is a runtime CORS change):**
+
+```bash
+# Pre-flight: confirm current Fly value
+fly secrets list -a dukanchi-app | grep -i allowed_origins  # (value is masked but presence confirmable)
+
+# Apply the clean list — pure Fly secrets update, no code or deploy needed
+# (Fly secrets propagate to running machines on next restart; no rebuild necessary)
+fly secrets set ALLOWED_ORIGINS="https://dukanchi.com,https://www.dukanchi.com" -a dukanchi-app
+
+# Post-update CORS preflight smoke (Rule E)
+curl -s -i -X OPTIONS https://dukanchi.com/api/auth/login \
+  -H "Origin: https://dukanchi.com" \
+  -H "Access-Control-Request-Method: POST" | grep -i access-control-allow-origin
+# Expected: Access-Control-Allow-Origin: https://dukanchi.com
+```
+
+**Why this is safe:**
+- `https://dukanchi.com` (with + without `www`) covers all production browser traffic
+- Capacitor APK uses `CAPACITOR_ORIGINS` hardcoded list → unaffected
+- ngrok dev origins use `isNgrokOrigin(origin)` helper (env.ts:143-149) → unaffected
+- Any cross-origin request from `http://localhost:*` would now be rejected (correct posture — there's no legitimate cross-origin from localhost to production)
+
+### Verification gates (docs/config only)
+
+- **`npm run typecheck`** — ✅ 0 errors (web + server + worker)
+- **`npm test -- --run`** — ✅ 100/100 (17 files, 4.71s)
+- **Production smoke** — `/health` HTTP 200, 0.60s
+
+### Production runtime
+
+Unchanged at `42d3e82`. Pending unshipped commits on `main` (now 6 ahead with this session's docs):
+- `1606d20` admin-panel minor+patch group (S103)
+- `70ab011` admin-panel @types/node 24 → 25 (S103)
+- `d5c204c` docs S103
+- `9977bd2` Dependabot guards + docs S104
+- `79635ac` 29 root bumps + ioredis tilde pin (S105)
+- `a47d415` docs S105
+- (+ Session 106 docs commit)
+
+Batched into the deliberate end-of-day Fly deploy.
+
+### Files modified
+
+- `CLAUDE.md` — +25 lines (Rule F.3 section)
+- `SESSION_LOG.md` — Session 106 entry prepended
+- `STATUS.md` — Last updated banner refreshed
+- `RUNBOOK.md` — **NOT MODIFIED** (verified already correct, see ND-S106-RUNBOOK)
+- `src/config/env.ts` / `src/app.ts` — **NOT MODIFIED** (recon-only)
+
+---
+
 ## 2026-05-28 — Session 105 — PR #56 Hardened Merge: ioredis ~5.10.1 pin — Backlog 0
 
 **Goal:** Resolve ND-S104-1 (free-resolve dedup trap) by tightening root `ioredis` range from `^5.10.1` to `~5.10.1` (patch only), then merge the 29 minor/patch bumps from PR #56 with dedup now structurally guaranteed.
