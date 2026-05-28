@@ -1,9 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 104 | **Checkpoint 2 PARTIAL:** 4 major-bump PRs CLOSED (#57/#58/#59/#60) + 4 Dependabot major-version guards added. **PR #56 deferred** — Phase 2 dedup verify reproduced PR #48-class ioredis split (ND-S104-1); needs Opus strategy. Backlog 5 → 1. | Prod runs main @ `42d3e82` (unchanged — admin-panel #54/#55 + future #56 batch into deliberate end-of-day deploy)
+> Last updated: 2026-05-28 | Session 105 | 🎉 **PR backlog: 0 open** ✅ (ND-S104-1 resolved: ioredis pinned `~5.10.1`; 29 root bumps merged via PR #66 replacing closed #56). Two-layer ioredis defence now live (Dependabot ignore + tilde range). | Prod runs main @ `42d3e82` (unchanged — 5 commits ahead, deliberate batched Fly deploy queued for end-of-day)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Active hygiene:** Open PR count 5 → 1 (only #56 remains, ABORT-deferred). Dependabot now ignores ioredis@5.11.x + 4 major-version bumps (prisma, @prisma/client, @eslint/js, @types/node). Future bumps to those will not be proposed by weekly cycles.
+> **Active hygiene:** Dependabot ignores: `ioredis@5.11.x` + 4 major-version blocks (prisma/@prisma/client/@eslint/js/@types/node). `package.json` pins `ioredis: ~5.10.1` (patch only) as second-layer defence against free-resolve splits.
 
 ## Day 1 Launch Sprint — 27 May 2026
 

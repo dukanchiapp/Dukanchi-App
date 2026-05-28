@@ -6,6 +6,100 @@
 
 ---
 
+## 2026-05-28 — Session 105 — PR #56 Hardened Merge: ioredis ~5.10.1 pin — Backlog 0
+
+**Goal:** Resolve ND-S104-1 (free-resolve dedup trap) by tightening root `ioredis` range from `^5.10.1` to `~5.10.1` (patch only), then merge the 29 minor/patch bumps from PR #56 with dedup now structurally guaranteed.
+
+**Status:** ✅ **PR backlog FULLY CLEARED.** Two-layer ioredis defence now live: Dependabot ignore (Session 101) for proposal stage + tilde range (this session) for resolve stage. Production runtime unchanged at `42d3e82` — admin-panel #54/#55 + this session's bumps batch into the deliberate end-of-day Fly deploy.
+
+### 🎉 Day 1 PR Backlog Sweep — milestone (2nd time today)
+
+| Session | Action | PRs |
+|---|---|---|
+| 99 | Batch-merge 4× GH-Actions Dependabot bumps | #2, #3, #4, #5 |
+| 100 | Rebase + merge admin-panel grouped bump | #34 |
+| 101 | Close + Dependabot guard the un-mergeable root grouped bump | #48 closed |
+| 103 | Auto-merge admin-panel Dependabot Monday cycle | #54, #55 |
+| 104 | Close 4 majors + Dependabot major-version guards | #57, #58, #59, #60 closed |
+| **105** | **Restore PR #56 with ioredis ~5.10.1 pin → merge** | #66 (replaces closed #56) ✅ |
+| **Total** | | **6 days → 0 backlog** |
+
+### ND-S104-1 RESOLVED — the two-layer ioredis defence
+
+| Layer | Mechanism | Effect |
+|---|---|---|
+| **Layer 1** (Session 101) | `.github/dependabot.yml` `ignore: ioredis@5.11.x` | Prevents Dependabot from **proposing** a 5.11 bump in a PR |
+| **Layer 2** (Session 105 — THIS) | `package.json`: `"ioredis": "~5.10.1"` (tilde, patch only) | Prevents npm's free-resolver from picking 5.11 even when `package-lock.json` is wiped |
+
+With both layers active, the `bullmq@5.77.x ↔ ioredis` dedup is guaranteed under both Dependabot weekly cycles AND ad-hoc fresh installs (contributor dev environments, lockfile regen scenarios, etc.).
+
+### PR #56 → #66 (server-side close detour)
+
+During Phase 6's `git push --force-with-lease`, the push was rejected: `dependabot/npm_and_yarn/minor-and-patch-129aa441e7` no longer existed on origin. Investigation: **PR #56 had been server-side CLOSED** (likely Dependabot auto-reaped after the underlying tree shifted post-merge of PRs #54/#55 admin-panel bumps). Local commits intact, however — pivoted to a fresh branch `chore/session-105-pr56-restore-with-ioredis-pin` and opened **PR #66** with the same 2 commits:
+- Commit 1: Original Dependabot bump (29 root minor/patch packages)
+- Commit 2: My ioredis `^5.10.1` → `~5.10.1` pin + regenerated lockfile
+
+PR #66 squash-merged at `79635ac` — final main state identical to what merging PR #56 + the pin would have produced.
+
+### Top 10 of the 29 packages bumped (full list in commit #105fd79 message)
+
+| Package | Bump |
+|---|---|
+| `@aws-sdk/client-s3` | 3.1041.0 → 3.1054.0 |
+| `@capacitor/core` + `android` + `cli` + `push-notifications` | 8.3.3 → 8.3.4 (push 8.0.4 → 8.1.1) |
+| `@sentry/node` + `profiling-node` + `react` | 10.52.x → 10.54.0 |
+| `bullmq` | 5.76.4 → 5.77.6 |
+| `helmet` | 8.1.0 → 8.2.0 |
+| `motion` | 12.38.0 → 12.40.0 |
+| `posthog-js` | 1.373.4 → 1.376.3 |
+| `react`/`react-dom` | 19.2.5 → 19.2.6 |
+| `react-router-dom` | 7.14.2 → 7.15.1 |
+| `vite-plugin-pwa` | 1.2.0 → **1.3.0** (re-verified ND-A1 push handler still compiles cleanly under v1.3) |
+
+### Verification gates
+
+| Gate | Result |
+|---|---|
+| **🚨 Dedup verify** (`npm ls ioredis` on rebased branch with fresh install) | ✅ `bullmq@5.77.6 → ioredis@5.10.1 deduped` + root `ioredis@5.10.1` — SAME tree, no split |
+| `npm run typecheck` (web + server + worker) | ✅ 0 errors |
+| `npm test -- --run` | ✅ 100/100 (17 files, 4.36s) |
+| `npm run build` | ✅ `mode injectManifest`, 59 precache entries, `dist/sw.js` 45,253 bytes |
+| **ND-A1 re-verify** (push handler under vite-plugin-pwa 1.3.0) | ✅ `addEventListener("push"` + `addEventListener("notificationclick"` both present in `dist/sw.js` |
+| `npm audit` | 9 moderate (unchanged ND-T6 residual — firebase-admin/exceljs uuid chain) |
+| Pre-merge CI on PR #66 | ✅ Typecheck+Test+Build 1m37s + Bundle Size 2m0s |
+| Post-merge CI on main `79635ac` | ✅ success |
+| Post-merge `npm ci` on main + `npm ls ioredis` | ✅ deduped at 5.10.1 |
+| Production `/health` smoke | ✅ HTTP 200, 0.39s — `{"status":"ok","db":"up","redis":"up"}` |
+
+### Deviations
+
+**ND-S105-1 — PR #56 server-side closed mid-task.** Surfaced during Phase 6 push. Cause: Dependabot reaps PRs whose underlying group resolutions are stale after partial merges; the 29-package group's dependency tree had shifted after #54/#55 merged. Local commits unaffected — pivoted to a new branch + PR #66 with identical content. No functional impact, but documents that grouped-bump PRs can vanish if not merged promptly within Dependabot's window.
+
+**ND-S105-2 — Dependabot already proposed a replacement.** During the `git pull` after merging PR #66, a new branch `dependabot/npm_and_yarn/minor-and-patch-c26b3e5e1b` surfaced from origin. This is Dependabot's recalculated grouped bump after the dust settled. Will show as a new PR shortly. Not touched this session (out of scope; standing backlog item for next Monday cycle triage).
+
+### Production deploy not triggered
+
+Per spec: `prod now N commits ahead (admin-panel + #56). Deliberate batched Fly deploy queued end-of-day. NO deploy this session.` Honoured. Production runtime remains at `42d3e82` (post-ND-A1 Session 102b).
+
+Pending unshipped commits on `main` ahead of prod:
+- `1606d20` admin-panel minor+patch group (Session 103)
+- `70ab011` admin-panel @types/node 24 → 25 (Session 103)
+- `d5c204c` docs (Session 103)
+- `9977bd2` Dependabot guards + Session 104 docs
+- **`79635ac` THIS SESSION — 29 root bumps + ioredis tilde pin**
+- (+ Session 105 docs commit)
+
+Bundled into the end-of-day deliberate Fly deploy.
+
+### Files modified
+
+- `package.json` — 1 line touched (`"ioredis": "^5.10.1"` → `"~5.10.1"`) + 29 transitive bump entries via Dependabot commit
+- `package-lock.json` — regenerated from scratch (+3282 / -5299 net — lockfile dedup removed duplicate transitive entries)
+- `SESSION_LOG.md` — Session 105 entry prepended
+- `STATUS.md` — Last updated banner refreshed
+
+---
+
 ## 2026-05-28 — Session 104 — Checkpoint 2 (Part 2): 4 majors closed + guards added, PR #56 deferred (ioredis dedup surprise)
 
 **Goal:** Finish Checkpoint 2 — merge PR #56 (with dedup verify), close 4 major-version PRs, add Dependabot major-version guards.
