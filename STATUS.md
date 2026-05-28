@@ -1,9 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 103 | **Checkpoint 2: 2 admin-panel Dependabot PRs merged (#54, #55); 5 root-npm PRs flagged for Opus review (#56, #57, #58, #59, #60)**. ioredis@5.11.x guard held ✅ | Prod runs main @ `42d3e82` (unchanged — admin-panel ships with next deploy)
+> Last updated: 2026-05-28 | Session 104 | **Checkpoint 2 PARTIAL:** 4 major-bump PRs CLOSED (#57/#58/#59/#60) + 4 Dependabot major-version guards added. **PR #56 deferred** — Phase 2 dedup verify reproduced PR #48-class ioredis split (ND-S104-1); needs Opus strategy. Backlog 5 → 1. | Prod runs main @ `42d3e82` (unchanged — admin-panel #54/#55 + future #56 batch into deliberate end-of-day deploy)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Active hygiene:** Open PR count 7 → 5 (#56 grouped root + 4 major-bump PRs deferred). Dependabot ignore `ioredis@5.11.x` confirmed working in prod via PR #56's untouched lockfile entry.
+> **Active hygiene:** Open PR count 5 → 1 (only #56 remains, ABORT-deferred). Dependabot now ignores ioredis@5.11.x + 4 major-version bumps (prisma, @prisma/client, @eslint/js, @types/node). Future bumps to those will not be proposed by weekly cycles.
 
 ## Day 1 Launch Sprint — 27 May 2026
 
