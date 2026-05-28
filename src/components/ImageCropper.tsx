@@ -1,9 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Move, Maximize2 } from 'lucide-react';
+import { compressImage } from '../lib/compressImage';
 
 interface ImageCropperProps {
   imageUrl: string;
-  onComplete: (croppedDataUrl: string) => void;
+  /**
+   * Receives the cropped image as a JPEG Blob. Session 113 changed this
+   * signature from `(dataUrl: string)` to `(blob: Blob)` to eliminate the
+   * downstream `fetch(dataUri).then(r => r.blob())` step in upload call
+   * sites — the cropper now goes straight from canvas to Blob via
+   * compressImage(). May be sync or async (caller awaits).
+   */
+  onComplete: (blob: Blob) => void | Promise<void>;
   onCancel: () => void;
 }
 
@@ -101,7 +109,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
     setScale(newScale);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     // Export at higher resolution
@@ -125,7 +133,15 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
       ctx.drawImage(img, offset.x * exportScale, offset.y * exportScale, img.width * scale * exportScale, img.height * scale * exportScale);
     }
 
-    onComplete(exportCanvas.toDataURL('image/jpeg', 0.9));
+    // Session 113: canvas → Blob direct via compressImage. The 1080×1440 cap
+    // is a no-op for the current 600×800 export, but the JPEG re-encode at
+    // 0.85 (vs the previous 0.9 toDataURL) saves ~20% bytes with no visible
+    // quality loss. The Blob path eliminates the downstream
+    //   fetch(dataUri).then(r => r.blob())
+    // step in PostsGrid call sites and removes the data: connect-src
+    // dependency on the upload pipeline.
+    const blob = await compressImage(exportCanvas, 1080, 1440, 0.85);
+    await onComplete(blob);
   };
 
   return (
