@@ -68,9 +68,20 @@ vi.mock("../lib/logger", () => ({
 
 vi.mock("@sentry/node", () => ({
   captureException: vi.fn(),
+  captureMessage: vi.fn(),
   addBreadcrumb: vi.fn(),
   setUser: vi.fn(),
   getCurrentScope: () => ({ setTag: vi.fn() }),
+}));
+
+// Tier 5A — mock the image safety classifier so the existing 200-path tests
+// don't make real Gemini calls. Each test that needs a different outcome
+// (reject / fail-open) overrides the implementation in beforeEach.
+const { classifyImageSafetyMock } = vi.hoisted(() => ({
+  classifyImageSafetyMock: vi.fn(),
+}));
+vi.mock("../services/geminiVision", () => ({
+  classifyImageSafety: classifyImageSafetyMock,
 }));
 
 // Mock disk write — upload.middleware falls back to fsp.writeFile when
@@ -138,7 +149,12 @@ function makeUploadApp(): express.Express {
 }
 
 describe("Upload validation (Day 3.3)", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Default to "safe" so existing pre-Tier-5A tests behave unchanged.
+    // Reject / fail-open cases below override per-test.
+    classifyImageSafetyMock.mockResolvedValue({ safe: true, durationMs: 1 });
+  });
 
   it("[Test 8] text claiming image/jpeg → 415 MIME_MISMATCH (magic-byte rejection)", async () => {
     const app = makeUploadApp();
@@ -214,6 +230,82 @@ describe("Upload validation (Day 3.3)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
+  });
+
+  // ── Tier 5A — Image moderation gate (Session 109a) ────────────────────────
+  it("[Test 19] classifier reports unsafe → 422 IMAGE_UNSAFE, fs writeFile NOT called", async () => {
+    classifyImageSafetyMock.mockResolvedValueOnce({
+      safe: false,
+      blockReason: "SAFETY",
+      ratings: { HARM_CATEGORY_SEXUALLY_EXPLICIT: "HIGH" },
+      durationMs: 220,
+    });
+
+    const fs = await import("fs");
+    const writeFileMock = vi.mocked(fs.promises.writeFile);
+    writeFileMock.mockClear();
+
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "nsfw.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(422);
+    expect(res.body.code).toBe("IMAGE_UNSAFE");
+    expect(res.body.error).toMatch(/unsafe content/i);
+    // Persistence MUST NOT have happened
+    expect(writeFileMock).not.toHaveBeenCalled();
+    // Classifier invoked exactly once with the validated buffer + DETECTED mime
+    expect(classifyImageSafetyMock).toHaveBeenCalledTimes(1);
+    const [b64, mime] = classifyImageSafetyMock.mock.calls[0];
+    expect(typeof b64).toBe("string");
+    expect(b64.length).toBeGreaterThan(0);
+    expect(mime).toBe("image/jpeg");
+  });
+
+  it("[Test 20] classifier fails (returns safe:true with error) → upload PROCEEDS (fail-open)", async () => {
+    // Simulates Gemini outage / timeout — the classifier returns safe:true
+    // with error string set. verifyAndPersistUpload must allow + persist.
+    classifyImageSafetyMock.mockResolvedValueOnce({
+      safe: true,
+      error: "AbortError: timeout 6000ms",
+      durationMs: 6_001,
+    });
+
+    const fs = await import("fs");
+    const writeFileMock = vi.mocked(fs.promises.writeFile);
+    writeFileMock.mockClear();
+
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "legit.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    // Persistence path DID run — fail-open contract honored
+    expect(writeFileMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("[Test 21] classifier safe:true → upload proceeds, fs writeFile called once (positive path regression)", async () => {
+    // Explicit positive-path assertion that with classifier returning safe:true
+    // the existing persist flow still runs (covers the case where a future
+    // refactor accidentally inverts the safety branch).
+    classifyImageSafetyMock.mockResolvedValueOnce({ safe: true, durationMs: 800 });
+
+    const fs = await import("fs");
+    const writeFileMock = vi.mocked(fs.promises.writeFile);
+    writeFileMock.mockClear();
+
+    const app = makeUploadApp();
+    const res = await request(app)
+      .post("/test-upload")
+      .attach("file", REAL_JPEG_BYTES, { filename: "clean.jpg", contentType: "image/jpeg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(writeFileMock).toHaveBeenCalledTimes(1);
+    expect(classifyImageSafetyMock).toHaveBeenCalledTimes(1);
   });
 });
 

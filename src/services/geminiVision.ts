@@ -1,8 +1,49 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
+import * as Sentry from '@sentry/node';
 import { logger } from '../lib/logger';
 import { env } from '../config/env';
 
 const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+
+// ── Tier 5A — Image moderation safetySettings ───────────────────────────────
+// Image-specific HARM_CATEGORY_IMAGE_* enum values exist in @google/genai
+// v1.50.1 but are flagged "not supported in Gemini API" (Vertex AI only).
+// We use the text-only categories — Gemini's multimodal safety classifier
+// applies them to image inputs as well. Threshold MEDIUM_AND_ABOVE chosen
+// (per Opus design) to avoid false-positives on legit retail clothing /
+// kitchenware while still gating overt NSFW / violence / hate.
+const IMAGE_SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+];
+
+// Block reasons / finish reasons that indicate the model refused on safety.
+// Kept as a string set so we don't need to import enums purely for comparison
+// (the SDK returns these as string literal values at runtime).
+const UNSAFE_BLOCK_REASONS: ReadonlySet<string> = new Set([
+  'SAFETY',
+  'IMAGE_SAFETY',
+  'PROHIBITED_CONTENT',
+]);
+const UNSAFE_FINISH_REASONS: ReadonlySet<string> = new Set([
+  'SAFETY',
+  'IMAGE_SAFETY',
+  'PROHIBITED_CONTENT',
+  'SPII',
+]);
+
+export interface ImageSafetyResult {
+  safe: boolean;
+  blockReason?: string;
+  ratings?: Record<string, string>;
+  durationMs: number;
+  error?: string;
+}
+
+// Exported for unit tests + downstream call-sites that need to assert config shape.
+export { IMAGE_SAFETY_SETTINGS };
 
 const CATEGORIES = [
   'Electronics', 'Fashion', 'Food', 'Beauty', 'Grocery', 'Home', 'Health',
@@ -78,6 +119,96 @@ export async function analyzeProductImage(
   } catch (err: any) {
     logger.error({ err, feature: 'analyzeProductImage' }, '[GEMINI] analyzeProductImage failed');
     return defaults;
+  }
+}
+
+/**
+ * Tier 5A — Synchronous image safety classification.
+ *
+ * Called from upload.middleware.verifyAndPersistUpload AFTER magic-byte/MIME
+ * gates pass but BEFORE the R2 PutObjectCommand. Returns { safe: false } when
+ * Gemini's multimodal safety classifier blocks the image at MEDIUM_AND_ABOVE
+ * probability across SEXUAL / DANGEROUS / HATE / HARASSMENT.
+ *
+ * Contract (FAIL-OPEN):
+ *   - Any timeout / network / SDK error → returns { safe: true, error: ... }
+ *   - Sentry captureMessage at warning level on the error path so a Gemini
+ *     outage is visible but does NOT block legit uploads.
+ *
+ * Timeout: 6s (vs 30s on the analysis fns) — sync UX budget. Typical Gemini
+ * Flash call returns in 0.5–1.5s on small images, so the 6s ceiling absorbs
+ * cold-start variance while preserving upload latency.
+ */
+export async function classifyImageSafety(
+  imageBase64: string,
+  mimeType: string,
+): Promise<ImageSafetyResult> {
+  const t0 = Date.now();
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      config: {
+        abortSignal: AbortSignal.timeout(6_000),
+        safetySettings: IMAGE_SAFETY_SETTINGS,
+      },
+      contents: [
+        {
+          parts: [
+            { inlineData: { mimeType, data: imageBase64 } },
+            // Minimal prompt — Gemini Flash sometimes returns finishReason=STOP
+            // with empty content for inlineData-only inputs; this nudges it to
+            // engage the classifier consistently. The text output is discarded.
+            { text: 'Describe this image briefly.' },
+          ],
+        },
+      ],
+    });
+
+    const blockReason = response.promptFeedback?.blockReason;
+    const candidate = response.candidates?.[0];
+    const finishReason = candidate?.finishReason;
+
+    // Build category->probability map for forensic logs (e.g. "HIGH" on
+    // SEXUAL category but we still allowed because threshold was MEDIUM —
+    // useful tuning telemetry).
+    const ratings: Record<string, string> = {};
+    const promptRatings = response.promptFeedback?.safetyRatings ?? [];
+    const candidateRatings = candidate?.safetyRatings ?? [];
+    for (const r of [...promptRatings, ...candidateRatings]) {
+      if (r.category && r.probability) {
+        ratings[String(r.category)] = String(r.probability);
+      }
+    }
+
+    const blockedByPrompt =
+      typeof blockReason === 'string' && UNSAFE_BLOCK_REASONS.has(blockReason);
+    const blockedByFinish =
+      typeof finishReason === 'string' && UNSAFE_FINISH_REASONS.has(finishReason);
+
+    if (blockedByPrompt || blockedByFinish) {
+      return {
+        safe: false,
+        blockReason: blockedByPrompt ? String(blockReason) : String(finishReason),
+        ratings,
+        durationMs: Date.now() - t0,
+      };
+    }
+
+    return { safe: true, ratings, durationMs: Date.now() - t0 };
+  } catch (err: any) {
+    const errMessage = err?.message ?? String(err);
+    // Fail-open: log + Sentry warn, but DO NOT propagate. A Gemini outage
+    // must never block legitimate uploads.
+    logger.warn(
+      { err, errMessage, feature: 'classifyImageSafety' },
+      '[GEMINI] classifyImageSafety failed — failing open (allow upload)',
+    );
+    Sentry.captureMessage('upload.moderation.gemini_error', {
+      level: 'warning',
+      tags: { component: 'upload', event: 'moderation_gemini_error' },
+      extra: { errMessage },
+    });
+    return { safe: true, error: errMessage, durationMs: Date.now() - t0 };
   }
 }
 
