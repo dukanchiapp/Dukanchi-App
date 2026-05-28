@@ -1,9 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 107 | 🎉 **Prod = main (in sync)** at `8da353b`. Fly v25 deployed (6 commits batched). ND-A1 push handler verified STILL LIVE under bumped vite-plugin-pwa 1.3.0. ALLOWED_ORIGINS appears already clean in prod (Session 95 drift report likely outdated).
+> Last updated: 2026-05-28 | Session 108 | 🎉 **CSP ENFORCED in production** (Fly v26, PR #70). Header flipped from `content-security-policy-report-only:` → `content-security-policy:`. Site + /health + ND-A1 push handler all intact post-flip. Task 5 CSP hardening CLOSED ✅.
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Pending:** CSP enforce flip (`reportOnly: true → false`) — isolated next step (CP3.5b). Sentry post-deploy new-error check is a manual founder dashboard action.
+> **Pending:** Watch `dukanchiapp@gmail.com` for CSP violation alerts over next 1-2h. Rollback path: `git revert a8b64bf + flyctl deploy` (instant). Checkpoint 4 (device verify): ND-D2-APK-SMOKE + browser PWA push end-to-end.
 
 ## Day 1 Launch Sprint — 27 May 2026
 
