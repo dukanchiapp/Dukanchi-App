@@ -13,6 +13,7 @@ import _fileType from "file-type";
 import * as Sentry from "@sentry/node";
 import { env } from "../config/env";
 import { logger } from "../lib/logger";
+import { classifyImageSafety } from "../services/geminiVision";
 
 /**
  * Upload middleware — Day 3 / Session 89 / Subtask 3.3 (production-grade upload validation).
@@ -277,6 +278,51 @@ export async function verifyAndPersistUpload(
   const baseNoExt = path.basename(safeBase, path.extname(safeBase));
   const storageKey = `${Date.now()}-${random}-${baseNoExt}${detectedExt}`;
 
+  // ── Tier 5A — Sync image safety classification (pre-R2) ──────────────────
+  // Single chokepoint — both /api/upload and /api/admin/settings/upload land
+  // here. Reject pre-store on confirmed unsafe; fail-open on Gemini error
+  // (classifier returns { safe: true, error } and we proceed). Adds ~0.8s
+  // typical / +6s worst-case to upload latency; bounded by AbortSignal
+  // inside classifyImageSafety.
+  const safety = await classifyImageSafety(
+    file.buffer.toString("base64"),
+    detected.mime,
+  );
+  if (!safety.safe) {
+    logger.warn(
+      {
+        event: "upload.rejected.moderation",
+        userId,
+        route,
+        storageKey,
+        claimedMime: file.mimetype,
+        detectedMime: detected.mime,
+        fileSize: file.size,
+        blockReason: safety.blockReason,
+        ratings: safety.ratings,
+        moderationDurationMs: safety.durationMs,
+        code: "IMAGE_UNSAFE",
+        rejectionReason: "image failed safety classification",
+      },
+      "Upload rejected: image failed safety classification",
+    );
+    Sentry.captureMessage("Image moderation rejection", {
+      level: "info",
+      tags: {
+        component: "upload",
+        event: "moderation_reject",
+        blockReason: safety.blockReason ?? "unknown",
+      },
+      extra: { userId, route, fileSize: file.size, ratings: safety.ratings },
+    });
+    res.status(422).json({
+      error:
+        "This image cannot be uploaded — it appears to contain unsafe content.",
+      code: "IMAGE_UNSAFE",
+    });
+    return;
+  }
+
   try {
     if (s3Client && env.S3_BUCKET_NAME) {
       await s3Client.send(
@@ -313,6 +359,8 @@ export async function verifyAndPersistUpload(
         detectedMime: detected.mime,
         fileSize: file.size,
         persistDurationMs: Date.now() - t0,
+        moderationDurationMs: safety.durationMs,
+        moderationFailedOpen: Boolean(safety.error),
         sink: s3Client && env.S3_BUCKET_NAME ? 'r2' : 'disk',
       },
       'Upload accepted and persisted',
