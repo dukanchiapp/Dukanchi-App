@@ -21,6 +21,7 @@
     "src/types/**/*",
     "src/constants/**/*",
     "src/lib/api.ts",
+    "src/lib/compressImage.ts",
     "src/lib/storeUtils.ts",
     "src/lib/sentry-frontend.ts",
     "src/lib/posthog.ts",

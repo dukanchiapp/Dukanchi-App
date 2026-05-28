@@ -521,9 +521,10 @@ export function PostsGrid({
               {showCropper && rawImageUrl ? (
                 <ImageCropper
                   imageUrl={rawImageUrl}
-                  onComplete={async (croppedDataUrl) => {
+                  onComplete={async (blob) => {
+                    // Session 113: blob arrives ready-to-upload from
+                    // compressImage(). No data: URI round-trip.
                     try {
-                      const blob = await fetch(croppedDataUrl).then(r => r.blob());
                       const formData = new FormData();
                       formData.append('file', blob, 'cropped-post.jpg');
                       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
@@ -644,9 +645,10 @@ export function PostsGrid({
               {editShowCropper && editRawImageUrl ? (
                 <ImageCropper
                   imageUrl={editRawImageUrl}
-                  onComplete={async (croppedDataUrl) => {
+                  onComplete={async (blob) => {
+                    // Session 113: blob arrives ready-to-upload from
+                    // compressImage(). No data: URI round-trip.
                     try {
-                      const blob = await fetch(croppedDataUrl).then(r => r.blob());
                       const formData = new FormData();
                       formData.append('file', blob, 'edited-post.jpg');
                       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
