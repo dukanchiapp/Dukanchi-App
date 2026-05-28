@@ -23,12 +23,15 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
+  const [loadError, setLoadError] = useState(false);
 
   // Target ratio 3:4
   const CANVAS_W = 300;
   const CANVAS_H = 400;
 
   useEffect(() => {
+    setLoadError(false);
+    setImg(null);
     const image = new Image();
     image.crossOrigin = 'anonymous';
     image.onload = () => {
@@ -43,6 +46,12 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
         x: (CANVAS_W - image.width * fillScale) / 2,
         y: (CANVAS_H - image.height * fillScale) / 2
       });
+    };
+    // Session 114 — Anti-Silent-Failure Rule B: cropper used to sit forever
+    // on a failed image load (corrupted file, dead URL, etc.). onerror flips
+    // a state flag so the UI shows an explicit error + Cancel button.
+    image.onerror = () => {
+      setLoadError(true);
     };
     image.src = imageUrl;
   }, [imageUrl]);
@@ -164,7 +173,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
             mode === 'crop' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
           }`}
         >
-          <Move size={12} /> <span>Crop & Adjust</span>
+          <Move size={12} /> <span>Crop</span>
         </button>
         <button
           onClick={() => setMode('fit')}
@@ -172,7 +181,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
             mode === 'fit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
           }`}
         >
-          <Maximize2 size={12} /> <span>Fit (Black Bars)</span>
+          <Maximize2 size={12} /> <span>Fit</span>
         </button>
       </div>
 
@@ -188,9 +197,25 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
         />
-        {mode === 'crop' && (
+        {/* Session 114: loading overlay during image decode. Blob URLs from
+            createObjectURL decode in a few ms typically, so this flashes
+            briefly on fast devices but rescues UX on slow ones / large files. */}
+        {!img && !loadError && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-[11px] text-gray-500 font-medium bg-white/80 px-2.5 py-1 rounded-full">Image load ho rahi hai...</span>
+          </div>
+        )}
+        {/* Session 114: explicit error state — Rule B (no silent failure on
+            image.onerror). User sees a clear message + Cancel below remains
+            the way out. */}
+        {loadError && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <span className="text-[11px] text-red-600 font-semibold bg-white/90 px-2.5 py-1 rounded-full">Image load nahi ho payi — Cancel karke dobara try karein</span>
+          </div>
+        )}
+        {mode === 'crop' && img && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-[10px] px-2.5 py-1 rounded-full backdrop-blur font-medium">
-            Drag to adjust · Pinch to zoom
+            Drag karein · pinch zoom
           </div>
         )}
       </div>
@@ -199,7 +224,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
       {mode === 'crop' && (
         <div className="flex items-center justify-center space-x-3">
           <button onClick={() => handleZoom(-0.05)} className="w-8 h-8 bg-gray-100 rounded-full text-lg font-bold flex items-center justify-center hover:bg-gray-200">−</button>
-          <span className="text-xs text-gray-500 font-medium">{Math.round(scale * 100)}%</span>
+          <span className="text-[11px] text-gray-400 font-medium tabular-nums">{Math.round(scale * 100)}%</span>
           <button onClick={() => handleZoom(0.05)} className="w-8 h-8 bg-gray-100 rounded-full text-lg font-bold flex items-center justify-center hover:bg-gray-200">+</button>
         </div>
       )}
@@ -209,8 +234,12 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
         <button onClick={onCancel} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">
           Cancel
         </button>
-        <button onClick={handleComplete} className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">
-          Use This Image
+        <button
+          onClick={handleComplete}
+          disabled={!img || loadError}
+          className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Image use karein
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import ImageCropper from '../ImageCropper';
 import { useToast } from '../../context/ToastContext';
@@ -99,6 +99,25 @@ export function PostsGrid({
   const [editShowCropper, setEditShowCropper] = useState(false);
   const [editRawImageUrl, setEditRawImageUrl] = useState('');
 
+  // ── Blob URL lifecycle (Session 114) ───────────────────────────────────────
+  // The cropper takes a local blob: URL from URL.createObjectURL. These URLs
+  // hold the file's bytes alive in memory until revoked. Effect cleanup runs
+  // (a) when the URL changes — revoking the previous one before the new one
+  // takes over, and (b) on component unmount — preventing the leak when the
+  // modal closes while a blob URL is still set. We only revoke URLs WE own
+  // (startsWith 'blob:') so any existing R2 URLs in edit-flow state aren't
+  // accidentally killed.
+  useEffect(() => {
+    return () => {
+      if (rawImageUrl.startsWith('blob:')) URL.revokeObjectURL(rawImageUrl);
+    };
+  }, [rawImageUrl]);
+  useEffect(() => {
+    return () => {
+      if (editRawImageUrl.startsWith('blob:')) URL.revokeObjectURL(editRawImageUrl);
+    };
+  }, [editRawImageUrl]);
+
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleTogglePin = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation();
@@ -141,24 +160,20 @@ export function PostsGrid({
     setEditRawImageUrl('');
   };
 
-  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        setEditRawImageUrl(data.url);
-        setEditShowCropper(true);
-      } else {
-        showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
-      }
-    } catch (err) {
-      showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
-      Sentry.captureException(err, { extra: { context: 'postsGrid.editImageUpload' } });
+    // Session 114: cropper consumes a LOCAL blob: URL — no raw upload to R2
+    // before crop. The cropped JPEG is uploaded post-crop (Session 113 path).
+    // Net: ~3-7s lag (full-file upload + Gemini moderation round-trip on raw)
+    // eliminated; cropper now appears in <100ms.
+    if (editRawImageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(editRawImageUrl);
     }
+    setEditRawImageUrl(URL.createObjectURL(file));
+    setEditShowCropper(true);
+    // Reset so the same file can be re-picked after cancel.
+    e.target.value = '';
   };
 
   const handleSaveEdit = async () => {
@@ -186,24 +201,20 @@ export function PostsGrid({
     setEditUploading(false);
   };
 
-  const handlePostImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePostImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
-      if (res.ok) {
-        const data = await res.json();
-        setRawImageUrl(data.url);
-        setShowCropper(true);
-      } else {
-        showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
-      }
-    } catch (err) {
-      showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
-      Sentry.captureException(err, { extra: { context: 'postsGrid.newPostImageUpload' } });
+    // Session 114: cropper consumes a LOCAL blob: URL — no raw upload to R2
+    // before crop. The cropped JPEG is uploaded post-crop (Session 113 path).
+    // Net: ~3-7s lag (full-file upload + Gemini moderation round-trip on raw)
+    // eliminated; cropper now appears in <100ms.
+    if (rawImageUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(rawImageUrl);
     }
+    setRawImageUrl(URL.createObjectURL(file));
+    setShowCropper(true);
+    // Reset so the same file can be re-picked after cancel.
+    e.target.value = '';
   };
 
   const compressImageToBase64 = async (url: string): Promise<{ base64: string; mimeType: string }> => {
@@ -567,8 +578,8 @@ export function PostsGrid({
                   cursor: 'pointer', borderRadius: 12, border: '1.5px dashed var(--f-glass-border-2)', background: 'var(--f-glass-bg)',
                 }}>
                   <FIcon name="image" size={32} color="var(--f-text-3)" />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-2)', marginTop: 8 }}>Tap to upload image</span>
-                  <span style={{ fontSize: 11, color: 'var(--f-text-3)', marginTop: 4 }}>Will be cropped to 3:4 ratio</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-2)', marginTop: 8 }}>Image select karein</span>
+                  <span style={{ fontSize: 11, color: 'var(--f-text-3)', marginTop: 4 }}>3:4 ratio mein crop hokar post hogi</span>
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePostImageUpload} />
                 </label>
               )}
@@ -576,7 +587,7 @@ export function PostsGrid({
             <div style={{ position: 'relative' }}>
               <textarea
                 style={{ ...sheetField, padding: '12px 48px 12px 12px', resize: 'none' }}
-                rows={3} placeholder="Write a caption..."
+                rows={3} placeholder="Apne product ke baare mein batayein..."
                 value={newPostCaption} onChange={(e) => setNewPostCaption(e.target.value)}
               />
               <button
