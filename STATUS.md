@@ -1,9 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 102b | 🎉 **ND-A1 CLOSED — Web Push LIVE in production** (Fly v24 deployed, PR #61 merged). Prod `/sw.js` now ships `addEventListener("push")` + `notificationclick`. Native Capacitor push unaffected. | Prod runs main @ `42d3e82`
+> Last updated: 2026-05-28 | Session 103 | **Checkpoint 2: 2 admin-panel Dependabot PRs merged (#54, #55); 5 root-npm PRs flagged for Opus review (#56, #57, #58, #59, #60)**. ioredis@5.11.x guard held ✅ | Prod runs main @ `42d3e82` (unchanged — admin-panel ships with next deploy)
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Active hygiene:** Dependabot ignores `ioredis@5.11.x` (root npm only) until `bullmq` ships ioredis@5.11+ support. 6 new Dependabot PRs surfaced overnight (Monday cycle) — separate triage queue.
+> **Active hygiene:** Open PR count 7 → 5 (#56 grouped root + 4 major-bump PRs deferred). Dependabot ignore `ioredis@5.11.x` confirmed working in prod via PR #56's untouched lockfile entry.
 
 ## Day 1 Launch Sprint — 27 May 2026
 
