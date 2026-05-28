@@ -6,6 +6,101 @@
 
 ---
 
+## 2026-05-28 — Session 109b — Image Moderation LIVE (Tier 5A)
+
+**Goal:** Merge PR #72 (Gemini Vision image safety gate on upload), deploy to Fly, verify production health + push handler survival + CSP enforcement + upload route auth-gate. Close primary Tier-5A launch blocker.
+
+**Status:** 🎉 **IMAGE MODERATION LIVE IN PRODUCTION.** Fly **v27** complete. Gemini Vision synchronous safety classifier now runs on every `/api/upload` + `/api/admin/settings/upload` request between magic-byte validation and R2 store. Unsafe images rejected with 422 `IMAGE_UNSAFE` pre-store; Gemini outage / 6s timeout fails open (allow + Sentry warn) so an upstream incident never blocks legit uploads. Reactive `Report` queue remains the backstop. **Tier 5A — image moderation — CLOSED ✅.**
+
+| Metric | Value |
+|---|---|
+| PR merged | #72 (squash) |
+| Squash commit | `4091dbf` |
+| Production HEAD | `a8b64bf` → **`4091dbf`** |
+| Fly release | **v27** complete |
+| Deploy duration | ~6m end-to-end (build + rolling release) |
+| Files changed | 4 (`src/services/geminiVision.ts`, `src/services/geminiVision.test.ts` new, `src/middlewares/upload.middleware.ts`, `src/middlewares/security.integration.test.ts`) |
+| Lines | +499 / −2 |
+| Tests | 112/112 (100 baseline + 9 service unit + 3 middleware integration) |
+
+### Design (locked in 109a)
+
+- **Categories** — 4 text-only HARM categories (`SEXUALLY_EXPLICIT`, `DANGEROUS_CONTENT`, `HATE_SPEECH`, `HARASSMENT`), all at `BLOCK_MEDIUM_AND_ABOVE`
+- **Deviation** — `HARM_CATEGORY_IMAGE_*` enums exist in `@google/genai` v1.50.1 but flagged "not supported in Gemini API" (Vertex AI only). Text-only categories applied; Gemini's multimodal classifier handles image inputs with the same enum set.
+- **Timeout** — 6s `AbortSignal.timeout` (vs 30s on the analysis fns) to keep upload UX bounded
+- **Fail-open** — any Gemini error / timeout returns `{safe:true, error:...}` + `Sentry.captureMessage("upload.moderation.gemini_error", "warning")`. Outage never blocks legit uploads.
+- **Reject** — 422 + `{code:"IMAGE_UNSAFE"}` + `Sentry.captureMessage("Image moderation rejection", "info")` + structured log `event:"upload.rejected.moderation"`. R2 put never runs on reject path.
+- **Threshold rationale** — MEDIUM (not LOW) on sexual category avoids false-positives on legit retail inventory (clothing, swimwear). Reactive Report queue catches any false-negative.
+
+### Phase 3 local gates (pre-merge in 109a)
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test -- --run` — **112/112** (18 files, 5.30s)
+- ✅ `npm run build` — Vite app + injectManifest SW both green
+- ✅ Real-Gemini local smoke (clean PWA icon → `{safe:true, durationMs:4986}` cold-start; throwaway script deleted, not committed)
+
+### Phase 4 CI
+
+- ✅ Pre-merge PR #72: Typecheck+Test+Build + Bundle Size Report both `success`
+- ✅ Post-merge main `4091dbf`: run 26590127598 `success`
+
+### Phase 5 deploy
+
+- ✅ `flyctl deploy -a dukanchi-app` → Fly **v27** complete
+- ✅ Rolling release on machine 9080d70da60d18, 1/1 check passing
+- ⚠️ Cosmetic "app not listening on expected address" warning (same as v25/v26; tcp_check still passes — known fly-proxy probe quirk on Node ipv6-only bind)
+
+### Phase 6 post-deploy verification (all green)
+
+| Check | Result |
+|---|---|
+| `/health` | **HTTP 200** in 495ms, `{status:"ok", db:"up", redis:"up"}` |
+| SW push handler (ND-A1) | ✅ `addEventListener("push"` present in `/sw.js` — survived deploy |
+| `/` (SPA) | **HTTP 200** in 114ms |
+| CSP header | ✅ `content-security-policy:` (enforced, NOT Report-Only) — Task 5 still healthy |
+| `/api/upload` (no auth) | **HTTP 401** `{error:"Access denied"}` — route alive + auth gate intact |
+
+### Phase 7 SKIPPED — prod clean-image smoke
+
+Minting a real prod JWT would require either touching `JWT_SECRET` (auto-mode classifier-blocked) or signing up a test user (Rule F violation). The upload would also create an R2 artifact needing explicit cleanup (Rule F.2). Coverage achieved via three other proofs:
+
+1. Mocked integration tests (Test 19/20/21 in `security.integration.test.ts`)
+2. Local real-Gemini smoke in 109a (clean image → safe in <5s)
+3. Founder app-level test queued (manual verify from web/APK)
+
+### Files modified
+
+- `src/services/geminiVision.ts` — added imports (`HarmCategory`, `HarmBlockThreshold`, `Sentry`), `IMAGE_SAFETY_SETTINGS` constant (4 categories @ MEDIUM), `ImageSafetyResult` interface, `classifyImageSafety()` function with fail-open contract
+- `src/services/geminiVision.test.ts` — **new**, 9 unit tests (config shape, clean, blocked-by-promptFeedback, blocked-by-finishReason, PROHIBITED_CONTENT, SDK throw, network error, malformed response)
+- `src/middlewares/upload.middleware.ts` — `classifyImageSafety` import + sync safety gate between L274 (storageKey) and L281 (R2 put); 422 reject path; `moderationDurationMs` + `moderationFailedOpen` added to `upload.accepted` log
+- `src/middlewares/security.integration.test.ts` — `vi.mock` for `classifyImageSafety` (default safe), `Sentry.captureMessage` stub, **3 new tests** (Test 19/20/21 for reject / fail-open / safe-positive paths)
+
+### Post-deploy monitoring (Mandeep — Sentry / dukanchiapp@gmail.com)
+
+- **"Image moderation rejection"** (info-level) → working as designed; track rate
+- **"upload.moderation.gemini_error"** (warning-level) → fail-open triggered; if rate > 1% of uploads in 24h, bump timeout 6s → 8s
+- **`upload.rejected.moderation`** structured logs in Railway / Fly aggregator → forensic queue (blockReason, ratings)
+
+### Tier 5 backlog impact
+
+- ✅ **Tier 5A — Image moderation** CLOSED (primary launch blocker)
+- ⏳ **Tier 5B** — E2E tests (Playwright setup + 2 critical paths) — next sprint
+- ⏳ **Tier 5C** — Performance smoke (Lighthouse + k6 search) — next sprint
+- ⏳ Phase B candidate — `moderationStatus` admin quarantine queue + per-route opt-out toggle (deferred until rejection-rate data exists)
+
+### Rollback path
+
+If a moderation regression surfaces (false-positive flood, Gemini billing spike, latency > 8s p99):
+
+```
+git revert 4091dbf
+flyctl deploy -a dukanchi-app
+```
+
+Rolls back to `a8b64bf` (CSP-enforced baseline). Fly auto-rollback already protects against healthcheck fail on next deploy.
+
+---
+
 ## 2026-05-28 — Session 108 — CSP Enforced (report-only → enforce)
 
 **Goal:** Flip CSP from `reportOnly: true` to `false` in `src/app.ts`, deploy, verify enforced header replaces Report-Only header in production, confirm site + push handler still healthy.
