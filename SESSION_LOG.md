@@ -6,6 +6,107 @@
 
 ---
 
+## 2026-05-29 — Session 115 — Futuristic v3 tokens + getLiveStatus foundation (no screen changes)
+
+**Goal:** Recon the founder-supplied "Futuristic v3" design bundle (`/Users/apple/Desktop/design_handoff_dukanchi_futuristic/`) + integrate design tokens additively into the styling layer. **Zero screen changes** this session — app must render identical post-merge. Foundation only; per-screen re-skin queued for follow-up sessions.
+
+**Status:** ✅ **TOKEN FOUNDATION LIVE.** Fly **v32** complete. App renders identical to pre-merge (verified locally + post-deploy curls). New `--f-status-*`, spacing scale (`--f-s-1..--f-s-12`), type scale (`--f-t-display..--f-t-micro`), letter-spacing, and line-height tokens are now available as utilities; `getLiveStatus()` helper + 15-test guard ships in `src/lib/liveStatus.ts`. Per-screen re-skin scope mapped + sized (recon report below).
+
+| Metric | Value |
+|---|---|
+| PR merged | #84 (squash) |
+| Squash commit | `b15cccf` |
+| Production HEAD | `6fe89f2` → **`b15cccf`** |
+| Fly release | **v32** complete |
+| Files changed | 4 (`src/futuristic.css`, `src/lib/liveStatus.ts` new, `src/lib/liveStatus.test.ts` new, `tsconfig.app.json` Rule G include) |
+| Lines | +244 (additive only) |
+| Tests | **127/127** (112 baseline + 15 new liveStatus tier-boundary tests) |
+| Visual diff | None — app pixel-identical to pre-merge |
+
+### Recon report — Tier 5D screen scope
+
+**Per-screen target table** (sized against current code + new design spec):
+
+| Production target | LOC | Effort | Key risks / notes |
+|---|---:|---|---|
+| `src/components/AppHeader.tsx` | 62 | **S** | Small file; drop Refresh button (per README); swap surface to dark glass. Touched by many pages — test rest-of-app regression carefully. |
+| `src/components/BottomNav.tsx` | 90 | **S** | New active-pill style + dark glass shell. Visible everywhere — must land before per-page reskins to avoid awkward half-state. |
+| `src/components/PostCard.tsx` | 279 | **M** | 3-row header layout, status capsule via getLiveStatus, area+pincode row, double-ring avatar shadow. Touches all feed surfaces. |
+| `src/pages/Home.tsx` | 669 | **L** | Sticky header + sticky location strip + carousel banner + pill tabs + filter + feed. Largest single-screen scope. Carries the post-save/like/follow optimistic pattern other screens reference. |
+| `src/pages/Search.tsx` | 970 | **L** | Trending chips + 4-col category grid + Ask Nearby teaser + 3-stage modal (Compose / Pulsing / Success). Modal includes the `RadarPulse` SVG (component already exists at `src/components/futuristic/RadarPulse.tsx`). |
+| `src/pages/Map.tsx` | 613 | **L** | 3D ↔ Map toggle, IsoMap (component exists) for 3D, dark-styled Google Maps for 2D, "stores nearby" pill, FABs, bottom sheet horizontal scroll. Google Maps style JSON is in README. |
+| `src/pages/Messages.tsx` | 397 | **M** | Variable-height conversation rows (4-line business vs 2-line customer), live status capsule via getLiveStatus, hover slide. |
+| `src/pages/Chat.tsx` | 561 | **M** | Peer header with business meta strip, message bubbles (different radius for me/them), composer with gradient send button. |
+| `src/pages/StoreProfile.tsx` | 707 | **L** | Gradient banner (16:8 overflow visible) + overlapping DP, distance pill, 3-line bio clamp with "Read more" toggle, info card, 3-col stats, posts/reviews tabs. |
+| `src/pages/Settings.tsx` | **NEW** | **M** | Page does NOT exist — current settings live in `UserSettings.tsx` (408 LOC). Decision needed: extend existing OR create new and migrate routes. README spec is for a NEW Settings shell (profile card + grouped sections + toggle switches + red logout). |
+| Splash boot | **NEW** | **S** | Standalone boot screen (aurora gradient bg + Dukanchi logo tile + magenta orbiting loader + bottom "Made in India 🇮🇳"). Hook to existing initial auth+feed-hydration gate. |
+
+**Existing assets found (avoid rebuild)**:
+- ✅ `src/components/futuristic/` already has `FAppHeader`, `FBottomNav`, `FPostCard`, `FIcon`, `FLogo`, `FLocationStrip`, `IsoMap`, `LiveOrb`, `RadarPulse`, `VoiceWaveform`, `FloatingProductCard` (Phase 7/8 from May 16-20). These are alternates to the production components — per-screen sessions will decide swap vs adapt.
+- ✅ `src/components/NotificationBell.tsx` exists for header bell wiring
+- ✅ `src/hooks/useFeed.ts` exists — Home reskin reuses it
+- ✅ `src/lib/storeUtils.ts:getStoreStatus()` exists — returns `{minutesUntilClose, ...}`; bridge to `getLiveStatus({closingSoon: ...minutesUntilClose})` for client-side computation until server adds the field
+- ✅ Prisma `Store.openingTime`, `Store.closingTime` (lines 99-100) already exist — no schema change needed
+- ✅ `lucide-react` already a dep — icon map in README §Iconography is drop-in
+
+**Theme audit + per-screen dark-flip strategy**:
+- Current app surface uses **`--dk-*` cream/warm palette** in `src/index.css` (NOT touched this session — global flip would break unreskinned screens)
+- **No `data-theme` attribute is set anywhere** in code (grep returned nothing) — the `[data-theme="light"]` block in `src/futuristic.css` is dead code, currently harmless. Kept for now; removed once all screens reskinned.
+- Strategy for per-screen sessions: opt into futuristic via component-level `f-bg-aurora` / `f-glass` / explicit `var(--f-*)` references. Each session ends with the screen working alongside un-reskinned screens (no global body bg flip). Global cream→dark surface flip is the FINAL step after all screens land.
+
+**Tailwind 4 token integration approach**:
+- No `tailwind.config.*` file (Tailwind 4 uses CSS-first `@import "tailwindcss"` only)
+- Tokens added directly to `:root` in `src/futuristic.css` (already imported by `main.tsx`)
+- Screens use tokens via `var(--f-*)` inline styles — no Tailwind utility-class generation needed (the existing futuristic components already follow this pattern)
+
+**getLiveStatus + closingSoon data source**:
+- **Helper**: `src/lib/liveStatus.ts` — pure, no I/O, `(closingSoon?, status?, statusColor?) → {label, color}`. 4 hex constants exposed via `LIVE_STATUS_COLORS`.
+- **Data source decision**: per-screen sessions can EITHER (a) compute `closingSoon` client-side via existing `getStoreStatus(s.openingTime, s.closingTime, s.is24Hours, s.workingDays).minutesUntilClose`, OR (b) ask the backend to add a derived `closingSoon` field to the feed payload (cheaper on slow phones, more consistent across screens). README §State Management notes both are valid.
+- **Tick**: post-card uses `setInterval(60_000)` per-card; should be a hook (`useClosingSoon(initial)`) to avoid duplicate timers when many cards render.
+
+**Recommended screen ORDER for re-skin** (pilot-critical first):
+1. **PostCard** (M) — visible on Home + Profile + Search results; biggest UX-per-LOC ratio
+2. **AppHeader** + **BottomNav** (S+S) — every screen, must land paired to avoid mid-app surface drift
+3. **Home** (L) — main entry; carries the carousel + tab + filter primitives others reuse
+4. **Search** (L) — second-most-touched; Ask Nearby is the signature feature
+5. **StoreProfile** (L) — funnels conversions
+6. **Messages** + **Chat** (M+M) — retention loop; pair them
+7. **Map** (L) — has 3D toggle complexity; IsoMap component already in repo
+8. **Settings** (M) — decide rename vs new file; lower funnel priority
+9. **Splash** (S) — polish; pairs with hydration gate work
+
+**Honest total effort estimate**:
+- 11 screens at S/M/L = 6 L + 5 M/S = roughly **6–9 sessions of ~30–60 min each** if each ships clean (tokens + LiveStatus already done = saves ~1 session)
+- Each screen carries 1–2× risk surfaces (regression vs un-reskinned neighbors). Per-screen smoke + E2E render check before merge is the gate.
+- Estimated total: **4–6 development days** at 2 sessions/day, assuming no major iteration on individual screen designs
+- Final "global body bg cream→dark flip" step (delete `[data-theme="light"]` + flip `--dk-*` to dark surfaces in `index.css`) is its own short session at the end
+
+### Files modified (this session)
+
+- `src/futuristic.css` — added `--f-status-*` (4 colors), `--f-s-*` (9 spacing), `--f-t-*` (9 type), `--f-ls-*` (4 LS), `--f-lh-*` (4 LH) — pure additive into existing `:root`; existing `[data-theme="light"]` block preserved
+- `src/lib/liveStatus.ts` — new, 91 LOC; `getLiveStatus()` + `LIVE_STATUS_COLORS`
+- `src/lib/liveStatus.test.ts` — new, 15 tests covering "Closed*" override, no-signal fallback, tier boundaries (15/30/60), color contract drift guard
+- `tsconfig.app.json` — added `src/lib/liveStatus.ts` to include list (Rule G — per-file allowlist for `src/lib/*`, not a glob)
+
+### Phase 5 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker, after Rule G fix)
+- ✅ `npm test -- --run` — **127/127** (vitest 112 baseline + 15 new liveStatus)
+- ✅ `npm run test:e2e` — 2/2 passing in 26.4s (chromium)
+- ✅ `npm run build` — green
+
+### Phase 6 CI + deploy
+
+- ✅ PR #84 (run 26605946828): `success`
+- ✅ `flyctl deploy -a dukanchi-app` → Fly **v32** complete
+- ✅ Post-deploy: `/health` 200 in 504ms · push handler intact · CSP `report-only` preserved · `/api/upload` 401-gated (not exercised here but unchanged surface)
+
+### Awaiting
+
+- Opus → screen-by-screen prompts in recommended order (PostCard → AppHeader+BottomNav → Home → Search → StoreProfile → Messages+Chat → Map → Settings → Splash → global dark flip)
+
+---
+
 ## 2026-05-29 — Session 114 — Instant file-pick + cropper UX polish (THE actual upload-flow speed win)
 
 **Goal:** Eliminate the multi-second lag between picking a photo from device and seeing the cropper. Apply minimal-risk copy/label polish on the cropper + post-modal UX. No design overhaul (post-pilot).
