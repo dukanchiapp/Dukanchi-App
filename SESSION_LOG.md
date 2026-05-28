@@ -6,6 +6,101 @@
 
 ---
 
+## 2026-05-28 — Session 108 — CSP Enforced (report-only → enforce)
+
+**Goal:** Flip CSP from `reportOnly: true` to `false` in `src/app.ts`, deploy, verify enforced header replaces Report-Only header in production, confirm site + push handler still healthy.
+
+**Status:** ✅ **CSP ENFORCED IN PRODUCTION.** Fly **v26** complete. Header confirmed flipped from `content-security-policy-report-only:` → `content-security-policy:`. Site, `/health`, and ND-A1 push handler all intact post-flip. The 3.5-day report-only monitoring window (since PR #43 / 2026-05-25) closed cleanly. **Task 5 — CSP enforce flip — CLOSED ✅.**
+
+| Metric | Value |
+|---|---|
+| PR merged | #70 |
+| Squash commit | `a8b64bf` |
+| Production HEAD | `8da353b` → **`a8b64bf`** |
+| Fly release | **v26** complete |
+| Deploy duration | **3m14s** (14:38:18Z → 14:41:32Z) |
+| Code change | 2 lines (`src/app.ts:115` + `:128`, both `true → false`) |
+| Files modified | `src/app.ts` only |
+
+### Phase 3 local gates (pre-merge)
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test` — 100/100 (17 files, 4.65s)
+- ✅ `npm run build` — `mode injectManifest`, 59 precache entries, `dist/sw.mjs` 41.78 KB
+
+### Phase 4 CI
+
+- ✅ Pre-merge PR #70: Typecheck+Test+Build 1m35s + Bundle Size 1m52s
+- ✅ Squash-merged at `a8b64bf`
+
+### 🚨 Phase 6 critical enforce verification (post-deploy)
+
+#### Header name flipped — confirmed via curl
+
+```
+$ curl -sI "https://dukanchi.com/" | grep -i "content-security-policy"
+content-security-policy: default-src 'self';script-src 'self' 'unsafe-inline'
+  https://*.i.posthog.com https://maps.googleapis.com https://maps.gstatic.com
+  https://unpkg.com;style-src 'self' 'unsafe-inline'
+  https://fonts.googleapis.com;img-src 'self' data: blob: …;font-src 'self'
+  https://fonts.gstatic.com;connect-src 'self' https://*.i.posthog.com
+  https://*.ingest.sentry.io https://*.ingest.us.sentry.io
+  https://nominatim.openstreetmap.org https://maps.googleapis.com
+  https://fonts.googleapis.com https://fonts.gstatic.com wss://dukanchi.com
+  wss:;worker-src 'self' blob:;media-src 'self' blob:;frame-src 'none';
+  frame-ancestors 'none';form-action 'self';base-uri 'self';object-src 'none';
+  upgrade-insecure-requests;report-uri /api/csp-report
+```
+
+Header name: `content-security-policy:` (NOT `content-security-policy-report-only:`). All directives unchanged from the report-only policy.
+
+#### Site + health post-flip
+
+| Check | Result |
+|---|---|
+| `/` SPA root | HTTP **200** ✅ |
+| `/health` | HTTP **200**, 0.33s, `{"status":"ok","db":"up","redis":"up","timestamp":1779979316996}` ✅ |
+| `/sw.js` (ND-A1 push handler intact) | **27,225 bytes** (byte-identical to Session 102b + 107 baselines); `addEventListener("push"` + `addEventListener("notificationclick"` both ✅ |
+| Directives present in enforced header | script-src, style-src, img-src, font-src, connect-src, worker-src, report-uri — all detected via grep ✅ |
+| `report-uri /api/csp-report` | Preserved — browsers continue posting violations even under enforce mode |
+
+### Phase 5 Fly deploy
+
+| Field | Value |
+|---|---|
+| Image | (next release identifier from Fly v26) |
+| Machine | `9080d70da60d18` rolling-updated v25 → v26 |
+| Healthcheck | 1/1 passing |
+| Deploy log | Clean (same recurring "app not listening on expected address" intermediate warning — benign per established pattern) |
+
+### Rollback path
+
+`git revert a8b64bf && flyctl deploy --app dukanchi-app` would restore Report-Only header in ~3 minutes if needed. **No rollback triggered** — verification all green.
+
+### Post-flip monitoring
+
+- Watch `dukanchiapp@gmail.com` for "CSP violation" Sentry alert emails over the next 1-2 hours (Task 4 alert rule from Session 98 captures these).
+- `/api/csp-report` endpoint stays wired — receives any violations regardless of enforce vs report-only state.
+- If any legitimate resource breaks → instant rollback path documented above.
+
+### Task 5 CSP hardening — closed
+
+Full timeline:
+- **PR #38** (Session 98, 2026-05-25): CSP discovery doc inventoried all browser-loaded origins and inline content
+- **PR #39** (Session 98): CSP Report-Only header + `/api/csp-report` endpoint shipped
+- **PR #40** (Session 98): `fonts.googleapis.com` added to connect-src (Maps SDK XHR)
+- **PR #43** (Session 98): Comprehensive allowlist re-confirmed + `fonts.gstatic.com` added to connect-src (Workbox SW fetch)
+- **CP3.5b recon** (Session 107): Full directive audit re-confirmed all browser-loaded origins covered
+- **PR #70** (Session 108, THIS): `reportOnly: true → false`
+
+### Files modified
+
+- `src/app.ts` — 2 lines (`reportOnly: true → false` at L115 + L128)
+- `SESSION_LOG.md` — Session 108 entry prepended
+- `STATUS.md` — Last updated banner refreshed
+
+---
+
 ## 2026-05-28 — Session 107 — Checkpoint 3.5a: Batched Deploy (6 commits) — ND-A1 push handler SURVIVED 1.3.0 bump
 
 **Goal:** Deploy the 6 commits accumulated since `42d3e82` (post-ND-A1 Session 102b). Verify the ND-A1 push handler survives the bumped `vite-plugin-pwa` 1.3.0 in production. Decoupled CORS hygiene to a manual step (Option A) after the auto-mode classifier blocked the Fly secrets staging.
