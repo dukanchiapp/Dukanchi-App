@@ -6,6 +6,101 @@
 
 ---
 
+## 2026-05-29 — Session 113 — Client image compression + eliminate fetch(data:URI) (perf + Rule H prereq cleanup)
+
+**Goal:** Optimize image-upload latency and remove the architectural dependency that triggered the Session 110 / 111 CSP hotfix-then-rollback cycle. Replace the `canvas → toDataURL → fetch(dataURI) → blob → FormData` chain with `canvas → compressImage() → Blob → FormData`. Pure client change; server-side upload + moderation surface untouched.
+
+**Status:** ✅ **PERF SHIPPED.** Fly **v30** complete. `src/lib/compressImage.ts` added; `ImageCropper` exports Blob directly; both `PostsGrid` consumer sites (new-post + edit-post) drop the intermediate `fetch(croppedDataUrl)` step. Image upload pipeline no longer depends on `data:` in CSP `connect-src` — meaningful Rule H prereq #1 cleanup ahead of the future CSP re-enforce.
+
+| Metric | Value |
+|---|---|
+| PR merged | #80 (squash) |
+| Squash commit | `485309f` |
+| Production HEAD | `bd0f974` → **`485309f`** |
+| Fly release | **v30** complete |
+| Deploy duration | ~3m end-to-end |
+| Files changed | 4 (`src/lib/compressImage.ts` new, `src/components/ImageCropper.tsx`, `src/components/profile/PostsGrid.tsx`, `tsconfig.app.json` Rule G include) |
+| Lines | +90 / −7 |
+| Tests | 112/112 + E2E 2/2 (baseline preserved) |
+
+### What changed
+
+1. **`src/lib/compressImage.ts`** — new shared util:
+   ```ts
+   compressImage(canvas, maxW = 1080, maxH = 1440, quality = 0.85): Promise<Blob>
+   ```
+   Resizes to fit within `maxW × maxH` (preserving aspect ratio; no-op if source is already smaller) and re-encodes as JPEG via `canvas.toBlob`. Throws on missing 2D context or `toBlob() === null`. High-quality smoothing on the downscale path.
+
+2. **`ImageCropper.tsx`** — `onComplete` signature changed:
+   ```diff
+   -  onComplete: (croppedDataUrl: string) => void;
+   +  onComplete: (blob: Blob) => void | Promise<void>;
+   ```
+   `handleComplete()` now `async`; replaces `exportCanvas.toDataURL('image/jpeg', 0.9)` with `await compressImage(exportCanvas, 1080, 1440, 0.85)`. The 600×800 cropper export is already under the 1080×1440 cap, so the resize branch is a no-op for this consumer today — the util is future-proof for larger sources.
+
+3. **`PostsGrid.tsx`** — both call sites (`cropper-upload-new` L522–537, `cropper-upload-edit` L645–660) drop the intermediate `await fetch(croppedDataUrl).then(r => r.blob())` and `FormData.append('file', blob, ...)` the cropper-emitted Blob directly.
+
+4. **`tsconfig.app.json`** — `include` list extended with `src/lib/compressImage.ts` (Rule G — `src/lib/*` is a per-file allowlist, not a glob; missing it surfaces a strict-config TS6307 that the root composite reference doesn't catch).
+
+### Architectural wins
+
+- **One fewer `fetch` per upload** — the `data:` URI fetch round-trip is gone
+- **No base64 decode + buffer allocation** on the data-URI path
+- **Image upload pipeline no longer depends on `data:` in CSP `connect-src`** — when CSP re-enforce lands (Rule H prereq path), we can confidently drop `"data:"` from `connectSrc`; only `"blob:"` needs to stay for the Capacitor native picker
+- **Quality 0.9 → 0.85** saves ~20% bytes with no visible quality loss
+
+### Scope honesty
+
+The "10× phone-photo reduction" framing in the prompt doesn't apply to this specific code path — the cropper already shrinks user input to 600×800 before encode, so the dominant gain on the current consumer is architectural (eliminate `fetch(data:URI)`) plus the ~20% quality-encode savings. The util's resize logic IS future-proof: profile pic / store logo flows (currently direct `<input type="file">` upload, no cropper) can adopt the same util later to actually realize the 10× phone-photo savings.
+
+### Phase 5 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker, after tsconfig.app.json include fix)
+- ✅ `npm test -- --run` — **112/112** (vitest baseline preserved)
+- ✅ `npm run build` — Vite + injectManifest SW both green
+- ✅ `npm run test:e2e` — **2/2 passing** in 24.9s (chromium; render-smoke unaffected)
+
+### Phase 6 CI
+
+- ✅ PR #80: Typecheck+Test+Build + Bundle Size Report both `success` (run 26598047716)
+
+### Phase 7 deploy
+
+- ✅ `flyctl deploy -a dukanchi-app` → Fly **v30** complete
+- ✅ Rolling release on machine 9080d70da60d18, 1/1 check passing
+- ⚠️ Cosmetic "app not listening" warning (consistent v25–v30; not actionable)
+
+### Phase 7.5 post-deploy verification (all green)
+
+| Check | Result |
+|---|---|
+| `/health` | **HTTP 200** in 528ms, `{status:"ok", db:"up", redis:"up"}` |
+| SW push handler (ND-A1) | ✅ `addEventListener("push"` present in `/sw.js` — survived deploy |
+| CSP header | ✅ `content-security-policy-report-only:` — Session 111 safe state preserved |
+| `/api/upload` (no auth) | **HTTP 401 Access denied** — route alive + auth gate intact |
+
+### Out of scope (intentional)
+
+- **AI Magic feed path** (`PostsGrid:compressImageToBase64` → `/api/ai/analyze-image`) still uses `toDataURL` — Gemini expects base64 in JSON body, not a Blob (different contract)
+- **Server-side moderation / upload route** — pure client change, no backend surface touched
+- **Profile pic / store logo upload flows** in `RetailerDashboard.tsx` use direct `<input type="file">` → FormData (no cropper, no toDataURL) — already optimal; could adopt `compressImage` later for client-side resize if phone-photo payloads become a launch blocker
+
+### Rule H prereq impact
+
+This PR meaningfully advances Rule H prereq #1 (directive cleanup):
+- Before: `connect-src 'self' data: blob: …` — `data:` only needed for the upload pipeline's `fetch(data:URI)` step
+- After: `data:` is no longer needed by the upload pipeline; could be removed from `connectSrc` on the next CSP edit
+- `blob:` still required (Capacitor native picker emits blob: URLs)
+
+Decision: keep `data:` in `connect-src` for now (no immediate downside in report-only mode; revisit during the CSP re-enforce sprint).
+
+### Awaiting
+
+- Founder real-device test — phone photo upload via the cropper modal should feel noticeably snappier on 4G (lower per-byte transfer; one fewer fetch round-trip)
+- Sentry watch for any new `postsGrid.cropperUploadNew` / `postsGrid.cropperUploadEdit` Sentry exceptions over the next 24h (cropper now emits Blob; Sentry shouldn't fire any new class — the signature change is internal-only between cropper and its only consumer)
+
+---
+
 ## 2026-05-28 — Session 112 — E2E Foundation (Tier 5B) + CLAUDE.md Rule H
 
 **Goal:** Lay the Playwright foundation that today's CSP/upload incident proved we need. Ship a contained scope tonight (public-page render smoke; no auth/DB) — auth/upload/chat E2E and CI integration require a test-env story and are deferred to a fresh-day task. Codify Rule H from today's S110/S111 learnings so the next CSP enforce attempt has explicit prerequisites.
