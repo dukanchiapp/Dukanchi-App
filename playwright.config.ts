@@ -16,8 +16,8 @@ import { defineConfig, devices } from '@playwright/test';
  *   - `reuseExistingServer: !process.env.CI` keeps local runs fast.
  *
  * Conventions:
- *   - testDir = 'e2e' (sibling of src/), testMatch '**​/*.spec.ts'
- *     → keeps vitest's `src/**​/*.test.ts` glob and this directory disjoint
+ *   - testDir = 'e2e' (sibling of src/), testMatch '**' + '/*.spec.ts'
+ *     → keeps vitest's 'src/**' + '/*.test.ts' glob and this directory disjoint
  *   - Single chromium project — Firefox / WebKit added when CI lands
  *   - reporter: 'list' for terminal-friendly local output
  */
