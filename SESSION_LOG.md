@@ -6,6 +6,109 @@
 
 ---
 
+## 2026-05-28 — Session 111 — CSP reverted to Report-Only (enforce broke upload via SW-cached header)
+
+**Goal:** Roll the CSP enforce-flip from Session 108 back to safe report-only state. Even after the Session 110 `data:` / `blob:` connect-src hotfix landed, legacy PWA installs continued to break on image upload because the CSP header is delivered with `index.html` — which the Workbox SW precaches. Server-side CSP changes therefore don't propagate to existing PWA users without cache churn.
+
+**Status:** ✅ **CSP REVERTED TO REPORT-ONLY (safe launch state).** Fly **v29** complete. Header confirmed flipped from `content-security-policy:` → `content-security-policy-report-only:`. Image upload no longer blocked by stale enforced header in SW precache. The `data:` / `blob:` connect-src additions from Session 110 are **retained** — harmless in report-only mode and needed for any future clean re-enforce. **Task 5 CSP enforce flip — RE-OPENED for fresh-day work.**
+
+| Metric | Value |
+|---|---|
+| PR merged | #76 (squash) |
+| Squash commit | `bd0f974` |
+| Production HEAD | `31c5232` → **`bd0f974`** |
+| Fly release | **v29** complete |
+| Deploy duration | ~3m end-to-end |
+| Files changed | 1 (`src/app.ts`) |
+| Lines | +2 / −2 (`reportOnly: false → true` on both prod L117 + dev L130) |
+| Tests | 112/112 (unchanged) |
+
+### Why rollback (the SW-precache problem)
+
+Session 108 flipped CSP from report-only → enforce. Session 110 added `data:` / `blob:` to connect-src to unblock the image upload `fetch(data:image/...)` step. The 110 server-side fix was confirmed via curl — but founder browser still saw upload broken. Root cause: the CSP header is sent as part of the HTML document response (helmet middleware on `app.use`). The Workbox service worker (post-ND-A1 injectManifest migration) precaches `index.html` along with the CSP header that was attached to that response at install time. Existing PWA installs therefore continued to serve the **stale enforced CSP** from their cache even after the server started sending the fixed (or report-only) header. Two compounding gaps:
+
+1. **Connect-src gap** (S110 hotfix) — fixed in `31c5232`
+2. **SW-cache stale-header propagation** — server CSP changes don't reach the browser at all on legacy PWA installs until the SW updates + clients claim the new version. For the launch window, the safest move is to revert to report-only on the server so that even installs serving the stale enforced header eventually get an updated SW that delivers a permissive report-only header — and meanwhile, brand-new visits with no SW yet get report-only immediately and can upload without any CSP block.
+
+### Fix
+
+```diff
+-       reportOnly: false,    // L117 (production)
++       reportOnly: true,
+...
+-       reportOnly: false,    // L130 (dev)
++       reportOnly: true,
+```
+
+All other directive content untouched. `data:` / `blob:` in `connect-src` retained.
+
+### Phase 3 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test -- --run` — **112/112** (unchanged from S109b/S110 baseline)
+- ✅ `npm run build` — Vite + injectManifest SW both green
+
+### Phase 4 CI
+
+- ✅ PR #76: Typecheck+Test+Build + Bundle Size Report both `success` (run 26593818604)
+
+### Phase 5 deploy
+
+- ✅ `flyctl deploy -a dukanchi-app` → Fly **v29** complete
+- ✅ Rolling release on machine 9080d70da60d18, 1/1 check passing
+- ⚠️ Same cosmetic "app not listening" warning (consistent v25-v29; tcp_check passes)
+
+### Phase 6 post-deploy verification (all green)
+
+| Check | Result |
+|---|---|
+| CSP header name | ✅ `content-security-policy-report-only:` (rolled back) |
+| `/health` | **HTTP 200** in 277ms, `{status:"ok", db:"up", redis:"up"}` |
+| SW push handler (ND-A1) | ✅ `addEventListener("push"` intact post-deploy |
+| Image moderation (S109b) | Unaffected — server-side, runs post-auth on upload route |
+
+### ND-S111-1 — Learning (re-enforce requires SW-cache propagation fix first)
+
+CSP-via-header + Workbox precaching of `index.html` = **stale-header propagation problem**. Server-side CSP changes don't reach legacy PWA users without explicit cache churn. Before re-attempting CSP enforce:
+
+1. **Adopt network-first navigation for the HTML document** in `src/sw.ts` so `index.html` is fetched fresh from the server on every navigation (with cache as fallback). This ensures the CSP header is never frozen in precache.
+2. **Exercise every real user flow** during the report-only window — not just synthetic page loads + directive theory. The image-upload flow `fetch(data:...)` was the gap S110 caught; future audits should iterate over: upload, search, chat, push subscribe, geolocation, R2 hot URLs, OAuth/Razorpay if added, etc.
+3. **Cache-busting / SW versioning ceremony** before flip — bump `sw.ts` version so all existing installs receive + activate the new SW (with network-first nav) BEFORE the enforce header lands.
+
+Candidate for codification in CLAUDE.md as **Rule H** (CSP enforce-flip prerequisites — exercise + SW-cache + versioning) if Opus agrees. Builds on the ND-S110-1 lesson.
+
+### Files modified
+
+- `src/app.ts` — `reportOnly: false → true` on both `if (env.NODE_ENV === 'production')` (L117) and dev (L130) helmet config paths
+
+### Day 1 backlog impact
+
+- 🔄 **Task 5 — CSP enforce flip — RE-OPENED.** Was closed in S108; rolled back in S111. New scope: SW network-first nav + flow audit + SW versioning ceremony, then re-flip. Estimate: 2-4 hr fresh-day task.
+- ✅ Image moderation (S109b) unaffected — server-side, post-auth
+- ✅ Push handler (ND-A1) intact across all of S108/S109b/S110/S111 deploys
+- ⏳ Tier 5B (E2E) + Tier 5C (perf) still queued
+- ⏳ Reactive `Report` queue remains backstop for moderation false-negatives
+
+### Rollback path (if report-only also surfaces issues — extremely unlikely)
+
+Report-only blocks nothing — it only reports violations. If a new issue surfaces, full revert chain:
+
+```bash
+git revert bd0f974   # back to enforce + data:/blob: (S110 state)
+git revert 31c5232   # back to enforce without data:/blob: (S108 state)
+git revert a8b64bf   # back to pre-S108 (original report-only from the 3.5-day window)
+flyctl deploy -a dukanchi-app
+```
+
+Practically: report-only is the safest state we've shipped — no rollback expected.
+
+### Awaiting
+
+- Founder cache-clear / hard-refresh / SW unregister + re-test image upload → expect 200 + url, no CSP block (because report-only blocks nothing)
+- Sentry watch `dukanchiapp@gmail.com` for any **new** `Content-Security-Policy-Report-Only` violation reports over the next 24h — these are the audit signal for the future re-enforce-flip prerequisite checklist
+
+---
+
 ## 2026-05-28 — Session 110 — HOTFIX: CSP connect-src `data:` / `blob:` (image upload unblocked)
 
 **Goal:** Restore image upload in production. CSP enforce (Session 108) blocked `PostsGrid.tsx:526` `fetch(data:image/jpeg;base64,...)` — connect-src lacked `data:` and `blob:`, so the upload pipeline broke at the data-URI → Blob conversion step.
