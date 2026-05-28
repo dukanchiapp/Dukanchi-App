@@ -6,6 +6,95 @@
 
 ---
 
+## 2026-05-28 — Session 112 — E2E Foundation (Tier 5B) + CLAUDE.md Rule H
+
+**Goal:** Lay the Playwright foundation that today's CSP/upload incident proved we need. Ship a contained scope tonight (public-page render smoke; no auth/DB) — auth/upload/chat E2E and CI integration require a test-env story and are deferred to a fresh-day task. Codify Rule H from today's S110/S111 learnings so the next CSP enforce attempt has explicit prerequisites.
+
+**Status:** ✅ **E2E FOUNDATION SHIPPED.** No deploy (E2E is dev/CI tooling). Vitest baseline preserved at 112/112; new Playwright suite passes 2/2 in ~16.5s locally. Rule H lands as the seventh entry in the Anti-Silent-Failure section.
+
+| Metric | Value |
+|---|---|
+| PR merged | #78 (squash) |
+| Squash commit | `1821733` |
+| Production HEAD | unchanged: `bd0f974` (S111 CSP rollback still latest deploy) |
+| Files added | `playwright.config.ts`, `e2e/public-render.spec.ts` |
+| Files modified | `package.json` (+ `test:e2e` script), `package-lock.json` (+ `@playwright/test`), `.gitignore` (+ Playwright artifact paths), `CLAUDE.md` (+ Rule H) |
+| Lines | +231 across 6 files (foundation) + 2/-2 (lint-cleanup follow-up) |
+| Vitest | **112/112** (unchanged — E2E specs explicitly disjoint) |
+| New E2E | **2/2** passing in ~16.5s on chromium locally |
+
+### What's in the foundation
+
+- **Playwright config** — `testDir: 'e2e'`, `testMatch: '**/*.spec.ts'`, `baseURL: http://localhost:4173`, webServer runs `npm run build && npm run preview` (180s timeout), `reuseExistingServer: !CI`, single chromium project, list reporter
+- **e2e/public-render.spec.ts — 2 render-only smoke tests:**
+  1. `/login` → Hindi heading "Wapas aagaye!" + `<input type="tel" placeholder="Phone number">` + `<input type="password" placeholder="Password">` + "Log In" submit + Sign up link → `/signup`
+  2. `/signup` → Hindi heading "Shuru karte hain!" + "Sign Up" submit
+- **package.json** — `"test:e2e": "playwright test"`
+- **.gitignore** — `test-results/`, `playwright-report/`, `playwright/.cache/`
+- **CLAUDE.md** — **Rule H** codifies CSP enforce-flip prerequisites: (1) exercise EVERY real user flow during the report-only window (upload, chat, search, auth, push, maps, …) and confirm zero violations, (2) adopt network-first navigation for `index.html` in `src/sw.ts` + bump SW version BEFORE flipping (so the CSP header isn't frozen in precache for legacy PWA installs), (3) keep the enforce commit a single revertable squash with no unrelated changes
+
+### Why `addInitScript`
+
+`index.html` ships a pre-React script that redirects browser visitors from any non-`/landing` path to `/landing` (the static `public/landing.html`) — by design, to drive non-PWA users to the install pitch. Without bypass, Playwright's vanilla browser never reaches React on `/login` or `/signup`. Tests use `context.addInitScript()` to set `localStorage.dk-browser-mode = '1'` before any page script runs — matching production behaviour after a user taps "continue in browser". This is documented in the spec file with a comment for future maintainers.
+
+### Isolation guarantees (E2E ↔ unit tests are disjoint)
+
+| Concern | Mitigation |
+|---|---|
+| Vitest picking up E2E specs | `vitest.config.ts` `include: ["src/**/*.test.ts"]` — `e2e/*.spec.ts` outside `src/` is invisible |
+| App tsconfig compiling E2E | `tsconfig.app.json` `exclude` has `**/*.spec.ts` AND only `include`s paths under `src/`; `e2e/` outside scope |
+| Server tsconfig compiling E2E | `tsconfig.server.json` same shape — `**/*.spec.ts` excluded, `e2e/` outside the `include` whitelist |
+| Worker tsconfig | extends `tsconfig.app.json` with `include: ["src/sw.ts"]` only — E2E never reaches it |
+| Root tsconfig | only references app + server projects; doesn't compile e2e at all |
+
+Net: `npm run typecheck` and `npm test` are unchanged by this PR; `npm run test:e2e` is opt-in.
+
+### Phase 5 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test -- --run` — **112/112** (vitest baseline preserved)
+- ✅ `npm run build` — Vite + injectManifest SW both green
+- ✅ `npm run test:e2e` — **2/2 passing in 16.5s** on chromium
+
+### Phase 6 CI
+
+- ✅ PR #78 first push (run 26596128822): success — ESLint warning on irregular whitespace (U+200B in JSDoc) flagged but allowed by `max-warnings=9999`
+- ✅ PR #78 lint-cleanup followup (run 26596340900): success (zero-width spaces replaced with string concatenation in the JSDoc comment text)
+- ✅ Squash-merged at `1821733`
+
+### Out of scope (deferred to fresh-day)
+
+| Item | Blocker |
+|---|---|
+| Auth E2E (signup → login → logout round-trip) | Needs test DB + test JWT minting strategy |
+| Upload pipeline E2E (image → R2 → verify URL) | Needs R2 mock or `R2_BUCKET_NAME_TEST` (Rule F.2) |
+| Chat / Socket.IO E2E | Needs test Redis |
+| Push subscribe E2E | Needs VAPID key plumbing in test env |
+| Playwright CI integration | Needs CI runner with browser deps; existing vitest CI untouched here |
+| Multi-project (Firefox + WebKit) | Single chromium tonight; expand when CI lands |
+
+### Rule H — full text (codified in CLAUDE.md)
+
+> Before flipping `helmet.contentSecurityPolicy.reportOnly: true → false`, three prerequisites are mandatory:
+> 1. **Exercise EVERY real user flow during the report-only window** — directive theory is insufficient; sessions 95–107 missed the connect-src `data:` gap because no real upload ran in the window
+> 2. **Solve the SW-cache stale-header propagation** — Workbox precaches `index.html` which freezes the CSP header at install time; adopt network-first navigation for the HTML doc + bump SW version BEFORE enforce
+> 3. **Keep `git revert` rollback ready** — the enforce commit must be a single revertable squash with no other deploy-shaped changes
+
+### Files modified
+
+- `playwright.config.ts` — new (Playwright config)
+- `e2e/public-render.spec.ts` — new (2 render-only tests)
+- `package.json` — added `"test:e2e": "playwright test"` script
+- `package-lock.json` — `@playwright/test` dev dep + transitive locks
+- `.gitignore` — `test-results/`, `playwright-report/`, `playwright/.cache/`
+- `CLAUDE.md` — Rule H added between Rule F.3 and Rule G in the Anti-Silent-Failure section
+
+### Awaiting
+
+- Opus / fresh-day → scope E2E auth + upload + chat paths with test env, then wire Playwright into CI alongside vitest
+
+---
+
 ## 2026-05-28 — Session 111 — CSP reverted to Report-Only (enforce broke upload via SW-cached header)
 
 **Goal:** Roll the CSP enforce-flip from Session 108 back to safe report-only state. Even after the Session 110 `data:` / `blob:` connect-src hotfix landed, legacy PWA installs continued to break on image upload because the CSP header is delivered with `index.html` — which the Workbox SW precaches. Server-side CSP changes therefore don't propagate to existing PWA users without cache churn.
