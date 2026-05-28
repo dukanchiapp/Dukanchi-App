@@ -114,7 +114,7 @@ if (env.NODE_ENV === 'production') {
     helmet({
       contentSecurityPolicy: {
         useDefaults: false,
-        reportOnly: false,
+        reportOnly: true,
         directives: cspDirectives,
       },
     }),
@@ -127,7 +127,7 @@ if (env.NODE_ENV === 'production') {
     helmet({
       contentSecurityPolicy: {
         useDefaults: false,
-        reportOnly: false,
+        reportOnly: true,
         directives: cspDirectives,
       },
       crossOriginResourcePolicy: false,
