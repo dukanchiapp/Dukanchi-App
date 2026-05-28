@@ -38,6 +38,13 @@ updates:
     commit-message:
       prefix: chore(deps)
       include: scope
+    ignore:
+      # ioredis 5.11+ breaks bullmq@5.77.x transitive dedup (nominal-typing collision).
+      # bullmq@5.77.6 pins ioredis to 5.10.x; bumping root ioredis to 5.11 splits the tree.
+      # Remove this ignore when bullmq releases a version accepting ioredis@5.11+.
+      # Tracked: Session 101 (2026-05-28). Re-evaluate monthly.
+      - dependency-name: "ioredis"
+        versions: ["5.11.x"]
 
   # ── Admin panel subproject (separate package.json) ───────────────────────
   - package-ecosystem: npm

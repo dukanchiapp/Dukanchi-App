@@ -6,6 +6,128 @@
 
 ---
 
+## 2026-05-28 — Session 101 — PR #48 Closed + Dependabot ioredis Guard — Backlog CLEARED
+
+**Goal:** Resolve the last open PR (#48 root npm grouped bump × 30 packages) that had been blocked by broken CI since 2026-05-27T15:55Z. Investigate root cause, attempt automatic recovery if safe, otherwise close cleanly + add guardrails to prevent recurrence.
+
+**Status:** ✅ **BACKLOG CLEARED — 0 OPEN PRs.** PR #48 closed (not merged) due to internal incompatibility between `bullmq@5.77.6` and `ioredis@5.11.0` in the same grouped bump. Dependabot ignore rule added for `ioredis@5.11.x` to prevent broken-PR recurrence. The other 26 (now legitimately bumpable) packages will re-propose in next Dependabot grouped run.
+
+### 🎉 Day 1 PR Backlog Sweep — milestone
+
+Single-day backlog clearance across Sessions 99 / 100 / 101 (all 2026-05-28):
+
+| Session | Action | PRs resolved |
+|---|---|---|
+| 99 | Batch-merge 4× GH-Actions Dependabot bumps | #2, #3, #4, #5 |
+| 100 | Rebase + merge admin-panel grouped bump | #34 |
+| 101 | Close + guard the un-mergeable root grouped bump | #48 (closed, not merged) |
+| **Total** | **6 PRs resolved · backlog 6 → 0** | |
+
+### Phase 1 recon — root cause confirmed
+
+Per spec, Phase 1 captured the verbatim CI failure log + PR #48 metadata. Findings:
+
+- **Diff scope**: clean — `package.json` + `package-lock.json` only.
+- **27 packages bumped** (Dependabot title said "30"; body itemised 27 — 3 transitive lockfile-only diffs). All semver-minor or -patch. None of `firebase-admin`/`exceljs`/`uuid` touched — ND-T6-1/T6-2 chain unaffected.
+- **Failure** (verbatim from `gh run view 26522482353 --log-failed`):
+  ```
+  ##[error]src/config/bullmq.ts(9,63): error TS2322:
+    Type 'Redis' is not assignable to type 'ConnectionOptions'.
+    Type '…/node_modules/ioredis/built/Redis' is not assignable to type
+         '…/node_modules/bullmq/node_modules/ioredis/built/Redis'.
+  ##[error]src/workers/notification.worker.ts(114,8): error TS2322: [same trail]
+  ##[error]The process '/opt/hostedtoolcache/node/22.22.3/x64/bin/npm' failed with exit code 2
+  ```
+
+The original Session 99 hypothesis ("firebase-admin/exceljs uuid chain blockers") was directionally correct but **misidentified** the specific blocker — the real cause is a duplicate-package nominal-typing collision in `ioredis`, not the uuid chain.
+
+### Phase 2 (DEDUP ABORT) — npm cannot dedupe ioredis after the bump
+
+| Step | Output |
+|---|---|
+| Rebase against fresh main | Clean (no conflicts) |
+| `rm -rf node_modules package-lock.json && npm install` | 1296 packages, 9 moderate vulns (expected ND-T6 residual) |
+| `npm ls ioredis` (Step 8.5) | ❌ FAIL — split tree, both versions installed |
+| `npm dedupe` recovery (one-shot) | ❌ no-op — version ranges genuinely incompatible |
+| Restore to `main @ 68fe1b8` | Clean (`bullmq@5.76.4 → ioredis@5.10.1 deduped`) |
+| **Decision** | ABORT — no automatic fix; do not modify PR branch |
+
+#### Pre-`npm dedupe` (after fresh install on rebased PR #48 branch)
+```
+react-example@0.0.0
++-- bullmq@5.77.6
+| `-- ioredis@5.10.1          ← nested, NOT deduped (bullmq pins to 5.10.x)
+`-- ioredis@5.11.0             ← root, this PR's bump
+```
+
+#### Post-`npm dedupe` (no-op — confirmed incompatibility)
+```
+react-example@0.0.0
++-- bullmq@5.77.6
+| `-- ioredis@5.10.1          ← STILL nested
+`-- ioredis@5.11.0             ← STILL split
+```
+
+#### `main`'s healthy reference state
+```
+react-example@0.0.0
++-- bullmq@5.76.4
+| `-- ioredis@5.10.1 deduped   ← properly deduped on main
+`-- ioredis@5.10.1
+```
+
+The blocker is structural: `bullmq@5.77.6`'s transitive `ioredis` range excludes `5.11.0`. Bumping root `ioredis` alone splits the type identity → TS2322 typecheck failure.
+
+### Decision: close + Dependabot guard (Option 3 from Phase 2 ABORT findings)
+
+- **Closed PR #48** with explanatory comment linking to this Session 101 entry.
+- **Added Dependabot ignore rule** in `.github/dependabot.yml` (root npm ecosystem block ONLY — admin-panel + github-actions blocks untouched):
+
+  ```yaml
+  ignore:
+    # ioredis 5.11+ breaks bullmq@5.77.x transitive dedup (nominal-typing collision).
+    # bullmq@5.77.6 pins ioredis to 5.10.x; bumping root ioredis to 5.11 splits the tree.
+    # Remove this ignore when bullmq releases a version accepting ioredis@5.11+.
+    # Tracked: Session 101 (2026-05-28). Re-evaluate monthly.
+    - dependency-name: "ioredis"
+      versions: ["5.11.x"]
+  ```
+
+- **Rationale for guarding `ioredis` (not `bullmq`):** Future `bullmq` patch releases may add `ioredis@5.11+` support — we want those to come through automatically. Guarding the smaller package (ioredis) means we only block one specific version range, not an entire ecosystem dimension.
+
+- **Removal trigger:** When `bullmq` ships a version supporting `ioredis@5.11+`. Re-evaluate monthly.
+
+### ND-S101-1 — Dependabot grouped bumps do NOT validate inter-package compatibility
+
+The grouped `minor-and-patch` Dependabot strategy bundles all in-range updates by date-window without checking whether the bumps are mutually compatible at the resolver level. This is an upstream limitation, not configurable per-group. Mitigation: rely on CI to catch incompatibilities (which it did here), then close + ignore-rule the specific blocker. Document for future similar situations.
+
+### Other findings carried forward
+
+- **9 moderate vulnerabilities remain** on `main` post-`npm install` — unchanged from PR #47 / Session 98 / Task 6. All in the `firebase-admin`/`exceljs`/`uuid` chain (ND-T6-1/T6-2). No new vulns introduced by this session.
+- **Build was not separately invoked** in the abort path (typecheck failure prevented it on the PR branch). Main's build remains healthy from prior sessions.
+
+### Verification gates (all green)
+
+- **`git status`** — only `.github/dependabot.yml` + `SESSION_LOG.md` + `STATUS.md` modified
+- **`npm run typecheck`** — 0 errors (web + server projects)
+- **`npm test -- --run`** — ✅ 100/100 in 4.73s
+- **YAML lint** — ✅ `yaml-lint` clean
+- **Production smoke** — `HTTP 200 | 0.54s`, `{"status":"ok","db":"up","redis":"up"}`
+- **Open PRs after session** — **0** ✅
+- **`main` HEAD** — `68fe1b8` at session start → (advanced by Session 101 docs PR squash on close)
+
+### Files modified
+
+- `.github/dependabot.yml` — +7 lines (ignore block in root npm ecosystem only)
+- `SESSION_LOG.md` — Session 101 entry prepended
+- `STATUS.md` — "Last updated" refreshed; backlog=0 prominent note
+
+### No deploy required
+
+Config + docs only. Production runtime unchanged at `cd18d1a` (last Fly deploy from PR #47).
+
+---
+
 ## 2026-05-28 — Session 100 — PR #34 Admin-Panel Grouped Bump (15 packages)
 
 **Goal:** Refresh the stale 4-day-old Dependabot admin-panel grouped bump (PR #34) — rebase against fresh main (5 commits ahead), verify CI + local gates, merge.
