@@ -1,16 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
-import { FIcon, type FIconName } from './futuristic';
+import { Home, Search, MapPin, MessageCircle, User } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-/* ── Futuristic v2 skin · Phase 10 / feat/futuristic-redesign ──
+/* ── Futuristic v3 skin · Session 117 / feat/reskin-header-nav ──
    Floating glass bottom navigation. Routes, active-tab detection, and the
-   hide-on-auth/chat/landing logic are preserved verbatim. */
+   hide-on-auth/chat/landing logic are preserved verbatim. v3 changes the
+   active state from the v2 solid-gradient tile to a translucent inset pill
+   with a magenta-tinted icon, and swaps FIcon → lucide-react. */
 
-const navItems: { path: string; icon: FIconName; label: string }[] = [
-  { path: '/', icon: 'home', label: 'Home' },
-  { path: '/search', icon: 'search', label: 'Search' },
-  { path: '/map', icon: 'mapPin', label: 'Map' },
-  { path: '/messages', icon: 'msg', label: 'Chat' },
-  { path: '/profile', icon: 'user', label: 'Profile' },
+const navItems: { path: string; icon: LucideIcon; label: string }[] = [
+  { path: '/', icon: Home, label: 'Home' },
+  { path: '/search', icon: Search, label: 'Search' },
+  { path: '/map', icon: MapPin, label: 'Map' },
+  { path: '/messages', icon: MessageCircle, label: 'Chat' },
+  { path: '/profile', icon: User, label: 'Profile' },
 ];
 
 export default function BottomNav() {
@@ -30,20 +33,20 @@ export default function BottomNav() {
       className="fixed bottom-0 left-0 right-0 pb-safe z-40"
       style={{ pointerEvents: 'none' }}
     >
-      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 14px 8px' }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 6px 6px' }}>
         <div
           style={{
             pointerEvents: 'auto',
             display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-            padding: '8px 6px', borderRadius: 30,
-            background: 'rgba(20,20,40,0.62)',
+            padding: '8px 4px', borderRadius: 32,
+            background: 'var(--f-bottom-nav-bg)',
             border: '1px solid var(--f-glass-border-2)',
             backdropFilter: 'blur(28px) saturate(180%)',
             WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            boxShadow: '0 -2px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.10)',
+            boxShadow: '0 -8px 28px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.30)',
           }}
         >
-          {navItems.map(({ path, icon, label }) => {
+          {navItems.map(({ path, icon: Icon, label }) => {
             const isActive =
               location.pathname === path ||
               (path !== '/' && location.pathname.startsWith(path));
@@ -53,30 +56,38 @@ export default function BottomNav() {
                 to={path}
                 aria-current={isActive ? 'page' : undefined}
                 style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  padding: '3px 10px', textDecoration: 'none',
+                  position: 'relative',
+                  flex: 1,
+                  minHeight: 58,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4,
+                  padding: '10px 6px 8px', borderRadius: 20,
+                  textDecoration: 'none',
+                  transition: 'all 250ms var(--f-ease)',
                 }}
               >
-                <div style={{
-                  width: 36, height: 36, borderRadius: 12,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isActive ? 'var(--f-grad-primary)' : 'transparent',
-                  boxShadow: isActive
-                    ? '0 0 16px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.30)'
-                    : 'none',
-                  transition: 'background 250ms var(--f-ease)',
-                }}>
-                  <FIcon
-                    name={icon}
-                    size={20}
-                    color={isActive ? 'white' : 'rgba(244,242,235,0.55)'}
-                    fill={isActive ? 'white' : 'none'}
-                    stroke={isActive ? 0 : 2}
+                {/* v3 active pill — translucent inset, magenta border + glow */}
+                {isActive && (
+                  <span
+                    style={{
+                      position: 'absolute', inset: '2px 8px',
+                      borderRadius: 18,
+                      background: 'linear-gradient(135deg, rgba(255,107,53,0.22), rgba(255,42,140,0.28))',
+                      border: '1px solid rgba(255,42,140,0.45)',
+                      boxShadow: '0 4px 14px rgba(255,42,140,0.30), inset 0 1px 0 rgba(255,255,255,0.20)',
+                    }}
                   />
-                </div>
+                )}
+                <Icon
+                  size={22}
+                  color={isActive ? '#FF2A8C' : 'var(--f-text-3)'}
+                  fill={isActive ? 'rgba(255,42,140,0.14)' : 'none'}
+                  strokeWidth={isActive ? 2.4 : 2}
+                  style={{ position: 'relative' }}
+                />
                 <span style={{
-                  fontSize: 9.5, fontWeight: isActive ? 800 : 600, letterSpacing: 0.3,
-                  color: isActive ? 'var(--f-text-1)' : 'rgba(244,242,235,0.55)',
+                  position: 'relative',
+                  fontSize: 10, fontWeight: 700, letterSpacing: 0.2,
+                  color: isActive ? '#FF2A8C' : 'var(--f-text-3)',
                 }}>
                   {label}
                 </span>
