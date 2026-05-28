@@ -1,14 +1,14 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 108 | 🎉 **CSP ENFORCED in production** (Fly v26, PR #70). Header flipped from `content-security-policy-report-only:` → `content-security-policy:`. Site + /health + ND-A1 push handler all intact post-flip. Task 5 CSP hardening CLOSED ✅.
+> Last updated: 2026-05-28 | Session 109b | 🎉 **IMAGE MODERATION LIVE** (Fly v27, PR #72, commit `4091dbf`). Gemini Vision synchronous safety gate now runs on every `/api/upload` + `/api/admin/settings/upload` between magic-byte check and R2 store. 422 `IMAGE_UNSAFE` rejection pre-store; fail-open on Gemini error/6s timeout (Sentry warn). Tier 5A — primary launch blocker — CLOSED ✅. CSP still enforced; SW push handler still intact post-deploy.
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Pending:** Watch `dukanchiapp@gmail.com` for CSP violation alerts over next 1-2h. Rollback path: `git revert a8b64bf + flyctl deploy` (instant). Checkpoint 4 (device verify): ND-D2-APK-SMOKE + browser PWA push end-to-end.
+> **Pending:** Watch `dukanchiapp@gmail.com` for "Image moderation rejection" (info) + "upload.moderation.gemini_error" (warning) rate over next 24h. Tier 5B (E2E tests) + Tier 5C (perf smoke) queued. Rollback path: `git revert 4091dbf + flyctl deploy` (rolls to a8b64bf CSP baseline). Checkpoint 4 (device verify): ND-D2-APK-SMOKE + browser PWA push end-to-end still pending.
 
 ## Day 1 Launch Sprint — 27 May 2026
 
 Status: ✅ Day 1 effectively complete | **6 of 7 tasks closed** | Task 5 CSP in 24-48h Sentry monitoring window before enforce flip
-Production HEAD: `050dc62` → `eda3a4d` (PR #43) → `9475c90` (PR #44) → `cd18d1a` (PR #47 npm audit fix); APK signed release built locally (not on `main`)
+Production HEAD: `050dc62` → `eda3a4d` (PR #43) → `9475c90` (PR #44) → `cd18d1a` (PR #47 npm audit fix) → `a8b64bf` (PR #70 CSP enforce, Fly v26) → **`4091dbf`** (PR #72 image moderation, Fly v27); APK signed release built locally (not on `main`)
 
 > **Note:** SESSION_LOG has a gap between Session 97 and Session 98 (~9 days, May 18 → May 27). At least one commit landed on main during that window that is not captured in the log. Backfill candidate for a future dedicated docs catch-up session.
 
