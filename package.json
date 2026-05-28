@@ -42,7 +42,7 @@
     "@capacitor/status-bar": "^8.0.2",
     "@google/genai": "^1.50.1",
     "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^7.8.0",
     "@react-google-maps/api": "^2.20.8",
     "@react-oauth/google": "^0.13.4",
     "@sentry/node": "^10.50.0",
