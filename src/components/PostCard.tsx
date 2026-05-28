@@ -1,7 +1,9 @@
 import React, { useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Bookmark, Share2, MessageCircle } from 'lucide-react';
-import { getStoreStatus, statusColor } from '../lib/storeUtils';
+import { Heart, Bookmark, Share2, MessageCircle, MapPin } from 'lucide-react';
+import { getStoreStatus } from '../lib/storeUtils';
+import { getLiveStatus } from '../lib/liveStatus';
+import { useClosingSoon } from '../hooks/useClosingSoon';
 import { Post } from '../types';
 
 export interface PostCardProps {
@@ -34,23 +36,53 @@ function getImageStyles(naturalRatio: number | undefined): {
   canvasStyle: React.CSSProperties;
   imgStyle: React.CSSProperties;
 } {
+  // Futuristic re-skin: canvas bg #0a0612 (deep plum-black) instead of pure
+  // black. Adaptive aspect-ratio logic preserved — portrait/unknown → 4:5
+  // (contain, no crop), square → 1:1, landscape → natural ratio.
+  const CANVAS_BG = '#0a0612';
   if (!naturalRatio || naturalRatio < 0.9) {
     return {
-      canvasStyle: { aspectRatio: '4/5', background: 'black', overflow: 'hidden', position: 'relative' },
+      canvasStyle: { aspectRatio: '4/5', background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
       imgStyle: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
     };
   }
   if (naturalRatio <= 1.1) {
     return {
-      canvasStyle: { aspectRatio: '1/1', background: 'black', overflow: 'hidden', position: 'relative' },
+      canvasStyle: { aspectRatio: '1/1', background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
       imgStyle: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
     };
   }
   return {
-    canvasStyle: { aspectRatio: String(naturalRatio), background: 'black', overflow: 'hidden', position: 'relative' },
+    canvasStyle: { aspectRatio: String(naturalRatio), background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
     imgStyle: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
   };
 }
+
+/** Gradient verified tick — green→cyan, matches the futuristic palette. */
+function VerifiedTick({ size = 14 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
+      <defs>
+        <linearGradient id="pc-vtick-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#2EE7A1" />
+          <stop offset="1" stopColor="#00E5FF" />
+        </linearGradient>
+      </defs>
+      <circle cx="6.5" cy="6.5" r="6.5" fill="url(#pc-vtick-grad)" />
+      <path d="M3.5 6.5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const ghostBtn: React.CSSProperties = {
+  background: 'transparent',
+  border: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  cursor: 'pointer',
+  padding: 0,
+};
 
 function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance, imgRatio, onLike, onSave, onFollow, onShare, onImgLoad }: PostCardProps) {
   const isOwnPost = post.isOwnPost === true;
@@ -61,6 +93,14 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
     post.store?.is24Hours ?? undefined,
     post.store?.workingDays ?? undefined
   );
+  // Live status capsule (Session 116): bridge getStoreStatus →
+  // useClosingSoon (ticks the countdown) → getLiveStatus (4-tier color).
+  const closingSoon = useClosingSoon(status?.minutesUntilClose ?? null);
+  const live = getLiveStatus({ closingSoon, status: status?.label ?? null });
+  // Row 3 area · pincode — Store has city + postalCode (no dedicated `area`).
+  const areaText = [post.store?.city, post.store?.postalCode]
+    .filter((v) => v !== null && v !== undefined && v !== '')
+    .join(' · ');
   const { canvasStyle, imgStyle } = getImageStyles(imgRatio);
 
   const handleImgLoad = useCallback(
@@ -75,92 +115,142 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
 
   return (
     <div
-      className="bg-white overflow-hidden"
       style={{
-        border: '0.5px solid var(--dk-border)',
-        borderRadius: 'var(--dk-radius-xl)',
+        overflow: 'hidden',
+        background: 'var(--f-bg-elev)',
+        border: '1px solid var(--f-glass-border)',
+        borderRadius: 22,
+        boxShadow: '0 2px 12px rgba(24,16,8,0.06)',
       }}
     >
-      {/* Card header */}
-      <div className="p-3 flex items-center justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Link to={storeLink} className="flex-shrink-0">
-            <img
-              src={post.store?.logoUrl || '/uploads/default-logo.png'}
-              alt={post.store?.storeName}
-              loading="lazy"
-              decoding="async"
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: '50%',
-                border: '2px solid var(--dk-accent)',
-                objectFit: 'cover',
-              }}
-            />
-          </Link>
-          <div className="min-w-0">
-            <div className="flex items-center gap-1">
-              <Link to={storeLink}>
-                <span
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: 'var(--dk-text-primary)',
-                    lineHeight: '1.3',
-                  }}
-                >
-                  {post.store?.storeName}
-                </span>
-              </Link>
-              {post.store?.isVerified && (
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <circle cx="6.5" cy="6.5" r="6.5" fill="var(--dk-success)" />
-                  <path
-                    d="M3.5 6.5l2 2 4-4"
-                    stroke="white"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              )}
-            </div>
-            <div
-              className="flex items-center gap-1 flex-wrap"
-              style={{ fontSize: 11, color: 'var(--dk-text-tertiary)', marginTop: 1 }}
-            >
-              <span style={{ color: status ? statusColor(status.color) : 'var(--dk-success)', fontWeight: 500 }}>
-                {status ? `● ${status.label}` : '● Open'}
+      {/* Card header — 3 sub-rows (name+verified+follow / status+distance+category / area) */}
+      <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        {/* Avatar — real logo image with double-ring shadow + gradient fallback */}
+        <Link to={storeLink} style={{ flexShrink: 0 }}>
+          <img
+            src={post.store?.logoUrl || '/uploads/default-logo.png'}
+            alt={post.store?.storeName}
+            loading="lazy"
+            decoding="async"
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: '50%',
+              objectFit: 'cover',
+              background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
+              boxShadow: '0 0 0 2px var(--f-bg-elev), 0 0 0 3.5px #FF2A8C, 0 4px 12px rgba(255,42,140,0.30)',
+            }}
+          />
+        </Link>
+
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {/* Row 1: name + verified + spacer + Follow */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+            <Link to={storeLink} style={{ minWidth: 0, textDecoration: 'none' }}>
+              <span
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: 'var(--f-text-1)',
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.2,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  display: 'block',
+                }}
+              >
+                {post.store?.storeName}
               </span>
-              {distance && (
-                <>
-                  <span style={{ color: 'var(--dk-border-strong)' }}>·</span>
-                  <span>{distance}</span>
-                </>
-              )}
-              {post.store?.category && (
-                <>
-                  <span style={{ color: 'var(--dk-border-strong)' }}>·</span>
-                  <span>{post.store.category}</span>
-                </>
-              )}
-            </div>
+            </Link>
+            {post.store?.isVerified && <VerifiedTick size={14} />}
+            <span style={{ flex: 1 }} />
+            {!isOwnPost && (
+              <button
+                onClick={() => onFollow(post.storeId)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 9999,
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  flexShrink: 0,
+                  lineHeight: 1,
+                  background: isFollowed ? 'var(--f-bg-elev)' : 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
+                  color: isFollowed ? 'var(--f-text-2)' : 'white',
+                  border: isFollowed ? '1px solid var(--f-glass-border-2)' : 'none',
+                  boxShadow: isFollowed ? 'none' : '0 2px 8px rgba(255,42,140,0.32)',
+                }}
+              >
+                {isFollowed ? 'Following' : 'Follow'}
+              </button>
+            )}
           </div>
-        </div>
-        {!isOwnPost && (
-          <button
-            onClick={() => onFollow(post.storeId)}
-            className="text-xs font-semibold px-3 py-1.5 rounded-full transition-colors flex-shrink-0 ml-2"
-            style={
-              isFollowed
-                ? { background: 'var(--dk-surface)', color: 'var(--dk-text-secondary)' }
-                : { background: 'var(--dk-accent)', color: 'white' }
-            }
+
+          {/* Row 2: status capsule + distance + category */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 7,
+              fontSize: 11,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              fontWeight: 500,
+            }}
           >
-            {isFollowed ? 'Following' : 'Follow'}
-          </button>
-        )}
+            <span
+              style={{
+                color: live.color,
+                fontWeight: 700,
+                flexShrink: 0,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 7px',
+                borderRadius: 9999,
+                background: live.color + '1A',
+                border: `1px solid ${live.color}40`,
+                fontSize: 10.5,
+                lineHeight: 1.2,
+              }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: live.color, display: 'inline-block' }} />
+              {live.label}
+            </span>
+            {distance && (
+              <span style={{ color: 'var(--f-text-3)', fontWeight: 600, flexShrink: 0 }}>{distance}</span>
+            )}
+            {post.store?.category && (
+              <>
+                <span style={{ color: 'var(--f-text-4)', flexShrink: 0 }}>·</span>
+                <span style={{ color: '#FF6BB4', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {post.store.category}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Row 3: area · pincode */}
+          {areaText && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: 10.5,
+                color: 'var(--f-text-3)',
+                fontWeight: 500,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+              }}
+            >
+              <MapPin size={10} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{areaText}</span>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Image canvas — aspect ratio adapts to photo dimensions */}
@@ -195,16 +285,16 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
       </div>
 
       {/* Action bar + caption */}
-      <div className="px-4 pt-3 pb-3">
-        <div className="flex items-center" style={{ gap: 16 }}>
-          <button onClick={() => onLike(post.id)} className="flex items-center gap-1">
+      <div style={{ padding: '12px 16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
+          <button onClick={() => onLike(post.id)} style={ghostBtn}>
             <Heart
-              size={21}
-              fill={isLiked ? '#FF4444' : 'none'}
-              color={isLiked ? '#FF4444' : 'var(--dk-text-primary)'}
+              size={22}
+              fill={isLiked ? '#FF4D6A' : 'none'}
+              color={isLiked ? '#FF4D6A' : 'var(--f-text-1)'}
               strokeWidth={2}
             />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--dk-text-secondary)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>
               {likeCount}
             </span>
           </button>
@@ -220,36 +310,36 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                   price: post.price,
                 },
               }}
-              className="flex items-center gap-1"
+              style={{ ...ghostBtn, textDecoration: 'none' }}
             >
-              <MessageCircle size={21} fill="none" color="var(--dk-text-primary)" strokeWidth={2} />
-              <span style={{ fontSize: 13, color: 'var(--dk-text-primary)' }}>Chat</span>
+              <MessageCircle size={21} fill="none" color="var(--f-text-1)" strokeWidth={2} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>Chat</span>
             </Link>
           )}
 
-          <button onClick={() => onShare(post)} className="flex items-center gap-1">
-            <Share2 size={19} fill="none" color="var(--dk-text-primary)" strokeWidth={2} />
-            <span style={{ fontSize: 13, color: 'var(--dk-text-primary)' }}>Share</span>
+          <button onClick={() => onShare(post)} style={ghostBtn}>
+            <Share2 size={20} fill="none" color="var(--f-text-1)" strokeWidth={2} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>Share</span>
           </button>
 
-          <div style={{ flex: 1 }} />
+          <span style={{ flex: 1 }} />
 
-          <button onClick={() => onSave(post.id)}>
+          <button onClick={() => onSave(post.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
             <Bookmark
-              size={21}
-              fill={isSaved ? 'var(--dk-text-primary)' : 'none'}
-              color="var(--dk-text-primary)"
+              size={22}
+              fill={isSaved ? 'var(--f-text-1)' : 'none'}
+              color="var(--f-text-1)"
               strokeWidth={2}
             />
           </button>
         </div>
 
         {post.product && (
-          <div className="flex items-center justify-between mt-2">
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>
               {post.product.productName}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--dk-accent)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#FF6BB4' }}>
               ₹{post.product.price?.toLocaleString()}
             </span>
           </div>
@@ -258,7 +348,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
         {post.caption && (
           <p
             className="line-clamp-3"
-            style={{ fontSize: 13, color: 'var(--dk-text-primary)', lineHeight: '1.45', marginTop: 6 }}
+            style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: '1.45', marginTop: 6 }}
           >
             {renderCaption(post.caption)}
           </p>
