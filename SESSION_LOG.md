@@ -6,6 +6,110 @@
 
 ---
 
+## 2026-05-28 — Session 103 — Checkpoint 2: Dependabot Monday Cycle Triage
+
+**Goal:** Triage 7 overnight Dependabot PRs (Monday weekly cycle). Auto-merge ONLY the safe category (GH-actions + admin-panel + green CI). Flag root-npm bumps for Opus review (PR #48 lesson — ioredis duplicate-package risk).
+
+**Status:** ✅ **Category A (2 PRs) auto-merged + 5 Category B PRs flagged for Opus review.** All gates green. Production runtime unchanged (admin-panel changes ship with next Fly deploy). **🎉 ioredis@5.11.x ignore rule from Session 101 confirmed working** — grouped root PR #56 explicitly did NOT bump ioredis.
+
+| Metric | Value |
+|---|---|
+| Open PRs at start | 7 (vs spec's expected 6 — one extra root PR surfaced) |
+| Open PRs after sweep | 5 (all Category B, awaiting Opus) |
+| Category A merged | **2** (#54, #55 — admin-panel scope) |
+| Category B flagged | **5** (#56, #57, #58, #59, #60 — root npm) |
+| ioredis guard | ✅ HELD — PR #56 left `"ioredis": "^5.10.1"` unchanged |
+| `main` HEAD | `fd95c08` → `1606d20` (#54) → `70ab011` (#55) |
+| Production HEAD | `42d3e82` (unchanged — admin-panel ships with next deploy) |
+
+### Categorization table
+
+| PR# | Title | Scope | CI | Category | Disposition |
+|---|---|---|---|---|---|
+| **#54** | admin-panel minor+patch group × 2 | admin-panel/* | ✅ SUCCESS | **A** | ✅ MERGED at `1606d20` |
+| **#55** | admin-panel `@types/node` 24.12 → 25.9 | admin-panel/* | ✅ SUCCESS | **A** | ✅ MERGED at `70ab011` |
+| #56 | root minor+patch group × 29 (ioredis untouched ✅) | root npm | ✅ SUCCESS | **B** | Opus review (root npm — repeat PR #48 risk surface) |
+| #57 | root `prisma` 5.22 → **7.8** (devDep, MAJOR) | root npm | ❌ FAILURE | **B** | Opus — Prisma 7 is a major bump (Prisma 6 + 7 had breaking client API changes; needs deliberate migration) |
+| #58 | root `@eslint/js` 9 → **10** (devDep, MAJOR) | root npm | ❌ FAILURE | **B** | Opus — ESLint 10 flat-config schema changed; needs config update |
+| #59 | root `@prisma/client` 5.22 → **7.8** (MAJOR) | root npm | ❌ FAILURE | **B** | Opus — paired with #57 |
+| #60 | root `@types/node` 22 → **25** (devDep, MAJOR) | root npm | ✅ SUCCESS | **B** | Opus — root major-version bump; needs node engine validation |
+
+### ioredis guard verification (Session 101 ignore rule working as designed)
+
+`grep -i '"ioredis"'` against each root PR's diff:
+
+```
+PR #56:  "ioredis": "^5.10.1"   ← unchanged from main (line appears 3× in the package-lock diff because PR #56 touched neighbouring deps; all three references preserve 5.10.1)
+PR #57:  no ioredis lines
+PR #58:  no ioredis lines
+PR #59:  no ioredis lines
+PR #60:  no ioredis lines
+```
+
+Confirms: Dependabot honoured the `.github/dependabot.yml` ignore rule (`dependency-name: "ioredis", versions: ["5.11.x"]`) added in Session 101. The PR #48-class blow-up where `bullmq@5.77.x ↔ ioredis@5.11.x` nominal-typing collision broke CI is now structurally prevented at the proposal stage.
+
+### Category A — sequential merge sequence
+
+Both PRs were stale (mergeable=UNKNOWN from yesterday) — rebased against current main, force-pushed, CI re-ran fresh, then merged.
+
+#### PR #54 (admin-panel minor+patch × 2)
+- Rebased: `abd515d → 481f2ac` (clean, no conflicts)
+- Force-push triggered fresh CI run [26575103323](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26575103323) → success
+- Squash-merged at `1606d20` (admin-panel/* only, +68 / -68 lines)
+- Main CI run [26575220781](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26575220781) → success
+
+#### PR #55 (admin-panel @types/node 24 → 25)
+- Rebased: `ba3b4d0 → 23e0b0e` (clean)
+- Force-push triggered fresh CI run [26575333459](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26575333459) → success
+- Squash-merged at `70ab011` (admin-panel/* only, +9 / -9 lines)
+- Main CI run [26575441374](https://github.com/dukanchiapp/Dukanchi-App/actions/runs/26575441374) → success
+
+Both branches deleted from origin.
+
+### Category B — flagged for Opus (NOT merged this session)
+
+These all touch root `package.json` + `package-lock.json` and need a deliberate decision matrix similar to the PR #48 / Session 101 abort path. **No mutations applied to any of them.**
+
+#### #56 — root minor+patch group × 29 (CI green, ioredis untouched)
+The "default safe" grouped bump for root, post-Session-101's ioredis ignore. Without the PR #48-class blocker, this should be the standard rebase + force-push + CI cycle. Worth a quick dedup check (npm ls on a few candidate packages) before merging since it bumps `bullmq`-adjacent things too. Recommend Opus drive a Session 102a-style local verify (fresh install + `npm ls` for the impacted packages + local build) before approving merge.
+
+#### #57 + #59 — Prisma 5.22 → 7.8 (devDep + client, MAJOR)
+Prisma 6 introduced significant client-API changes (`Prisma.PrismaClientKnownRequestError` typing, schema relation modes, native query bigint defaults). Prisma 7 likely continues the trend. **Cannot bump without an explicit migration plan**: schema validation, regenerated client code, possible `prisma migrate` runs against the test DB, and integration test rerun. ND-T6-1 (firebase-admin uuid chain) is also adjacent — Prisma 7's transitive may re-shuffle that tree.
+
+#### #58 — `@eslint/js` 9 → 10 (devDep, MAJOR)
+ESLint 10 changes flat-config schema and removes some legacy rules. Our codebase already runs ESLint 9 flat-config (Day 7 / Session 94 `64d2313`), so the migration is small but config changes required. CI failure expected without `.eslintrc.json` / `eslint.config.js` adjustments.
+
+#### #60 — `@types/node` 22 → 25 (devDep, MAJOR)
+Node types track the runtime line. We ship on Node 22 in production (Fly Dockerfile + CI both use Node 22). Bumping types to 25 introduces type definitions for Node 25 features that aren't available at runtime — risk of writing code that typechecks but throws at runtime. Generally `@types/node` should track the runtime Node version, not lead it. **Recommend close, wait for Node 22 LTS sunset before bumping types to a higher major.**
+
+### Verification gates (post-Category-A)
+
+- **admin-panel** `npm ci`: 215 packages, **0 vulnerabilities** ✅
+- **admin-panel** `npm run build`: ✓ 1815 modules transformed in 350ms; 429.61 KB / 120.20 KB gzip bundle (unchanged from prior baseline)
+- **Root typecheck**: 0 errors (web + server + worker — all 3 chains, including new injectManifest worker)
+- **Root tests**: 100/100 passing (17 files, 5.47s)
+- **Production smoke**: HTTP 200, 0.55s — `/health` green
+
+### No deploy triggered
+
+All merged content scoped to `admin-panel/*`. Admin-panel ships as part of the Express image built from the root repo — changes will land in production with the **next** Fly deploy (not this session). Production runtime remains `42d3e82` (post-ND-A1 Session 102b).
+
+### ND-S103-1 — Pre-existing ESLint warning surfaces in every CI run
+
+CI consistently surfaces `Unexpected any. Specify a different type` at `scripts/backfillEmbeddings.ts:14` in the lint step. Day 7 / Session 94 ND-D7-3/D7-4 documented this is part of the ESLint baseline running in `continue-on-error: true` report-only mode. Doesn't fail CI. Logged here because it appears in every PR's CI log this session and tomorrow's ESLint 10 bump (PR #58) will need this addressed first.
+
+### Remaining open PRs after this session
+
+| PR | Title | Why deferred |
+|---|---|---|
+| #56 | root minor+patch group × 29 | Opus needs to drive Session 102a-style local verify |
+| #57 | prisma 5→7 | Major bump; needs schema/migration validation |
+| #58 | @eslint/js 9→10 | Major bump; flat-config schema changes |
+| #59 | @prisma/client 5→7 | Major bump; paired with #57 |
+| #60 | @types/node 22→25 | Types ahead of runtime; recommend close |
+
+---
+
 ## 2026-05-28 — Session 102b — ND-A1 LIVE: injectManifest push SW deployed to production
 
 **Goal:** Deploy the Session 102a injectManifest migration (PR #61) to production. Prove that the prod-served `/sw.js` now contains the `push` and `notificationclick` handlers that were dead since the PWA shipped.
