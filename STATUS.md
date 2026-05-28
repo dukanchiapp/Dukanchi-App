@@ -1,9 +1,9 @@
 # Dukanchi — Live Status Dashboard
 
-> Last updated: 2026-05-28 | Session 106 | **Tier 3 hygiene:** Rule F.3 codified (CI cancelled ≠ failure); RUNBOOK §6 verified already correct (Session 95 callout misplaced); ALLOWED_ORIGINS recon delivered — fix is a 1-line Fly secrets update. | Prod runs main @ `42d3e82` (6 commits ahead, deliberate batched Fly deploy queued end-of-day)
+> Last updated: 2026-05-28 | Session 107 | 🎉 **Prod = main (in sync)** at `8da353b`. Fly v25 deployed (6 commits batched). ND-A1 push handler verified STILL LIVE under bumped vite-plugin-pwa 1.3.0. ALLOWED_ORIGINS appears already clean in prod (Session 95 drift report likely outdated).
 > Single-page snapshot. History → SESSION_LOG.md. Decisions → DECISIONS.md.
 >
-> **Awaiting Opus decision:** ALLOWED_ORIGINS Fly secrets cleanup (recommended `fly secrets set ALLOWED_ORIGINS="https://dukanchi.com,https://www.dukanchi.com"`). Native Capacitor pathway unaffected (CAPACITOR_ORIGINS hardcoded in src/app.ts:148 — independent of env).
+> **Pending:** CSP enforce flip (`reportOnly: true → false`) — isolated next step (CP3.5b). Sentry post-deploy new-error check is a manual founder dashboard action.
 
 ## Day 1 Launch Sprint — 27 May 2026
 
