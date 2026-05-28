@@ -6,6 +6,89 @@
 
 ---
 
+## 2026-05-29 — Session 116 — PostCard Futuristic re-skin + useClosingSoon (screen 1 of re-skin)
+
+**Goal:** Re-skin `src/components/PostCard.tsx` to the Futuristic v3 spec IN PLACE — preserve every prop, handler, optimistic-update wiring, and real data source. First screen of the Tier 5D re-skin (recommended order: PostCard → AppHeader+BottomNav → …). Visual layer only.
+
+**Status:** ✅ **POSTCARD RE-SKINNED + LIVE.** Fly **v33** complete. Card now renders deep-glass with the v3 3-row header, getLiveStatus capsule, double-ring avatar, and lucide action row — all interactions + data preserved. `useClosingSoon` hook drives the live closing-countdown. Interim: dark card on still-cream Home/Profile surfaces (expected pre-pilot until those screens flip).
+
+| Metric | Value |
+|---|---|
+| PR merged | #86 (squash) |
+| Squash commit | `33d654c` |
+| Production HEAD | `b15cccf` → **`33d654c`** |
+| Fly release | **v33** complete |
+| Files changed | 3 (`src/components/PostCard.tsx`, `src/hooks/useClosingSoon.ts` new, `src/hooks/useClosingSoon.test.ts` new) |
+| Lines | +301 / −103 |
+| Tests | **133/133** (127 baseline + 6 new `nextClosingSoon`) |
+
+### Preserved (contract intact — confirmed via grep)
+
+- **Props**: `PostCardProps` interface untouched (post, isLiked, isSaved, isFollowed, likeCount, distance, imgRatio, onLike, onSave, onFollow, onShare, onImgLoad)
+- **Handlers**: `onLike(post.id)`, `onSave(post.id)`, `onFollow(post.storeId)`, `onShare(post)`, `onImgLoad(post.id, ratio)` — all wired identically
+- **Chat**: `<Link to={/chat/{ownerId}} state={{referredPost}}>` — it's a router Link with nav state (NOT an onChat prop); preserved exactly incl. `chatEnabled !== false` gate
+- **Store links**: avatar + name → `/profile` (own) or `/store/{storeId}`
+- **Adaptive image ratio** (`getImageStyles`: 4:5 portrait / 1:1 square / natural landscape) — kept; only bg swapped `black → #0a0612`
+- Price overlay on image, product name+price row, caption + `renderCaption` first-sentence-bold, `React.memo` comparator — all preserved
+
+### Visual changes (Futuristic v3 spec)
+
+- **Card**: `var(--f-bg-elev)` solid, 22px radius, `1px solid var(--f-glass-border)`, `0 2px 12px rgba(24,16,8,0.06)`
+- **Header → 3 sub-rows**:
+  - Row 1: 46px logo avatar (real `logoUrl`) with double-ring shadow (`0 0 0 2px elev, 0 0 0 3.5px #FF2A8C, 0 4px 12px magenta`) + gradient bg fallback + name 15/700 -0.01em + gradient verified tick (green→cyan) + Follow button
+  - Row 2: live status **capsule** (getLiveStatus → `color+1A` bg, `color+40` border, dot + label) + distance (`--f-text-3`) + category (`#FF6BB4`)
+  - Row 3: lucide `MapPin 10` + `{city} · {postalCode}` (only if present)
+- **Image canvas**: bg `#0a0612`
+- **Action row**: lucide Heart/MessageCircle/Share2/Bookmark (20–22px), 13/700 labels, gap 22, `var(--f-text-1)`; liked heart `#FF4D6A`
+- **Follow**: gradient default (`+ 0 2px 8px magenta`) / `var(--f-bg-elev)` + glass border "Following"
+- All `--dk-*` cream tokens removed from this component → `--f-*` only
+
+### Live status wiring
+
+```
+getStoreStatus(openingTime, closingTime, is24Hours, workingDays)  // existing
+  → .minutesUntilClose
+  → useClosingSoon(...)        // NEW hook: ticks 60s, decrements, floors -5
+  → getLiveStatus({ closingSoon, status: status?.label })  // S115 helper
+  → { label, color } → capsule
+```
+
+`Store` type has `city` + `postalCode` (NO dedicated `area` field) — Row 3 maps to those. When `status` is null (no hours configured) → getLiveStatus falls back to "Open" green (parity with prior `● Open` behavior).
+
+### useClosingSoon hook (new)
+
+- `src/hooks/useClosingSoon.ts` — ticks once/minute, decrements via pure `nextClosingSoon`, floors at `CLOSING_SOON_FLOOR (-5)`, **one interval per instance**, resets on `initialMinutes` change, clears on unmount (no duplicate timers).
+- `src/hooks/**/*` already in `tsconfig.app.json` include — no Rule G addition needed.
+
+### Tests
+
+- **6 node-only tests** on the extracted pure `nextClosingSoon` stepper (decrement / cross-zero / floor / convergence / tier-boundary walk 60→30→15).
+- **Deviation**: `@testing-library/react` + jsdom are deliberately NOT in this repo's vitest setup (node-only env; confirmed via `vitest.config.ts` comment). Rather than add RTL + jsdom infra for a re-skin task, the pure step `nextClosingSoon` was extracted from the hook and unit-tested. Timer/reset/cleanup wiring is standard React idiom covered by typecheck + manual dev render. Flagged for a future "add RTL" infra session if hook-level tests become desired.
+
+### Phase 3 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test -- --run` — **133/133**
+- ✅ `npm run build` — green
+- ✅ `npm run test:e2e` — 2/2 (chromium)
+
+### Phase 4 CI + deploy
+
+- ✅ PR #86 (run 26607000827): `success`
+- ✅ Fly **v33** complete; machine 9080d70da60d18, 1/1 check passing
+- ✅ Post-deploy: `/health` 200 in 583ms · SW push handler intact · CSP `report-only` preserved
+
+### E2E coverage gap (explicit)
+
+The public render-smoke E2E (`e2e/public-render.spec.ts`) only covers `/login` + `/signup` (unauth). **PostCard is auth-gated (Home/Profile feeds) → NOT E2E-covered.** Founder device test required to confirm: dark-glass card render, live status capsule ticks, and all interactions (like/save/follow/chat/share/image-load) work. This is a known gap pending the Tier 5B auth-E2E session (needs test DB + JWT minting).
+
+### Awaiting
+
+- Founder device test — Home feed cards should be dark-glass + live status capsule + every action functional
+- Opus → next screen: **AppHeader + BottomNav** (paired — both visible everywhere, land together to avoid mid-app surface drift)
+
+---
+
 ## 2026-05-29 — Session 115 — Futuristic v3 tokens + getLiveStatus foundation (no screen changes)
 
 **Goal:** Recon the founder-supplied "Futuristic v3" design bundle (`/Users/apple/Desktop/design_handoff_dukanchi_futuristic/`) + integrate design tokens additively into the styling layer. **Zero screen changes** this session — app must render identical post-merge. Foundation only; per-screen re-skin queued for follow-up sessions.
