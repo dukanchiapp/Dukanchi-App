@@ -6,6 +6,114 @@
 
 ---
 
+## 2026-05-28 — Session 104 — Checkpoint 2 (Part 2): 4 majors closed + guards added, PR #56 deferred (ioredis dedup surprise)
+
+**Goal:** Finish Checkpoint 2 — merge PR #56 (with dedup verify), close 4 major-version PRs, add Dependabot major-version guards.
+
+**Status:** ⚠️ **PARTIAL SUCCESS.** 4 majors closed (#57, #58, #59, #60) + 4 Dependabot major-version guards appended to `.github/dependabot.yml`. **PR #56 NOT MERGED** — Phase 2 step 7 dedup check ABORTED on a reproducible PR #48-class ioredis split. Backlog: **5 → 1** (only #56 remains, deferred for Opus strategy).
+
+### ND-S104-1 — PR #56 dedup ABORT (the Dependabot ignore rule isn't sufficient for free-resolve)
+
+🚨 **Surprise finding:** Session 101's `dependabot.yml` ignore rule for `ioredis@5.11.x` successfully **prevents Dependabot from proposing** a 5.11 bump in a PR (confirmed in Session 103 — PR #56's diff left `"ioredis": "^5.10.1"` unchanged in `package.json`), but it does **NOT** lock-pin existing semver ranges during a manual `npm install`.
+
+When Phase 2 Step 6 (`rm -rf node_modules package-lock.json && npm install`) ran on the rebased PR #56 branch:
+
+```
+react-example@0.0.0 /Users/apple/Documents/Dukanchi-App
++-- bullmq@5.77.6
+| `-- ioredis@5.10.1      ← nested (bullmq pins to 5.10.x)
+`-- ioredis@5.11.0         ← root resolved FREELY under ^5.10.1 → picked 5.11.0
+```
+
+The semver caret `^5.10.1` permits `5.11.0`, and npm's free-resolution defaulted to the latest matching version. Without a lockfile to pin the existing 5.10.1, the resolver split the tree exactly like PR #48 did.
+
+**Comparison with `main`** (where the lockfile was preserved):
+```
++-- bullmq@5.76.4
+| `-- ioredis@5.10.1 deduped     ← properly deduped on main
+`-- ioredis@5.10.1
+```
+
+**Implication:** PR #56's CI run was green because GitHub Actions uses `npm ci` (lockfile-strict) — the PR's own `package-lock.json` correctly pinned 5.10.1. The dedup failure only manifested when **I deliberately discarded the lockfile** as Phase 2 Step 6 required. Merging PR #56 as-is would likely succeed (the lockfile-strict CI environment matches `npm ci`), but the spec's "fresh lockfile regen + dedup verify" safety pattern correctly identified that the **ranges in `package.json` are still unsafe** under free-resolve conditions (e.g. a future `npm install` after a `package-lock.json` regeneration, or any contributor's local dev environment without lockfile discipline).
+
+**ABORT executed cleanly:** branch state restored to PR #56's original (lockfile changes discarded), checked out to `main`, `npm ci` against main's lockfile → confirmed bullmq@5.76.4 + ioredis@5.10.1 deduped + tests 100/100 + typecheck 0 errors + `/health` 200.
+
+**Recommended fixes for #56 (Opus to choose):**
+1. **`overrides`/`resolutions` in `package.json`** — add `"overrides": { "ioredis": "5.10.1" }` to enforce the pin under all install modes. Most robust; requires explicit decision since spec said "DO NOT add overrides automatically" in Session 101 ABORT.
+2. **Tighten the `package.json` ioredis range** — change `"ioredis": "^5.10.1"` to `"ioredis": "~5.10.1"` (tilde, only patch updates). Less invasive than overrides; still allows tighter Dependabot bumps in the 5.10.x line.
+3. **Skip the fresh-lockfile-regen safety on this PR** — accept PR #56 as-is (its lockfile is correct); rely on CI's `npm ci` to enforce the pin. Lowest effort but leaves the same trap for future contributors.
+4. **Wait for upstream `bullmq` 5.78+** that accepts `ioredis@5.11+`, then bump both together. Zero effort, indefinite wait.
+
+### Phase 3 — 4 majors closed with documented rationale
+
+| PR | Bump | Disposition |
+|---|---|---|
+| **#57** | `prisma` 5.22 → **7.8** (devDep, MAJOR) | ✅ Closed (Prisma 6+7 client-API breaking changes; needs dedicated migration session + DB-layer testing) |
+| **#59** | `@prisma/client` 5.22 → **7.8** (MAJOR) | ✅ Closed (paired with #57; CLI + client must migrate together) |
+| **#58** | `@eslint/js` 9 → **10** (devDep, MAJOR) | ✅ Closed (flat-config schema changes; lint is `continue-on-error: true` so non-blocking; deferred to dedicated ESLint 10 config session) |
+| **#60** | `@types/node` 22 → **25** (devDep, MAJOR) | ✅ Closed (types ahead of runtime — Node 22 LTS in prod; tracking ND-S100-2 Node 20→24 deprecation; will revisit at Node 24 upgrade) |
+
+Each closure included an explanatory comment linking to this session's deferral rationale.
+
+### Phase 4 — Dependabot major-version guards appended
+
+Added 4 new entries to the root npm ecosystem's existing `ignore:` block in `.github/dependabot.yml` (preserving the ioredis@5.11.x entry from Session 101). YAML lint validated clean (`✔ YAML Lint successful`).
+
+```yaml
+ignore:
+  # (existing — Session 101)
+  - dependency-name: "ioredis"
+    versions: ["5.11.x"]
+  # Prisma 5→7 is a major DB-layer migration — defer to a roadmapped session.
+  - dependency-name: "prisma"
+    update-types: ["version-update:semver-major"]
+  - dependency-name: "@prisma/client"
+    update-types: ["version-update:semver-major"]
+  # ESLint 10 flat-config major — lint is report-only; defer to dedicated config session.
+  - dependency-name: "@eslint/js"
+    update-types: ["version-update:semver-major"]
+  # @types/node should track the Node runtime major (currently 22).
+  - dependency-name: "@types/node"
+    update-types: ["version-update:semver-major"]
+```
+
+Future Dependabot weekly cycles will NOT re-propose these 4 major bumps. Minor/patch flows still allowed.
+
+### Verification gates (post-Phase-4)
+
+- **`npm run typecheck`** — ✅ 0 errors (web + server + worker, including post-ND-A1 injectManifest chain)
+- **`npm test`** — ✅ 100/100 (17 files, 5.51s)
+- **YAML lint** — ✅ `yaml-lint` clean
+- **Production smoke** — `/health` HTTP 200, 0.67s, `{"status":"ok","db":"up","redis":"up"}`
+
+### Final state
+
+| Item | Value |
+|---|---|
+| `main` HEAD | `d5c204c` → (Session 104 docs PR squash) |
+| Production HEAD | `42d3e82` (unchanged — admin-panel #54/#55 + future #56 batch into deliberate end-of-day deploy) |
+| Open PRs after session | **1** (only #56, deferred for Opus dedup strategy) |
+| Backlog change | 5 → 1 |
+| Dependabot guards active | 5 entries (ioredis@5.11.x + 4 major-version blocks) |
+
+### Backlog items added
+
+- **ND-S104-BACKLOG — Prisma 5 → 7 migration session** (post-launch): schema validation + regenerated client + integration test rerun + ND-T6-1 (firebase-admin uuid chain) impact analysis.
+- **ND-S104-BACKLOG — ESLint 10 config session**: flat-config schema migration + the pre-existing `scripts/backfillEmbeddings.ts:14` baseline warning (ND-D7-3 / ND-S103-1) should be addressed in the same pass.
+
+### Files modified
+
+- `.github/dependabot.yml` — +14 lines (4 new ignore entries with comments)
+- `SESSION_LOG.md` — Session 104 entry prepended
+- `STATUS.md` — Last updated banner + backlog status refreshed
+- **Production code: NONE.** PR #56 not merged; the 4 closed PRs never touched `main`.
+
+### Production deploy not triggered
+
+Per spec: "prod will be N commits ahead after this (admin-panel #54/#55 + root #56). A deliberate batched Fly deploy with full verification is queued for end-of-day after technical work completes — do NOT deploy this session." Honoured. Production runtime remains at `42d3e82` (post-ND-A1 Session 102b).
+
+---
+
 ## 2026-05-28 — Session 103 — Checkpoint 2: Dependabot Monday Cycle Triage
 
 **Goal:** Triage 7 overnight Dependabot PRs (Monday weekly cycle). Auto-merge ONLY the safe category (GH-actions + admin-panel + green CI). Flag root-npm bumps for Opus review (PR #48 lesson — ioredis duplicate-package risk).

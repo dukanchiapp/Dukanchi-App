@@ -45,6 +45,18 @@ updates:
       # Tracked: Session 101 (2026-05-28). Re-evaluate monthly.
       - dependency-name: "ioredis"
         versions: ["5.11.x"]
+      # Prisma 5→7 is a major DB-layer migration — defer to a roadmapped session.
+      # Remove both entries together when Prisma 7 migration is scheduled. (Session 104)
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
+      # ESLint 10 flat-config major — lint is report-only; defer to dedicated config session. (Session 104)
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      # @types/node should track the Node runtime major (currently 22). Re-evaluate at Node 24 upgrade. (Session 104)
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # ── Admin panel subproject (separate package.json) ───────────────────────
   - package-ecosystem: npm
