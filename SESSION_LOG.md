@@ -6,6 +6,90 @@
 
 ---
 
+## 2026-05-28 — Session 110 — HOTFIX: CSP connect-src `data:` / `blob:` (image upload unblocked)
+
+**Goal:** Restore image upload in production. CSP enforce (Session 108) blocked `PostsGrid.tsx:526` `fetch(data:image/jpeg;base64,...)` — connect-src lacked `data:` and `blob:`, so the upload pipeline broke at the data-URI → Blob conversion step.
+
+**Status:** 🚨 **HOTFIX SHIPPED.** Fly **v28** complete. `connect-src` now includes `data:` + `blob:` immediately after `'self'`. CSP remains enforced (header still `content-security-policy:`, NOT `-Report-Only`). Image upload restored without weakening any other directive.
+
+| Metric | Value |
+|---|---|
+| PR merged | #74 (squash) |
+| Squash commit | `31c5232` |
+| Production HEAD | `4091dbf` → **`31c5232`** |
+| Fly release | **v28** complete |
+| Deploy duration | ~3m end-to-end |
+| Files changed | 1 (`src/app.ts`) |
+| Lines | +2 / −0 |
+| Tests | 112/112 (unchanged — no test asserts on connect-src content) |
+
+### Root cause
+
+The image upload pipeline takes a user-cropped image (HTMLCanvasElement → `toDataURL('image/jpeg')`) and then `fetch()`s the resulting `data:image/jpeg;base64,...` URI to convert it to a Blob before POSTing to `/api/upload`. Browser CSP routes `fetch(data:...)` and `fetch(blob:...)` through the **connect-src** directive — not img-src. Sessions 95–107 monitored CSP report-only for 3.5 days but the monitoring window didn't include a real upload flow, so the gap was uncovered until founder CP4 device test post-109b ran the actual upload path against enforced CSP.
+
+### Fix
+
+```diff
+  connectSrc: [
+    "'self'",
++   "data:",  // Session 110 hotfix — PostsGrid image-upload pipeline fetch()es a data: URI ...
++   "blob:",  // Session 110 hotfix — Capacitor image picker returns blob: URLs that are then fetch()-ed before R2 PUT
+    "https://*.i.posthog.com",
+    ...
+  ],
+```
+
+All other directives untouched (img-src / workerSrc / mediaSrc retain their pre-existing `blob:` allowances). CSP enforce flag unchanged.
+
+### Phase 3 local gates
+
+- ✅ `npm run typecheck` — 0 errors (web + server + worker)
+- ✅ `npm test -- --run` — **112/112** (no test asserts on connect-src contents — grep confirmed)
+- ✅ `npm run build` — Vite + injectManifest SW both green
+
+### Phase 4 CI
+
+- ✅ PR #74: Typecheck+Test+Build + Bundle Size Report both `success` (run 26591487601)
+
+### Phase 5 deploy
+
+- ✅ `flyctl deploy -a dukanchi-app` → Fly **v28** complete
+- ✅ Rolling release on machine 9080d70da60d18, 1/1 check passing
+- ⚠️ Same cosmetic "app not listening" warning (consistent v25-v28; tcp_check passes)
+
+### Phase 6 post-deploy verification (all green)
+
+| Check | Result |
+|---|---|
+| `connect-src` directive | ✅ Contains `'self' data: blob:` (verified via `curl -sI` + grep) |
+| CSP header name | ✅ `content-security-policy:` (enforced, NOT `-Report-Only`) |
+| `/health` | **HTTP 200** in 142ms, `{status:"ok", db:"up", redis:"up"}` |
+| SW push handler (ND-A1) | ✅ `addEventListener("push"` intact post-deploy |
+
+### ND-S110-1 — Learning (codify next sprint)
+
+**Before flipping CSP from report-only → enforce, exercise every real user flow during the report-only window** — not just directive theory and synthetic page loads. The image-upload pipeline uses `fetch(data:...)` and would have surfaced this connect-src gap as a Sentry CSP-violation report-only event if the founder had run a real upload during the 3.5-day monitoring window. Lesson: future CSP enforce-flips must include a documented "browser exercise checklist" covering every Sentry-instrumented user flow (upload, search, chat, push subscribe, geolocation, etc.) before flip.
+
+Candidate for codification in CLAUDE.md as **Rule H** (CSP enforce-flip prerequisites) if Opus agrees.
+
+### Files modified
+
+- `src/app.ts` — added `"data:"` + `"blob:"` to `cspDirectives.connectSrc` (lines 88–89 with hotfix-origin comments)
+
+### Rollback path (if upload STILL broken or new CSP violations appear)
+
+```bash
+git revert a8b64bf  # full CSP → report-only (un-blocks everything)
+flyctl deploy -a dukanchi-app
+```
+
+### Awaiting
+
+- Founder re-test image upload from web + APK → confirm `/api/upload` returns 200 + url for a clean image, no console CSP error
+- Founder Sentry watch for new `Content-Security-Policy` violation reports in next 1-2h (should be zero new connect-src violations)
+
+---
+
 ## 2026-05-28 — Session 109b — Image Moderation LIVE (Tier 5A)
 
 **Goal:** Merge PR #72 (Gemini Vision image safety gate on upload), deploy to Fly, verify production health + push handler survival + CSP enforcement + upload route auth-gate. Close primary Tier-5A launch blocker.
