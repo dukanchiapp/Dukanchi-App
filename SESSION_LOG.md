@@ -6,11 +6,19 @@
 
 ---
 
+## 2026-05-30 — Session 128.1 — Docs-LIVE follow-up (PR #112, Fly v46)
+
+**Goal:** Per the docs convention (see [[deploy-mechanism]]), after a deploy is verified land a `docs(session-N): ... LIVE` PR so the SESSION_LOG / STATUS entries reflect post-deploy state on main.
+
+**Status:** ✅ LIVE. PR pending; Session 128 entry updated with the LIVE marker + Fly v46 + matched bundle hashes (`index-Cw4Z1gZe.css` / `index-YAC98fPR.js`) on both Fly origin and Cloudflare. STATUS.md "Last updated" flipped 128→128.1.
+
+---
+
 ## 2026-05-30 — Session 128 — Store/Profile mockup parity fixes (logo clip, distance pill, bio read-more, Legal→Settings)
 
 **Goal:** Founder flagged 5 issues from screenshots (mockup = customer "Dolphin hotel" store profile; current bugs on own "test store" profile): (1) logo overlapped/clipped under the cover + make it bigger; (2) distance pill ("1.6km away") must show when a CUSTOMER visits any business profile via post/search/map (StoreProfile) — match mockup layout exactly; (3) move Legal & Privacy from profile → Settings; (4) bio read-more triggered by LINE count (>3 lines), not chars; (5) match mockup text + Direction button = BLUE gradient. **Visual-only** (Rule 4) — no API/route/schema/auth/socket changes.
 
-**Status:** ⏳ Code complete, NOT yet deployed (awaiting founder review + `fly deploy`). typecheck 0 (web/server/worker) ✅ · build ✓.
+**Status:** ✅ **LIVE.** PR [#112](https://github.com/dukanchiapp/Dukanchi-App/pull/112) squash-merged to main `73cc9f5`; **Fly v46** (machine `9080d70da60d18`, region `sin`, healthcheck passing — listen-address warning benign). New bundle hashes `index-Cw4Z1gZe.css` + `index-YAC98fPR.js` identical on `dukanchi-app.fly.dev` (Fly origin) AND `dukanchi.com` (Cloudflare); `/health` 200 both; CSS rule `body.modal-open .app-bottom-nav{display:none!important}` + `app-bottom-nav` JS class both shipped to production. typecheck 0 (web/server/worker) · build ✓.
 
 - **Logo-clip bug (root cause + fix)** — both `StoreProfile.tsx` and `Profile.tsx` positioned the logo at `bottom:-28/-34` *inside* a cover `<div style={{ overflow:'hidden' }}>`, so the overhang was clipped ("profile picture under the other element"). Fix: outer cover wrapper is no longer clipped (`height` only); the cover IMAGE moved into its own absolutely-positioned `overflow:hidden` media layer; logo + distance pill render OUTSIDE that layer at `zIndex 4`.
 - **Logo enlarged** — StoreProfile 84→**96**px (borderRadius 22→24, fallback initial 34→40), Profile 72→**92**px (18→24, 28→38); both now a clean **4px white** "cutout" border (was dark `--f-bg-deep`) + soft shadow, matching the Bright mockup.
