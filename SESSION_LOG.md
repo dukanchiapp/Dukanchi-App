@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-05-29 — Session 126 — Design mockup parity: Store Profile + Messages rich rows + Map chips
+
+**Goal:** Founder shared 4 reference mockups (Store Profile / Home / Map / Messages) and asked for **exact UI match** — "jaha jo details hain smartly build karo". Audited all 4 implemented screens vs the mockups and closed every drift.
+
+**Status:** ✅ **MOCKUP PARITY LIVE.** Fly **v43** complete. Store Profile rebuilt (gear, distance pill, inline status, icon-tile details, 12h hours, gradient direction button); Messages now has rich store rows (live status + distance + category + area, backed by an additive `getConversations` change); Map category chips color-tinted. Home + PostCard already matched (no change).
+
+| Metric | Value |
+|---|---|
+| PR merged | #106 (squash) |
+| Squash commit | `b8cedc6` |
+| Production HEAD | `4f37316` → **`b8cedc6`** |
+| Fly release | **v43** complete |
+| Files changed | 6 (+258 / −72) |
+| Tests | **133/133** |
+
+### Audit result (4 screens vs mockups)
+
+- **Home** — already matches (header, location strip, For-you/Following/Saved pills, PostCard 3-row header, filter "dark square"). No change.
+- **PostCard** — already matches (double-ring avatar, status capsule, distance, category, area · pincode). No change.
+- **Map** — matched except category chip colors. IsoMap 3D radar already matches (grid + center pulse orb + colored tiles).
+- **Store Profile** — multiple drifts (below).
+- **Messages** — needed rich store rows (below).
+
+### Changes
+
+**Store Profile (`src/pages/StoreProfile.tsx`):**
+- Header: owner now gets a **gear → `/settings`** (matches mockup); visitors keep Share.
+- **Distance capsule** ("1.6 km away") on the cover — haversine from `LocationContext` user loc → store coords. null when either is missing.
+- **Live status inline** in the meta row: `RETAIL · Category · ● status` (was only in the details card).
+- **Details card rebuilt** — each row behind a magenta-tinted icon tile; address bold + `postalCode · city, state` secondary; **12-hour** hours (`fmt12` helper) + working days; **full-gradient** "Direction to Store" button (was translucent orange).
+
+**Messages rich rows (backend + frontend):**
+- `message.service.ts` `getConversations` — store `select` expanded (category, openingTime, closingTime, is24Hours, workingDays, latitude, longitude, city, postalCode). **Additive** response shape; route path `/api/messages/conversations` unchanged.
+- `Conversation` type (`src/types/index.ts`) extended with optional `store` + `role` + `deletedAt`.
+- `ConversationRow.tsx` — store rows render **live-status capsule + distance + category + 📍 area (city)**; plain user↔user rows keep the original compact layout (name + inline timestamp + last message). Hooks (getStoreStatus → useClosingSoon → getLiveStatus) run unconditionally; memo comparator extended with `distance`.
+- `Messages.tsx` — pulls user location, computes per-row distance, passes it to each row.
+
+**Map (`src/pages/Map.tsx`):**
+- Inactive category chips tinted with their **category color** (same `CATEGORIES` palette as the map markers + 3D tiles). "All" → neutral glass.
+
+### Judgment calls (founder-surfaced)
+
+- Store Profile gear → `/settings` (owner only) — bottom-nav Profile-active in mockup = owner viewing own store.
+- **Map gear FAB NOT added** — mockup shows it but it has no defined action; shipping a dead button is worse. Flagged.
+- Conversation area = store `city` (mockup showed locality names).
+- Map chip colors from app palette (consistent with markers) — may differ slightly from the mockup's exact hues.
+
+### Phase 3 gates
+
+- ✅ typecheck 0 (web + server + worker) · vitest **133/133** · build green (69 precache) · E2E 2/2
+- ✅ Rule A: no new route mounts / apiFetch paths (backend change additive to existing endpoint). Rule B: no silent-catch added.
+
+### Phase 4 CI + deploy
+
+- ✅ PR #106 (run 26617651260): Typecheck+Test+Build `pass` + Bundle Size `pass`
+- ✅ Fly **v43** complete; `/health` 200 on both domains; **`/api/messages/conversations` → 401 `application/json`** (route intact, additive shape live, not SPA fallback); CSP `report-only` + Socket.IO `wss` unaffected.
+
+### Awaiting
+
+- Founder device test — Store Profile (owner gear + distance pill + icon-tile details + 12h hours; visitor Share), Messages rich rows (store vs plain), Map colored chips.
+- Decision: re-add a Map gear FAB only if a real action is defined (map layers / display options).
+- Pilot-critical finish queue resumes: KYCForm → settings sub-tabs → global `--dk-*` flip.
+
+---
+
 ## 2026-05-29 — Session 125 — Retailer dashboard cluster re-skin: RetailerDashboard + StoreFormFields + KycUploadForm + AiBioModal (pilot-critical session 2 of ~5)
 
 **Goal:** Convert the retailer dashboard cluster — the 3 MIXED (`--dk-*` + raw-Tailwind-light) files plus AiBioModal — to `--f-*` dark. These are the GATEKEEPER for the S128 global `--dk-*` flip: flipping while they still mix `--dk-` + raw Tailwind would break contrast (unreadable light text on dark).
