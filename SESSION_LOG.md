@@ -6,6 +6,66 @@
 
 ---
 
+## 2026-05-29 — Session 122 — Map re-skin: 3D↔Map toggle + live bell (screen 7 of re-skin)
+
+**Goal:** Re-skin Map.tsx to Futuristic v3, preserving the REAL Google Maps integration + markers + user location + store nav + re-center; add the 3D↔Map toggle (IsoMap). Seventh step of the Tier 5D re-skin.
+
+**Status:** ✅ **MAP LIVE ON v3.** Fly **v39** complete. Already v2-futuristic with a working `@react-google-maps/api` integration; closed v3 gaps + added the 3D toggle. **Real Google Maps integration untouched.**
+
+| Metric | Value |
+|---|---|
+| PR merged | #98 (squash) |
+| Squash commit | `b547c14` |
+| Production HEAD | `dc7bb41` → **`b547c14`** |
+| Fly release | **v39** complete |
+| Files changed | 1 (`src/pages/Map.tsx`, +97/−23) |
+| Tests | **133/133** |
+
+### 🔎 Recon: already v2-futuristic (613 LOC)
+
+`@react-google-maps/api` (`GoogleMap`/`useJsApiLoader`/`Marker`), dark `MAP_STYLES` via the legacy `styles` prop (NO mapId → JSON applies), user-location marker (orange dot), store markers (SVG teardrop pins + category color/emoji), `flyToStore` (panTo+zoom+select), `recenterMap`, store fetch, category/search filter, distance sort, selected-store card, bottom sheet (collapsed peek + expanded list), empty/loading/error states. All dark, all wiring intact.
+
+### Changes
+
+**1. 3D↔Map toggle (NEW).** Top-right pill (Layers/3D | MapPin/Map). **Map (Google) stays DEFAULT**; 3D renders `<IsoMap>` with real stores **projected onto the iso grid** — lat/lng normalised around the user (centre 50,50), reflecting actual relative geography (NOT random pylons). `IsoMap onSelect → handleIsoSelect → flyToStore` (maps the `IsoMapStore` id back to the real store, preserving nav + selection). Added `mapMode` state + `isoStores` memo + `handleIsoSelect`.
+
+**2. Dead bell → live NotificationBell** (44×44 glass tile) — **5th dead decorative bell** found+fixed across the re-skin (Home/StoreProfile/Search/Map all had a static no-onClick bell).
+
+**3. Dead no-op settings FAB removed** — it had no `onClick` (did nothing); task says don't add new nav. Re-center FAB kept (handler preserved), Crosshair → lucide.
+
+**4. FIcon → lucide** throughout (Search/X/Crosshair/MapPin/Clock/Phone/Store/Navigation/ChevronDown/ArrowUp/Layers). FLogo kept.
+
+### PRESERVED VERBATIM (grep-confirmed — the critical part)
+
+`useJsApiLoader`, `<GoogleMap>` + options (`disableDefaultUI`, `styles: MAP_STYLES`, `clickableIcons:false`), user-location `<Marker>`, store `<Marker>`s (SVG teardrop pins), `onLoad`/`onUnmount` mapRef, `flyToStore` (panTo + setZoom + setSelectedStore), `recenterMap` (panTo userLocation + zoom), store fetch (`/api/stores?limit=200`), `matchCategory` filter, distance sort, selected-store card, collapsed+expanded bottom sheet, View Store / Navigate nav, click-to-deselect.
+
+### ⚠️ Deviations (flagged)
+
+- **Dark Maps style** — KEPT existing `MAP_STYLES`. It's already a coherent dark deep-space style (purple-toned `#0E1224` geometry / `#14091F` water / `#1A0C1F` roads) that matches the app's magenta brand **better** than the README's bluer JSON (`#0E1424`/`#0A1830`/`#1F2940`). Applied via the legacy `styles` prop (no mapId blocking the JSON). Did NOT swap to the README palette — the existing one is more on-brand. Opus to confirm.
+- **Store status** — KEPT `getStoreStatus` + `statusColor` (already-colored semantic). Did NOT convert to `getLiveStatus`/`useClosingSoon` — avoids mixing hook/non-hook patterns on this complex screen; the legacy colors are consistent within Map. (getLiveStatus 4-tier is a future nicety; PostCard/StoreProfile already use it where it matters more.)
+- **IsoMap is a stylized novelty** — it's a CSS-3D pseudo-iso scene, not a true geographic map. The projection makes it reflect *relative* positions, but it's a visual flourish, not a navigation tool. Map (Google) is correctly the default + the real workhorse.
+
+### Phase 3 gates
+
+- ✅ typecheck 0 · vitest **133/133** · build green (68 precache) · E2E 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #98 (run 26613634532): `success`
+- ✅ Fly **v39** complete; post-deploy `/health` 200 in 432ms · push handler intact · CSP `report-only` preserved
+
+### E2E coverage gap (explicit)
+
+Map is auth-gated + needs a Maps API key + geolocation → NOT covered by the public render-smoke E2E. Founder device test required: real map loads (dark), store markers + tap→store card, **re-center**, **3D toggle swaps to IsoMap** + tap pylon→store, bottom sheet (peek + expand) cards → store, bell drawer.
+
+### Awaiting
+
+- Founder device test (esp. real Google Map + 3D toggle)
+- Opus: confirm Maps dark-style choice (keep on-brand purple vs force README blue)
+- Opus → next: **Settings + Splash (123, paired)** — the last two screens before the global cream→dark flip
+
+---
+
 ## 2026-05-29 — Session 121 — Search + Ask Nearby radar re-skin (screen 6 of re-skin)
 
 **Goal:** Re-skin Search.tsx to Futuristic v3 including the Ask Nearby 3-stage modal, preserving search API + filter/sort + trending + the Ask Nearby broadcast. Sixth step of the Tier 5D re-skin.
