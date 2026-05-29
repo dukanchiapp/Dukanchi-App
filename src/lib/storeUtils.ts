@@ -20,7 +20,7 @@ export function getStoreStatus(
     const today = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date().getDay()];
     if (!workingDays.includes(today)) return { isOpen: false, label: 'Closed Today', color: 'red' };
   }
-  if (is24Hours) return { isOpen: true, label: 'Open 24 Hours', color: 'green' };
+  if (is24Hours) return { isOpen: true, label: 'Open 24h', color: 'green' };
   if (!openingTime || !closingTime) return null;
 
   const [openH, openM] = openingTime.split(':').map(Number);

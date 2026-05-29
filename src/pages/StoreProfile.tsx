@@ -40,15 +40,15 @@ const coverFab: CSSProperties = {
 // Session 126: magenta-tinted rounded icon tile for the details card rows
 // (matches the design mockup — address / phone / hours each sit behind a tile).
 const iconTile: CSSProperties = {
-  width: 38,
-  height: 38,
-  borderRadius: 11,
+  width: 42,
+  height: 42,
+  borderRadius: 13,
   flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'rgba(255,42,140,0.12)',
-  border: '1px solid rgba(255,42,140,0.22)',
+  background: 'rgba(255,42,140,0.14)',
+  border: '1px solid rgba(255,42,140,0.26)',
 };
 
 /** "21:00" → "9:00 PM". Leaves non-HH:MM strings untouched. */
@@ -76,7 +76,6 @@ export default function StoreProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('posts');
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(0);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -152,7 +151,6 @@ export default function StoreProfilePage() {
       const storeData = await storeRes.json();
       setStore(storeData);
       setIsFollowing(storeData.followers?.length > 0);
-      setFollowersCount(storeData._count?.followers || 0);
 
       const productsRes = await apiFetch(`/api/products?storeId=${id}`);
       const productsData = await productsRes.json();
@@ -176,7 +174,6 @@ export default function StoreProfilePage() {
   const toggleFollow = async () => {
     const wasFollowing = isFollowing;
     setIsFollowing(!wasFollowing);
-    setFollowersCount(prev => !wasFollowing ? prev + 1 : Math.max(0, prev - 1));
     try {
       const res = await apiFetch(`/api/stores/${id}/follow`, {
         method: 'POST',
@@ -190,7 +187,6 @@ export default function StoreProfilePage() {
     } catch (err) {
       showToast(wasFollowing ? 'Unfollow nahi ho saka, dobara try karein' : 'Follow nahi ho saka, dobara try karein', { type: 'error' });
       setIsFollowing(wasFollowing);
-      setFollowersCount(prev => wasFollowing ? prev + 1 : Math.max(0, prev - 1));
     }
   };
 
@@ -257,12 +253,6 @@ export default function StoreProfilePage() {
   const tabs = [
     { key: 'posts', label: 'Posts', count: posts.length },
     ...(showReviews ? [{ key: 'reviews', label: 'Reviews', count: reviews.length }] : []),
-  ];
-
-  const stats: { v: string | number; l: string }[] = [
-    { v: store._count?.posts || posts.length, l: 'Posts' },
-    { v: followersCount, l: 'Followers' },
-    ...(showReviews ? [{ v: store.averageRating ? store.averageRating.toFixed(1) : '—', l: 'Rating' }] : []),
   ];
 
   return (
@@ -332,16 +322,17 @@ export default function StoreProfilePage() {
             </div>
           </div>
 
-          {/* Logo overlapping cover bottom */}
+          {/* Logo overlapping cover bottom — Session 126: enlarged + rounder +
+              thicker dark "cutout" border to match the mockup's prominent logo. */}
           <div style={{
-            position: 'absolute', bottom: -28, left: 18, width: 72, height: 72, borderRadius: 18, overflow: 'hidden',
-            border: '3px solid var(--f-bg-deep)', background: 'var(--f-grad-primary)',
+            position: 'absolute', bottom: -28, left: 18, width: 84, height: 84, borderRadius: 22, overflow: 'hidden',
+            border: '4px solid var(--f-bg-deep)', background: 'var(--f-grad-primary)',
             boxShadow: '0 0 24px rgba(255,42,140,0.45), 0 8px 24px rgba(0,0,0,0.55)',
           }}>
             {store.logoUrl ? (
               <img src={store.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 28, color: 'white' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 34, color: 'white' }}>
                 {store.storeName?.charAt(0)}
               </div>
             )}
@@ -421,16 +412,6 @@ export default function StoreProfilePage() {
               )}
             </div>
           )}
-
-          {/* Stats */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            {stats.map(stat => (
-              <div key={stat.l} className="f-glass" style={{ flex: 1, padding: '13px 8px', borderRadius: 14, textAlign: 'center', background: 'var(--f-glass-bg)' }}>
-                <div className="f-mono" style={{ fontSize: 21, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.02em' }}>{stat.v}</div>
-                <div style={{ fontSize: 10, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 2 }}>{stat.l}</div>
-              </div>
-            ))}
-          </div>
 
           {/* Details card — Session 126: icon-tile rows + bold address/hours
               (12-hour) + full-gradient Direction button (matches the mockup).

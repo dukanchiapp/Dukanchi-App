@@ -39,9 +39,9 @@ describe('lib/storeUtils', () => {
       expect(status).toEqual({ isOpen: false, label: 'Closed Today', color: 'red' });
     });
 
-    it('returns "Open 24 Hours" when is24Hours flag set', () => {
+    it('returns "Open 24h" when is24Hours flag set', () => {
       const status = getStoreStatus(undefined, undefined, true);
-      expect(status).toEqual({ isOpen: true, label: 'Open 24 Hours', color: 'green' });
+      expect(status).toEqual({ isOpen: true, label: 'Open 24h', color: 'green' });
     });
 
     it('returns null when openingTime + closingTime both missing (no 24h flag)', () => {
