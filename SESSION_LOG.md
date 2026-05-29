@@ -10,7 +10,9 @@
 
 **Goal:** Founder shipped a new "Dukanchi Bright Skin" design-system handoff and asked to "implement this new design — ensure the whole app is on the new skin, all internal pages and all elements." Flip the entire app from the dark "Futuristic v2" spatial-glass look to the warm Bright system. **Visual-only** (Rule 4) — no features/fields/API/schema/Socket.IO/auth/routing changes.
 
-**Status:** ✅ Implemented + verified locally; **PR #110** open, merging to go live. typecheck 0 (web/server/worker) · **133/133** tests · build ✓ · zero indigo classes remain.
+**Status:** ✅ **LIVE.** **PR #110** squash-merged → main `7d81f04`; CI green; **Fly v45** deployed (machine `9080d70da60d18`, region `sin`, health check passing — the deploy-time "not listening on 0.0.0.0:3000" socket-scan warning was benign, confirmed by passing healthcheck + live curl). typecheck 0 (web/server/worker) · **133/133** tests · build ✓ · zero indigo classes remain.
+
+**Production smoke (Rule E):** new CSS bundle `index-L79VeOAa.css` (was `index-sV-tPRzk.css`) serves the cream `#fff7f0` signature on BOTH `https://dukanchi-app.fly.dev` (Fly origin) and `https://dukanchi.com` (through Cloudflare) — `/health` 200 on both, identical asset hash → Cloudflare not serving a stale cached bundle, no cache purge needed. ✅ Bright skin confirmed live.
 
 - **Central token remap (`futuristic.css`)** — legacy `--f-*` token *values* remapped to Bright (cream `#FFF7F0`, orange→magenta `#FF6B35→#FF2A8C`, Inter); canonical `--b-*` tokens + `.b-clay`/`.b-clay-emoji`/`.b-tap` primitives added. One central edit re-skins every token-consuming file. (See DECISIONS.md 2026-05-30 for the keep-`--f-*`-names trade-off.)
 - **index.css + index.html** — cream body, dk tokens, fonts.
@@ -22,7 +24,7 @@
 
 **Verification gaps (honest):** NotFound + Signup visually confirmed Bright in the frontend-only preview. 8 files (KYCForm, ReviewModal, 6 settings/* tabs) sit behind `ProtectedRoute` — unreachable without a backend in dev, so verified at source (0 indigo) + build (CSS compiles) level only; need founder login-gated QA on production. **Native APK re-skin un-verified** — web/preview only; APK rebuild + on-device smoke pending (Rule D note). Native status bar/splash still dark `#060814` (capacitor.config) — Bright-tone follow-up queued.
 
-**Files:** 28 changed (+596 / −594). Commit `087608f` on `feat/bright-skin`.
+**Files:** 28 changed (+596 / −594). Commit `087608f` on `feat/bright-skin` → squash-merged to main `7d81f04` (PR #110) → Fly v45 LIVE.
 
 ---
 
