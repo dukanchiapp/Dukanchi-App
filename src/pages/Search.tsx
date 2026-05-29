@@ -9,8 +9,10 @@ import { captureEvent } from '../lib/posthog';
 import { Sentry } from '../lib/sentry-frontend';
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { FIcon } from '../components/futuristic/FIcon';
+import { Search, X, SlidersHorizontal, ArrowRight, Clock, MapPin, Store, Navigation, ChevronRight, Check } from 'lucide-react';
 import { FLogo } from '../components/futuristic/FLogo';
+import { RadarPulse } from '../components/futuristic/RadarPulse';
+import NotificationBell from '../components/NotificationBell';
 
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
 
@@ -330,10 +332,12 @@ export default function SearchPage() {
                 </span>
               </div>
             </div>
+            {/* Session 121: dead decorative bell → live NotificationBell (drawer +
+                unread dot), 44×44 glass tile — consistent with Home/StoreProfile. */}
             <div
               style={{
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 borderRadius: 14,
                 background: 'var(--f-glass-bg-2)',
                 border: '1px solid var(--f-glass-border)',
@@ -344,7 +348,7 @@ export default function SearchPage() {
                 justifyContent: 'center',
               }}
             >
-              <FIcon name="bell" size={18} color="var(--f-text-1)" />
+              <NotificationBell />
             </div>
           </div>
         </div>
@@ -374,7 +378,7 @@ export default function SearchPage() {
                   padding: '11px 14px',
                 }}
               >
-                <FIcon name="search" size={16} color="var(--f-text-3)" />
+                <Search size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                 <input
                   ref={inputRef}
                   type="text"
@@ -387,7 +391,7 @@ export default function SearchPage() {
                 />
                 {query ? (
                   <button onClick={() => { setQuery(''); setSuggestions([]); setCorrectedQuery(null); }}>
-                    <FIcon name="x" size={15} color="var(--f-text-3)" />
+                    <X size={15} color="var(--f-text-3)" />
                   </button>
                 ) : null}
               </div>
@@ -402,7 +406,7 @@ export default function SearchPage() {
                   border: '1px solid ' + (hasFilters || showFilters ? 'rgba(255,42,140,0.45)' : 'var(--f-glass-border-2)'),
                 }}
               >
-                <FIcon name="sliders" size={18} color={hasFilters || showFilters ? 'white' : 'var(--f-text-1)'} />
+                <SlidersHorizontal size={18} color={hasFilters || showFilters ? 'white' : 'var(--f-text-1)'} />
               </button>
             </div>
 
@@ -428,7 +432,7 @@ export default function SearchPage() {
                     style={{ borderBottom: i < suggestions.length - 1 ? '1px solid var(--f-glass-border)' : 'none' }}
                     onMouseDown={(e) => { e.preventDefault(); setQuery(s); setShowSuggestions(false); }}
                   >
-                    <FIcon name="search" size={14} color="var(--f-text-3)" />
+                    <Search size={14} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 13, color: 'var(--f-text-1)', flex: 1 }}>
                       {s.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')).map((part, j) =>
                         part.toLowerCase() === query.toLowerCase()
@@ -436,7 +440,7 @@ export default function SearchPage() {
                           : <span key={j}>{part}</span>
                       )}
                     </span>
-                    <FIcon name="arrowR" size={12} color="var(--f-text-3)" />
+                    <ArrowRight size={12} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                   </button>
                 ))}
               </div>
@@ -453,7 +457,7 @@ export default function SearchPage() {
                 border: '1px solid var(--f-glass-border)',
               }}
             >
-              <FIcon name="search" size={14} color="#FF6BB4" />
+              <Search size={14} color="#FF6BB4" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>
                 Showing results for{' '}
                 <button
@@ -550,16 +554,29 @@ export default function SearchPage() {
                     <button
                       key={cat.value}
                       onClick={() => setQuery(cat.label)}
-                      className="flex flex-col items-center justify-center gap-1.5 active:opacity-70"
+                      className="flex flex-col items-center justify-center gap-2"
+                      onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.35)'; }}
+                      onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)'; }}
                       style={{
                         background: 'var(--f-bg-elev)',
-                        border: '1px solid var(--f-glass-border)',
-                        borderRadius: 16,
-                        padding: '14px 6px 12px',
+                        border: '1px solid var(--f-glass-border-2)',
+                        borderRadius: 18,
+                        padding: '14px 4px 12px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        transition: 'transform 200ms var(--f-ease), box-shadow 200ms',
                       }}
                     >
-                      <span style={{ fontSize: 22, lineHeight: 1 }}>{cat.emoji}</span>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--f-text-1)', lineHeight: 1.2, textAlign: 'center' }}>
+                      {/* v3 colored icon tile — cat.color at 13% alpha bg */}
+                      <span style={{
+                        width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: cat.color + '22', fontSize: 20, lineHeight: 1, flexShrink: 0,
+                      }}>
+                        {cat.emoji}
+                      </span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, color: 'var(--f-text-1)', lineHeight: 1.15, textAlign: 'center',
+                        width: '100%', padding: '0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
                         {cat.label}
                       </span>
                     </button>
@@ -587,11 +604,11 @@ export default function SearchPage() {
                           onClick={() => setQuery(q)}
                           className="flex items-center gap-2.5 flex-1 text-left"
                         >
-                          <FIcon name="clock" size={15} color="var(--f-text-3)" />
+                          <Clock size={15} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                           <span style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{q}</span>
                         </button>
                         <button onClick={() => removeHistoryItem(q)} className="ml-2 p-1">
-                          <FIcon name="x" size={14} color="var(--f-text-3)" />
+                          <X size={14} color="var(--f-text-3)" />
                         </button>
                       </div>
                     ))}
@@ -668,7 +685,7 @@ export default function SearchPage() {
                                     <div className="flex flex-col gap-1 mt-1">
                                       {distance && (
                                         <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--f-text-2)' }}>
-                                          <FIcon name="mapPin" size={10} color="#FF6BB4" />
+                                          <MapPin size={10} color="#FF6BB4" style={{ flexShrink: 0 }} />
                                           {distance} away
                                         </span>
                                       )}
@@ -677,7 +694,7 @@ export default function SearchPage() {
                                           className="flex items-center gap-1"
                                           style={{ fontSize: 12, fontWeight: 600, color: statusColor(status.color) }}
                                         >
-                                          <FIcon name="clock" size={10} color={statusColor(status.color)} />
+                                          <Clock size={10} color={statusColor(status.color)} style={{ flexShrink: 0 }} />
                                           {status.label}
                                         </span>
                                       )}
@@ -694,7 +711,7 @@ export default function SearchPage() {
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold"
                                     style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}
                                   >
-                                    <FIcon name="storeIc" size={13} color="var(--f-text-1)" />
+                                    <Store size={13} color="var(--f-text-1)" />
                                     View Store
                                   </Link>
                                   <button
@@ -702,7 +719,7 @@ export default function SearchPage() {
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold"
                                     style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.4)' }}
                                   >
-                                    <FIcon name="navigation" size={13} color="white" />
+                                    <Navigation size={13} color="white" />
                                     Navigate
                                   </button>
                                 </div>
@@ -717,7 +734,7 @@ export default function SearchPage() {
                   {filteredStores.length === 0 && hasFilters && (
                     <div className="text-center py-12">
                       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-                        <FIcon name="sliders" size={36} color="var(--f-text-4)" />
+                        <SlidersHorizontal size={36} color="var(--f-text-4)" />
                       </div>
                       <p style={{ fontSize: 14, color: 'var(--f-text-2)' }}>
                         No results match your filters.
@@ -731,7 +748,7 @@ export default function SearchPage() {
               ) : (
                 <div className="text-center py-16">
                   <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-                    <FIcon name="search" size={44} color="var(--f-text-4)" />
+                    <Search size={44} color="var(--f-text-4)" />
                   </div>
                   <p style={{ fontSize: 14, color: 'var(--f-text-2)' }}>
                     No results for "{query}"
@@ -774,7 +791,7 @@ export default function SearchPage() {
                       }}
                     >
                       Nearby shops se poocho
-                      <FIcon name="chevR" size={15} color="white" />
+                      <ChevronRight size={15} color="white" />
                     </button>
                   </div>
                 </div>
@@ -817,11 +834,26 @@ export default function SearchPage() {
                   📍 Nearby Shops se Poocho
                 </h2>
                 <button onClick={() => { setAskModalOpen(false); setAskResult(null); }}>
-                  <FIcon name="x" size={20} color="var(--f-text-3)" />
+                  <X size={20} color="var(--f-text-3)" />
                 </button>
               </div>
 
-              {askResult ? (
+              {askSending ? (
+                /* Broadcasting state — RadarPulse during the REAL in-flight
+                   /api/ask-nearby/send broadcast (no fake timer; shows for the
+                   actual network duration, then flips to success on askResult). */
+                <div className="text-center py-6" style={{ animation: 'f-fade-up 0.3s var(--f-ease)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <RadarPulse size={220} color="#FF2A8C" shopCount={12} />
+                  </div>
+                  <h2 className="f-display" style={{ fontSize: 20, color: 'var(--f-text-1)', margin: '16px 0 4px' }}>
+                    Broadcasting… <span className="f-grad-text">nearby shops</span>
+                  </h2>
+                  <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
+                    "{askQuery.trim()}" · {askRadius}km radius
+                  </p>
+                </div>
+              ) : askResult ? (
                 /* Success state */
                 <div className="text-center py-6">
                   <div
@@ -832,7 +864,7 @@ export default function SearchPage() {
                       boxShadow: '0 0 30px rgba(0,229,255,0.5), 0 0 60px rgba(46,231,161,0.4)',
                     }}
                   >
-                    <FIcon name="check" size={36} color="white" stroke={3} />
+                    <Check size={36} color="white" strokeWidth={3} />
                   </div>
                   <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--f-text-1)', marginTop: 4 }}>
                     {askResult.sentTo} shops ko message gaya!
