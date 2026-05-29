@@ -6,6 +6,65 @@
 
 ---
 
+## 2026-05-29 — Session 123 — Settings (UserSettings) + Splash re-skin (paired, screens 8+9 of re-skin)
+
+**Goal:** Re-skin Settings (restyle the real routed UserSettings.tsx, NOT a new dead Settings.tsx) + add/restyle a Splash gated on real auth state. Eighth+ninth step of the Tier 5D re-skin — last screens before the global cream→dark flip.
+
+**Status:** ✅ **SETTINGS SHELL + SPLASH LIVE ON v3.** Fly **v40** complete. Splash added (boot gate on real auth check). UserSettings shell re-skinned (it was genuinely light — first such screen). Sub-tab content components flagged for a follow-up.
+
+| Metric | Value |
+|---|---|
+| PR merged | #100 (squash) |
+| Squash commit | `81879d1` |
+| Production HEAD | `b547c14` → **`81879d1`** |
+| Fly release | **v40** complete |
+| Files | `src/components/Splash.tsx` (new), `src/App.tsx` (BootGate), `src/pages/UserSettings.tsx` (+180/−29) |
+| Tests | **133/133** |
+
+### Splash (new + wired honestly)
+
+- `src/components/Splash.tsx` — aurora bg + 64px gradient logo tile (FLogo) + magenta orbiting loader ring (`f-spin-slow` 1.2s) + "Dukanchi" 26/800 wordmark + "apna bazaar, apni dukaan" + "Made in India 🇮🇳".
+- **BootGate** in App.tsx: shows `<Splash/>` **while `AuthContext.isLoading`** is true — i.e. the REAL duration of the initial `/api/auth/me` network check (resolves via the provider's `.finally` → always terminates; can't hang the gate indefinitely). **NOT a fake timer** (same honest-gating principle as the S121 RadarPulse). `React`-free typing via `type ReactNode` import.
+- ✅ **E2E (2/2) proves the gate doesn't break boot** — login/signup still render after the auth check resolves. `/` returns 200 in prod.
+- Native note: Capacitor has its own splash (`SplashScreen.hide()` on mount); the web Splash bridges the post-native auth-check window. Minor possible brief double-splash on native — both branded, acceptable.
+
+### 🔎 Settings — UserSettings.tsx was GENUINELY LIGHT (first in the re-skin)
+
+Every prior screen (S116-122) arrived ~95% v2-dark. **UserSettings was the exception** — raw Tailwind `bg-gray-50`/`bg-white`/`text-gray-900`/`text-indigo-500`/`divide-gray-100` (never touched in the Phase 6/7/8 v2 pass). It's a **tab-list navigation** (not the prototype's toggle groups) that opens separate sub-tab components.
+
+**Re-skinned the SHELL (landing list view):**
+- Dark aurora page wrapper, glass sticky header (42×42 back tile + "Settings" 22/800 + 44×44 bell tile), **NEW gradient profile card** (56px gradient avatar + name + role), grouped tab-list card (`var(--f-bg-elev)` + glass border-2; each row = 32×32 magenta-tinted icon tile + label 14/600 + chevron, divided by glass borders), red-tinted Logout, magenta team-member banner.
+- Icons already lucide (ArrowLeft/ChevronRight/LogOut + per-tab icons).
+
+**PRESERVED**: `/settings` route, all tab navigation (`activeTab` + back-to-list), profile data (`user`), logout (showConfirm → `logout()` → `/login`), NotificationBell (already wired — not a dead bell), all sub-tab data fetches + handlers (store, posts, team, customer data, delete flows).
+
+### ⚠️ DEVIATION (meaningful scope finding — needs Opus follow-up)
+
+The sub-tab **content** components — `AccountDetailsTab`, `CustomerDataTabs`, `BusinessSettingsTabs`, `ManagePostsTab`, `ManageTeamTab`, `BulkUploadTab` — are **separate files still on the light Tailwind-gray theme**. NOT re-skinned here (each is its own component, a multi-file job). **Critically: the planned global cream→dark flip (S124) will NOT fix them** — they use raw Tailwind gray classes (`bg-white`, `text-gray-900`), NOT `--dk-*` tokens. They need their own dedicated re-skin pass.
+
+**Interim**: dark Settings shell → tap a tab → light sub-content (known gap, pre-pilot acceptable). **Recommend a "re-skin settings sub-tabs + BusinessSettingsTabs toggles" session** (the README's actual toggles — hide-ratings, chat-enable — live in BusinessSettingsTabs).
+
+### Phase 3 gates
+
+- ✅ typecheck 0 · vitest **133/133** · build green (68 precache) · **E2E 2/2 (boot gate non-breaking)**
+
+### Phase 4 CI + deploy
+
+- ✅ PR #100 (run 26614330293): `success`
+- ✅ Fly **v40** complete; post-deploy `/health` 200 in 566ms · push intact · CSP `report-only` · `/` 200 (SPA serving — boot OK)
+
+### E2E coverage gap
+
+Settings sub-tabs + Splash visual are auth-gated / boot-only → founder device test: Splash on cold boot (logo + orbiting ring, hides when ready), Settings list dark + profile card + tab nav + logout. (Boot non-breakage already proven by E2E + prod `/` 200.)
+
+### Awaiting
+
+- Founder device test (Splash cold-boot + Settings shell)
+- Opus decisions queue (now 5): shared AppHeader, StoreProfile gear, conversation rich-rows backend, Map dark-style, **+ settings sub-tab re-skin session**
+- Opus → **Session 124: GLOBAL cream→dark flip** (final) — but NOTE: the flip (delete `[data-theme="light"]`, flip `--dk-*` in index.css, delete dead AppHeader.tsx) only affects `--dk-*`-token-based surfaces; the Tailwind-gray sub-components (settings sub-tabs + possibly others) need separate passes. Re-scope S124 accordingly.
+
+---
+
 ## 2026-05-29 — Session 122 — Map re-skin: 3D↔Map toggle + live bell (screen 7 of re-skin)
 
 **Goal:** Re-skin Map.tsx to Futuristic v3, preserving the REAL Google Maps integration + markers + user location + store nav + re-center; add the 3D↔Map toggle (IsoMap). Seventh step of the Tier 5D re-skin.
