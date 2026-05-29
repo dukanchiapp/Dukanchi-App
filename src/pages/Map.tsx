@@ -252,6 +252,10 @@ export default function MapPage() {
           <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', paddingBottom: 2 }}>
             {CATEGORY_CHIPS.map(chip => {
               const active = selectedCategory === chip.value;
+              // Session 126: tint each inactive chip with its category color
+              // (same palette as the map markers + 3D tiles) — matches mockup.
+              // "All" (no value) has no color → falls back to neutral glass.
+              const catColor = CATEGORIES.find(c => c.value === chip.value)?.color;
               return (
                 <button
                   key={chip.value}
@@ -260,7 +264,9 @@ export default function MapPage() {
                   style={
                     active
                       ? { background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', border: '1px solid rgba(255,42,140,0.55)', boxShadow: '0 0 12px rgba(255,42,140,0.30)' }
-                      : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
+                      : catColor
+                        ? { background: `${catColor}22`, color: 'var(--f-text-1)', border: `1px solid ${catColor}66` }
+                        : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
                   }
                 >
                   {chip.emoji && <span>{chip.emoji}</span>}

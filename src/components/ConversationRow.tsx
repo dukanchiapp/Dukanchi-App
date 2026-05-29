@@ -1,17 +1,39 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, MapPin } from 'lucide-react';
 import { Conversation } from '../types';
+import { getStoreStatus } from '../lib/storeUtils';
+import { getLiveStatus } from '../lib/liveStatus';
+import { useClosingSoon } from '../hooks/useClosingSoon';
 
 /* Futuristic v3 skin · Session 120 / feat/reskin-messages-chat.
    Glass conversation row. Prop contract + React.memo comparator preserved.
-   v3: var(--f-bg-elev) surface + hover (translateX + magenta border + glow). */
+   v3: var(--f-bg-elev) surface + hover (translateX + magenta border + glow).
+
+   Session 126: rich store rows — when the other party owns a store
+   (conv.store present) the row shows a live-status capsule + distance +
+   category + area line, matching the design mockup. Plain user↔user chats
+   keep the original compact layout (name + timestamp inline, last message). */
 
 interface Props {
   conversation: Conversation;
   onClick: (userId: string, name: string) => void;
+  /** Precomputed "1.2 km" / "300 m" string (Messages page owns user location). */
+  distance?: string | null;
 }
 
-const ConversationRow = React.memo(function ConversationRow({ conversation: conv, onClick }: Props) {
+const ConversationRow = React.memo(function ConversationRow({ conversation: conv, onClick, distance }: Props) {
+  const store = conv.store ?? null;
+  // Hooks must run unconditionally — getStoreStatus(undefined…) → null when the
+  // party has no store, so useClosingSoon(null) just no-ops (no timer).
+  const status = getStoreStatus(
+    store?.openingTime ?? undefined,
+    store?.closingTime ?? undefined,
+    store?.is24Hours ?? undefined,
+    store?.workingDays ?? undefined,
+  );
+  const closingSoon = useClosingSoon(status?.minutesUntilClose ?? null);
+  const live = store ? getLiveStatus({ closingSoon, status: status?.label ?? null }) : null;
+
   return (
     <div
       onClick={() => onClick(conv.userId, conv.name)}
@@ -56,6 +78,8 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
         )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
+        {/* Name — timestamp sits inline only on plain rows (store rows move it
+            down to the last-message line, matching the mockup). */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
           <h3 style={{
             fontSize: 14.5, fontWeight: 700, color: 'var(--f-text-1)', letterSpacing: '-0.01em',
@@ -63,17 +87,67 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
           }}>
             {conv.name}
           </h3>
-          <span className="f-mono" style={{ fontSize: 10, color: 'var(--f-text-3)', flexShrink: 0 }}>
-            {conv.timestamp}
-          </span>
+          {!store && (
+            <span className="f-mono" style={{ fontSize: 10, color: 'var(--f-text-3)', flexShrink: 0 }}>
+              {conv.timestamp}
+            </span>
+          )}
         </div>
-        <p style={{
-          fontSize: 12.5, marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          color: conv.unread > 0 ? 'var(--f-text-1)' : 'var(--f-text-3)',
-          fontWeight: conv.unread > 0 ? 600 : 400, marginBottom: 0,
-        }}>
-          {conv.lastMessage}
-        </p>
+
+        {/* Store meta — live status capsule + distance + category */}
+        {store && (live || distance || store.category) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 7, marginTop: 4,
+            fontSize: 10.5, whiteSpace: 'nowrap', overflow: 'hidden',
+          }}>
+            {live && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', borderRadius: 9999,
+                color: live.color, background: live.color + '1A', border: `1px solid ${live.color}40`,
+                fontWeight: 700, flexShrink: 0, lineHeight: 1.2,
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: live.color }} />
+                {live.label}
+              </span>
+            )}
+            {distance && <span style={{ color: 'var(--f-text-3)', fontWeight: 600, flexShrink: 0 }}>{distance}</span>}
+            {store.category && (
+              <>
+                <span style={{ color: 'var(--f-text-4)', flexShrink: 0 }}>·</span>
+                <span style={{ color: '#FF6BB4', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {store.category}
+                </span>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Area line */}
+        {store?.city && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4, marginTop: 3,
+            fontSize: 10.5, color: 'var(--f-text-3)', whiteSpace: 'nowrap', overflow: 'hidden',
+          }}>
+            <MapPin size={10} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.city}</span>
+          </div>
+        )}
+
+        {/* Last message (+ timestamp on this line for store rows) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: store ? 4 : 3 }}>
+          <p style={{
+            fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            color: conv.unread > 0 ? 'var(--f-text-1)' : 'var(--f-text-3)',
+            fontWeight: conv.unread > 0 ? 600 : 400, margin: 0,
+          }}>
+            {conv.lastMessage}
+          </p>
+          {store && (
+            <span className="f-mono" style={{ fontSize: 10, color: 'var(--f-text-3)', flexShrink: 0 }}>
+              {conv.timestamp}
+            </span>
+          )}
+        </div>
       </div>
       <ChevronRight size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
     </div>
@@ -81,7 +155,8 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
 }, (prev, next) =>
   prev.conversation.userId === next.conversation.userId &&
   prev.conversation.lastMessage === next.conversation.lastMessage &&
-  prev.conversation.unread === next.conversation.unread
+  prev.conversation.unread === next.conversation.unread &&
+  prev.distance === next.distance
 );
 
 export default ConversationRow;
