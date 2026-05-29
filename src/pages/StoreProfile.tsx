@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, Share2, Store, MapPin, Phone, Clock, Navigation,
-  Plus, Check, MessageCircle, Star, Heart,
+  Plus, Check, MessageCircle, Star, Heart, Settings,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
 import ReviewModal from '../components/ReviewModal';
@@ -11,6 +11,7 @@ import NotificationBell from '../components/NotificationBell';
 import { getStoreStatus } from '../lib/storeUtils';
 import { getLiveStatus } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
+import { useUserLocation } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { apiFetch } from '../lib/api';
@@ -36,17 +37,37 @@ const coverFab: CSSProperties = {
   flexShrink: 0,
 };
 
-const detailRow: CSSProperties = {
+// Session 126: magenta-tinted rounded icon tile for the details card rows
+// (matches the design mockup — address / phone / hours each sit behind a tile).
+const iconTile: CSSProperties = {
+  width: 38,
+  height: 38,
+  borderRadius: 11,
+  flexShrink: 0,
   display: 'flex',
   alignItems: 'center',
-  gap: 10,
-  padding: '5px 0',
+  justifyContent: 'center',
+  background: 'rgba(255,42,140,0.12)',
+  border: '1px solid rgba(255,42,140,0.22)',
 };
+
+/** "21:00" → "9:00 PM". Leaves non-HH:MM strings untouched. */
+function fmt12(t?: string | null): string {
+  if (!t) return '';
+  const [hStr, m] = t.split(':');
+  let h = parseInt(hStr, 10);
+  if (Number.isNaN(h)) return t;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m ?? '00'} ${ampm}`;
+}
 
 export default function StoreProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { location: userLocCtx } = useUserLocation();
+  const userLoc = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
   const [store, setStore] = useState<any>(null);
   usePageMeta({ title: store?.storeName || 'Store' });
   const [, setProducts] = useState<any[]>([]);
@@ -219,6 +240,17 @@ export default function StoreProfilePage() {
   // v3 live status — 4-tier color (red ≤15 / orange ≤30 / yellow ≤60 / green)
   // via getLiveStatus, ticking through useClosingSoon (declared at top).
   const live = storeStatus ? getLiveStatus({ closingSoon, status: storeStatus.label }) : null;
+  // Distance user → store (mockup: "1.6 km away" pill on the cover). null when
+  // either coordinate is missing or the user hasn't shared location.
+  const storeDistance: string | null = (() => {
+    if (!userLoc || !store.latitude || !store.longitude) return null;
+    const R = 6371;
+    const dLat = (store.latitude - userLoc.lat) * Math.PI / 180;
+    const dLon = (store.longitude - userLoc.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLoc.lat * Math.PI / 180) * Math.cos(store.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
+  })();
   const showReviews = !store.hideRatings;
   const sortedPosts = [...posts].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
 
@@ -277,17 +309,26 @@ export default function StoreProfilePage() {
               <div style={coverFab}>
                 <NotificationBell />
               </div>
-              <button
-                onClick={() => {
-                  const url = `${window.location.origin}/store/${store.id}`;
-                  if (navigator.share) navigator.share({ title: store.storeName, url });
-                  else { navigator.clipboard.writeText(url); showToast('Link copied!', { type: 'success' }); }
-                }}
-                style={coverFab}
-                aria-label="Share"
-              >
-                <Share2 size={16} color="white" />
-              </button>
+              {/* Session 126: mockup shows a gear top-right. Owner viewing their
+                  own store → gear links to /settings. Visitors keep Share (more
+                  useful when viewing someone else's store). */}
+              {isOwner ? (
+                <button onClick={() => navigate('/settings')} style={coverFab} aria-label="Settings">
+                  <Settings size={16} color="white" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    const url = `${window.location.origin}/store/${store.id}`;
+                    if (navigator.share) navigator.share({ title: store.storeName, url });
+                    else { navigator.clipboard.writeText(url); showToast('Link copied!', { type: 'success' }); }
+                  }}
+                  style={coverFab}
+                  aria-label="Share"
+                >
+                  <Share2 size={16} color="white" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -305,6 +346,19 @@ export default function StoreProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Session 126: distance capsule (mockup) — bottom-right of the cover. */}
+          {storeDistance && (
+            <div style={{
+              position: 'absolute', bottom: 16, right: 14, zIndex: 2,
+              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999,
+              background: 'rgba(6,8,20,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid var(--f-glass-border-2)',
+            }}>
+              <MapPin size={12} color="var(--f-magenta-light)" />
+              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--f-text-1)' }}>{storeDistance}</span>
+            </div>
+          )}
         </div>
 
         {/* ── Store info ── */}
@@ -332,6 +386,15 @@ export default function StoreProfilePage() {
               </span>
             )}
             {store.category && <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{store.category}</span>}
+            {live && (
+              <>
+                <span style={{ fontSize: 12, color: 'var(--f-text-4)' }}>·</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: live.color }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: live.color, boxShadow: `0 0 6px ${live.color}` }} />
+                  {live.label}
+                </span>
+              </>
+            )}
           </div>
 
           {store.description && (
@@ -369,45 +432,40 @@ export default function StoreProfilePage() {
             ))}
           </div>
 
-          {/* Details card */}
-          <div className="f-glass f-glass-edge" style={{ padding: '12px 14px', borderRadius: 16, background: 'var(--f-glass-bg)' }}>
+          {/* Details card — Session 126: icon-tile rows + bold address/hours
+              (12-hour) + full-gradient Direction button (matches the mockup).
+              Live status now lives inline in the meta row above. */}
+          <div className="f-glass f-glass-edge" style={{ padding: 14, borderRadius: 16, background: 'var(--f-glass-bg)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {store.address && (
-              <div style={detailRow}>
-                <MapPin size={14} color="var(--f-magenta-light)" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 12.5, color: 'var(--f-text-1)', fontWeight: 500 }}>{store.address}</span>
-              </div>
-            )}
-            {(store.postalCode || store.city || store.state) && (
-              <div style={{ ...detailRow, paddingLeft: 24 }}>
-                <span style={{ fontSize: 11, color: 'var(--f-text-3)' }}>
-                  {store.postalCode && <span>{store.postalCode}</span>}
-                  {(store.city || store.state) && <span>{store.postalCode ? ' · ' : ''}{[store.city, store.state].filter(Boolean).join(', ')}</span>}
-                </span>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={iconTile}><MapPin size={16} color="var(--f-magenta-light)" /></div>
+                <div style={{ minWidth: 0, paddingTop: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>{store.address}</p>
+                  {(store.postalCode || store.city || store.state) && (
+                    <p style={{ fontSize: 11.5, color: 'var(--f-text-3)', margin: '2px 0 0' }}>
+                      {[store.postalCode, [store.city, store.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
             {store.phoneVisible !== false && store.phone && (
-              <div style={detailRow}>
-                <Phone size={14} color="var(--f-magenta-light)" style={{ flexShrink: 0 }} />
-                <a href={`tel:${store.phone}`} style={{ fontSize: 12.5, color: 'var(--f-text-2)', textDecoration: 'none' }}>{store.phone}</a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={iconTile}><Phone size={15} color="var(--f-magenta-light)" /></div>
+                <a href={`tel:${store.phone}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)', textDecoration: 'none' }}>{store.phone}</a>
               </div>
             )}
-            {live && (
-              <div style={detailRow}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: live.color, flexShrink: 0, boxShadow: `0 0 8px ${live.color}` }} />
-                <span style={{ fontSize: 12.5, fontWeight: 700, color: live.color }}>{live.label}</span>
-              </div>
-            )}
-            {(store.openingTime || store.closingTime) && !store.is24Hours && (
-              <div style={detailRow}>
-                <Clock size={14} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
-                  Hours: {store.openingTime || '--:--'} – {store.closingTime || '--:--'}
-                </span>
-              </div>
-            )}
-            {store.workingDays && (
-              <div style={{ ...detailRow, paddingLeft: 24 }}>
-                <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{store.workingDays}</span>
+            {(store.is24Hours || store.openingTime || store.closingTime) && (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={iconTile}><Clock size={15} color="var(--f-magenta-light)" /></div>
+                <div style={{ minWidth: 0, paddingTop: 1 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>
+                    {store.is24Hours ? 'Open 24 Hours' : `${fmt12(store.openingTime)} – ${fmt12(store.closingTime)}`}
+                  </p>
+                  {store.workingDays && (
+                    <p style={{ fontSize: 11.5, color: 'var(--f-text-3)', margin: '2px 0 0' }}>{store.workingDays}</p>
+                  )}
+                </div>
               </div>
             )}
             {store.latitude && store.longitude && store.latitude !== 0 && (
@@ -416,13 +474,13 @@ export default function StoreProfilePage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8,
-                  padding: '11px 14px', borderRadius: 12, background: 'rgba(255,107,53,0.14)',
-                  border: '1px solid rgba(255,107,53,0.38)', color: 'var(--f-orange-light)', fontSize: 13,
-                  fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(255,107,53,0.18)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 2,
+                  padding: '13px 14px', borderRadius: 13, background: 'var(--f-grad-primary)',
+                  color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none',
+                  boxShadow: '0 0 20px rgba(255,42,140,0.40)',
                 }}
               >
-                <Navigation size={14} color="var(--f-orange-light)" />
+                <Navigation size={15} color="white" />
                 Direction to Store
               </a>
             )}

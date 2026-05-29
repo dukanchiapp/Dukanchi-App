@@ -85,6 +85,21 @@ export interface Conversation {
   lastMessage: string;
   timestamp: string;
   unread: number;
+  role?: string;
+  deletedAt?: string | null;
+  // Session 126: store meta for rich conversation rows (live status / distance
+  // / category / area). null when the other party owns no store.
+  store?: {
+    category?: string | null;
+    openingTime?: string | null;
+    closingTime?: string | null;
+    is24Hours?: boolean;
+    workingDays?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    city?: string | null;
+    postalCode?: number | null;
+  } | null;
 }
 
 export interface Interactions {

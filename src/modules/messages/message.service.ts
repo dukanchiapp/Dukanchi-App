@@ -68,8 +68,11 @@ export class MessageService {
       orderBy: { createdAt: 'desc' },
       take: 500,
       include: {
-        sender: { select: { id: true, name: true, role: true, deletedAt: true, stores: { select: { storeName: true, logoUrl: true }, take: 1 } } },
-        receiver: { select: { id: true, name: true, role: true, deletedAt: true, stores: { select: { storeName: true, logoUrl: true }, take: 1 } } },
+        // Session 126: store select expanded (category / timing / coords / city)
+        // so conversation rows can render rich store meta — live status,
+        // distance, category, area — matching the design mockup.
+        sender: { select: { id: true, name: true, role: true, deletedAt: true, stores: { select: { storeName: true, logoUrl: true, category: true, openingTime: true, closingTime: true, is24Hours: true, workingDays: true, latitude: true, longitude: true, city: true, postalCode: true }, take: 1 } } },
+        receiver: { select: { id: true, name: true, role: true, deletedAt: true, stores: { select: { storeName: true, logoUrl: true, category: true, openingTime: true, closingTime: true, is24Hours: true, workingDays: true, latitude: true, longitude: true, city: true, postalCode: true }, take: 1 } } },
       },
     });
 
@@ -78,10 +81,11 @@ export class MessageService {
       const otherId = msg.senderId === userId ? msg.receiverId : msg.senderId;
       if (!seen.has(otherId)) {
         const other = msg.senderId === userId ? msg.receiver : msg.sender;
+        const otherStore = other.stores?.[0];
         seen.set(otherId, {
           userId: otherId,
-          name: other.stores?.[0]?.storeName || other.name,
-          logoUrl: other.stores?.[0]?.logoUrl || null,
+          name: otherStore?.storeName || other.name,
+          logoUrl: otherStore?.logoUrl || null,
           role: other.role,
           // Surfaced for D2 anonymize — frontend reads this to render
           // "Deleted user" label in place of name when non-null.
@@ -89,6 +93,19 @@ export class MessageService {
           lastMessage: msg.message,
           lastImageUrl: msg.imageUrl,
           timestamp: msg.createdAt,
+          // Session 126: store meta for rich conversation rows. null when the
+          // other party owns no store (customer ↔ customer chats stay plain).
+          store: otherStore ? {
+            category: otherStore.category ?? null,
+            openingTime: otherStore.openingTime ?? null,
+            closingTime: otherStore.closingTime ?? null,
+            is24Hours: otherStore.is24Hours ?? false,
+            workingDays: otherStore.workingDays ?? null,
+            latitude: otherStore.latitude ?? null,
+            longitude: otherStore.longitude ?? null,
+            city: otherStore.city ?? null,
+            postalCode: otherStore.postalCode ?? null,
+          } : null,
         });
       }
     }

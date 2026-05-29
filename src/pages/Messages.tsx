@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, X, MessageCircle, ChevronRight } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
+import { useUserLocation } from '../context/LocationContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { useToast } from '../context/ToastContext';
 import ConversationRow from '../components/ConversationRow';
@@ -33,8 +34,21 @@ export default function MessagesPage() {
   const socketRef = useRef<Socket | null>(null);
   const reopenCountRef = useRef(0);
   const { token, user, isLoading: authLoading } = useAuth();
+  const { location: userLocCtx } = useUserLocation();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  // Session 126: distance user → store for rich conversation rows. Returns
+  // "1.2 km" / "300 m", or null when location/coords are missing.
+  const convDistance = (lat?: number | null, lng?: number | null): string | null => {
+    if (!userLocCtx || lat == null || lng == null) return null;
+    const R = 6371;
+    const dLat = (lat - userLocCtx.lat) * Math.PI / 180;
+    const dLon = (lng - userLocCtx.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLocCtx.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
+  };
 
   const formatConversations = (data: Conversation[]): Conversation[] =>
     data.map(conv => ({
@@ -293,6 +307,7 @@ export default function MessagesPage() {
                 key={conv.userId}
                 conversation={conv}
                 onClick={handleOpenChat}
+                distance={convDistance(conv.store?.latitude, conv.store?.longitude)}
               />
             ))}
           </div>
