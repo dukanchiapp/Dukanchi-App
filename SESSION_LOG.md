@@ -6,6 +6,67 @@
 
 ---
 
+## 2026-05-29 — Session 124 — Global shared UI re-skin: Toast + ImageCropper + ProtectedRoute (pilot-critical session 1 of ~5)
+
+**Goal:** Re-skin the 3 raw-Tailwind-light SHARED surfaces (audit-flagged — the `--dk-*` flip can't reach them) to `--f-*` dark. First of the ~5 pilot-critical finish sessions from the S123.5 audit.
+
+**Status:** ✅ **SHARED UI DARK.** Fly **v41** complete. Toast (every screen), ImageCropper (post-image crop), ProtectedRoute spinner all converted to `--f-*`. Highest-visibility, lowest-effort cluster done first.
+
+| Metric | Value |
+|---|---|
+| PR merged | #102 (squash) |
+| Squash commit | `8f26668` |
+| Production HEAD | `81879d1` → **`8f26668`** |
+| Fly release | **v41** complete |
+| Files changed | 3 (`Toast.tsx` +79/−42-ish, `ImageCropper.tsx`, `ProtectedRoute.tsx`) |
+| Tests | **133/133** |
+
+### Changes (all → `--f-*`, NOT `--dk-*`)
+
+**Toast.tsx** (renders on EVERY screen — biggest visual-consistency win):
+- Toast notification: light `bg-green-50`/`bg-red-50`/`bg-amber-50`/`bg-blue-50` → dark glass (`var(--f-glass-bg-2)`) + status-tinted border + glow (success→`--f-success`, error→`--f-danger`, warning→`#F59E0B`, info→`--f-cyan`) + `--f-text-1` text. Icons recolored to status tokens.
+- Confirm modal: `bg-white` card → `var(--f-modal-bg)` glass; gray text → text-1/2; cancel → glass; confirm → `--f-danger` (error) / gradient (else).
+- PRESERVED: ToastContext API (`{message, type, onClose, confirm}`), 5s auto-close timer, confirm onConfirm/onCancel flow, all 4 variants, dismiss.
+
+**ImageCropper.tsx** (anyone posting an image):
+- Mode toggle (Crop/Fit pills), canvas border, loading + error overlays, zoom buttons, Cancel + "Image use karein" CTA → `--f-*` (glass + gradient; canvas `#0a0612`).
+- PRESERVED 100% of S113/S114 logic: `compressImage(blob)`, `onComplete(Blob)`, `image.onerror → setLoadError` + error overlay + disabled CTA, loading overlay, crop/zoom/drag pointer handlers, 600×800 export. Only surface colors changed — zero touch to crop/upload logic.
+
+**ProtectedRoute.tsx**: `bg-gray-50` spinner fallback → `var(--f-bg-deep)` + magenta spinner.
+
+### Why `--f-*` not `--dk-*`
+
+Keeps these surfaces on the futuristic palette (matching the 9 done screens) so the eventual global `--dk-*` flip doesn't touch them — and so they're consistent NOW, not dependent on the flip.
+
+### Phase 3 gates
+
+- ✅ typecheck 0 · vitest **133/133** · build green (68 precache) · E2E 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #102 (run 26615064280): `success`
+- ✅ Fly **v41** complete; post-deploy `/health` 200 in 584ms · push handler intact · CSP `report-only` preserved
+
+### Pilot-critical finish progress (from S123.5 audit — ~5 sessions)
+
+- ✅ **S124 — Global shared UI** (Toast + ImageCropper + ProtectedRoute) ← this session
+- ⏳ S125 — Retailer dashboard cluster (RetailerDashboard + StoreFormFields + KycUploadForm + AiBioModal) — **L** (the 3 MIXED `--dk-`+Tailwind files; must precede the flip)
+- ⏳ S126 — Onboarding KYC (KYCForm)
+- ⏳ S127 — Settings sub-tabs (AccountDetailsTab + ManagePostsTab + BulkUploadTab + BusinessSettingsTabs)
+- ⏳ S128 — GLOBAL `--dk-*` flip + delete `[data-theme=light]` + delete dead AppHeader + comprehensive device test
+- Deferred (post-pilot): ManageTeamTab, CustomerDataTabs, Support, ReviewModal, NotFound
+
+### E2E coverage gap
+
+Toast/ImageCropper/confirm-dialogs render conditionally (not on public login/signup) → not E2E-covered. Founder device test: trigger success/error toast (dark glass), open post-image cropper (dark modal + crop + upload, S114 intact), confirm dialog.
+
+### Awaiting
+
+- Founder device test (toast + cropper + confirm)
+- Opus → **S125 retailer dashboard cluster** (the heavyweight — must complete before the global flip since RetailerDashboard/StoreFormFields/KycUploadForm mix `--dk-`+Tailwind and would break contrast if flipped while still mixed)
+
+---
+
 ## 2026-05-29 — Session 123 — Settings (UserSettings) + Splash re-skin (paired, screens 8+9 of re-skin)
 
 **Goal:** Re-skin Settings (restyle the real routed UserSettings.tsx, NOT a new dead Settings.tsx) + add/restyle a Splash gated on real auth state. Eighth+ninth step of the Tier 5D re-skin — last screens before the global cream→dark flip.
