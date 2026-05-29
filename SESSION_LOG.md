@@ -6,6 +6,73 @@
 
 ---
 
+## 2026-05-29 — Session 118 — Home page re-skin: live bell + v3 PostCard + lucide chrome (screen 3 of re-skin)
+
+**Goal:** Re-skin Home.tsx to Futuristic, full-dark, preserving all data/hooks/handlers. Third step of the Tier 5D re-skin.
+
+**Status:** ✅ **HOME LIVE ON v3.** Fly **v35** complete. Recon found Home was already ~95% futuristic v2; this session closed the two **functional** gaps that remained.
+
+| Metric | Value |
+|---|---|
+| PR merged | #90 (squash) |
+| Squash commit | `7f9a64e` |
+| Production HEAD | `f7793e7` → **`7f9a64e`** |
+| Fly release | **v35** complete |
+| Files changed | 1 (`src/pages/Home.tsx`, +18/−14) |
+| Tests | **133/133** |
+
+### 🔎 Recon: Home was already v2-futuristic
+
+Home.tsx already had: dark `--f-bg-deep` + `--f-page-bg` wrapper, `--f-sticky-bg` sticky header + tabs, `FLogo`, `FLocationStrip` (already matches README v3 location-strip spec exactly), glass carousel (2.2:1, magenta border+glow, 4s rotate, chevrons, dots, `/api/app-settings` data), gradient pill-tabs (For you/Following/Saved), filter dropdown (Global / Within 3km), loading skeletons, empty/end states, infinite scroll. So the page was NOT cream — the task's "wrap in dark" premise was already satisfied.
+
+### Two real (functional) gaps closed
+
+**1. Dead bell → live NotificationBell.** The header bell was a **static decorative `FIcon name="bell"`** (gold, no onClick, no drawer) — i.e. tapping it did nothing. Replaced with the real `<NotificationBell/>` (unread badge + drawer via `NotificationContext`) inside a 44×44 glass tile. **The notification drawer is now reachable from Home** (it never was before).
+
+**2. Feed card v2 → v3.** Home rendered **`FPostCard` (v2)** — single-ring avatar, hardcoded `#2EE7A1` green status dot, no status capsule, no live countdown, no area row. Swapped to the **S116-re-skinned `PostCard` (v3)** — double-ring avatar, `getLiveStatus` capsule, `useClosingSoon` live countdown, area·pincode row. Props identical (`PostCardProps`) → pure drop-in import swap. **This ALSO makes S116 live** — `PostCard.tsx` had been imported by ZERO screens (dead code) until this swap. (Parallel to the S117 AppHeader-dead-code finding — re-skinned components weren't actually wired.)
+
+### Chrome icons → lucide
+
+`FIcon` → lucide-react: `ChevronLeft`/`ChevronRight` (carousel), `SlidersHorizontal` (filter btn), `Check` (filter tick), `Store` (empty state). `FIcon` import fully removed from Home. `FLogo` + `FLocationStrip` kept as-is (own components, already v3-correct; they use FIcon internally — re-skinned in their own right later if needed).
+
+### Preserved verbatim (grep-confirmed)
+
+useFeed + pagination (IntersectionObserver → loadMore), saved-tab separate `/api/users/{id}/saved` fetch, optimistic `toggleLike`/`toggleSave`/`toggleFollow` + error rollback, `LocationContext` (`useUserLocation`) + `LocationPicker`, tab filtering (`feedType`), distance filter (`locationRange`), `getDistance` haversine, `getLikeCount`, `handleShare` (native share + clipboard fallback), carousel data source + 4s rotation + chevron/dot controls, loading skeletons, empty + "Sab posts dekh liye" end states.
+
+### f-bg-aurora decision
+
+Did NOT wrap in `.f-bg-aurora` class. Home already renders fully dark via `--f-bg-deep` + `--f-page-bg` (equivalent outcome). The `.f-bg-aurora` class sets `overflow:hidden` + an absolute animated `::before` + forces children to `z-index:1` — that would break the working `position:sticky` header + tabs. Goal ("Home fully dark now") already met without it.
+
+### Phase 3 local gates
+
+- ✅ `npm run typecheck` — 0 errors
+- ✅ `npm test -- --run` — **133/133**
+- ✅ `npm run build` — green (60 precache entries — PostCard chunk now pulled into Home; FPostCard no longer)
+- ✅ `npm run test:e2e` — 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #90 (run 26610697775): `success`
+- ✅ Fly **v35** complete; post-deploy `/health` 200 in 491ms · push handler intact · CSP `report-only` preserved
+
+### Reusable primitives surfaced (for Search / StoreProfile reuse)
+
+- `FLocationStrip` — drop-in location strip
+- The glass carousel block (16:9-ish, magenta border+glow, auto-rotate, chevrons, dots)
+- The gradient pill-tabs + glass filter-dropdown pattern
+- 44×44 glass bell tile wrapping `<NotificationBell/>` (now used identically in S117 AppHeader + S118 Home)
+
+### E2E coverage gap (explicit)
+
+Home is auth-gated → NOT covered by the public render-smoke E2E. Founder device test required: feed loads + paginates, tab switch filters (For you/Following/Saved), location Change opens picker, **bell opens notification drawer**, like/save/follow on v3 cards work, live status capsule ticks.
+
+### Awaiting
+
+- Founder device test — Home fully dark, v3 cards with live capsule, working bell drawer, all interactions
+- Opus → next screen: **Store Profile (119)** — L-size (banner + DP overlap + stats + bio clamp + Posts/Reviews tabs); the StoreProfile feed currently uses an inline `sortedPosts.map` (NOT PostCard) — that session decides card strategy there
+
+---
+
 ## 2026-05-29 — Session 117 — AppHeader + BottomNav Futuristic re-skin (paired, screen 2 of re-skin)
 
 **Goal:** Re-skin AppHeader + BottomNav (paired — chrome that renders across screens) to Futuristic v3 IN PLACE, preserving all props/handlers/routing/NotificationBell wiring. Second step of the Tier 5D re-skin.
