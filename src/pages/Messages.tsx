@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import RefreshButton from '../components/RefreshButton';
+import { Search, X, MessageCircle, ChevronRight } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -10,7 +10,6 @@ import ConversationRow from '../components/ConversationRow';
 import { Conversation } from '../types';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
-import { FIcon } from '../components/futuristic';
 
 /* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Conversation fetch,
@@ -189,27 +188,25 @@ export default function MessagesPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
             <h1 className="f-display" style={{ fontSize: 30, color: 'var(--f-text-1)', margin: 0 }}>Messages</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 11, color: 'var(--f-text-3)', fontWeight: 600 }}>{conversations.length} chats</span>
-              <RefreshButton />
-            </div>
+            {/* Session 120: Refresh button dropped per design (was a bare reload). */}
+            <span style={{ fontSize: 12, color: 'var(--f-text-3)', fontWeight: 600 }}>{conversations.length} chats</span>
           </div>
 
           {/* Search */}
           <div className="f-glass" style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 14, background: 'var(--f-glass-bg)',
           }}>
-            <FIcon name="search" size={16} color="var(--f-text-3)" />
+            <Search size={17} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search conversations"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--f-text-1)', fontSize: 13, fontFamily: 'inherit' }}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--f-text-1)', fontSize: 14, fontFamily: 'inherit', fontWeight: 500 }}
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
-                <FIcon name="x" size={14} color="var(--f-text-3)" />
+                <X size={14} color="var(--f-text-3)" />
               </button>
             )}
           </div>
@@ -305,7 +302,7 @@ export default function MessagesPage() {
         {!loading && searchQuery && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '56px 16px' }}>
             <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>
-              <FIcon name="search" size={38} color="var(--f-text-4)" />
+              <Search size={38} color="var(--f-text-4)" />
             </div>
             <p style={{ fontSize: 14, color: 'var(--f-text-3)' }}>No conversations matching "{searchQuery}"</p>
           </div>
@@ -321,7 +318,7 @@ export default function MessagesPage() {
                 marginBottom: 16, background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
                 boxShadow: '0 0 30px rgba(255,42,140,0.20)',
               }}>
-                <FIcon name="msg" size={34} color="var(--f-magenta-light)" />
+                <MessageCircle size={34} color="var(--f-magenta-light)" />
               </div>
               <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--f-text-1)', margin: '0 0 6px' }}>Koi chat nahi hai abhi</h2>
               <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.55, maxWidth: 270, textAlign: 'center', margin: 0 }}>
@@ -381,13 +378,13 @@ export default function MessagesPage() {
                 width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center',
                 justifyContent: 'center', background: 'var(--f-grad-primary)', boxShadow: '0 0 16px rgba(255,42,140,0.45)',
               }}>
-                <FIcon name="msg" size={20} color="white" />
+                <MessageCircle size={20} color="white" />
               </div>
               <div style={{ flex: 1, textAlign: 'left' }}>
                 <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0 }}>Ask Nearby Stores</p>
                 <p style={{ fontSize: 11, color: 'var(--f-text-3)', margin: '1px 0 0' }}>Ek message, saari shops tak pahuche</p>
               </div>
-              <FIcon name="chevR" size={18} color="var(--f-text-3)" />
+              <ChevronRight size={18} color="var(--f-text-3)" />
             </button>
           </div>
         )}
