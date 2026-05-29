@@ -6,6 +6,71 @@
 
 ---
 
+## 2026-05-29 — Session 119 — Store Profile re-skin: live bell + getLiveStatus + bio clamp + 1:1 grid (screen 4 of re-skin)
+
+**Goal:** Re-skin StoreProfile.tsx to Futuristic v3 in place, preserving all data/handlers/wiring. Fourth step of the Tier 5D re-skin.
+
+**Status:** ✅ **STORE PROFILE LIVE ON v3.** Fly **v36** complete. Recon (per the established pattern) found StoreProfile already comprehensively v2-futuristic; this session closed the v3 gaps + one functional add.
+
+| Metric | Value |
+|---|---|
+| PR merged | #92 (squash) |
+| Squash commit | `31a10b7` |
+| Production HEAD | `7f9a64e` → **`31a10b7`** |
+| Fly release | **v36** complete |
+| Files changed | 1 (`src/pages/StoreProfile.tsx`, +83/−31) |
+| Tests | **133/133** |
+
+### 🔎 Recon: already v2-futuristic (Phase 6)
+
+Dark `--f-bg-deep` + aurora wash, glass cover + glow overlay, overlapping logo, glass stats cells, glass details card, gradient role pill, sticky Posts/Reviews tabs, full post-detail modal — all dark, all wiring intact.
+
+### 5 changes (1 functional add + 4 v3-spec)
+
+**1. Refresh → live NotificationBell (functional).** `RefreshButton` (bare `window.location.reload()`, no logic — same as the S117 AppHeader Refresh) **dropped** per design. Added `<NotificationBell/>` (drawer + unread dot) in the cover FAB tile. **Store profile previously had NO bell** → now reachable. Share button kept.
+
+**2. getLiveStatus hours.** Status was `getStoreStatus` + `statusColor` (old semantic 'green'/'yellow'/'red'). Now bridges `minutesUntilClose` → `useClosingSoon` (live tick) → `getLiveStatus` 4-tier color + glowing dot. Consistent with PostCard/Home. **Hook hoisted above the loading/!store early returns** (React hooks rule — `store?.` optional chaining handles the null-pre-fetch case).
+
+**3. Bio 3-line clamp + Read more/less** toggle (was shown full; `bioExpanded` state, shown only when description > 140 chars).
+
+**4. Posts grid → README spec.** `aspectRatio` 3/4 → **1:1**, gap 3 → **4**, + **STORE badge** top-left of the first cell (`idx === 0`).
+
+**5. FIcon → lucide-react** throughout (12 distinct icons across ~19 usages: ChevronLeft/Share2/Store/MapPin/Phone/Clock/Navigation/Plus/Check/MessageCircle/Star/Heart). FIcon import removed.
+
+### Preserved verbatim (grep-confirmed)
+
+store fetch (`fetchStoreData`), `toggleFollow` (optimistic + rollback), `toggleLike`, `handleShare`, reviews + `ReviewModal`, post-detail modal (`selectedPost` scroll-into-view), owner-vs-visitor action buttons (New Post → `/profile`, Edit Profile → `/retailer/dashboard`, Follow/Chat/Call), tabs, `StarRating`, `isOwner` gating, `getLikeCount`, products fetch.
+
+### ⚠️ Deviations (flagged — out of pure-reskin scope)
+
+- **Distance pill near DP** (README §Store-profile) NOT added — the page has no LocationContext/userLoc; distance display = new feature wiring (haversine + LocationContext import), not a re-skin. Skipped.
+- **Settings gear top-right** (README) NOT added — the owner already reaches the dashboard via the Edit Profile action button (a gear → same destination is redundant); a personal-settings gear on a *visitor's* view of *another* store is a UX mismatch. Kept the universally-useful Share button instead. **Opus to confirm** (or request an owner-only gear).
+- **Banner/DP geometry** kept as working v2 (200px cover + 72px logo overlap at -28) rather than rebuilding to the README's 16:8 banner + 84px DP at -42. Valid v2 layout, low payoff to rebuild, higher risk to a working sticky/overlap. Polished in place (icons, status, bio).
+
+### Phase 3 gates
+
+- ✅ `npm run typecheck` — 0 errors
+- ✅ `npm test -- --run` — **133/133**
+- ✅ `npm run build` — green (63 precache entries)
+- ✅ `npm run test:e2e` — 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #92 (run 26611373510): `success`
+- ✅ Fly **v36** complete; post-deploy `/health` 200 (1.17s, cold machine) · push handler intact · CSP `report-only` preserved
+
+### E2E coverage gap (explicit)
+
+StoreProfile is auth-gated → NOT covered by the public render-smoke E2E. Founder device test required: follow toggle, bio Read more/less, Posts/Reviews tab switch, Edit Profile/New Post nav, **bell drawer**, post-detail modal open/scroll, live hours color, 1:1 grid + STORE badge.
+
+### Awaiting
+
+- Opus decision: settings gear (skip / owner-only) on store profile
+- Founder device test
+- Opus → next: **Messages + Chat (120, paired)** — M+M; the chat thread + conversation list
+
+---
+
 ## 2026-05-29 — Session 118 — Home page re-skin: live bell + v3 PostCard + lucide chrome (screen 3 of re-skin)
 
 **Goal:** Re-skin Home.tsx to Futuristic, full-dark, preserving all data/hooks/handlers. Third step of the Tier 5D re-skin.
