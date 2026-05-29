@@ -6,6 +6,74 @@
 
 ---
 
+## 2026-05-29 — Session 120 — Messages + Chat re-skin (paired, screen 5 of re-skin)
+
+**Goal:** Re-skin Messages.tsx + Chat.tsx to Futuristic v3, paired, preserving ALL Socket.IO realtime + send + fetch wiring (chat = core product). Fifth step of the Tier 5D re-skin.
+
+**Status:** ✅ **MESSAGES + CHAT LIVE ON v3.** Fly **v37** complete. Both were already comprehensively v2-futuristic; closed v3 gaps + one functional cleanup. **Realtime backbone untouched — only style + icon JSX changed.**
+
+| Metric | Value |
+|---|---|
+| PR merged | #94 (squash) |
+| Squash commit | `947eb13` |
+| Production HEAD | `31a10b7` → **`947eb13`** |
+| Fly release | **v37** complete |
+| Files changed | 3 (`Messages.tsx`, `Chat.tsx`, `ConversationRow.tsx`, +52/−46) |
+| Tests | **133/133** |
+
+### 🔎 Recon: both already v2-futuristic (Phase 6/7)
+
+Messages: dark bg + aurora wash, glass search, glass conversation rows (via `ConversationRow`), ask-nearby stock-request cards, suggested-stores rail, empty state. Chat: dark bg, glass header, gradient/glass bubbles, glass composer, post-ref card + preview overlay + referred-post banner. All dark, all wiring intact.
+
+### Changes (1 functional + v3 polish)
+
+**Messages.tsx**
+- **RefreshButton dropped** per design (bare `window.location.reload()` — same as S117/S119). Header now "Messages" + "{N} chats".
+- FIcon → lucide (Search/X/MessageCircle/ChevronRight).
+
+**ConversationRow.tsx**
+- v3 row: bg `var(--f-glass-bg-2)` → `var(--f-bg-elev)`, + hover (translateX 2px + magenta border + glow). chevR → lucide.
+
+**Chat.tsx**
+- FIcon → lucide (ChevronLeft/Send/Paperclip/X/Tag/ShoppingCart/AlertCircle).
+- Bubbles → v3 spec: padding 11/15, fontSize 14/500, radius 20-6, **incoming solid `var(--f-bg-elev)` + glass border-2** (was translucent glass-bg-3 + blur), outgoing gradient + magenta shadow. Composer send 42→46px. Back 38→42, peer avatar 36→38.
+
+### PRESERVED VERBATIM (grep-confirmed — the critical part)
+
+- **Chat Socket.IO**: `connect`/`connect_error`/`disconnect`, `newMessage` listener + belongs-check, `handleReopen` reconnect-aware refetch (`socket.io.on('reconnect')` + `engine.on('open')`), visibility wakeup, `getSocketUrl`/`getSocketAuthOptions`
+- **Chat send/fetch**: message history fetch (`/api/messages/{userId}`), `sendRaw`, `handleSend` (image upload to `/api/upload` + post-ref encode + PostHog `chat_message_sent`), receiver role-aware fetch (store lookup for retailer/supplier/brand/manufacturer), scroll-to-end, `PostRefCard`/`PostPreviewOverlay`/`ReferredPostBanner`
+- **Messages Socket.IO**: `ask_nearby_request` + `ask_nearby_confirmed` listeners, reconnect refetch, visibility wakeup, `refreshConversations`, `handleAskNearbyRespond`, suggested-stores fetch, search filter
+- **ConversationRow**: prop contract + React.memo comparator + unread badge
+
+### ⚠️ RECON GAP (flagged — NOT fabricated, NO backend touched)
+
+README wants **role-based rich conversation rows** (business: status capsule + distance + area + category) + a **chat-header business meta strip / customer ● Online**. The data is NOT in the payload:
+- `Conversation` type = `{userId, name, logoUrl, lastMessage, timestamp, unread}` — no role/store fields
+- Chat fetches peer role but not store status/category/distance; no presence tracking for "Online"
+
+Rendered the existing 2-line rows + name-only peer card gracefully. Rich rows + peer meta would require **enriching `/api/messages/conversations`** (peer role + store status/category/area/distance) + a **presence signal** for Online. **Out of re-skin scope** — flagged for an Opus backend ticket if desired. Did NOT fabricate a fake "Online" or invent data.
+
+### Phase 3 gates
+
+- ✅ typecheck 0 · vitest **133/133** · build green (64 precache) · E2E 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #94 (run 26612085255): `success`
+- ✅ Fly **v37** complete; post-deploy `/health` 200 in 475ms · push handler intact · CSP `report-only` preserved
+
+### E2E coverage gap + HIGH-priority founder test
+
+Messages + Chat are auth-gated + realtime → NOT E2E-covered. **Founder MUST device-test the realtime path** (highest-risk re-skin so far): open a thread, **send + receive a live message** (Socket.IO `newMessage`), image send, post-enquiry banner flow, conversation-list update, ask-nearby stock-request card respond. A broken chat = broken core product — verify before relying on it.
+
+### Awaiting
+
+- Founder realtime device test (send/receive)
+- Opus: backend ticket for conversation-payload enrichment (rich business rows) — yes/no?
+- Opus → next: **Search (121)** — L-size + Ask Nearby radar (FAskNearbyModal: compose → RadarPulse → success)
+
+---
+
 ## 2026-05-29 — Session 119 — Store Profile re-skin: live bell + getLiveStatus + bio clamp + 1:1 grid (screen 4 of re-skin)
 
 **Goal:** Re-skin StoreProfile.tsx to Futuristic v3 in place, preserving all data/handlers/wiring. Fourth step of the Tier 5D re-skin.
