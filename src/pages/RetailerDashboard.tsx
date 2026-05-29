@@ -266,8 +266,8 @@ export default function RetailerDashboard() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen" style={{ background: 'var(--dk-bg)' }}>
-        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: 'var(--dk-border-strong)', borderTopColor: 'var(--dk-accent)' }} />
+      <div className="flex justify-center items-center h-screen" style={{ background: 'var(--f-bg-deep)' }}>
+        <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: 'var(--f-glass-border-2)', borderTopColor: 'var(--f-magenta)' }} />
       </div>
     );
   }
@@ -275,33 +275,33 @@ export default function RetailerDashboard() {
   // ── KYC Gate ──────────────────────────────────────────────────────────────
   if (needsKyc && !kycApproved && !storeId) {
     return (
-      <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+      <div style={{ background: 'var(--f-bg-deep)', minHeight: '100vh', paddingBottom: 80 }}>
         <div className="max-w-md mx-auto">
-          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{ background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}>
+          <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{ background: 'var(--f-bg-deep)', borderBottom: '0.5px solid var(--f-glass-border)' }}>
             <div className="flex items-center gap-3">
-              <Link to="/profile"><ArrowLeft size={22} style={{ color: 'var(--dk-text-primary)' }} /></Link>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Identity Verification</h1>
+              <Link to="/profile"><ArrowLeft size={22} style={{ color: 'var(--f-text-1)' }} /></Link>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--f-text-1)' }}>Identity Verification</h1>
             </div>
             <NotificationBell />
           </header>
           <main className="p-4">
             {kycStatus === 'pending' ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-amber-100 p-6 text-center">
-                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4"><Clock size={28} className="text-amber-500" /></div>
-                <h2 className="text-lg font-bold text-gray-900 mb-2">Verification In Progress</h2>
-                <p className="text-sm text-gray-500 leading-relaxed">Your documents are being reviewed by our team. This usually takes 24-48 hours.</p>
-                <div className="mt-4 bg-amber-50 text-amber-700 text-xs font-medium px-4 py-2.5 rounded-xl">Status: Under Review</div>
+              <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(255,107,53,0.12)' }}><Clock size={28} color="var(--f-orange)" /></div>
+                <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--f-text-1)' }}>Verification In Progress</h2>
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--f-text-3)' }}>Your documents are being reviewed by our team. This usually takes 24-48 hours.</p>
+                <div className="mt-4 text-xs font-medium px-4 py-2.5 rounded-xl" style={{ background: 'rgba(255,107,53,0.12)', color: 'var(--f-orange)' }}>Status: Under Review</div>
               </div>
             ) : kycStatus === 'rejected' ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
+              <div className="rounded-2xl p-6" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center"><AlertTriangle size={24} className="text-red-500" /></div>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,77,106,0.12)' }}><AlertTriangle size={24} color="var(--f-danger)" /></div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Verification Rejected</h2>
-                    <p className="text-xs text-red-500 font-medium">Please resubmit your documents</p>
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--f-text-1)' }}>Verification Rejected</h2>
+                    <p className="text-xs font-medium" style={{ color: 'var(--f-danger)' }}>Please resubmit your documents</p>
                   </div>
                 </div>
-                {kycNotes && <div className="bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl mb-4"><strong>Reason:</strong> {kycNotes}</div>}
+                {kycNotes && <div className="text-sm px-4 py-3 rounded-xl mb-4" style={{ background: 'rgba(255,77,106,0.12)', color: 'var(--f-danger)' }}><strong>Reason:</strong> {kycNotes}</div>}
                 <KycUploadForm
                   kycDocUrl={kycDocUrl} kycSelfieUrl={kycSelfieUrl}
                   kycStoreName={kycStoreName} kycStorePhoto={kycStorePhoto}
@@ -312,15 +312,15 @@ export default function RetailerDashboard() {
                 />
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="rounded-2xl p-6" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center"><Shield size={24} className="text-indigo-600" /></div>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,42,140,0.12)' }}><Shield size={24} color="var(--f-magenta)" /></div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Verify Your Identity</h2>
-                    <p className="text-xs text-gray-500">Required before setting up your store</p>
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--f-text-1)' }}>Verify Your Identity</h2>
+                    <p className="text-xs" style={{ color: 'var(--f-text-3)' }}>Required before setting up your store</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-500 mb-5 leading-relaxed">Upload a valid ID document (Aadhaar, PAN, or Business License) and a clear selfie.</p>
+                <p className="text-sm mb-5 leading-relaxed" style={{ color: 'var(--f-text-3)' }}>Upload a valid ID document (Aadhaar, PAN, or Business License) and a clear selfie.</p>
                 <KycUploadForm
                   kycDocUrl={kycDocUrl} kycSelfieUrl={kycSelfieUrl}
                   kycStoreName={kycStoreName} kycStorePhoto={kycStorePhoto}
@@ -338,18 +338,18 @@ export default function RetailerDashboard() {
   }
 
   return (
-    <div style={{ background: 'var(--dk-bg)', minHeight: '100vh', paddingBottom: 80 }}>
+    <div style={{ background: 'var(--f-bg-deep)', minHeight: '100vh', paddingBottom: 80 }}>
       <div className="max-w-md mx-auto">
-        <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{ background: 'var(--dk-bg)', borderBottom: '0.5px solid var(--dk-border)' }}>
+        <header className="sticky top-0 z-20 flex items-center justify-between px-4 py-3" style={{ background: 'var(--f-bg-deep)', borderBottom: '0.5px solid var(--f-glass-border)' }}>
           <div className="flex items-center gap-3">
-            <Link to="/profile"><ArrowLeft size={22} style={{ color: 'var(--dk-text-primary)' }} /></Link>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--dk-text-primary)' }}>Edit Profile</h1>
+            <Link to="/profile"><ArrowLeft size={22} style={{ color: 'var(--f-text-1)' }} /></Link>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--f-text-1)' }}>Edit Profile</h1>
           </div>
           <NotificationBell />
         </header>
 
         <main className="px-4 pt-4 pb-8">
-          <div className="rounded-2xl overflow-hidden" style={{ background: 'white', border: '0.5px solid var(--dk-border)' }}>
+          <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
             <div className="p-5">
               <form className="space-y-4" onSubmit={handleSaveStoreInfo}>
                 <StoreFormFields

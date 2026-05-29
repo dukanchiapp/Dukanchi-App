@@ -114,17 +114,17 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
       style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
       onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}
     >
-      <div className="w-full max-w-[380px] rounded-2xl p-6 shadow-xl" style={{ background: 'white' }}>
+      <div className="w-full max-w-[380px] rounded-2xl p-6" style={{ background: 'var(--f-modal-bg)', border: '1px solid var(--f-glass-border-2)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', boxShadow: '0 16px 48px rgba(0,0,0,0.55)' }}>
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} style={{ color: 'var(--dk-accent)' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--dk-accent)' }}>AI Store Description</h3>
+            <Sparkles size={16} style={{ color: 'var(--f-orange)' }} />
+            <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--f-orange)' }}>AI Store Description</h3>
           </div>
           <button type="button" onClick={handleClose} className="p-1">
-            <X size={18} style={{ color: 'var(--dk-text-tertiary)' }} />
+            <X size={18} style={{ color: 'var(--f-text-3)' }} />
           </button>
         </div>
-        <p className="mb-4 text-xs" style={{ color: 'var(--dk-text-tertiary)', lineHeight: 1.5 }}>
+        <p className="mb-4 text-xs" style={{ color: 'var(--f-text-3)', lineHeight: 1.5 }}>
           Apni dukaan ke baare mein kuch bolo ya likho — AI perfect bio banayega
         </p>
 
@@ -132,7 +132,8 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
           <div className="space-y-3">
             <div className="relative">
               <textarea
-                className="w-full p-3 pb-10 rounded-xl outline-none text-sm dk-input"
+                className="w-full p-3 pb-10 rounded-xl outline-none text-sm"
+                style={{ background: 'var(--f-bg-elev)', border: '1px solid var(--f-glass-border-2)', color: 'var(--f-text-1)' }}
                 rows={4}
                 placeholder="e.g. meri electronics shop hai, mobiles aur accessories bechta hu, 10 saal ka experience hai..."
                 value={userContext}
@@ -143,15 +144,15 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={loading}
                 className="absolute bottom-2 right-2 flex items-center justify-center rounded-full disabled:opacity-50"
-                style={{ width: 32, height: 32, background: isRecording ? '#EF4444' : 'var(--dk-accent)' }}
+                style={{ width: 32, height: 32, background: isRecording ? 'var(--f-danger)' : 'var(--f-grad-primary)' }}
               >
                 {isRecording ? <MicOff size={14} color="white" /> : <Mic size={14} color="white" />}
               </button>
             </div>
             {isRecording && (
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#EF4444', flexShrink: 0 }} />
-                <p className="text-xs" style={{ color: 'var(--dk-text-tertiary)' }}>Recording... {recordingSeconds}s — ruk ne ke liye mic dabao</p>
+                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--f-danger)', flexShrink: 0 }} />
+                <p className="text-xs" style={{ color: 'var(--f-text-3)' }}>Recording... {recordingSeconds}s — ruk ne ke liye mic dabao</p>
               </div>
             )}
             <button
@@ -159,7 +160,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
               onClick={handleGenerate}
               disabled={loading || isRecording}
               className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: 'var(--dk-accent)', color: 'white' }}
+              style={{ background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 0 16px rgba(255,42,140,0.35)' }}
             >
               {loading ? <><Loader2 size={15} className="animate-spin" /> AI soch raha hai...</> : <><Sparkles size={14} /> ✨ Generate karo</>}
             </button>
@@ -167,28 +168,28 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
         ) : (
           <div className="space-y-3">
             {result?.bio && (
-              <div className="p-3 rounded-xl" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
-                <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--dk-text-tertiary)' }}>Bio</p>
-                <p className="text-sm mb-3" style={{ color: 'var(--dk-text-primary)', lineHeight: 1.55 }}>{result.bio}</p>
+              <div className="p-3 rounded-xl" style={{ background: 'var(--f-bg-elev)', border: '0.5px solid var(--f-glass-border)' }}>
+                <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--f-text-3)' }}>Bio</p>
+                <p className="text-sm mb-3" style={{ color: 'var(--f-text-1)', lineHeight: 1.55 }}>{result.bio}</p>
                 <button
                   type="button"
                   onClick={() => { onBioApply(result!.bio); handleClose(); }}
                   className="w-full py-2 rounded-xl font-bold text-sm"
-                  style={{ background: 'var(--dk-accent)', color: 'white' }}
+                  style={{ background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.30)' }}
                 >
                   Bio use karo
                 </button>
               </div>
             )}
             {result?.tagline && (
-              <div className="p-3 rounded-xl" style={{ background: 'var(--dk-bg-soft)', border: '0.5px solid var(--dk-border)' }}>
-                <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--dk-text-tertiary)' }}>Tagline</p>
-                <p className="text-sm mb-3 font-medium" style={{ color: 'var(--dk-text-primary)', fontStyle: 'italic' }}>"{result.tagline}"</p>
+              <div className="p-3 rounded-xl" style={{ background: 'var(--f-bg-elev)', border: '0.5px solid var(--f-glass-border)' }}>
+                <p className="text-[11px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--f-text-3)' }}>Tagline</p>
+                <p className="text-sm mb-3 font-medium" style={{ color: 'var(--f-text-1)', fontStyle: 'italic' }}>"{result.tagline}"</p>
                 <button
                   type="button"
                   onClick={() => { navigator.clipboard?.writeText(result!.tagline).catch(() => {}); showToast('Tagline copied!', { type: 'success' }); }}
                   className="w-full py-2 rounded-xl font-bold text-sm"
-                  style={{ background: 'var(--dk-surface)', border: '0.5px solid var(--dk-border)', color: 'var(--dk-text-primary)' }}
+                  style={{ background: 'var(--f-glass-bg-2)', border: '0.5px solid var(--f-glass-border)', color: 'var(--f-text-1)' }}
                 >
                   Tagline copy karo
                 </button>
@@ -198,7 +199,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
               type="button"
               onClick={() => { setStep('input'); setResult(null); }}
               className="w-full text-center text-xs font-semibold pt-1"
-              style={{ color: 'var(--dk-text-tertiary)' }}
+              style={{ color: 'var(--f-text-3)' }}
             >
               ← Wapas (dobara generate karo)
             </button>
