@@ -10,6 +10,7 @@ import { CustomerDataTabs } from '../components/settings/CustomerDataTabs';
 import { AccountDetailsTab } from '../components/settings/AccountDetailsTab';
 import { BulkUploadTab } from '../components/settings/BulkUploadTab';
 import { BusinessSettingsTabs } from '../components/settings/BusinessSettingsTabs';
+import { LegalLinks } from '../components/legal/LegalLinks';
 import { apiFetch } from '../lib/api';
 
 export default function UserSettings() {
@@ -366,6 +367,17 @@ export default function UserSettings() {
                 );
               })}
             </div>
+
+            {/* Session 128: Legal & Privacy moved here from the profile page
+                (DPDP public documents — Privacy, Terms, Account Deletion, etc.) */}
+            <p style={{
+              fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: 'var(--f-text-3)', margin: '8px 0 8px 4px',
+            }}>
+              Legal &amp; Privacy
+            </p>
+            <LegalLinks variant="menu" />
+
             <button
               onClick={handleLogout}
               className="w-full flex items-center justify-center"
