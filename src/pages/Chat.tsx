@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
+import { ChevronLeft, Send, Paperclip, X, Tag, ShoppingCart, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
@@ -7,7 +8,6 @@ import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { Sentry } from '../lib/sentry-frontend';
 import { useToast } from '../context/ToastContext';
-import { FIcon } from '../components/futuristic';
 
 /* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Socket.IO connection,
@@ -44,7 +44,7 @@ function PostRefCard({ text, onTap }: { text: string; onTap: (post: any) => void
           display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 4,
           background: 'var(--f-grad-primary)', borderRadius: 9999, padding: '2px 8px',
         }}>
-          <FIcon name="tag" size={8} color="white" />
+          <Tag size={8} color="white" />
           <span style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'white' }}>Post</span>
         </span>
         {post.price && (
@@ -87,13 +87,13 @@ function PostPreviewOverlay({ post, onClose }: {
           {post.imageUrl
             ? <img src={post.imageUrl} alt="post" style={{ width: '100%', objectFit: 'cover', maxHeight: '42vh', display: 'block' }} />
             : <div style={{ width: '100%', height: 192, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <FIcon name="cart" size={40} color="var(--f-text-4)" />
+                <ShoppingCart size={40} color="var(--f-text-4)" />
               </div>
           }
           {post.price && (
             <div style={{ position: 'absolute', bottom: 12, left: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '6px 12px' }}>
-                <FIcon name="tag" size={12} color="var(--f-magenta-light)" />
+                <Tag size={12} color="var(--f-magenta-light)" />
                 <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.01em', color: '#fff' }}>
                   ₹{Number(post.price).toLocaleString()}
                 </span>
@@ -109,7 +109,7 @@ function PostPreviewOverlay({ post, onClose }: {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
-            <FIcon name="x" size={15} color="#fff" />
+            <X size={15} color="#fff" />
           </button>
         </div>
 
@@ -146,7 +146,7 @@ function ReferredPostBanner({ post, onDismiss }: {
         {post.caption && <p style={{ fontSize: 12, color: 'var(--f-text-3)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.caption}</p>}
       </div>
       <button onClick={onDismiss} style={{ padding: 4, background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0, display: 'flex' }}>
-        <FIcon name="x" size={14} color="var(--f-text-3)" />
+        <X size={14} color="var(--f-text-3)" />
       </button>
     </div>
   );
@@ -391,14 +391,14 @@ export default function ChatPage() {
         <Link
           to="/messages"
           className="f-glass"
-          style={{ width: 38, height: 38, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textDecoration: 'none' }}
+          style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textDecoration: 'none' }}
           aria-label="Back to messages"
         >
-          <FIcon name="chevL" size={20} color="var(--f-text-1)" />
+          <ChevronLeft size={20} color="var(--f-text-1)" />
         </Link>
         <div className="f-glass" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 16, minWidth: 0 }}>
           <div style={{
-            width: 36, height: 36, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+            width: 38, height: 38, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
             background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'white', fontWeight: 800, fontSize: 14, boxShadow: '0 0 14px rgba(255,42,140,0.45)',
           }}>
@@ -445,14 +445,12 @@ export default function ChatPage() {
               }}
             >
               <div style={{
-                padding: isPostRef ? 6 : '10px 14px', fontSize: 13.5, lineHeight: 1.4,
+                padding: isPostRef ? 6 : '11px 15px', fontSize: 14, lineHeight: 1.45, fontWeight: 500,
                 color: isMe ? '#fff' : 'var(--f-text-1)',
-                background: isMe ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-3)',
-                border: isMe ? 'none' : '1px solid var(--f-glass-border)',
-                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                boxShadow: isMe ? '0 0 18px rgba(255,42,140,0.28)' : 'none',
-                backdropFilter: isMe ? 'none' : 'blur(20px)',
-                WebkitBackdropFilter: isMe ? 'none' : 'blur(20px)',
+                background: isMe ? 'var(--f-grad-primary)' : 'var(--f-bg-elev)',
+                border: isMe ? 'none' : '1px solid var(--f-glass-border-2)',
+                borderRadius: isMe ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
+                boxShadow: isMe ? '0 4px 14px rgba(255,42,140,0.25)' : '0 1px 3px rgba(0,0,0,0.25)',
               }}>
                 {isPostRef ? (
                   <PostRefCard text={msg.message!} onTap={setPreviewPost} />
@@ -496,10 +494,10 @@ export default function ChatPage() {
             background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.35)', borderRadius: 12,
             fontSize: 12, color: '#FF8FA3',
           }}>
-            <FIcon name="alert" size={14} color="#FF8FA3" />
+            <AlertCircle size={14} color="#FF8FA3" style={{ flexShrink: 0 }} />
             <span style={{ flex: 1 }}>{uploadError}</span>
             <button type="button" onClick={() => setUploadError('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
-              <FIcon name="x" size={12} color="#FF8FA3" />
+              <X size={12} color="#FF8FA3" />
             </button>
           </div>
         )}
@@ -518,7 +516,7 @@ export default function ChatPage() {
                 onClick={clearImagePreview}
                 style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: 'pointer', display: 'flex' }}
               >
-                <FIcon name="x" size={12} color="#fff" />
+                <X size={12} color="#fff" />
               </button>
             </div>
           </div>
@@ -526,7 +524,7 @@ export default function ChatPage() {
 
         <form onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
           <label className="f-glass" style={{ width: 42, height: 42, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <FIcon name="paperclip" size={20} color="var(--f-text-2)" />
+            <Paperclip size={20} color="var(--f-text-2)" />
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
           <input
@@ -535,24 +533,24 @@ export default function ChatPage() {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder={referredPost ? 'Ask about this post…' : 'Type a message...'}
             style={{
-              flex: 1, padding: '12px 16px', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
-              borderRadius: 9999, color: 'var(--f-text-1)', fontSize: 14, fontFamily: 'inherit', outline: 'none',
+              flex: 1, padding: '14px 18px', background: 'var(--f-bg-elev)', border: '1px solid var(--f-glass-border-2)',
+              borderRadius: 9999, color: 'var(--f-text-1)', fontSize: 14, fontFamily: 'inherit', outline: 'none', fontWeight: 500,
             }}
           />
           <button
             type="submit"
             disabled={sendDisabled}
             style={{
-              width: 42, height: 42, borderRadius: 14, border: 'none', flexShrink: 0,
+              width: 46, height: 46, borderRadius: 14, border: 'none', flexShrink: 0,
               cursor: sendDisabled ? 'not-allowed' : 'pointer',
               opacity: sendDisabled ? 0.5 : 1,
-              background: 'var(--f-grad-primary)', boxShadow: '0 0 16px rgba(255,42,140,0.5)',
+              background: 'var(--f-grad-primary)', boxShadow: '0 4px 14px rgba(255,42,140,0.4)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
             {isSending
               ? <div className="animate-spin" style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: '#fff' }} />
-              : <FIcon name="send" size={16} color="#fff" fill="#fff" />}
+              : <Send size={17} color="#fff" fill="#fff" />}
           </button>
         </form>
       </footer>

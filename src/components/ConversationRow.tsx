@@ -1,9 +1,10 @@
 import React from 'react';
+import { ChevronRight } from 'lucide-react';
 import { Conversation } from '../types';
-import { FIcon } from './futuristic';
 
-/* Futuristic v2 skin · Phase 7 / feat/futuristic-redesign.
-   Glass conversation row. Prop contract + React.memo comparator preserved. */
+/* Futuristic v3 skin · Session 120 / feat/reskin-messages-chat.
+   Glass conversation row. Prop contract + React.memo comparator preserved.
+   v3: var(--f-bg-elev) surface + hover (translateX + magenta border + glow). */
 
 interface Props {
   conversation: Conversation;
@@ -14,11 +15,21 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
   return (
     <div
       onClick={() => onClick(conv.userId, conv.name)}
+      onMouseOver={e => {
+        e.currentTarget.style.transform = 'translateX(2px)';
+        e.currentTarget.style.borderColor = 'rgba(255,42,140,0.35)';
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,42,140,0.12)';
+      }}
+      onMouseOut={e => {
+        e.currentTarget.style.transform = 'translateX(0)';
+        e.currentTarget.style.borderColor = 'var(--f-glass-border-2)';
+        e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.30)';
+      }}
       style={{
-        display: 'flex', alignItems: 'center', gap: 14, padding: '13px 14px', cursor: 'pointer',
-        borderRadius: 18, background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border-2)',
-        backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.10)',
+        display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', cursor: 'pointer',
+        borderRadius: 18, background: 'var(--f-bg-elev)', border: '1px solid var(--f-glass-border-2)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.30)',
+        transition: 'transform 200ms var(--f-ease), border-color 200ms, box-shadow 200ms',
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -64,7 +75,7 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
           {conv.lastMessage}
         </p>
       </div>
-      <FIcon name="chevR" size={16} color="var(--f-text-3)" />
+      <ChevronRight size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
     </div>
   );
 }, (prev, next) =>
