@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import {
+  ChevronLeft, Share2, Store, MapPin, Phone, Clock, Navigation,
+  Plus, Check, MessageCircle, Star, Heart,
+} from 'lucide-react';
 import StarRating from '../components/StarRating';
 import ReviewModal from '../components/ReviewModal';
-import RefreshButton from '../components/RefreshButton';
-import { getStoreStatus, statusColor } from '../lib/storeUtils';
+import NotificationBell from '../components/NotificationBell';
+import { getStoreStatus } from '../lib/storeUtils';
+import { getLiveStatus } from '../lib/liveStatus';
+import { useClosingSoon } from '../hooks/useClosingSoon';
 import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
-import { FIcon } from '../components/futuristic';
 
 /* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. All store/post/review
@@ -53,6 +58,15 @@ export default function StoreProfilePage() {
   const [followersCount, setFollowersCount] = useState(0);
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [bioExpanded, setBioExpanded] = useState(false);
+
+  // Live store status — computed at top level (hooks must run before the
+  // loading/!store early returns). store is null pre-fetch → getStoreStatus
+  // returns null → useClosingSoon(null) → no timer. Re-runs when store loads.
+  const storeStatus = getStoreStatus(
+    store?.openingTime, store?.closingTime, store?.is24Hours, store?.workingDays,
+  );
+  const closingSoon = useClosingSoon(storeStatus?.minutesUntilClose ?? null);
 
   const userStr = localStorage.getItem('user');
   const currentUser = userStr ? JSON.parse(userStr) : null;
@@ -181,7 +195,7 @@ export default function StoreProfilePage() {
           width: 72, height: 72, borderRadius: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
           marginBottom: 16, background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
         }}>
-          <FIcon name="storeIc" size={32} color="var(--f-text-3)" />
+          <Store size={32} color="var(--f-text-3)" />
         </div>
         <h2 className="f-display" style={{ fontSize: 22, color: 'var(--f-text-1)', margin: '0 0 8px' }}>Store not found</h2>
         <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: '0 0 24px', maxWidth: 280 }}>
@@ -195,14 +209,16 @@ export default function StoreProfilePage() {
             fontFamily: 'inherit', boxShadow: '0 0 20px rgba(255,42,140,0.4)',
           }}
         >
-          <FIcon name="chevL" size={16} color="white" /> Go Back
+          <ChevronLeft size={16} color="white" /> Go Back
         </button>
       </div>
     );
   }
 
   const isOwner = store.ownerId === currentUserId;
-  const storeStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
+  // v3 live status — 4-tier color (red ≤15 / orange ≤30 / yellow ≤60 / green)
+  // via getLiveStatus, ticking through useClosingSoon (declared at top).
+  const live = storeStatus ? getLiveStatus({ closingSoon, status: storeStatus.label }) : null;
   const showReviews = !store.hideRatings;
   const sortedPosts = [...posts].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
 
@@ -252,10 +268,15 @@ export default function StoreProfilePage() {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '48px 14px 0',
           }}>
             <button onClick={() => navigate(-1)} style={coverFab} aria-label="Back">
-              <FIcon name="chevL" size={18} color="white" />
+              <ChevronLeft size={18} color="white" />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <RefreshButton />
+              {/* Session 119: Refresh button dropped (was window.location.reload);
+                  added live NotificationBell (drawer + unread dot) in a dark
+                  glass FAB tile — reachable from any store profile now. */}
+              <div style={coverFab}>
+                <NotificationBell />
+              </div>
               <button
                 onClick={() => {
                   const url = `${window.location.origin}/store/${store.id}`;
@@ -265,7 +286,7 @@ export default function StoreProfilePage() {
                 style={coverFab}
                 aria-label="Share"
               >
-                <FIcon name="share" size={16} color="white" />
+                <Share2 size={16} color="white" />
               </button>
             </div>
           </div>
@@ -314,7 +335,28 @@ export default function StoreProfilePage() {
           </div>
 
           {store.description && (
-            <p style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.55, margin: '0 0 14px' }}>{store.description}</p>
+            <div style={{ margin: '0 0 14px' }}>
+              <p
+                style={{
+                  fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.55, margin: 0,
+                  display: '-webkit-box', WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: bioExpanded ? 'unset' : 3, overflow: 'hidden',
+                }}
+              >
+                {store.description}
+              </p>
+              {store.description.length > 140 && (
+                <button
+                  onClick={() => setBioExpanded(v => !v)}
+                  style={{
+                    marginTop: 4, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: 'var(--f-magenta-light)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
+                  }}
+                >
+                  {bioExpanded ? 'Read less' : 'Read more'}
+                </button>
+              )}
+            </div>
           )}
 
           {/* Stats */}
@@ -331,7 +373,7 @@ export default function StoreProfilePage() {
           <div className="f-glass f-glass-edge" style={{ padding: '12px 14px', borderRadius: 16, background: 'var(--f-glass-bg)' }}>
             {store.address && (
               <div style={detailRow}>
-                <FIcon name="mapPin" size={14} color="var(--f-magenta-light)" />
+                <MapPin size={14} color="var(--f-magenta-light)" style={{ flexShrink: 0 }} />
                 <span style={{ fontSize: 12.5, color: 'var(--f-text-1)', fontWeight: 500 }}>{store.address}</span>
               </div>
             )}
@@ -345,19 +387,19 @@ export default function StoreProfilePage() {
             )}
             {store.phoneVisible !== false && store.phone && (
               <div style={detailRow}>
-                <FIcon name="phone" size={14} color="var(--f-magenta-light)" />
+                <Phone size={14} color="var(--f-magenta-light)" style={{ flexShrink: 0 }} />
                 <a href={`tel:${store.phone}`} style={{ fontSize: 12.5, color: 'var(--f-text-2)', textDecoration: 'none' }}>{store.phone}</a>
               </div>
             )}
-            {storeStatus && (
+            {live && (
               <div style={detailRow}>
-                <FIcon name="clock" size={14} color={statusColor(storeStatus.color)} />
-                <span style={{ fontSize: 12.5, fontWeight: 600, color: statusColor(storeStatus.color) }}>{storeStatus.label}</span>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: live.color, flexShrink: 0, boxShadow: `0 0 8px ${live.color}` }} />
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: live.color }}>{live.label}</span>
               </div>
             )}
             {(store.openingTime || store.closingTime) && !store.is24Hours && (
               <div style={detailRow}>
-                <FIcon name="clock" size={14} color="var(--f-text-3)" />
+                <Clock size={14} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                 <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
                   Hours: {store.openingTime || '--:--'} – {store.closingTime || '--:--'}
                 </span>
@@ -380,7 +422,7 @@ export default function StoreProfilePage() {
                   fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(255,107,53,0.18)',
                 }}
               >
-                <FIcon name="navigation" size={14} color="var(--f-orange-light)" />
+                <Navigation size={14} color="var(--f-orange-light)" />
                 Direction to Store
               </a>
             )}
@@ -398,7 +440,7 @@ export default function StoreProfilePage() {
                     color: 'white', fontSize: 13, fontWeight: 700, boxShadow: '0 0 16px rgba(255,42,140,0.35)',
                   }}
                 >
-                  <FIcon name="plus" size={14} color="white" /> New Post
+                  <Plus size={14} color="white" /> New Post
                 </Link>
                 <Link
                   to="/retailer/dashboard"
@@ -425,8 +467,8 @@ export default function StoreProfilePage() {
                   }}
                 >
                   {isFollowing
-                    ? <><FIcon name="check" size={15} color="var(--f-text-1)" />Following</>
-                    : <><FIcon name="plus" size={15} color="white" />Follow</>}
+                    ? <><Check size={15} color="var(--f-text-1)" />Following</>
+                    : <><Plus size={15} color="white" />Follow</>}
                 </button>
                 {store.chatEnabled !== false && (
                   <Link
@@ -437,7 +479,7 @@ export default function StoreProfilePage() {
                       border: '1px solid var(--f-glass-border-2)', color: 'var(--f-text-1)', fontSize: 13, fontWeight: 700,
                     }}
                   >
-                    <FIcon name="msg" size={15} color="var(--f-magenta-light)" />Chat
+                    <MessageCircle size={15} color="var(--f-magenta-light)" />Chat
                   </Link>
                 )}
                 {store.phone && store.phoneVisible !== false && (
@@ -449,7 +491,7 @@ export default function StoreProfilePage() {
                     }}
                     aria-label="Call store"
                   >
-                    <FIcon name="phone" size={17} color="var(--f-text-2)" />
+                    <Phone size={17} color="var(--f-text-2)" />
                   </a>
                 )}
               </>
@@ -493,12 +535,12 @@ export default function StoreProfilePage() {
 
           {/* Posts grid */}
           {activeTab === 'posts' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 3, padding: 3 }}>
-              {sortedPosts.map(post => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4, padding: 4 }}>
+              {sortedPosts.map((post, idx) => (
                 <div
                   key={post.id}
                   onClick={() => setSelectedPost(post)}
-                  style={{ position: 'relative', aspectRatio: '3/4', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', background: 'var(--f-bg-elev)' }}
+                  style={{ position: 'relative', aspectRatio: '1/1', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', background: 'var(--f-bg-elev)' }}
                 >
                   <img
                     src={post.imageUrl}
@@ -508,13 +550,23 @@ export default function StoreProfilePage() {
                     decoding="async"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
+                  {/* STORE badge — top-left of first cell (README §Posts grid) */}
+                  {idx === 0 && (
+                    <span style={{
+                      position: 'absolute', top: 6, left: 8, fontSize: 9, fontWeight: 800,
+                      color: 'var(--f-text-1)', letterSpacing: 0.6, padding: '3px 7px', borderRadius: 6,
+                      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                    }}>
+                      STORE
+                    </span>
+                  )}
                   {post.isPinned && (
                     <div style={{
                       position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'var(--f-grad-primary)', boxShadow: '0 0 10px rgba(255,42,140,0.5)',
                     }}>
-                      <FIcon name="star" size={11} color="white" fill="white" />
+                      <Star size={11} color="white" fill="white" />
                     </div>
                   )}
                   {(post.product?.price || post.price) && (
@@ -581,7 +633,7 @@ export default function StoreProfilePage() {
                 {reviews.length === 0 && (
                   <div style={{ padding: '44px 0', textAlign: 'center' }}>
                     <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
-                      <FIcon name="star" size={34} color="var(--f-text-4)" />
+                      <Star size={34} color="var(--f-text-4)" />
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--f-text-3)' }}>No reviews yet</p>
                   </div>
@@ -601,7 +653,7 @@ export default function StoreProfilePage() {
             borderBottom: '1px solid var(--f-glass-border)',
           }}>
             <button onClick={() => setSelectedPost(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }} aria-label="Close">
-              <FIcon name="chevL" size={22} color="var(--f-text-1)" />
+              <ChevronLeft size={22} color="var(--f-text-1)" />
             </button>
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--f-text-1)' }}>{store.storeName}</span>
             <div style={{ width: 22 }} />
@@ -655,19 +707,19 @@ export default function StoreProfilePage() {
                             onClick={() => toggleLike(post.id)}
                             style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
                           >
-                            <FIcon name="heart" size={22} color={isLiked ? 'var(--f-danger)' : 'var(--f-text-1)'} fill={isLiked ? 'var(--f-danger)' : 'none'} />
+                            <Heart size={22} color={isLiked ? 'var(--f-danger)' : 'var(--f-text-1)'} fill={isLiked ? 'var(--f-danger)' : 'none'} />
                             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--f-text-2)' }}>{likeCount}</span>
                           </button>
                           {store.chatEnabled !== false && !isOwner && (
                             <Link to={`/chat/${store.ownerId}`} style={{ display: 'flex' }}>
-                              <FIcon name="msg" size={22} color="var(--f-text-1)" />
+                              <MessageCircle size={22} color="var(--f-text-1)" />
                             </Link>
                           )}
                           <button
                             onClick={() => handleShare(post)}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}
                           >
-                            <FIcon name="share" size={21} color="var(--f-text-1)" />
+                            <Share2 size={21} color="var(--f-text-1)" />
                           </button>
                         </div>
                         {(post.product?.price || post.price) && (
