@@ -8,10 +8,11 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
-import { FIcon } from '../components/futuristic/FIcon';
+import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store } from 'lucide-react';
 import { FLogo } from '../components/futuristic/FLogo';
 import { FLocationStrip } from '../components/futuristic/FLocationStrip';
-import { FPostCard } from '../components/futuristic/FPostCard';
+import { PostCard } from '../components/PostCard';
+import NotificationBell from '../components/NotificationBell';
 
 // Futuristic (v2) carousel chevron — glass circle. Shared L/R style.
 const fChevBtn: CSSProperties = {
@@ -322,11 +323,14 @@ export default function HomePage() {
                 </span>
               </div>
             </div>
+            {/* Session 118: dead decorative bell → live NotificationBell
+                (unread badge + drawer via NotificationContext) in a 44×44
+                glass tile per README §Home header. */}
             <div
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
+                width: 44,
+                height: 44,
+                borderRadius: 14,
                 background: 'var(--f-glass-bg-2)',
                 border: '1px solid var(--f-glass-border)',
                 backdropFilter: 'blur(20px)',
@@ -336,7 +340,7 @@ export default function HomePage() {
                 justifyContent: 'center',
               }}
             >
-              <FIcon name="bell" size={18} color="#FFD96B" fill="#FFD96B" />
+              <NotificationBell />
             </div>
           </div>
           <FLocationStrip
@@ -382,11 +386,11 @@ export default function HomePage() {
 
               {carouselImages.length > 1 && (
                 <>
-                  <button onClick={() => goCarousel('prev')} style={{ ...fChevBtn, left: 8 }}>
-                    <FIcon name="chevL" size={16} color="white" />
+                  <button onClick={() => goCarousel('prev')} style={{ ...fChevBtn, left: 8 }} aria-label="Previous">
+                    <ChevronLeft size={16} color="white" />
                   </button>
-                  <button onClick={() => goCarousel('next')} style={{ ...fChevBtn, right: 8 }}>
-                    <FIcon name="chevR" size={16} color="white" />
+                  <button onClick={() => goCarousel('next')} style={{ ...fChevBtn, right: 8 }} aria-label="Next">
+                    <ChevronRight size={16} color="white" />
                   </button>
                   <div
                     style={{
@@ -485,7 +489,7 @@ export default function HomePage() {
                 cursor: 'pointer',
               }}
             >
-              <FIcon name="sliders" size={15} color="var(--f-text-1)" />
+              <SlidersHorizontal size={15} color="var(--f-text-1)" />
             </button>
             {showFilters && (
               <div
@@ -539,7 +543,7 @@ export default function HomePage() {
                   >
                     {opt.label}
                     {locationRange === opt.key && (
-                      <FIcon name="check" size={14} color="#FF6BB4" />
+                      <Check size={14} color="#FF6BB4" />
                     )}
                   </button>
                 ))}
@@ -588,7 +592,7 @@ export default function HomePage() {
           ) : posts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <FIcon name="storeIc" size={44} color="var(--f-text-4)" />
+                <Store size={44} color="var(--f-text-4)" />
               </div>
               <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-2)' }}>
                 {feedType === 'saved' ? 'No saved posts yet.' : 'No posts found.'}
@@ -601,7 +605,7 @@ export default function HomePage() {
             </div>
           ) : (
             posts.map(post => (
-              <FPostCard
+              <PostCard
                 key={post.id}
                 post={post}
                 isLiked={interactions.likedPostIds.includes(post.id)}
