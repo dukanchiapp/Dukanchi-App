@@ -11,8 +11,10 @@ import { Link } from 'react-router-dom';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation } from '../context/LocationContext';
 import { CATEGORIES, CATEGORY_CHIPS, matchCategory } from '../constants/categories';
-import { FIcon } from '../components/futuristic/FIcon';
+import { Search, X, Crosshair, MapPin, Clock, Phone, Store, Navigation, ChevronDown, ArrowUp, Layers } from 'lucide-react';
 import { FLogo } from '../components/futuristic/FLogo';
+import { IsoMap, type IsoMapStore } from '../components/futuristic/IsoMap';
+import NotificationBell from '../components/NotificationBell';
 
 const GoogleMap = GoogleMapComponent as any;
 const Marker = MarkerComponent as any;
@@ -57,6 +59,7 @@ export default function MapPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [listExpanded, setListExpanded] = useState(false);
+  const [mapMode, setMapMode] = useState<'map' | '3d'>('map'); // Session 122: 3D↔Map toggle
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { location: userLocCtx } = useUserLocation();
@@ -133,6 +136,40 @@ export default function MapPage() {
     [filteredStores, userLocation]
   );
 
+  // Session 122: IsoMap (3D view) — project real store lat/lng into the
+  // pseudo-isometric grid, user fixed at centre (50,50). Reflects actual
+  // relative geography (NOT random pylons). Spread normalised to the
+  // farthest shown store so the scene fills the grid.
+  const isoStores = useMemo<IsoMapStore[]>(() => {
+    if (!userLocation) return [];
+    const shown = validStores.slice(0, 12);
+    const maxAbs = Math.max(
+      0.001,
+      ...shown.flatMap(s => [
+        Math.abs(s.latitude - userLocation.lat),
+        Math.abs(s.longitude - userLocation.lng),
+      ]),
+    );
+    return shown.map((s, i) => {
+      const catDef = CATEGORIES.find(c => matchCategory(s.category, c.value));
+      const x = 50 + ((s.longitude - userLocation.lng) / maxAbs) * 32;
+      const y = 50 - ((s.latitude - userLocation.lat) / maxAbs) * 32; // invert lat for screen
+      return {
+        id: s.id,
+        x: Math.max(10, Math.min(90, x)),
+        y: Math.max(10, Math.min(90, y)),
+        h: 28 + (i % 3) * 12, // deterministic height variety
+        label: (s.storeName?.charAt(0) || '?').toUpperCase(),
+        color: catDef?.color || '#FF2A8C',
+      };
+    });
+  }, [validStores, userLocation]);
+
+  const handleIsoSelect = (iso: IsoMapStore) => {
+    const real = validStores.find(s => String(s.id) === String(iso.id));
+    if (real) flyToStore(real);
+  };
+
   const selectedStoreDistance = selectedStore && userLocation
     ? getDistance(userLocation.lat, userLocation.lng, selectedStore.latitude, selectedStore.longitude)
     : null;
@@ -172,15 +209,16 @@ export default function MapPage() {
                 <span style={{ fontSize: 10, color: 'var(--f-text-3)', lineHeight: 1.15 }}>apna bazaar, apni dukaan</span>
               </div>
             </div>
+            {/* Session 122: dead decorative bell → live NotificationBell (44×44 glass tile). */}
             <div
               style={{
-                width: 40, height: 40, borderRadius: 14,
+                width: 44, height: 44, borderRadius: 14,
                 background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)',
                 backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <FIcon name="bell" size={18} color="var(--f-text-1)" />
+              <NotificationBell />
             </div>
           </div>
 
@@ -194,7 +232,7 @@ export default function MapPage() {
               height: 44,
             }}
           >
-            <FIcon name="search" size={16} color="var(--f-text-3)" />
+            <Search size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search stores near you..."
@@ -205,7 +243,7 @@ export default function MapPage() {
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery('')}>
-                <FIcon name="x" size={14} color="var(--f-text-3)" />
+                <X size={14} color="var(--f-text-3)" />
               </button>
             )}
           </div>
@@ -259,6 +297,9 @@ export default function MapPage() {
                   </p>
                 </div>
               </div>
+            ) : mapMode === '3d' && userLocation ? (
+              /* Session 122: 3D isometric view — real stores projected onto the grid. */
+              <IsoMap stores={isoStores} focused={selectedStore?.id} onSelect={handleIsoSelect} accent="#FF2A8C" />
             ) : isLoaded && userLocation ? (
               <GoogleMap
                 mapContainerStyle={MAP_CONTAINER_STYLE}
@@ -341,16 +382,49 @@ export default function MapPage() {
               </span>
             </div>
 
-            {/* Recenter + settings buttons */}
+            {/* 3D ↔ Map toggle (top-right) — Session 122 */}
+            {userLocation && (
+              <div
+                className="absolute top-3 right-3 flex"
+                style={{
+                  padding: 3, borderRadius: 9999, gap: 2,
+                  background: 'var(--f-fab-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid var(--f-glass-border-2)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                }}
+              >
+                {([
+                  { k: '3d' as const, icon: Layers, label: '3D' },
+                  { k: 'map' as const, icon: MapPin, label: 'Map' },
+                ]).map(m => {
+                  const Icon = m.icon;
+                  const active = mapMode === m.k;
+                  return (
+                    <button
+                      key={m.k}
+                      onClick={() => setMapMode(m.k)}
+                      className="flex items-center gap-1"
+                      style={{
+                        padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+                        background: active ? 'linear-gradient(135deg, #FF6B35, #FF2A8C)' : 'transparent',
+                        color: active ? 'white' : 'var(--f-text-2)', border: 'none',
+                        boxShadow: active ? '0 2px 8px rgba(255,42,140,0.30)' : 'none',
+                      }}
+                    >
+                      <Icon size={12} color={active ? 'white' : 'var(--f-text-2)'} /> {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Recenter FAB (re-center handler preserved; dead no-op settings FAB removed — Session 122) */}
             <div className="absolute bottom-3 right-3 flex flex-col gap-2">
               <button
                 onClick={recenterMap}
                 style={{ ...fabStyle, border: '1px solid rgba(255,107,53,0.45)', boxShadow: '0 0 16px rgba(255,107,53,0.4)' }}
+                aria-label="Re-center map"
               >
-                <FIcon name="crosshair" size={18} color="#FF6B35" />
-              </button>
-              <button style={fabStyle}>
-                <FIcon name="settings" size={18} color="var(--f-text-1)" />
+                <Crosshair size={18} color="#FF6B35" />
               </button>
             </div>
           </div>
@@ -387,31 +461,31 @@ export default function MapPage() {
                       )}
                     </div>
                     <button onClick={() => setSelectedStore(null)}>
-                      <FIcon name="x" size={16} color="var(--f-text-3)" />
+                      <X size={16} color="var(--f-text-3)" />
                     </button>
                   </div>
                   <div className="mt-2 space-y-1">
                     {selectedStoreDistance && (
                       <div className="flex items-center gap-1.5">
-                        <FIcon name="mapPin" size={12} color="#FF6BB4" />
+                        <MapPin size={12} color="#FF6BB4" style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{selectedStoreDistance} away</span>
                       </div>
                     )}
                     {storeStatus && (
                       <div className="flex items-center gap-1.5">
-                        <FIcon name="clock" size={12} color={statusColor(storeStatus.color)} />
+                        <Clock size={12} color={statusColor(storeStatus.color)} style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: statusColor(storeStatus.color), fontWeight: 600 }}>{storeStatus.label}</span>
                       </div>
                     )}
                     {selectedStore.address && (
                       <div className="flex items-center gap-1.5">
-                        <FIcon name="mapPin" size={12} color="var(--f-text-3)" />
+                        <MapPin size={12} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                         <span className="truncate" style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.address}</span>
                       </div>
                     )}
                     {selectedStore.phone && (
                       <div className="flex items-center gap-1.5">
-                        <FIcon name="phone" size={12} color="var(--f-text-3)" />
+                        <Phone size={12} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.phone}</span>
                       </div>
                     )}
@@ -424,7 +498,7 @@ export default function MapPage() {
                   className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
                   style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}
                 >
-                  <FIcon name="storeIc" size={14} color="var(--f-text-1)" />
+                  <Store size={14} color="var(--f-text-1)" />
                   View Store
                 </Link>
                 <a
@@ -434,7 +508,7 @@ export default function MapPage() {
                   className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
                   style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.4)' }}
                 >
-                  <FIcon name="navigation" size={14} color="white" />
+                  <Navigation size={14} color="white" />
                   Navigate
                 </a>
               </div>
@@ -483,7 +557,7 @@ export default function MapPage() {
                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
                       Stores near you · <span style={{ color: '#FF6BB4' }}>{validStores.length}</span>
                     </p>
-                    <FIcon name="chevD" size={16} color="var(--f-text-3)" />
+                    <ChevronDown size={16} color="var(--f-text-3)" />
                   </button>
                   <div className="overflow-y-auto overscroll-contain" style={{ scrollbarWidth: 'thin', padding: '8px 12px' }}>
                     <div className="space-y-2">
@@ -508,15 +582,15 @@ export default function MapPage() {
                                   <p className="font-bold truncate" style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{store.storeName}</p>
                                   {store.category && <p style={{ fontSize: 11, color: '#FF6BB4', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
                                   <div className="flex items-center gap-3 mt-1">
-                                    {dist && <div className="flex items-center gap-1"><FIcon name="mapPin" size={11} color="#FF6BB4" /><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
+                                    {dist && <div className="flex items-center gap-1"><MapPin size={11} color="#FF6BB4" style={{ flexShrink: 0 }} /><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
                                     {sStatus && <span style={{ fontSize: 11, fontWeight: 600, color: statusColor(sStatus.color) }}>● {sStatus.label}</span>}
                                   </div>
                                 </div>
                               </div>
                             </button>
                             <div className="flex gap-2 px-3 pb-3">
-                              <Link to={`/store/${store.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}><FIcon name="storeIc" size={12} color="var(--f-text-1)" /> View Store</Link>
-                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white' }}><FIcon name="navigation" size={12} color="white" /> Navigate</a>
+                              <Link to={`/store/${store.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}><Store size={12} color="var(--f-text-1)" /> View Store</Link>
+                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white' }}><Navigation size={12} color="white" /> Navigate</a>
                             </div>
                           </div>
                         );
@@ -544,7 +618,7 @@ export default function MapPage() {
                       Stores near you · <span style={{ color: '#FF6BB4' }}>{validStores.length}</span>
                     </p>
                     <span style={{ fontSize: 11, color: 'var(--f-text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <FIcon name="arrowUp" size={10} color="var(--f-text-3)" /> Swipe up
+                      <ArrowUp size={10} color="var(--f-text-3)" /> Swipe up
                     </span>
                   </button>
 
@@ -600,7 +674,7 @@ export default function MapPage() {
         {!isLoaded || !userLocation ? null : validStores.length === 0 && (
           <div className="text-center py-16 px-4">
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
-              <FIcon name="mapPin" size={40} color="var(--f-text-4)" />
+              <MapPin size={40} color="var(--f-text-4)" />
             </div>
             <p style={{ fontSize: 14, color: 'var(--f-text-2)', fontWeight: 600 }}>No stores found nearby</p>
             <p style={{ fontSize: 12, color: 'var(--f-text-3)', marginTop: 4 }}>Try changing the category filter</p>
