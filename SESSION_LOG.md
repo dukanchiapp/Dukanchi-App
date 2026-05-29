@@ -6,6 +6,20 @@
 
 ---
 
+## 2026-05-29 — Session 126.1 — Mockup parity polish (founder visual QA fixes)
+
+**Goal:** Founder reviewed the live parity build (v43) and flagged remaining mismatches on the PostCard + Store Profile mockups ("elements not matching yet").
+
+**Status:** ✅ LIVE. Fly **v44**. PR #108 squash `a3eed69`. typecheck 0 · 133/133 · build ✓ · E2E 2/2; `/health` 200 both domains.
+
+- **`storeUtils`** — 24h status label `Open 24 Hours` → **`Open 24h`** (the canonical status capsule across PostCard / Map / Messages rich rows / Store Profile meta — matches the mockup's compact pill). `storeUtils.test.ts` updated.
+- **Store Profile logo** — 72→84 px, borderRadius 18→22, dark "cutout" border 3→4px, fallback initial 28→34 (matches the mockup's prominent logo).
+- **Store Profile detail icon tiles** — 38→42 px, borderRadius 11→13.
+- **Store Profile** — removed the Posts/Followers/Rating **stats row** (NOT in the mockup — bio flows straight into the details card). `followersCount` state removed (was display-only); `isFollowing` still drives the follow toggle.
+- Visual-only; follow / fetch / tabs / posts-grid wiring preserved.
+
+---
+
 ## 2026-05-29 — Session 126 — Design mockup parity: Store Profile + Messages rich rows + Map chips
 
 **Goal:** Founder shared 4 reference mockups (Store Profile / Home / Map / Messages) and asked for **exact UI match** — "jaha jo details hain smartly build karo". Audited all 4 implemented screens vs the mockups and closed every drift.
