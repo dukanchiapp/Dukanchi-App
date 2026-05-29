@@ -285,42 +285,93 @@ export default function UserSettings() {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen pb-20">
-      <header className="bg-white px-4 py-4 sticky top-0 z-20 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center">
-          <button onClick={() => activeTab ? setActiveTab(null) : navigate(-1)} className="mr-3 text-gray-500 hover:text-gray-900">
-            <ArrowLeft size={24} />
-          </button>
-          <h1 className="text-xl font-bold text-gray-900">
-            {activeTab ? tabs.find(t => t.id === activeTab)?.label || 'Settings' : 'Settings'}
-          </h1>
-        </div>
-        <NotificationBell />
-      </header>
+    <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
+      {/* Aurora wash */}
+      <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
+
+      <div style={{ position: 'relative', zIndex: 1 }} className="max-w-md mx-auto">
+        <header
+          className="px-4 py-3.5 sticky top-0 z-20 flex items-center justify-between"
+          style={{ background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderBottom: '1px solid var(--f-glass-border)' }}
+        >
+          <div className="flex items-center" style={{ gap: 12 }}>
+            <button
+              onClick={() => activeTab ? setActiveTab(null) : navigate(-1)}
+              style={{ width: 42, height: 42, borderRadius: 12, border: '1px solid var(--f-glass-border-2)', background: 'var(--f-bg-elev)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+              aria-label="Back"
+            >
+              <ArrowLeft size={20} color="var(--f-text-1)" />
+            </button>
+            <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--f-text-1)', margin: 0 }}>
+              {activeTab ? tabs.find(t => t.id === activeTab)?.label || 'Settings' : 'Settings'}
+            </h1>
+          </div>
+          {/* Bell tile (NotificationBell already wired) */}
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <NotificationBell />
+          </div>
+        </header>
 
       <main className="p-4">
         {!activeTab && (
           <div className="space-y-3">
-            {isTeamMember && (
-              <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-center">
-                <p className="text-xs text-indigo-600 font-medium">You're logged in as a team member. Some settings are restricted.</p>
+            {/* Profile card (Session 123) */}
+            <div
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: 16, borderRadius: 18,
+                background: 'linear-gradient(135deg, rgba(255,107,53,0.10), rgba(255,42,140,0.10))',
+                border: '1px solid var(--f-glass-border-2)',
+              }}
+            >
+              <div style={{
+                width: 56, height: 56, borderRadius: 18, flexShrink: 0,
+                background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontWeight: 800, fontSize: 22, boxShadow: '0 4px 14px rgba(255,42,140,0.30)',
+              }}>
+                {(user?.name || 'U').charAt(0).toUpperCase()}
               </div>
-            )}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="divide-y divide-gray-100">
-                {tabs.map(tab => {
-                  const Icon = tab.icon;
-                  return (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-left">
-                      <div className="flex items-center text-gray-700"><Icon size={20} className="mr-3 text-indigo-500" /><span className="text-sm font-medium">{tab.label}</span></div>
-                      <ChevronRight size={16} className="text-gray-400" />
-                    </button>
-                  );
-                })}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name || 'User'}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--f-text-2)', marginTop: 2, fontWeight: 500, textTransform: 'capitalize' }}>
+                  {isTeamMember ? 'Team member' : (user?.role || 'customer')}
+                </div>
               </div>
             </div>
-            <button onClick={handleLogout} className="w-full bg-white border border-red-200 text-red-600 font-semibold py-3 rounded-xl flex items-center justify-center hover:bg-red-50 transition-colors">
-              <LogOut size={18} className="mr-2" /> Log Out
+
+            {isTeamMember && (
+              <div style={{ borderRadius: 14, padding: '10px 14px', textAlign: 'center', background: 'rgba(107,51,255,0.12)', border: '1px solid rgba(107,51,255,0.30)' }}>
+                <p style={{ fontSize: 12, color: 'var(--f-magenta-light)', fontWeight: 600, margin: 0 }}>You're logged in as a team member. Some settings are restricted.</p>
+              </div>
+            )}
+            <div style={{ borderRadius: 18, overflow: 'hidden', background: 'var(--f-bg-elev)', border: '1px solid var(--f-glass-border-2)', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}>
+              {tabs.map((tab, i) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className="w-full flex items-center justify-between text-left"
+                    style={{ padding: '14px 16px', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: i < tabs.length - 1 ? '1px solid var(--f-glass-border)' : 'none' }}
+                  >
+                    <div className="flex items-center" style={{ gap: 12 }}>
+                      <span style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,42,140,0.10)', border: '1px solid rgba(255,42,140,0.20)' }}>
+                        <Icon size={15} color="#FF2A8C" />
+                      </span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)' }}>{tab.label}</span>
+                    </div>
+                    <ChevronRight size={16} color="var(--f-text-3)" />
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center"
+              style={{ padding: '14px 16px', borderRadius: 14, background: 'rgba(255,77,106,0.10)', border: '1px solid rgba(255,77,106,0.30)', color: '#FF4D6A', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <LogOut size={18} style={{ marginRight: 8 }} /> Log Out
             </button>
           </div>
         )}
@@ -403,6 +454,7 @@ export default function UserSettings() {
           </div>
         )}
       </main>
+      </div>
     </div>
   );
 }

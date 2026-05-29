@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import SignupPage from './pages/Signup';
 import LoginPage from './pages/Login';
@@ -32,6 +32,7 @@ import { LocationProvider } from './context/LocationContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import Splash from './components/Splash';
 import { useAuth } from './context/AuthContext';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { useFcmRegistration } from './hooks/useFcmRegistration';
@@ -41,6 +42,18 @@ import { useLocation } from 'react-router-dom';
 import { isNative } from './lib/api';
 import { isPublicPath } from './constants/publicRoutes';
 
+
+/**
+ * BootGate — Session 123. Shows the Splash boot screen WHILE the initial auth
+ * check (/api/auth/me) is in flight (AuthContext.isLoading), then reveals the
+ * app. Gated on real hydration state — no fake timer; resolves via the auth
+ * provider's `.finally`, so it always terminates.
+ */
+function BootGate({ children }: { children: ReactNode }) {
+  const { isLoading } = useAuth();
+  if (isLoading) return <Splash />;
+  return <>{children}</>;
+}
 
 function FlowController() {
   const navigate = useNavigate();
@@ -182,6 +195,7 @@ export default function App() {
           <LocationProvider>
           <NotificationProvider>
             <FlowController />
+            <BootGate>
             <div className="min-h-screen" style={{ background: 'var(--f-bg-deep)' }}>
               {import.meta.env.VITE_SHOW_PWA_PROMPTS === 'true' && <BrowserModeBanner />}
               <Suspense fallback={
@@ -214,6 +228,7 @@ export default function App() {
               <BottomNav />
               {import.meta.env.VITE_SHOW_PWA_PROMPTS === 'true' && <PWAInstallPrompt />}
             </div>
+            </BootGate>
           </NotificationProvider>
           </LocationProvider>
         </ToastProvider>
