@@ -7,8 +7,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      <div className="flex justify-center items-center min-h-screen" style={{ background: 'var(--f-bg-deep)' }}>
+        <div
+          className="animate-spin rounded-full h-8 w-8"
+          style={{ border: '3px solid var(--f-glass-border-2)', borderTopColor: 'var(--f-magenta)' }}
+        ></div>
       </div>
     );
   }

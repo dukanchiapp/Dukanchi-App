@@ -22,35 +22,60 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
     return;
   }, [onClose, confirm]);
 
-  const icons = {
-    success: <CheckCircle className="text-green-500" size={20} />,
-    error: <XCircle className="text-red-500" size={20} />,
-    warning: <AlertCircle className="text-amber-500" size={20} />,
-    info: <Info className="text-blue-500" size={20} />,
+  // Futuristic v3 status accents (match --f-status-* / --f-success / --f-danger).
+  const accent: Record<ToastType, string> = {
+    success: 'var(--f-success)',
+    error: 'var(--f-danger)',
+    warning: '#F59E0B',
+    info: 'var(--f-cyan)',
   };
 
-  const colors = {
-    success: 'bg-green-50 border-green-100',
-    error: 'bg-red-50 border-red-100',
-    warning: 'bg-amber-50 border-amber-100',
-    info: 'bg-blue-50 border-blue-100',
+  const icons = {
+    success: <CheckCircle color={accent.success} size={20} />,
+    error: <XCircle color={accent.error} size={20} />,
+    warning: <AlertCircle color={accent.warning} size={20} />,
+    info: <Info color={accent.info} size={20} />,
   };
 
   if (confirm) {
     return (
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6" onClick={confirm.onCancel}>
-        <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6" style={{ background: 'rgba(5,5,15,0.72)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }} onClick={confirm.onCancel}>
+        <div
+          className="rounded-2xl p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200"
+          style={{
+            background: 'var(--f-modal-bg)', border: '1px solid var(--f-glass-border-2)',
+            backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
           <div className="text-center">
-            <div className={`w-14 h-14 ${type === 'error' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+            <div
+              className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{
+                background: (type === 'error' ? 'var(--f-danger)' : '#F59E0B') + '1A',
+                border: `1px solid ${(type === 'error' ? 'var(--f-danger)' : '#F59E0B')}40`,
+                color: type === 'error' ? 'var(--f-danger)' : '#F59E0B',
+              }}
+            >
                {type === 'error' ? <XCircle size={28} /> : <AlertCircle size={28} />}
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">{type === 'error' ? 'Confirm Action' : 'Are you sure?'}</h3>
-            <p className="text-sm text-gray-500 mb-6">{message}</p>
+            <h3 className="text-lg font-bold mb-2" style={{ color: 'var(--f-text-1)' }}>{type === 'error' ? 'Confirm Action' : 'Are you sure?'}</h3>
+            <p className="text-sm mb-6" style={{ color: 'var(--f-text-2)' }}>{message}</p>
             <div className="flex space-x-3">
-              <button onClick={confirm.onCancel} className="flex-1 py-2.5 rounded-xl font-medium text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-              <button 
-                onClick={() => { confirm.onConfirm(); onClose(); }} 
-                className={`flex-1 py-2.5 rounded-xl font-medium text-sm text-white transition-colors ${type === 'error' ? 'bg-red-600 hover:bg-red-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+              <button
+                onClick={confirm.onCancel}
+                className="flex-1 py-2.5 rounded-xl font-semibold text-sm"
+                style={{ color: 'var(--f-text-1)', background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)' }}
+              >Cancel</button>
+              <button
+                onClick={() => { confirm.onConfirm(); onClose(); }}
+                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white"
+                style={
+                  type === 'error'
+                    ? { background: 'var(--f-danger)', border: 'none', boxShadow: '0 0 16px rgba(255,77,106,0.35)' }
+                    : { background: 'var(--f-grad-primary)', border: 'none', boxShadow: '0 0 16px rgba(255,42,140,0.35)' }
+                }
               >
                 Confirm
               </button>
@@ -62,11 +87,19 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
   }
 
   return (
-    <div className={`fixed bottom-24 left-4 right-4 md:left-auto md:right-6 md:w-80 z-[100] animate-in slide-in-from-bottom-4 duration-300`}>
-      <div className={`flex items-center p-4 rounded-2xl border shadow-lg ${colors[type]}`}>
+    <div className="fixed bottom-24 left-4 right-4 md:left-auto md:right-6 md:w-80 z-[100] animate-in slide-in-from-bottom-4 duration-300">
+      <div
+        className="flex items-center p-4 rounded-2xl"
+        style={{
+          background: 'var(--f-glass-bg-2)',
+          border: `1px solid ${accent[type]}55`,
+          backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+          boxShadow: `0 8px 28px rgba(0,0,0,0.45), 0 0 18px ${accent[type]}22`,
+        }}
+      >
         <div className="mr-3 flex-shrink-0">{icons[type]}</div>
-        <p className="text-sm font-medium text-gray-800 flex-1">{message}</p>
-        <button onClick={onClose} className="ml-3 text-gray-400 hover:text-gray-600 transition-colors">
+        <p className="text-sm font-medium flex-1" style={{ color: 'var(--f-text-1)' }}>{message}</p>
+        <button onClick={onClose} className="ml-3" style={{ color: 'var(--f-text-3)' }}>
           <X size={16} />
         </button>
       </div>

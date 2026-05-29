@@ -156,7 +156,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
   return (
     <div className="space-y-3">
       {/* Mode Toggle */}
-      <div className="flex bg-gray-100 rounded-xl p-1">
+      <div className="flex rounded-xl p-1" style={{ background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)' }}>
         <button
           onClick={() => {
             setMode('crop');
@@ -169,17 +169,19 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
               });
             }
           }}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-colors ${
-            mode === 'crop' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-          }`}
+          className="flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-colors"
+          style={mode === 'crop'
+            ? { background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 2px 8px rgba(255,42,140,0.30)' }
+            : { background: 'transparent', color: 'var(--f-text-3)' }}
         >
           <Move size={12} /> <span>Crop</span>
         </button>
         <button
           onClick={() => setMode('fit')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-colors ${
-            mode === 'fit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'
-          }`}
+          className="flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-colors"
+          style={mode === 'fit'
+            ? { background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 2px 8px rgba(255,42,140,0.30)' }
+            : { background: 'transparent', color: 'var(--f-text-3)' }}
         >
           <Maximize2 size={12} /> <span>Fit</span>
         </button>
@@ -191,8 +193,8 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="rounded-xl border-2 border-gray-200 bg-black"
-          style={{ cursor: mode === 'crop' ? 'grab' : 'default', touchAction: 'none' }}
+          className="rounded-xl"
+          style={{ border: '1px solid var(--f-glass-border-2)', background: '#0a0612', cursor: mode === 'crop' ? 'grab' : 'default', touchAction: 'none' }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -202,15 +204,15 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
             briefly on fast devices but rescues UX on slow ones / large files. */}
         {!img && !loadError && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[11px] text-gray-500 font-medium bg-white/80 px-2.5 py-1 rounded-full">Image load ho rahi hai...</span>
+            <span className="text-[11px] font-medium px-2.5 py-1 rounded-full" style={{ color: 'var(--f-text-2)', background: 'var(--f-glass-bg-3)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>Image load ho rahi hai...</span>
           </div>
         )}
         {/* Session 114: explicit error state — Rule B (no silent failure on
             image.onerror). User sees a clear message + Cancel below remains
             the way out. */}
         {loadError && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-[11px] text-red-600 font-semibold bg-white/90 px-2.5 py-1 rounded-full">Image load nahi ho payi — Cancel karke dobara try karein</span>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-4">
+            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full text-center" style={{ color: 'var(--f-danger)', background: 'rgba(255,77,106,0.14)', border: '1px solid rgba(255,77,106,0.35)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>Image load nahi ho payi — Cancel karke dobara try karein</span>
           </div>
         )}
         {mode === 'crop' && img && (
@@ -223,21 +225,22 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
       {/* Zoom controls for crop mode */}
       {mode === 'crop' && (
         <div className="flex items-center justify-center space-x-3">
-          <button onClick={() => handleZoom(-0.05)} className="w-8 h-8 bg-gray-100 rounded-full text-lg font-bold flex items-center justify-center hover:bg-gray-200">−</button>
-          <span className="text-[11px] text-gray-400 font-medium tabular-nums">{Math.round(scale * 100)}%</span>
-          <button onClick={() => handleZoom(0.05)} className="w-8 h-8 bg-gray-100 rounded-full text-lg font-bold flex items-center justify-center hover:bg-gray-200">+</button>
+          <button onClick={() => handleZoom(-0.05)} className="w-8 h-8 rounded-full text-lg font-bold flex items-center justify-center" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}>−</button>
+          <span className="text-[11px] font-medium tabular-nums" style={{ color: 'var(--f-text-3)' }}>{Math.round(scale * 100)}%</span>
+          <button onClick={() => handleZoom(0.05)} className="w-8 h-8 rounded-full text-lg font-bold flex items-center justify-center" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}>+</button>
         </div>
       )}
 
       {/* Action buttons */}
       <div className="flex space-x-3">
-        <button onClick={onCancel} className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-200 transition-colors">
+        <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}>
           Cancel
         </button>
         <button
           onClick={handleComplete}
           disabled={!img || loadError}
-          className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          style={{ background: 'var(--f-grad-primary)', border: 'none', boxShadow: '0 0 16px rgba(255,42,140,0.35)' }}
         >
           Image use karein
         </button>
