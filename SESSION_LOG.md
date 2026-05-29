@@ -6,6 +6,69 @@
 
 ---
 
+## 2026-05-29 — Session 125 — Retailer dashboard cluster re-skin: RetailerDashboard + StoreFormFields + KycUploadForm + AiBioModal (pilot-critical session 2 of ~5)
+
+**Goal:** Convert the retailer dashboard cluster — the 3 MIXED (`--dk-*` + raw-Tailwind-light) files plus AiBioModal — to `--f-*` dark. These are the GATEKEEPER for the S128 global `--dk-*` flip: flipping while they still mix `--dk-` + raw Tailwind would break contrast (unreadable light text on dark).
+
+**Status:** ✅ **DASHBOARD CLUSTER DARK.** Fly **v42** complete. RetailerDashboard + StoreFormFields + KycUploadForm + AiBioModal all on `--f-*` with ZERO `--dk-*` and ZERO raw-Tailwind-light remaining — the flip-blocker is cleared.
+
+| Metric | Value |
+|---|---|
+| PR merged | #104 (squash) |
+| Squash commit | `4f37316` |
+| Production HEAD | `8f26668` → **`4f37316`** |
+| Fly release | **v42** complete |
+| Files changed | 4 (+128 / −115) |
+| Tests | **133/133** |
+
+### Changes (all → `--f-*`; BOTH raw-Tailwind AND `--dk-*` converted)
+
+**StoreFormFields.tsx** (the heavy one — store edit form):
+- Legacy `dk-input` class (×10) + `dk-update-btn` class → inline `fInput` const (`--f-bg-elev` + `--f-glass-border-2` + `--f-text-1`) + gradient "Update Location" button.
+- Raw `bg-gray-50`/`border-gray-200`/`focus:bg-white`/`focus:border-indigo-500` address + opening/closing-time inputs → `fInput`.
+- White logo border (`3px solid white`) → `--f-glass-border-2`; camera FAB ring `white` → `--f-bg-deep`; cover placeholder `#F3F4F6` → `--f-bg-elev`.
+- `#1A1A1A` save button → `--f-grad-primary` + glow; char counter `#EF4444`/`#888` → `--f-danger`/`--f-text-3`; indigo checkbox → `accentColor: --f-magenta`; MapPin `text-indigo-400` → `--f-orange`; all `text-gray-400/500/600` labels → `--f-text-2`/`--f-text-3`.
+
+**KycUploadForm.tsx**: text input + dashed upload tiles (`border-gray-200`/`green-300`/`bg-green-50`) → `--f-glass-border-2`/`--f-success` + `rgba(46,231,161,0.10)`; gray text → text-1/2/3; submit button → gradient.
+
+**AiBioModal.tsx**: modal `bg-white` → `--f-modal-bg` glass; textarea `dk-input` → inline `--f-*`; recording-red `#EF4444` → `--f-danger`; Generate + Bio-use buttons → `--f-grad-primary`.
+
+**RetailerDashboard.tsx**: KYC-gate state cards — pending (`bg-white`/`amber-50`/`amber-100`), rejected (`red-50`/`red-100`), default (`gray-100`/`indigo-50`) → `--f-glass-bg` cards + tinted icon tiles (orange/`--f-danger`/`--f-magenta` at 12% alpha) + `--f-text-1/3`; form host card `background:white` → `--f-glass-bg`; loading spinner `--f-orange` → `--f-magenta` (aligns to ProtectedRoute spinner).
+
+### Preserved (visual-only — Rule 4)
+
+Store CRUD (`handleSaveStoreInfo` POST/PUT `/api/stores`), KYC upload pipeline (`handleKycUpload` `/api/upload` + `handleKycSubmit` `/api/kyc/submit`), GPS pin (`handleGPSUpdate`), logo/cover upload, pincode autofill (`/api/pincode/:code`), AI bio gen (`/api/ai/generate-store-description` + `/api/ai/transcribe-voice` voice path), dashboard nav, all StoreFormFields/KycUploadForm/AiBioModal props + handlers — unchanged.
+
+### Phase 3 gates
+
+- ✅ typecheck 0 (web + server + worker) · vitest **133/133** · E2E 2/2 · build green (68 precache)
+- ✅ grep-confirmed: ZERO `--dk-*` · ZERO legacy `dk-` classes · ZERO raw-Tailwind-light · ZERO hardcoded light surfaces across all 4 files
+
+### Phase 4 CI + deploy
+
+- ✅ PR #104 (run 26616074884): Typecheck+Test+Build `pass` (1m29s) + Bundle Size `pass` (1m40s)
+- ✅ Fly **v42** complete; post-deploy `/health` 200 (`application/json`) on both `dukanchi-app.fly.dev` AND `dukanchi.com`; CSP `report-only` preserved (`wss://dukanchi.com` connect-src intact → Socket.IO unaffected); push structurally intact (zero push/SW code touched)
+
+### Pilot-critical finish progress (from S123.5 audit — ~5 sessions)
+
+- ✅ **S124 — Global shared UI** (Toast + ImageCropper + ProtectedRoute)
+- ✅ **S125 — Retailer dashboard cluster** (RetailerDashboard + StoreFormFields + KycUploadForm + AiBioModal) ← this session — **the `--dk-`+Tailwind flip-blocker is now cleared**
+- ⏳ S126 — Onboarding KYC (KYCForm) — flag: is the standalone `KYCForm.tsx` a duplicate of the dashboard `KycUploadForm.tsx` (re-skinned this session)? Reconcile in S126.
+- ⏳ S127 — Settings sub-tabs (AccountDetailsTab + ManagePostsTab + BulkUploadTab + BusinessSettingsTabs)
+- ⏳ S128 — GLOBAL `--dk-*` flip + delete `[data-theme=light]` + delete dead AppHeader + comprehensive device test
+- Deferred (post-pilot): ManageTeamTab, CustomerDataTabs, Support, ReviewModal, NotFound
+
+### E2E coverage gap
+
+The dashboard + KYC gate are auth-gated (retailer role) → not covered by the public-render E2E smoke. Founder device test: open Edit Profile (dark form + inputs + map + save), trigger AI bio modal (dark glass + voice), hit the KYC gate (pending/rejected/default cards dark).
+
+### Awaiting
+
+- Founder device test (retailer dashboard edit-profile + KYC gate + AI bio modal — pilot-critical, founder onboards retailers in person)
+- Opus → **S126 KYCForm** (reconcile against this session's KycUploadForm), then S127 settings sub-tabs, then the S128 global flip (now unblocked)
+
+---
+
 ## 2026-05-29 — Session 124 — Global shared UI re-skin: Toast + ImageCropper + ProtectedRoute (pilot-critical session 1 of ~5)
 
 **Goal:** Re-skin the 3 raw-Tailwind-light SHARED surfaces (audit-flagged — the `--dk-*` flip can't reach them) to `--f-*` dark. First of the ~5 pilot-critical finish sessions from the S123.5 audit.
