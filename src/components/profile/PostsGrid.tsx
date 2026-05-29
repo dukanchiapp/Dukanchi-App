@@ -118,6 +118,16 @@ export function PostsGrid({
     };
   }, [editRawImageUrl]);
 
+  // Session 128: hide the global BottomNav while a sheet is open (the nav was
+  // overlapping the Publish button on the New Post sheet). Toggle a body class
+  // — BottomNav has a CSS rule that hides itself when this class is present.
+  useEffect(() => {
+    const sheetOpen = showNewPostModal || !!editingPost;
+    if (!sheetOpen) return undefined;
+    document.body.classList.add('modal-open');
+    return () => { document.body.classList.remove('modal-open'); };
+  }, [showNewPostModal, editingPost]);
+
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleTogglePin = async (e: React.MouseEvent, postId: string) => {
     e.stopPropagation();

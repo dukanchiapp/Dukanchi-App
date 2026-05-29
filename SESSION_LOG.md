@@ -19,12 +19,13 @@
 - **Bio read-more (line-based)** — both pages: `<p>` clamped to 3 lines (`-webkit-line-clamp`), a `useRef` + `useEffect` measures `scrollHeight > clientHeight + 2` and only then shows the magenta-ink "Read more"/"Read less" toggle. Replaces StoreProfile's old `description.length > 140` char heuristic; adds the toggle to Profile (was a plain `<p>`).
 - **Legal & Privacy moved to Settings** — removed `<LegalLinks variant="menu" />` from BOTH Profile views (customer menu list + retailer footer card) and the now-unused import; added a labelled "Legal & Privacy" section + `<LegalLinks variant="menu" />` to `UserSettings.tsx` (`!activeTab` view, between the tabs list and Log Out).
 - **Direction button → blue gradient** — StoreProfile + `StoreInfoCard.tsx` (own-profile card): orange/magenta → `linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)`, white text/icon, blue shadow. Info-row icon tiles re-tinted peach (`--b-orange-bg` / `--b-tint`) with `--b-orange` icons; cover FABs → dark frosted glass (better contrast on light covers).
+- **BottomNav hidden while posting** (founder follow-up — screenshot showed the bottom nav overlapping the Publish button). `PostsGrid.tsx` toggles `document.body.classList` `modal-open` while the New Post OR Edit Post sheet is open; `BottomNav.tsx` carries an `app-bottom-nav` class; `index.css` adds `body.modal-open .app-bottom-nav { display: none !important; }`. CSS-driven so it works without prop-drilling through React tree.
 
 **Compliance:** Rule A/D — no `apiFetch`/`api.ts`/`AuthContext`/`app.ts`/socket changes (visual-only) ✅. Rule B — no new silent catches ✅. Rule G — `npm run typecheck` (3 projects) + `npm run build` ✅.
 
 **Verification gaps (honest):** `StoreProfile`/`Profile` sit behind `ProtectedRoute` + need a backend + a seeded store with `lat/lng` → not meaningfully renderable in the frontend-only dev preview. Verified at typecheck + build + source-review level only; needs founder login-gated QA on a deployed build (and a real distance-bearing store for the pill). Native APK unaffected (web bundle) but un-smoke-tested.
 
-**Files:** `src/pages/StoreProfile.tsx`, `src/pages/Profile.tsx`, `src/pages/UserSettings.tsx`, `src/components/profile/StoreInfoCard.tsx`. Branch + PR + Fly deploy pending founder go-ahead.
+**Files:** `src/pages/StoreProfile.tsx`, `src/pages/Profile.tsx`, `src/pages/UserSettings.tsx`, `src/components/profile/StoreInfoCard.tsx`, `src/components/profile/PostsGrid.tsx`, `src/components/BottomNav.tsx`, `src/index.css`. Branch `feat/profile-mockup-parity` (initial commit `909314a` + nav-hide follow-up).
 
 ---
 
