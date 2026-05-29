@@ -195,22 +195,24 @@ export default function MessagesPage() {
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
-        {/* ── Header ── */}
+        {/* ── Gradient header ── */}
         <div style={{
-          position: 'sticky', top: 0, zIndex: 20, padding: '18px 16px 12px',
-          background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          position: 'sticky', top: 0, zIndex: 20, padding: '0 16px 14px',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 18px)',
+          background: 'var(--b-grad)',
         }}>
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h1 className="f-display" style={{ fontSize: 30, color: 'var(--f-text-1)', margin: 0 }}>Messages</h1>
+            <h1 className="f-display" style={{ fontSize: 26, color: '#fff', margin: 0 }}>Messages</h1>
             {/* Session 120: Refresh button dropped per design (was a bare reload). */}
-            <span style={{ fontSize: 12, color: 'var(--f-text-3)', fontWeight: 600 }}>{conversations.length} chats</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{conversations.length} chats</span>
           </div>
 
           {/* Search */}
-          <div className="f-glass" style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 14, background: 'var(--f-glass-bg)',
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 12,
+            background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
           }}>
-            <Search size={17} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+            <Search size={17} color="#A8A8A8" style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search conversations"
@@ -275,8 +277,8 @@ export default function MessagesPage() {
                       disabled={respondingIds.has(card.responseId)}
                       style={{
                         flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                        background: 'var(--f-success)', color: '#062018', fontSize: 13, fontWeight: 800,
-                        opacity: respondingIds.has(card.responseId) ? 0.6 : 1, boxShadow: '0 0 16px rgba(46,231,161,0.35)',
+                        background: 'var(--f-success)', color: '#fff', fontSize: 13, fontWeight: 800,
+                        opacity: respondingIds.has(card.responseId) ? 0.6 : 1, boxShadow: '0 3px 10px rgba(12,131,31,0.30)',
                       }}
                     >
                       ✅ Haan, hai stock!

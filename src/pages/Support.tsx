@@ -73,7 +73,7 @@ export default function SupportPage() {
         <button 
           onClick={() => setActiveTab('help')}
           className={`flex-1 px-4 py-3 text-sm font-medium text-center border-b-2 transition-colors flex justify-center items-center ${
-            activeTab === 'help' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            activeTab === 'help' ? 'border-[#D11F75] text-[#D11F75]' : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
           <HelpCircle size={18} className="mr-2" />
@@ -93,13 +93,13 @@ export default function SupportPage() {
       <main className="p-4">
         {activeTab === 'help' && (
           <div className="space-y-6">
-            <div className="bg-indigo-50 p-6 rounded-2xl flex flex-col items-center text-center">
-              <Mail className="h-10 w-10 text-indigo-600 mb-3" />
+            <div className="bg-[#FFF3EC] p-6 rounded-2xl flex flex-col items-center text-center">
+              <Mail className="h-10 w-10 text-[#D11F75] mb-3" />
               <h2 className="text-lg font-bold text-gray-900">Need direct help?</h2>
               <p className="text-sm text-gray-600 mt-2 mb-4">Our support team is available 24/7 to assist you.</p>
               <a
                 href="mailto:support@gai-app.com"
-                className="bg-indigo-600 text-white font-medium py-2 px-6 rounded-full w-full text-center block"
+                className="bg-[#D11F75] text-white font-medium py-2 px-6 rounded-full w-full text-center block"
               >
                 Email Support
               </a>

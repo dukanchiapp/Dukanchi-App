@@ -47,8 +47,8 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
     <div className="space-y-4">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
-            <Upload size={20} className="text-indigo-600" />
+          <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] flex items-center justify-center flex-shrink-0">
+            <Upload size={20} className="text-[#D11F75]" />
           </div>
           <div>
             <h3 className="font-bold text-gray-900">Import from Excel / CSV</h3>
@@ -56,7 +56,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
           </div>
         </div>
 
-        <label className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-medium text-sm cursor-pointer transition-colors ${importLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
+        <label className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-medium text-sm cursor-pointer transition-colors ${importLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#D11F75] text-white hover:bg-[#B01A63]'}`}>
           {importLoading ? (
             <>
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -83,7 +83,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
             <p className="text-green-700 text-xs mt-1">
               Columns detected: {Object.entries(importResult.mappingUsed).map(([k, v]) => `${v} → ${k}`).join(', ')}
             </p>
-            <Link to="/profile" className="text-indigo-600 text-xs font-medium mt-1 inline-block hover:underline">
+            <Link to="/profile" className="text-[#D11F75] text-xs font-medium mt-1 inline-block hover:underline">
               View imported products →
             </Link>
           </div>
@@ -94,7 +94,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
         <h3 className="font-bold text-gray-900 mb-2">Add Products Manually</h3>
         <p className="text-sm text-gray-500 mb-4">Type or paste your product details below. This text will be searchable by customers.</p>
         <textarea
-          className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all leading-relaxed"
+          className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#FF8A5C] focus:ring-2 focus:ring-[#FFEEE5] transition-all leading-relaxed"
           rows={8}
           maxLength={6000}
           placeholder="Example:&#10;Samsung Galaxy S24 - ₹79,999&#10;iPhone 15 Pro Max - ₹1,59,900&#10;OnePlus 12 - ₹64,999&#10;&#10;List your products, prices, brands, categories..."

@@ -32,7 +32,7 @@ function PostRefCard({ text, onTap }: { text: string; onTap: (post: any) => void
       onClick={() => onTap(post)}
       style={{
         display: 'flex', alignItems: 'center', overflow: 'hidden', maxWidth: 230, textAlign: 'left',
-        borderRadius: 14, border: '1px solid var(--f-glass-border-2)', background: 'rgba(0,0,0,0.28)',
+        borderRadius: 14, border: '1px solid var(--f-glass-border)', background: 'var(--f-bg-elev-2)',
         cursor: 'pointer', padding: 0,
       }}
     >
@@ -48,12 +48,12 @@ function PostRefCard({ text, onTap }: { text: string; onTap: (post: any) => void
           <span style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'white' }}>Post</span>
         </span>
         {post.price && (
-          <p style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: '#fff', margin: 0 }}>₹{Number(post.price).toLocaleString()}</p>
+          <p style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: 'var(--f-text-1)', margin: 0 }}>₹{Number(post.price).toLocaleString()}</p>
         )}
         {post.caption && (
-          <p style={{ fontSize: 11, lineHeight: 1.2, color: 'rgba(255,255,255,0.78)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.caption}</p>
+          <p style={{ fontSize: 11, lineHeight: 1.2, color: 'var(--f-text-2)', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{post.caption}</p>
         )}
-        <p style={{ fontSize: 9, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0' }}>Tap to preview</p>
+        <p style={{ fontSize: 9, color: 'var(--f-text-3)', margin: '4px 0 0' }}>Tap to preview</p>
       </div>
     </button>
   );
@@ -384,30 +384,33 @@ export default function ChatPage() {
 
       {/* ── Header ── */}
       <header style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 10px', zIndex: 5,
-        background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid var(--f-glass-border)',
+        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 12px', zIndex: 5,
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+        background: 'var(--b-grad)',
       }}>
         <Link
           to="/messages"
-          className="f-glass"
-          style={{ width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textDecoration: 'none' }}
+          style={{
+            width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, textDecoration: 'none',
+            background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)',
+          }}
           aria-label="Back to messages"
         >
-          <ChevronLeft size={20} color="var(--f-text-1)" />
+          <ChevronLeft size={20} color="#fff" />
         </Link>
-        <div className="f-glass" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 16, minWidth: 0 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 16, minWidth: 0, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
           <div style={{
             width: 38, height: 38, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
-            background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', fontWeight: 800, fontSize: 14, boxShadow: '0 0 14px rgba(255,42,140,0.45)',
+            background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontWeight: 800, fontSize: 14,
           }}>
             {receiverLogo
               ? <img src={receiverLogo} alt="receiver logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : (receiverInitial || '?')}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {receiverName || 'Loading...'}
             </div>
           </div>

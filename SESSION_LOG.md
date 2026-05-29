@@ -6,6 +6,26 @@
 
 ---
 
+## 2026-05-30 — Session 127 — Bright design system re-skin (whole-app dark→light flip)
+
+**Goal:** Founder shipped a new "Dukanchi Bright Skin" design-system handoff and asked to "implement this new design — ensure the whole app is on the new skin, all internal pages and all elements." Flip the entire app from the dark "Futuristic v2" spatial-glass look to the warm Bright system. **Visual-only** (Rule 4) — no features/fields/API/schema/Socket.IO/auth/routing changes.
+
+**Status:** ✅ Implemented + verified locally; **PR #110** open, merging to go live. typecheck 0 (web/server/worker) · **133/133** tests · build ✓ · zero indigo classes remain.
+
+- **Central token remap (`futuristic.css`)** — legacy `--f-*` token *values* remapped to Bright (cream `#FFF7F0`, orange→magenta `#FF6B35→#FF2A8C`, Inter); canonical `--b-*` tokens + `.b-clay`/`.b-clay-emoji`/`.b-tap` primitives added. One central edit re-skins every token-consuming file. (See DECISIONS.md 2026-05-30 for the keep-`--f-*`-names trade-off.)
+- **index.css + index.html** — cream body, dk tokens, fonts.
+- **Shared chrome** — BottomNav (flat white bar, magenta-ink `#D11F75` active, Home filled-when-active; 5 tabs + hide logic preserved), FLocationStrip (`#D11F75` pin/Change), NotificationBell, PostCard/FPostCard, ConversationRow.
+- **Hero screens** — Home, Search (claymorphic category grid), Map + IsoMap (cyan→warm radar, invisible white pulse→magenta), Chat (gradient header + legible PostRefCard on both bubble types), Messages, Profile, StoreProfile, Signup (dark dropdown→white optStyle + low-contrast error banner fixed), NotFound (off-brand indigo→Bright).
+- **Settings/KYC/Review indigo sweep** — ~51 "escaped" indigo Tailwind utilities across 9 files (KYCForm, ReviewModal, 6 settings/* tabs, Support) the token remap couldn't reach → Bright via arbitrary values: magenta-ink `#D11F75` primary text/icons/buttons/borders, warm tints (`#FFF3EC`/`#FFE7D9`/`#FFE0CC`…) backgrounds, orange `#FF6B35` focus rings, `#B01A63` hover. `\b`-anchored substitution so `indigo-50` didn't collide with `indigo-500`; opacity (`/50`) + `hover:`/`focus:` prefixes preserved.
+
+**Compliance:** Rule A/D — no `apiFetch`/`api.ts`/`AuthContext`/`app.ts`/socket changes (visual-only) ✅. Rule B — no new silent catches ✅. Rule G — `npm run typecheck` (3 projects) ✅.
+
+**Verification gaps (honest):** NotFound + Signup visually confirmed Bright in the frontend-only preview. 8 files (KYCForm, ReviewModal, 6 settings/* tabs) sit behind `ProtectedRoute` — unreachable without a backend in dev, so verified at source (0 indigo) + build (CSS compiles) level only; need founder login-gated QA on production. **Native APK re-skin un-verified** — web/preview only; APK rebuild + on-device smoke pending (Rule D note). Native status bar/splash still dark `#060814` (capacitor.config) — Bright-tone follow-up queued.
+
+**Files:** 28 changed (+596 / −594). Commit `087608f` on `feat/bright-skin`.
+
+---
+
 ## 2026-05-29 — Session 126.1 — Mockup parity polish (founder visual QA fixes)
 
 **Goal:** Founder reviewed the live parity build (v43) and flagged remaining mismatches on the PostCard + Store Profile mockups ("elements not matching yet").

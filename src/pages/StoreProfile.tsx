@@ -26,10 +26,8 @@ const coverFab: CSSProperties = {
   width: 38,
   height: 38,
   borderRadius: 12,
-  background: 'var(--f-fab-bg)',
-  backdropFilter: 'blur(20px)',
-  WebkitBackdropFilter: 'blur(20px)',
-  border: '1px solid var(--f-glass-border-2)',
+  background: 'rgba(255,255,255,0.18)',
+  border: '1px solid rgba(255,255,255,0.35)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -273,7 +271,7 @@ export default function StoreProfilePage() {
               style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px) brightness(0.4)', transform: 'scale(1.15)' }}
             />
           ) : (
-            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF2A8C 0%, #6B33FF 55%, #00E5FF 100%)' }} />
+            <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
           )}
 
           {/* Glow + fade-to-deep overlay */}
@@ -297,7 +295,7 @@ export default function StoreProfilePage() {
                   added live NotificationBell (drawer + unread dot) in a dark
                   glass FAB tile — reachable from any store profile now. */}
               <div style={coverFab}>
-                <NotificationBell />
+                <NotificationBell color="#fff" />
               </div>
               {/* Session 126: mockup shows a gear top-right. Owner viewing their
                   own store → gear links to /settings. Visitors keep Share (more

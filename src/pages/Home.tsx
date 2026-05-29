@@ -286,61 +286,60 @@ export default function HomePage() {
     >
       <div className="max-w-md mx-auto">
 
-        {/* ── Sticky top block (Header + Location) ── */}
+        {/* ── Sticky top block (gradient Header + Location) ── */}
         <div
           ref={topBarRef}
           className="sticky top-0 z-30"
-          style={{
-            background: 'var(--f-sticky-bg)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-          }}
         >
+          {/* Gradient header — orange→magenta, fills the safe-area notch */}
           <div
             style={{
-              padding: '14px 16px 12px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              background: 'var(--b-grad)',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <FLogo size={36} />
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span
-                  style={{
-                    fontSize: 17,
-                    fontWeight: 800,
-                    color: 'var(--f-text-1)',
-                    letterSpacing: '-0.02em',
-                    lineHeight: 1.15,
-                  }}
-                >
-                  Dukanchi
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--f-text-3)', lineHeight: 1.15 }}>
-                  apna bazaar, apni dukaan
-                </span>
-              </div>
-            </div>
-            {/* Session 118: dead decorative bell → live NotificationBell
-                (unread badge + drawer via NotificationContext) in a 44×44
-                glass tile per README §Home header. */}
             <div
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: 14,
-                background: 'var(--f-glass-bg-2)',
-                border: '1px solid var(--f-glass-border)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                padding: '0 16px 14px',
                 display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
-                justifyContent: 'center',
               }}
             >
-              <NotificationBell />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <FLogo size={40} />
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: '#fff',
+                      letterSpacing: '-0.02em',
+                      lineHeight: 1.1,
+                    }}
+                  >
+                    Dukanchi
+                  </span>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.1 }}>
+                    apna bazaar, apni dukaan
+                  </span>
+                </div>
+              </div>
+              {/* Live NotificationBell (unread badge + drawer) — white-on-gradient tile */}
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 14,
+                  background: 'rgba(255,255,255,0.18)',
+                  border: '1px solid rgba(255,255,255,0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <NotificationBell color="#fff" />
+              </div>
             </div>
           </div>
           <FLocationStrip
@@ -355,13 +354,11 @@ export default function HomePage() {
             <div
               style={{
                 position: 'relative',
-                borderRadius: 22,
+                borderRadius: 18,
                 overflow: 'hidden',
                 aspectRatio: '2.2 / 1',
                 background: 'var(--f-bg-elev)',
-                border: '1px solid rgba(255,42,140,0.30)',
-                boxShadow:
-                  '0 0 32px rgba(255,42,140,0.22), inset 0 1px 0 rgba(255,255,255,0.15)',
+                boxShadow: '0 6px 18px rgba(255,42,140,0.20)',
               }}
             >
               <div
@@ -447,7 +444,7 @@ export default function HomePage() {
             borderBottom: '1px solid var(--f-glass-border)',
           }}
         >
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', padding: 4, borderRadius: 9999, gap: 2, background: 'var(--f-bg-elev-2)' }}>
             {tabs.map(tab => {
               const active = feedType === tab.key;
               return (
@@ -455,18 +452,16 @@ export default function HomePage() {
                   key={tab.key}
                   onClick={() => setFeedType(tab.key)}
                   style={{
-                    padding: '8px 18px',
+                    padding: '8px 16px',
                     borderRadius: 9999,
                     fontSize: 12,
                     fontWeight: 700,
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    background: active ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
-                    color: active ? 'white' : 'var(--f-text-2)',
-                    border: active
-                      ? '1px solid rgba(255,42,140,0.55)'
-                      : '1px solid var(--f-glass-border)',
-                    boxShadow: active ? '0 0 14px rgba(255,42,140,0.40)' : 'none',
+                    border: 'none',
+                    background: active ? 'var(--f-grad-primary)' : 'transparent',
+                    color: active ? '#fff' : 'var(--f-text-2)',
+                    boxShadow: active ? '0 2px 8px rgba(255,42,140,0.30)' : 'none',
                   }}
                 >
                   {tab.label}
@@ -503,9 +498,7 @@ export default function HomePage() {
                   zIndex: 30,
                   background: 'var(--f-modal-bg)',
                   border: '1px solid var(--f-glass-border-2)',
-                  backdropFilter: 'blur(28px)',
-                  WebkitBackdropFilter: 'blur(28px)',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                  boxShadow: '0 12px 32px rgba(24,16,8,0.14)',
                 }}
               >
                 <div
@@ -543,7 +536,7 @@ export default function HomePage() {
                   >
                     {opt.label}
                     {locationRange === opt.key && (
-                      <Check size={14} color="#FF6BB4" />
+                      <Check size={14} color="#D11F75" />
                     )}
                   </button>
                 ))}

@@ -98,7 +98,7 @@ export default function ReviewModal({ isOpen, onClose, targetId, targetType, tar
               onChange={(e) => setComment(e.target.value)}
               placeholder={`Share the details of your experience with ${targetName}...`}
               rows={4}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none resize-none text-sm"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent transition-all outline-none resize-none text-sm"
             />
           </div>
 
@@ -107,7 +107,7 @@ export default function ReviewModal({ isOpen, onClose, targetId, targetType, tar
           <button
             type="submit"
             disabled={isSubmitting || rating === 0}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center space-x-2"
+            className="w-full py-3 bg-[#D11F75] hover:bg-[#B01A63] text-white font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center space-x-2"
           >
             {isSubmitting ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

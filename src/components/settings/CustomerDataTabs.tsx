@@ -42,7 +42,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
             {followedStores.map(s => (
               <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center space-x-3">
                 <Link to={`/store/${s.id}`} className="flex items-center space-x-3 flex-1 min-w-0">
-                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex-shrink-0 flex items-center justify-center text-indigo-600 font-bold">{s.storeName?.charAt(0)}</div>
+                  <div className="w-10 h-10 bg-[#FFE7D9] rounded-full flex-shrink-0 flex items-center justify-center text-[#D11F75] font-bold">{s.storeName?.charAt(0)}</div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm text-gray-900">{s.storeName}</h3>
                     <p className="text-xs text-gray-500">{s.category}</p>
@@ -60,7 +60,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
         ) : (
           <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 text-gray-500">
             <Store className="mx-auto h-10 w-10 text-gray-300 mb-2" /><p className="text-sm">You aren't following any stores yet.</p>
-            <Link to="/search" className="text-indigo-600 font-medium text-sm mt-2 inline-block">Discover local businesses</Link>
+            <Link to="/search" className="text-[#D11F75] font-medium text-sm mt-2 inline-block">Discover local businesses</Link>
           </div>
         )
       )}
@@ -84,7 +84,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
         ) : (
           <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 text-gray-500">
             <Bookmark className="mx-auto h-10 w-10 text-gray-300 mb-2" /><p className="text-sm">No saved posts yet.</p>
-            <Link to="/" className="text-indigo-600 font-medium text-sm mt-2 inline-block">Browse feed</Link>
+            <Link to="/" className="text-[#D11F75] font-medium text-sm mt-2 inline-block">Browse feed</Link>
           </div>
         )
       )}
@@ -94,7 +94,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
           <div className="space-y-2">
             {savedLocations.map(loc => (
               <div key={loc.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 flex items-center space-x-3">
-                <MapPin size={18} className="text-indigo-500 flex-shrink-0" />
+                <MapPin size={18} className="text-[#D11F75] flex-shrink-0" />
                 <div><h3 className="font-semibold text-sm text-gray-900">{loc.locationName}</h3><p className="text-xs text-gray-400">{loc.latitude.toFixed(4)}, {loc.longitude.toFixed(4)}</p></div>
               </div>
             ))}
@@ -102,7 +102,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
         ) : (
           <div className="text-center py-10 bg-white rounded-2xl border border-gray-100 text-gray-500">
             <MapPin className="mx-auto h-10 w-10 text-gray-300 mb-2" /><p className="text-sm">No saved locations.</p>
-            <Link to="/map" className="text-indigo-600 font-medium text-sm mt-2 inline-block">Explore map</Link>
+            <Link to="/map" className="text-[#D11F75] font-medium text-sm mt-2 inline-block">Explore map</Link>
           </div>
         )
       )}

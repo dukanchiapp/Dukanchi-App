@@ -38,19 +38,19 @@ export const ManageTeamTab = React.memo(function ManageTeamTab({
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center space-x-3">
-        <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-sm">{ownerName?.charAt(0) || 'O'}</div>
+        <div className="w-10 h-10 bg-[#D11F75] rounded-full flex items-center justify-center text-white font-bold text-sm">{ownerName?.charAt(0) || 'O'}</div>
         <div className="flex-1">
           <h3 className="font-semibold text-sm text-gray-900">{ownerName}</h3>
           <p className="text-xs text-gray-500">{ownerEmail}</p>
         </div>
-        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-bold">Owner</span>
+        <span className="text-[10px] bg-[#FFE7D9] text-[#D11F75] px-2 py-0.5 rounded-full font-bold">Owner</span>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">Team Members ({teamMembers.length}/{3})</h3>
           {teamMembers.length < 3 ? (
-            <button onClick={onToggleAddForm} className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-lg flex items-center hover:bg-indigo-100 transition-colors">
+            <button onClick={onToggleAddForm} className="text-xs font-semibold text-[#D11F75] bg-[#FFF3EC] px-3 py-1.5 rounded-lg flex items-center hover:bg-[#FFE7D9] transition-colors">
               <Plus size={14} className="mr-1" /> Add Member
             </button>
           ) : (
@@ -103,7 +103,7 @@ export const ManageTeamTab = React.memo(function ManageTeamTab({
                 <input
                   type="text" required value={newMemberName}
                   onChange={e => onFieldChange('newMemberName', e.target.value)}
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#D11F75] focus:ring-2 focus:ring-[#FFD9C2] transition-all"
                   placeholder="e.g. Rahul"
                 />
               </div>
@@ -114,7 +114,7 @@ export const ManageTeamTab = React.memo(function ManageTeamTab({
                   <input
                     type="tel" required value={newMemberPhone}
                     onChange={e => onFieldChange('newMemberPhone', e.target.value)}
-                    className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#D11F75] focus:ring-2 focus:ring-[#FFD9C2] transition-all"
                     placeholder="+91 XXXXX XXXXX"
                   />
                 </div>
@@ -126,7 +126,7 @@ export const ManageTeamTab = React.memo(function ManageTeamTab({
                   <input
                     type="password" required minLength={4} value={newMemberPassword}
                     onChange={e => onFieldChange('newMemberPassword', e.target.value)}
-                    className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#D11F75] focus:ring-2 focus:ring-[#FFD9C2] transition-all"
                     placeholder="Minimum 4 characters"
                   />
                 </div>
@@ -134,7 +134,7 @@ export const ManageTeamTab = React.memo(function ManageTeamTab({
               {teamError && <p className="text-xs text-red-500">{teamError}</p>}
               <div className="flex space-x-3 pt-2">
                 <button type="button" onClick={onToggleAddForm} className="flex-1 py-2.5 rounded-xl font-medium text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors">Cancel</button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl font-medium text-sm text-white bg-indigo-600 hover:bg-indigo-700 transition-colors">Add Member</button>
+                <button type="submit" className="flex-1 py-2.5 rounded-xl font-medium text-sm text-white bg-[#D11F75] hover:bg-[#B01A63] transition-colors">Add Member</button>
               </div>
             </form>
           </div>

@@ -38,7 +38,7 @@ export function IsoMap({
         perspective: 1400,
         perspectiveOrigin: '50% 30%',
         background:
-          'radial-gradient(ellipse at 50% 65%, rgba(255,42,140,0.18) 0%, transparent 55%), radial-gradient(ellipse at 30% 30%, rgba(0,229,255,0.10) 0%, transparent 50%)',
+          'radial-gradient(ellipse at 50% 65%, rgba(255,42,140,0.16) 0%, transparent 55%), radial-gradient(ellipse at 30% 30%, rgba(255,107,53,0.14) 0%, transparent 50%), linear-gradient(160deg, #FFF7F0 0%, #FFEEE5 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -60,7 +60,7 @@ export function IsoMap({
             top: '-20%',
             bottom: '-20%',
             backgroundImage:
-              'linear-gradient(rgba(0,229,255,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.18) 1px, transparent 1px)',
+              'linear-gradient(rgba(255,107,53,0.20) 1px, transparent 1px), linear-gradient(90deg, rgba(255,107,53,0.20) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
             maskImage:
               'radial-gradient(ellipse at center, black 35%, transparent 70%)',
@@ -127,7 +127,7 @@ export function IsoMap({
               position: 'absolute',
               inset: -16,
               borderRadius: '50%',
-              border: '1.5px solid white',
+              border: '1.5px solid #FF2A8C',
               animation: 'f-pulse-ring 2.4s ease-out infinite',
             }}
           />
@@ -136,7 +136,7 @@ export function IsoMap({
               position: 'absolute',
               inset: -8,
               borderRadius: '50%',
-              border: '1.5px solid white',
+              border: '1.5px solid #FF2A8C',
               animation: 'f-pulse-ring 2.4s ease-out infinite',
               animationDelay: '0.8s',
             }}
@@ -146,8 +146,8 @@ export function IsoMap({
               position: 'absolute',
               inset: 0,
               borderRadius: '50%',
-              background: 'white',
-              boxShadow: '0 0 30px white, 0 0 60px #FF2A8C',
+              background: '#FF2A8C',
+              boxShadow: '0 0 16px rgba(255,42,140,0.7), 0 0 36px rgba(255,42,140,0.4)',
             }}
           />
         </div>

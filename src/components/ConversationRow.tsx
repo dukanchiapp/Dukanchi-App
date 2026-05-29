@@ -114,7 +114,7 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
             {store.category && (
               <>
                 <span style={{ color: 'var(--f-text-4)', flexShrink: 0 }}>·</span>
-                <span style={{ color: '#FF6BB4', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ color: '#D11F75', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {store.category}
                 </span>
               </>

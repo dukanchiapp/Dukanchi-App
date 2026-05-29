@@ -1,68 +1,95 @@
 /* ─────────────────────────────────────────────────────────────
-   Dukanchi · Futuristic Direction · Design Tokens
-   Spatial / Vision-OS glass · Orange→Magenta gradient
+   Dukanchi · Bright Skin · Design Tokens
+   Warm, colorful, light system anchored on the orange→magenta
+   gradient. (Visual re-skin of the former "futuristic" dark skin —
+   the --f-* variable NAMES are preserved and remapped to bright
+   values so the whole app re-skins from this one file. New screens
+   should prefer the --b-* tokens + .b-* classes below.)
    ───────────────────────────────────────────────────────────── */
 
 :root {
-  /* Deep-space surfaces */
-  --f-bg-deep:        #060814;
-  --f-bg-elev:        #0E1224;
-  --f-bg-elev-2:      #161B2E;
+  /* ── Bright design-system tokens (canonical) ── */
+  --b-grad:      linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
+  --b-grad-warm: linear-gradient(135deg, #FFB020 0%, #FF6B35 45%, #FF2A8C 100%);
+  --b-orange:      #FF6B35;
+  --b-orange-light:#FFA94D;
+  --b-magenta:     #FF2A8C;
+  --b-magenta-ink: #D11F75;
+  --b-violet:      #7C3AED;
+  --b-cyan:        #0EA5C4;
+  --b-green:       #0C831F;
+  --b-amber:       #F0B429;
+  --b-orange-st:   #FB7A1E;
+  --b-red:         #E53935;
+  --b-ink:    #1C1A18;
+  --b-gray-1: #3A3633;
+  --b-gray-2: #7E7873;
+  --b-gray-3: #A8A29C;
+  --b-line:    #F0EAE2;
+  --b-bg:      #FFFFFF;
+  --b-surface: #FFF7F0;
+  --b-tint:    #FFEEE5;
+  /* status capsule backgrounds */
+  --b-green-bg:  #E8F5E9;
+  --b-amber-bg:  #FEF6E0;
+  --b-orange-bg: #FFF0E2;
+  --b-red-bg:    #FDECEA;
 
-  /* Glass — universal frosted surface system */
-  --f-glass-bg:       rgba(255, 255, 255, 0.05);
-  --f-glass-bg-2:     rgba(255, 255, 255, 0.09);
-  --f-glass-bg-3:     rgba(255, 255, 255, 0.14);
-  --f-glass-border:   rgba(255, 255, 255, 0.14);
-  --f-glass-border-2: rgba(255, 255, 255, 0.22);
-  --f-glass-shine:    rgba(255, 255, 255, 0.40);
-  --f-glass-shadow:   0 12px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  /* ─── Surfaces (remapped: dark space → warm light) ─── */
+  --f-bg-deep:        #FFF7F0;   /* app surface — warm cream */
+  --f-bg-elev:        #FFFFFF;   /* card */
+  --f-bg-elev-2:      #FFF7F0;   /* nested surface */
 
-  /* Brand colors — orange anchored, magenta neon accent, cyan signal */
+  /* Glass primitives → solid warm white cards (no dark, no neon) */
+  --f-glass-bg:       #FFFFFF;
+  --f-glass-bg-2:     #FFFFFF;
+  --f-glass-bg-3:     #FFF7F0;
+  --f-glass-border:   #F0EAE2;
+  --f-glass-border-2: #E7DFD4;
+  --f-glass-shine:    rgba(255, 255, 255, 0.92);
+  --f-glass-shadow:   0 2px 12px rgba(24, 16, 8, 0.06);
+
+  /* Brand — orange anchored, magenta companion */
   --f-orange:         #FF6B35;
   --f-orange-light:   #FFA94D;
   --f-magenta:        #FF2A8C;
   --f-magenta-light:  #FF6BB4;
-  --f-cyan:           #00E5FF;
-  --f-violet:         #6B33FF;
-  --f-acid:           #B6FF3D;
-  --f-success:        #2EE7A1;
-  --f-danger:         #FF4D6A;
+  --f-cyan:           #0EA5C4;
+  --f-violet:         #7C3AED;
+  --f-acid:           #7C3AED;
+  --f-success:        #0C831F;
+  --f-danger:         #E53935;
 
-  /* Gradients — these ARE the brand under this direction */
-  --f-grad-primary:   linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
-  --f-grad-primary-soft: linear-gradient(135deg, rgba(255,107,53,0.20), rgba(255,42,140,0.20));
-  --f-grad-accent:    linear-gradient(135deg, #FF2A8C 0%, #6B33FF 100%);
-  --f-grad-signal:    linear-gradient(135deg, #00E5FF 0%, #6B33FF 100%);
-  --f-grad-aurora:    radial-gradient(circle at 20% 20%, rgba(255,107,53,0.35) 0%, transparent 50%),
-                      radial-gradient(circle at 80% 0%, rgba(255,42,140,0.30) 0%, transparent 45%),
-                      radial-gradient(circle at 50% 100%, rgba(0,229,255,0.18) 0%, transparent 55%);
+  /* Gradients — the brand signature */
+  --f-grad-primary:      linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
+  --f-grad-primary-soft: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(255,42,140,0.12));
+  --f-grad-accent:       linear-gradient(135deg, #FF2A8C 0%, #7C3AED 100%);
+  --f-grad-signal:       linear-gradient(135deg, #0EA5C4 0%, #7C3AED 100%);
+  --f-grad-aurora:       none;
 
-  /* Glow / aura — applied as box-shadow */
-  --f-glow-orange:    0 0 0 1px rgba(255,107,53,0.35), 0 0 30px rgba(255,107,53,0.45), 0 0 80px rgba(255,107,53,0.25);
-  --f-glow-magenta:   0 0 0 1px rgba(255,42,140,0.35), 0 0 30px rgba(255,42,140,0.55), 0 0 80px rgba(255,42,140,0.30);
-  --f-glow-cyan:      0 0 30px rgba(0,229,255,0.50), 0 0 80px rgba(0,229,255,0.25);
+  /* "Glow" → soft warm brand shadows (no neon ring) */
+  --f-glow-orange:    0 3px 12px rgba(255, 107, 53, 0.28);
+  --f-glow-magenta:   0 3px 12px rgba(255, 42, 140, 0.30);
+  --f-glow-cyan:      0 3px 12px rgba(14, 165, 196, 0.22);
 
-  /* Text */
-  --f-text-1:         #F4F2EB;
-  --f-text-2:         rgba(244, 242, 235, 0.72);
-  --f-text-3:         rgba(244, 242, 235, 0.48);
-  --f-text-4:         rgba(244, 242, 235, 0.28);
+  /* Text — warm-tinted ink (never cold grey) */
+  --f-text-1:         #1C1A18;
+  --f-text-2:         #3A3633;
+  --f-text-3:         #7E7873;
+  --f-text-4:         #A8A29C;
 
-  /* Status (Session 115 — Futuristic v3 bundle).
-     Live store status — used across Home / Messages / Chat header / Map /
-     Profile. Driven by getLiveStatus() — see src/lib/liveStatus.ts. */
-  --f-status-open:    #1FA365;  /* Open — green */
-  --f-status-yellow:  #F59E0B;  /* Closes in 31–60 min — amber */
-  --f-status-orange:  #FF8A4D;  /* Closes in 16–30 min — orange */
-  --f-status-red:     #FF4D6A;  /* Closes in ≤15 min OR any "Closed*" — red */
+  /* Live store status — 4 tiers (getLiveStatus() — src/lib/liveStatus.ts) */
+  --f-status-open:    #0C831F;  /* Open — green */
+  --f-status-yellow:  #F0B429;  /* Closes in 31–60 min — amber */
+  --f-status-orange:  #FB7A1E;  /* Closes in 16–30 min — orange */
+  --f-status-red:     #E53935;  /* Closes in ≤15 min OR any "Closed*" — red */
 
   /* Radii */
   --f-r-sm:           10px;
-  --f-r-md:           14px;
-  --f-r-lg:           20px;
-  --f-r-xl:           28px;
-  --f-r-2xl:          36px;
+  --f-r-md:           12px;
+  --f-r-lg:           18px;
+  --f-r-xl:           22px;
+  --f-r-2xl:          28px;
   --f-r-pill:         9999px;
 
   /* Type */
@@ -74,133 +101,66 @@
   --f-ease:           cubic-bezier(0.16, 1, 0.3, 1);
   --f-ease-out:       cubic-bezier(0.22, 1, 0.36, 1);
   --f-ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --b-ease:           cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* ─── Spacing scale (4-base) — Session 115 — use these, not ad-hoc px ─── */
-  --f-s-1:  4px;
-  --f-s-2:  8px;
-  --f-s-3:  12px;
-  --f-s-4:  16px;
-  --f-s-5:  20px;
-  --f-s-6:  24px;
-  --f-s-8:  32px;
-  --f-s-10: 40px;
-  --f-s-12: 48px;
+  /* ─── Spacing scale (4-base) ─── */
+  --f-s-1:  4px;  --f-s-2:  8px;  --f-s-3:  12px; --f-s-4:  16px;
+  --f-s-5:  20px; --f-s-6:  24px; --f-s-8:  32px; --f-s-10: 40px; --f-s-12: 48px;
 
-  /* ─── Type scale (semantic) — Session 115 ─── */
-  --f-t-display: 28px;   /* Big page titles: "Messages", "Dolphin hotel" */
-  --f-t-title:   22px;   /* Section heroes */
-  --f-t-h1:      18px;   /* In-page H1 */
-  --f-t-h2:      15px;   /* Card titles, post-card store name */
-  --f-t-body:    14px;   /* Default body */
-  --f-t-sm:      13px;   /* Secondary body, action labels */
-  --f-t-xs:      12px;   /* Captions, helper, tab labels */
-  --f-t-meta:    11px;   /* Meta strip text, status dots */
-  --f-t-micro:   10px;   /* Eyebrows uppercase, mono timestamps */
+  /* ─── Type scale (semantic) ─── */
+  --f-t-display: 28px; --f-t-title: 22px; --f-t-h1: 18px; --f-t-h2: 15px;
+  --f-t-body: 14px; --f-t-sm: 13px; --f-t-xs: 12px; --f-t-meta: 11px; --f-t-micro: 10px;
 
-  /* ─── Letter-spacing scale — Session 115 ─── */
-  --f-ls-tight:    -0.02em;
-  --f-ls-snug:     -0.01em;
-  --f-ls-normal:   0;
-  --f-ls-eyebrow:  0.08em;
+  /* ─── Letter-spacing / line-height ─── */
+  --f-ls-tight: -0.02em; --f-ls-snug: -0.01em; --f-ls-normal: 0; --f-ls-eyebrow: 0.08em;
+  --f-lh-tight: 1.15; --f-lh-snug: 1.3; --f-lh-body: 1.5; --f-lh-loose: 1.6;
 
-  /* ─── Line-height scale — Session 115 ─── */
-  --f-lh-tight:   1.15;
-  --f-lh-snug:    1.3;
-  --f-lh-body:    1.5;
-  --f-lh-loose:   1.6;
-
-  /* Theme-routed surface tones — common reusable values */
-  --f-sticky-bg:      rgba(8, 8, 18, 0.65);
-  --f-page-bg:        radial-gradient(ellipse 60% 50% at 18% 22%, rgba(255,107,53,0.20) 0%, transparent 60%),
-                      radial-gradient(ellipse 45% 40% at 82% 12%, rgba(255,42,140,0.22) 0%, transparent 60%),
-                      radial-gradient(ellipse 70% 60% at 50% 95%, rgba(0,229,255,0.10) 0%, transparent 65%);
-  --f-loc-bg:         rgba(255, 107, 53, 0.10);
-  --f-loc-border:     rgba(255, 107, 53, 0.18);
-  --f-bottom-nav-bg:  rgba(15, 15, 30, 0.70);
-  --f-modal-bg:       rgba(15, 15, 30, 0.85);
-  --f-fab-bg:         rgba(15, 15, 30, 0.78);
-  --f-shell-edge:     #1a1a1a;
-  --f-status-bar-color: white;
-}
-
-/* ─── Light theme — flip the dark surfaces, keep brand neon ─── */
-[data-theme="light"] {
-  --f-bg-deep:        #FFF6E8;
-  --f-bg-elev:        #FFFFFF;
-  --f-bg-elev-2:      #FFFCF6;
-  --f-glass-bg:       rgba(255, 255, 255, 0.55);
-  --f-glass-bg-2:     rgba(255, 255, 255, 0.78);
-  --f-glass-bg-3:     rgba(255, 255, 255, 0.92);
-  --f-glass-border:   rgba(45, 25, 15, 0.10);
-  --f-glass-border-2: rgba(45, 25, 15, 0.18);
-  --f-glass-shine:    rgba(255, 255, 255, 0.95);
-  --f-glass-shadow:   0 12px 40px rgba(255,107,53,0.12), inset 0 1px 0 rgba(255, 255, 255, 0.85);
-  --f-text-1:         #1A0F0A;
-  --f-text-2:         rgba(26, 15, 10, 0.72);
-  --f-text-3:         rgba(26, 15, 10, 0.50);
-  --f-text-4:         rgba(26, 15, 10, 0.32);
-  --f-sticky-bg:      rgba(255, 246, 232, 0.78);
-  --f-page-bg:        radial-gradient(ellipse 60% 50% at 18% 22%, rgba(255,107,53,0.30) 0%, transparent 60%),
-                      radial-gradient(ellipse 45% 40% at 82% 12%, rgba(255,42,140,0.22) 0%, transparent 60%),
-                      radial-gradient(ellipse 70% 60% at 50% 95%, rgba(255,212,150,0.40) 0%, transparent 65%);
-  --f-loc-bg:         rgba(255, 107, 53, 0.14);
-  --f-loc-border:     rgba(255, 107, 53, 0.28);
-  --f-bottom-nav-bg:  rgba(255, 255, 255, 0.78);
-  --f-modal-bg:       rgba(255, 252, 246, 0.92);
-  --f-fab-bg:         rgba(255, 255, 255, 0.85);
+  /* Theme-routed surface tones (remapped to bright) */
+  --f-sticky-bg:      rgba(255, 247, 240, 0.82);
+  --f-page-bg:        none;
+  --f-loc-bg:         #FFEEE5;
+  --f-loc-border:     #FFE0D4;
+  --f-bottom-nav-bg:  rgba(255, 255, 255, 0.94);
+  --f-modal-bg:       #FFFFFF;
+  --f-fab-bg:         #FFFFFF;
   --f-shell-edge:     #E8D5C0;
-  --f-status-bar-color: #1A0F0A;
+  --f-status-bar-color: #FFFFFF;
 }
 
-/* ─── Universal glass primitives ─── */
+/* ─── Universal card primitives (formerly "glass") ─── */
 
 .f-glass {
   background: var(--f-glass-bg);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--f-glass-border);
   border-radius: var(--f-r-lg);
   box-shadow: var(--f-glass-shadow);
 }
 
 .f-glass-strong {
-  background: var(--f-glass-bg-2);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  background: var(--f-glass-bg);
   border: 1px solid var(--f-glass-border-2);
   border-radius: var(--f-r-lg);
-  box-shadow: var(--f-glass-shadow);
+  box-shadow: 0 2px 16px rgba(24, 16, 8, 0.08);
 }
 
-/* Top hairline shine — gives glass the Vision-OS edge */
-.f-glass-edge {
-  position: relative;
-}
+/* Top hairline — faint warm brand accent (replaces the dark-glass shine) */
+.f-glass-edge { position: relative; }
 .f-glass-edge::before {
   content: "";
   position: absolute;
   top: 0; left: 12%; right: 12%; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--f-glass-shine), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,107,53,0.25), transparent);
   pointer-events: none;
   border-radius: inherit;
 }
 
-/* Background aurora — wrap pages in this */
+/* Page background — flat warm cream (aurora retired) */
 .f-bg-aurora {
   position: relative;
   background: var(--f-bg-deep);
   overflow: hidden;
 }
-.f-bg-aurora::before {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background: var(--f-grad-aurora);
-  filter: blur(60px);
-  z-index: 0;
-  pointer-events: none;
-  animation: f-aurora-drift 24s ease-in-out infinite;
-}
+.f-bg-aurora::before { content: none; }
 .f-bg-aurora > * { position: relative; z-index: 1; }
 
 @keyframes f-aurora-drift {
@@ -209,17 +169,8 @@
   66%      { transform: translate(-3%, 2%) rotate(-1.5deg); }
 }
 
-/* Grain overlay — subtle texture so glass doesn't look "clean digital" */
-.f-grain::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 2;
-  opacity: 0.06;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
-}
+/* Grain overlay — off on the bright skin */
+.f-grain::after { content: none; }
 
 /* ─── Buttons ─── */
 
@@ -230,85 +181,136 @@
   border-radius: var(--f-r-pill);
   padding: 14px 24px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
   font-family: var(--f-font);
   cursor: pointer;
-  box-shadow: var(--f-glow-orange);
-  transition: transform 250ms var(--f-ease), box-shadow 250ms var(--f-ease);
+  box-shadow: 0 3px 10px rgba(255, 42, 140, 0.30);
+  transition: transform 0.16s var(--f-ease), box-shadow 0.16s var(--f-ease);
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
 .f-btn-primary:hover { transform: translateY(-1px) scale(1.01); }
-.f-btn-primary:active { transform: scale(0.98); }
+.f-btn-primary:active { transform: scale(0.96); box-shadow: 0 2px 6px rgba(255, 42, 140, 0.25); }
 
 .f-btn-glass {
-  background: var(--f-glass-bg-2);
+  background: #fff;
   color: var(--f-text-1);
-  backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--f-glass-border);
+  border: 1px solid var(--f-glass-border-2);
   border-radius: var(--f-r-pill);
   padding: 12px 20px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--f-font);
   cursor: pointer;
-  transition: all 250ms var(--f-ease);
+  box-shadow: 0 1px 3px rgba(28, 26, 24, 0.05);
+  transition: all 0.16s var(--f-ease);
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
 }
-.f-btn-glass:hover { background: var(--f-glass-bg-3); border-color: var(--f-glass-border-2); }
+.f-btn-glass:hover { background: var(--f-bg-elev-2); border-color: var(--f-orange); }
+.f-btn-glass:active { transform: scale(0.97); }
 
 /* ─── Text utilities ─── */
 
 .f-display {
   font-family: var(--f-font-display);
   font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 0.96;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
 }
 
 .f-grad-text {
-  background: var(--f-grad-primary);
+  background: linear-gradient(135deg, #FF6B35 0%, #D11F75 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
 }
 
-/* Light theme: kill all text glow/shadow halos + neon-y inset rings */
-[data-theme="light"] .f-display,
-[data-theme="light"] h1,
-[data-theme="light"] h2,
-[data-theme="light"] h3,
-[data-theme="light"] span,
-[data-theme="light"] p,
-[data-theme="light"] button {
-  text-shadow: none !important;
-}
-[data-theme="light"] .f-grad-text {
-  background: linear-gradient(135deg, #E0531C 0%, #D11F75 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-}
+/* No text-shadow/glow halos on the bright skin */
+h1, h2, h3, .f-display { text-shadow: none; }
 
 .f-mono { font-family: var(--f-font-mono); letter-spacing: 0; }
 
 .f-eyebrow {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--f-text-2);
-  padding: 6px 12px;
-  border-radius: var(--f-r-pill);
-  background: var(--f-glass-bg);
-  border: 1px solid var(--f-glass-border);
-  backdrop-filter: blur(10px);
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--b-orange);
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 .f-eyebrow::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%;
-  background: var(--f-orange);
-  box-shadow: 0 0 12px var(--f-orange);
+  background: var(--b-orange);
 }
 
-/* ─── Animations ─── */
+/* ════════════════════════════════════════════════════════════
+   Bright component layer — .b-* classes (from the design bundle)
+   Use these directly on new/refined screens.
+   ════════════════════════════════════════════════════════════ */
+
+.b-section { padding: 18px 16px 4px; }
+.b-shead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+.b-shead h2 {
+  font-size: 16px; font-weight: 800; letter-spacing: -0.02em;
+  background: var(--b-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.b-shead .see { font-size: 12px; font-weight: 700; color: var(--b-magenta-ink); }
+.b-eyebrow { font-size: 11px; font-weight: 800; color: var(--b-orange); text-transform: uppercase; letter-spacing: 1px; }
+
+/* status pills */
+.b-pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 4px; }
+.b-pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.b-pill.open   { color: var(--b-green);     background: var(--b-green-bg); }
+.b-pill.soon   { color: var(--b-amber);     background: var(--b-amber-bg); }
+.b-pill.orange { color: var(--b-orange-st); background: var(--b-orange-bg); }
+.b-pill.closed { color: var(--b-red);       background: var(--b-red-bg); }
+
+/* rating chip */
+.b-rating { background: var(--b-green); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; display: inline-flex; align-items: center; gap: 2px; }
+
+/* buttons */
+.b-btn-grad { background: var(--b-grad); border: none; color: #fff; font-weight: 800; font-family: inherit; cursor: pointer; box-shadow: 0 3px 10px rgba(255,42,140,0.30); transition: transform 0.16s var(--b-ease), box-shadow 0.16s var(--b-ease); }
+.b-btn-grad:active { transform: scale(0.95); box-shadow: 0 2px 6px rgba(255,42,140,0.25); }
+.b-btn-out { background: var(--b-tint); border: 1.5px solid var(--b-orange); color: var(--b-orange); font-weight: 800; font-family: inherit; cursor: pointer; transition: transform 0.16s var(--b-ease); }
+.b-btn-out:active { transform: scale(0.95); }
+
+/* ── Claymorphic 3D-style icon tiles ── */
+.b-clay {
+  position: relative; border-radius: 20px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 14px rgba(24,16,8,0.12), inset 0 2px 3px rgba(255,255,255,0.85), inset 0 -3px 5px rgba(0,0,0,0.06);
+  transition: transform 0.2s var(--b-ease), box-shadow 0.2s var(--b-ease);
+}
+.b-clay:active { transform: scale(0.92) translateY(1px); box-shadow: 0 3px 8px rgba(24,16,8,0.14), inset 0 2px 3px rgba(255,255,255,0.7); }
+.b-clay .b-clay-emoji { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.18)); transition: transform 0.2s var(--b-ease); }
+.b-clay:hover .b-clay-emoji { transform: scale(1.12) rotate(-3deg); }
+
+/* ── Smooth animation layer (transform-only — never gates visibility) ── */
+@keyframes b-screen-in { from { transform: translateY(12px); } to { transform: translateY(0); } }
+.b-screen-anim { animation: b-screen-in 0.4s var(--b-ease) both; }
+
+@keyframes b-rise { from { transform: translateY(18px) scale(0.98); } to { transform: translateY(0) scale(1); } }
+.b-stagger > * { animation: b-rise 0.5s var(--b-ease) both; opacity: 1; }
+.b-stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.b-stagger > *:nth-child(2) { animation-delay: 0.12s; }
+.b-stagger > *:nth-child(3) { animation-delay: 0.20s; }
+.b-stagger > *:nth-child(4) { animation-delay: 0.28s; }
+.b-stagger > *:nth-child(5) { animation-delay: 0.36s; }
+.b-stagger > *:nth-child(6) { animation-delay: 0.44s; }
+
+@keyframes b-pop { 0% { transform: scale(0.8); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+.b-pop { animation: b-pop 0.5s var(--b-ease) both; }
+
+.b-tap { transition: transform 0.18s var(--b-ease), box-shadow 0.18s var(--b-ease); cursor: pointer; }
+.b-tap:active { transform: scale(0.94); }
+
+@keyframes b-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.b-float { animation: b-float 3.4s ease-in-out infinite; }
+
+@keyframes b-breathe { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+.b-pill.open::before, .b-pill.soon::before { animation: b-breathe 2.2s ease-in-out infinite; }
+
+/* ─── Legacy animations (kept — transform/opacity only) ─── */
 
 @keyframes f-pulse-ring {
   0%   { transform: scale(0.6); opacity: 0.8; }
@@ -334,4 +336,12 @@
 @keyframes f-tilt-3d {
   0%, 100% { transform: rotateY(-8deg) rotateX(2deg); }
   50%      { transform: rotateY(8deg) rotateX(-2deg); }
+}
+
+/* Respect reduced motion (keep subtle, not fully off) */
+@media (prefers-reduced-motion: reduce) {
+  .b-screen-anim, .b-stagger > *, .b-pop, .b-float {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
