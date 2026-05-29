@@ -6,6 +6,63 @@
 
 ---
 
+## 2026-05-29 — Session 121 — Search + Ask Nearby radar re-skin (screen 6 of re-skin)
+
+**Goal:** Re-skin Search.tsx to Futuristic v3 including the Ask Nearby 3-stage modal, preserving search API + filter/sort + trending + the Ask Nearby broadcast. Sixth step of the Tier 5D re-skin.
+
+**Status:** ✅ **SEARCH + ASK NEARBY LIVE ON v3.** Fly **v38** complete. Already v2-futuristic; closed v3 gaps + wired RadarPulse into the real broadcast flow + fixed dead bell.
+
+| Metric | Value |
+|---|---|
+| PR merged | #96 (squash) |
+| Squash commit | `dc7bb41` |
+| Production HEAD | `947eb13` → **`dc7bb41`** |
+| Fly release | **v38** complete |
+| Files changed | 1 (`src/pages/Search.tsx`, +60/−28) |
+| Tests | **133/133** |
+
+### 🔎 Recon: already v2-futuristic (970 LOC)
+
+Dark `--f-bg-deep` + `--f-page-bg` wrapper, sticky glass header, glass search input + filter button, autocomplete suggestions, "did you mean" correction, filter panel (category + sort), trending chips, category grid, recent searches, results list, no-results, Ask Nearby CTA + bottom-sheet modal. All dark, all wiring intact.
+
+### Changes
+
+**1. Dead bell → live NotificationBell.** Header bell was a static decorative FIcon (no onClick/drawer) — same class as Home's. Now `<NotificationBell/>` (drawer + unread dot) in a 44×44 glass tile.
+
+**2. RadarPulse wired into the REAL broadcast (not a fake timer).** The Ask Nearby modal went compose → success with only a button-label loading state (no radar). Added a **"Broadcasting…" stage** that renders `<RadarPulse size={220} shopCount={12}>` **while `askSending` is true** — i.e. for the ACTUAL in-flight `/api/ask-nearby/send` duration, then flips to success on `askResult`. The prototype used a fake 3.2s `setTimeout`; this version ties the radar to the real network call (honest loading visual). Branch order: `askSending ? radar : askResult ? success : compose` (askGeocodingArea keeps compose visible with its label).
+
+**3. Category grid → v3.** Each tile now has an inner 40×40 colored icon tile (`cat.color + '22'` 13%-alpha bg) holding the emoji + hover translateY(-2px). Uses `cat.color` from `constants/categories`; kept emoji (no per-category lucide mapping in the data).
+
+**4. FIcon → lucide** throughout (Search/X/SlidersHorizontal/ArrowRight/Clock/MapPin/Store/Navigation/ChevronRight/Check). FLogo kept; `getStoreStatus`+`statusColor` kept (results-list store status sort + label).
+
+### PRESERVED VERBATIM (grep-confirmed)
+
+search API (`/api/search/ai` + `/api/search/suggestions` + history GET/POST/DELETE), 300ms debounce, `saveSearch`, category/sort filter (`matchCategory`, `filteredStores` sort by open-status), trending data (`TRENDING` const), `getDistance`, `openDirections`, PostHog `search_performed`, correction banner, autocomplete outside-click close. **Full Ask Nearby flow**: `handleAskSend` (area mode my/custom + nominatim geocoding + radius 1-20), `/api/ask-nearby/send` POST body `{query, radiusKm, latitude, longitude, areaLabel}`, `askResult` `{sentTo, storeNames}`, "Messages mein jaao" nav. Exact Hinglish copy intact.
+
+### NOTE — live Ask Nearby is richer than the prototype
+
+The production flow has **area mode (my-location vs custom + geocoding)** + a **storeNames-notified list** that the prototype's query-only compose lacks. Kept ALL of it — did not dumb down to the prototype. The RadarPulse stage was added on top of the existing richer flow.
+
+### Phase 3 gates
+
+- ✅ typecheck 0 · vitest **133/133** · build green (65 precache) · E2E 2/2
+
+### Phase 4 CI + deploy
+
+- ✅ PR #96 (run 26612956980): `success`
+- ✅ Fly **v38** complete; post-deploy `/health` 200 in 455ms · push handler intact · CSP `report-only` preserved
+
+### E2E coverage gap (explicit)
+
+Search is auth-gated → NOT covered by the public render-smoke E2E. Founder device test required: type query → results + correction, trending chips, category grid, filter panel (category/sort), **Ask Nearby broadcast** (compose → RadarPulse "Broadcasting…" → success → "Messages mein jaao"), my-location vs custom-area geocoding, bell drawer.
+
+### Awaiting
+
+- Founder device test (esp. Ask Nearby broadcast end-to-end)
+- Opus → next: **Map (122)** — L-size (3D ↔ Map toggle, IsoMap, GoogleMap dark style, bottom sheet, FABs)
+
+---
+
 ## 2026-05-29 — Session 120 — Messages + Chat re-skin (paired, screen 5 of re-skin)
 
 **Goal:** Re-skin Messages.tsx + Chat.tsx to Futuristic v3, paired, preserving ALL Socket.IO realtime + send + fetch wiring (chat = core product). Fifth step of the Tier 5D re-skin.
