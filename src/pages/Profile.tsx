@@ -34,10 +34,10 @@ const kycPrimaryBtn: CSSProperties = {
   fontFamily: 'inherit', boxShadow: '0 0 24px rgba(255,107,53,0.40)',
 };
 
+// Translucent-white tile — sits on the gradient header / dark cover, white icon inside.
 const coverFab: CSSProperties = {
-  width: 36, height: 36, borderRadius: 12, background: 'var(--f-fab-bg)',
-  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-  border: '1px solid var(--f-glass-border-2)', display: 'flex', alignItems: 'center',
+  width: 36, height: 36, borderRadius: 12, background: 'rgba(255,255,255,0.18)',
+  border: '1px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center',
   justifyContent: 'center', cursor: 'pointer',
 };
 
@@ -204,18 +204,19 @@ export default function ProfilePage() {
         <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
-          {/* Header */}
+          {/* Gradient header */}
           <div style={{
-            position: 'sticky', top: 0, zIndex: 20, padding: '18px 16px 12px',
-            background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+            position: 'sticky', top: 0, zIndex: 20, padding: '0 16px 12px',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 18px)',
+            background: 'var(--b-grad)',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <h1 className="f-display" style={{ fontSize: 30, color: 'var(--f-text-1)', margin: 0 }}>Profile</h1>
+            <h1 className="f-display" style={{ fontSize: 26, color: '#fff', margin: 0 }}>Profile</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <RefreshButton />
-              <NotificationBell />
+              <NotificationBell color="#fff" />
               <Link to="/settings" style={coverFab} aria-label="Settings">
-                <FIcon name="settings" size={18} color="var(--f-text-1)" />
+                <FIcon name="settings" size={18} color="#fff" />
               </Link>
             </div>
           </div>
@@ -473,7 +474,7 @@ export default function ProfilePage() {
           ) : store.logoUrl ? (
             <img src={store.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.4)', transform: 'scale(1.2)' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #FF2A8C 0%, #6B33FF 55%, #00E5FF 100%)' }} />
+            <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
           )}
           <div style={{
             position: 'absolute', inset: 0,
@@ -482,7 +483,7 @@ export default function ProfilePage() {
               linear-gradient(180deg, rgba(6,8,20,0.15) 0%, rgba(6,8,20,0.55) 60%, var(--f-bg-deep) 100%)`,
           }} />
           <div style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '48px 14px 0', zIndex: 2 }}>
-            <NotificationBell />
+            <NotificationBell color="#fff" />
             <Link to="/settings" state={{ activeTab: 'bulk_upload' }} style={coverFab} aria-label="Settings">
               <FIcon name="settings" size={18} color="white" />
             </Link>

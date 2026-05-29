@@ -3,17 +3,24 @@ import { Home, AlertTriangle } from 'lucide-react';
 
 export default function NotFoundPage() {
   return (
-    <div className="max-w-md mx-auto bg-gray-50 min-h-screen flex items-center justify-center px-6">
+    <div
+      className="max-w-md mx-auto min-h-screen flex items-center justify-center px-6"
+      style={{ background: 'var(--f-bg-deep)', fontFamily: 'var(--f-font)' }}
+    >
       <div className="text-center">
-        <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <AlertTriangle size={36} className="text-indigo-600" />
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
+          style={{ background: 'var(--b-tint)' }}
+        >
+          <AlertTriangle size={36} style={{ color: 'var(--f-orange)' }} />
         </div>
-        <h1 className="text-6xl font-extrabold text-gray-900 mb-2">404</h1>
-        <p className="text-lg text-gray-600 mb-1">Page Not Found</p>
-        <p className="text-sm text-gray-400 mb-8">The page you're looking for doesn't exist or has been moved.</p>
-        <Link 
-          to="/" 
-          className="inline-flex items-center bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-indigo-700 transition-colors shadow-sm"
+        <h1 className="text-6xl font-extrabold mb-2" style={{ color: 'var(--f-text-1)' }}>404</h1>
+        <p className="text-lg mb-1" style={{ color: 'var(--f-text-2)' }}>Page Not Found</p>
+        <p className="text-sm mb-8" style={{ color: 'var(--f-text-3)' }}>The page you're looking for doesn't exist or has been moved.</p>
+        <Link
+          to="/"
+          className="inline-flex items-center px-6 py-3 rounded-xl font-semibold text-sm"
+          style={{ background: 'var(--f-grad-primary)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(255,42,140,0.30)' }}
         >
           <Home size={18} className="mr-2" />
           Go Home

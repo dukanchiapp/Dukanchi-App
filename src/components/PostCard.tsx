@@ -36,10 +36,10 @@ function getImageStyles(naturalRatio: number | undefined): {
   canvasStyle: React.CSSProperties;
   imgStyle: React.CSSProperties;
 } {
-  // Futuristic re-skin: canvas bg #0a0612 (deep plum-black) instead of pure
-  // black. Adaptive aspect-ratio logic preserved — portrait/unknown → 4:5
-  // (contain, no crop), square → 1:1, landscape → natural ratio.
-  const CANVAS_BG = '#0a0612';
+  // Bright skin: warm cream letterbox behind contained portrait photos.
+  // Adaptive aspect-ratio logic preserved — portrait/unknown → 4:5 (contain,
+  // no crop), square → 1:1, landscape → natural ratio.
+  const CANVAS_BG = 'var(--f-bg-elev-2)';
   if (!naturalRatio || naturalRatio < 0.9) {
     return {
       canvasStyle: { aspectRatio: '4/5', background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
@@ -58,17 +58,11 @@ function getImageStyles(naturalRatio: number | undefined): {
   };
 }
 
-/** Gradient verified tick — green→cyan, matches the futuristic palette. */
+/** Verified tick — solid Bright green, matches bright.html. */
 function VerifiedTick({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
-      <defs>
-        <linearGradient id="pc-vtick-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#2EE7A1" />
-          <stop offset="1" stopColor="#00E5FF" />
-        </linearGradient>
-      </defs>
-      <circle cx="6.5" cy="6.5" r="6.5" fill="url(#pc-vtick-grad)" />
+      <circle cx="6.5" cy="6.5" r="6.5" fill="#0C831F" />
       <path d="M3.5 6.5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -225,7 +219,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
             {post.store?.category && (
               <>
                 <span style={{ color: 'var(--f-text-4)', flexShrink: 0 }}>·</span>
-                <span style={{ color: '#FF6BB4', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ color: '#D11F75', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {post.store.category}
                 </span>
               </>
@@ -339,7 +333,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>
               {post.product.productName}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#FF6BB4' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#D11F75' }}>
               ₹{post.product.price?.toLocaleString()}
             </span>
           </div>

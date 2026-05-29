@@ -1,31 +1,40 @@
 @import "tailwindcss";
 
 :root {
-  --dk-bg: #FFFDFA;
-  --dk-bg-warm: #FFF8F0;
-  --dk-bg-soft: #FFF1E6;
-  --dk-surface: #F5EBDC;
-  --dk-border: #F0E6D9;
-  --dk-border-strong: #E0D4BF;
+  /* Bright skin — warm light surfaces (aligned with src/futuristic.css --b-*) */
+  --dk-bg: #FFFFFF;
+  --dk-bg-warm: #FFF7F0;
+  --dk-bg-soft: #FFEEE5;
+  --dk-surface: #FFF7F0;
+  --dk-border: #F0EAE2;
+  --dk-border-strong: #E7DFD4;
   --dk-accent: #FF6B35;
-  --dk-accent-dark: #B85C1F;
-  --dk-accent-text: #7A3810;
-  --dk-text-primary: #1A1A1A;
-  --dk-text-secondary: #555;
-  --dk-text-tertiary: #888;
-  --dk-success: #1D9E75;
-  --dk-success-bg: #E1F5EE;
-  --dk-success-text: #0F6E56;
-  --dk-danger: #FF4444;
+  --dk-accent-dark: #D11F75;
+  --dk-accent-text: #D11F75;
+  --dk-text-primary: #1C1A18;
+  --dk-text-secondary: #3A3633;
+  --dk-text-tertiary: #7E7873;
+  --dk-success: #0C831F;
+  --dk-success-bg: #E8F5E9;
+  --dk-success-text: #0C831F;
+  --dk-danger: #E53935;
   --dk-radius-sm: 10px;
   --dk-radius-md: 12px;
   --dk-radius-lg: 14px;
   --dk-radius-xl: 18px;
 }
 
+html, body {
+  background: #FFF7F0;
+  color: #1C1A18;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .dk-input {
-  background: var(--dk-surface);
-  border: 0.5px solid var(--dk-border);
+  background: #FFFFFF;
+  border: 1px solid var(--dk-border);
   color: var(--dk-text-primary);
 }
 

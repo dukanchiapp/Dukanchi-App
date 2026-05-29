@@ -189,36 +189,33 @@ export default function MapPage() {
     >
       <div className="max-w-md mx-auto">
 
-        {/* ── Header ── */}
+        {/* ── Gradient header ── */}
         <div
-          className="sticky top-0 z-20 px-4 pt-3 pb-3"
+          className="sticky top-0 z-20 px-4 pb-3"
           style={{
-            background: 'var(--f-sticky-bg)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderBottom: '1px solid var(--f-glass-border)',
+            background: 'var(--b-grad)',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <FLogo size={36} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+              <FLogo size={40} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 17, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   Dukanchi
                 </span>
-                <span style={{ fontSize: 10, color: 'var(--f-text-3)', lineHeight: 1.15 }}>apna bazaar, apni dukaan</span>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.1 }}>apna bazaar, apni dukaan</span>
               </div>
             </div>
-            {/* Session 122: dead decorative bell → live NotificationBell (44×44 glass tile). */}
+            {/* Live NotificationBell — white-on-gradient tile */}
             <div
               style={{
-                width: 44, height: 44, borderRadius: 14,
-                background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)',
-                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                width: 42, height: 42, borderRadius: 14,
+                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <NotificationBell />
+              <NotificationBell color="#fff" />
             </div>
           </div>
 
@@ -226,13 +223,13 @@ export default function MapPage() {
           <div
             className="flex items-center gap-2 px-3"
             style={{
-              background: 'var(--f-glass-bg)',
-              border: '1px solid var(--f-glass-border)',
-              borderRadius: 14,
+              background: '#fff',
+              borderRadius: 12,
               height: 44,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
             }}
           >
-            <Search size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+            <Search size={16} color="#A8A8A8" style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search stores near you..."
@@ -248,25 +245,19 @@ export default function MapPage() {
             )}
           </div>
 
-          {/* Category chips */}
+          {/* Category chips — white active / translucent-white inactive on the gradient */}
           <div className="flex gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none', paddingBottom: 2 }}>
             {CATEGORY_CHIPS.map(chip => {
               const active = selectedCategory === chip.value;
-              // Session 126: tint each inactive chip with its category color
-              // (same palette as the map markers + 3D tiles) — matches mockup.
-              // "All" (no value) has no color → falls back to neutral glass.
-              const catColor = CATEGORIES.find(c => c.value === chip.value)?.color;
               return (
                 <button
                   key={chip.value}
                   onClick={() => setSelectedCategory(chip.value)}
-                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold"
+                  className="flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold"
                   style={
                     active
-                      ? { background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', border: '1px solid rgba(255,42,140,0.55)', boxShadow: '0 0 12px rgba(255,42,140,0.30)' }
-                      : catColor
-                        ? { background: `${catColor}22`, color: 'var(--f-text-1)', border: `1px solid ${catColor}66` }
-                        : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
+                      ? { background: '#fff', color: 'var(--b-magenta-ink)', border: 'none' }
+                      : { background: 'rgba(255,255,255,0.22)', color: '#fff', border: 'none' }
                   }
                 >
                   {chip.emoji && <span>{chip.emoji}</span>}
@@ -285,7 +276,7 @@ export default function MapPage() {
               borderRadius: 20,
               height: 380,
               border: '1px solid var(--f-glass-border-2)',
-              boxShadow: '0 0 32px rgba(255,42,140,0.12)',
+              boxShadow: '0 6px 18px rgba(24,16,8,0.08)',
             }}
           >
             {loadError ? (
@@ -384,7 +375,7 @@ export default function MapPage() {
             >
               <span style={{ color: '#FF2A8C', fontSize: 11, textShadow: '0 0 8px #FF2A8C' }}>●</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-1)' }}>
-                <span style={{ color: '#FF6BB4', fontWeight: 800 }}>{validStores.length}</span> stores nearby
+                <span style={{ color: '#D11F75', fontWeight: 800 }}>{validStores.length}</span> stores nearby
               </span>
             </div>
 
@@ -453,7 +444,7 @@ export default function MapPage() {
                   {selectedStore.logoUrl ? (
                     <img src={selectedStore.logoUrl} className="w-full h-full object-cover" alt="logo" loading="lazy" decoding="async" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: '#FF6BB4' }}>
+                    <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: '#D11F75' }}>
                       {selectedStore.storeName?.charAt(0)}
                     </div>
                   )}
@@ -463,7 +454,7 @@ export default function MapPage() {
                     <div className="min-w-0">
                       <p className="font-bold truncate" style={{ fontSize: 15, color: 'var(--f-text-1)' }}>{selectedStore.storeName}</p>
                       {selectedStore.category && (
-                        <p style={{ fontSize: 12, color: '#FF6BB4', fontWeight: 600, marginTop: 1 }}>{selectedStore.category}</p>
+                        <p style={{ fontSize: 12, color: '#D11F75', fontWeight: 600, marginTop: 1 }}>{selectedStore.category}</p>
                       )}
                     </div>
                     <button onClick={() => setSelectedStore(null)}>
@@ -473,7 +464,7 @@ export default function MapPage() {
                   <div className="mt-2 space-y-1">
                     {selectedStoreDistance && (
                       <div className="flex items-center gap-1.5">
-                        <MapPin size={12} color="#FF6BB4" style={{ flexShrink: 0 }} />
+                        <MapPin size={12} color="#D11F75" style={{ flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{selectedStoreDistance} away</span>
                       </div>
                     )}
@@ -561,7 +552,7 @@ export default function MapPage() {
                     style={{ borderBottom: '1px solid var(--f-glass-border)' }}
                   >
                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
-                      Stores near you · <span style={{ color: '#FF6BB4' }}>{validStores.length}</span>
+                      Stores near you · <span style={{ color: '#D11F75' }}>{validStores.length}</span>
                     </p>
                     <ChevronDown size={16} color="var(--f-text-3)" />
                   </button>
@@ -586,9 +577,9 @@ export default function MapPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="font-bold truncate" style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{store.storeName}</p>
-                                  {store.category && <p style={{ fontSize: 11, color: '#FF6BB4', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
+                                  {store.category && <p style={{ fontSize: 11, color: '#D11F75', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
                                   <div className="flex items-center gap-3 mt-1">
-                                    {dist && <div className="flex items-center gap-1"><MapPin size={11} color="#FF6BB4" style={{ flexShrink: 0 }} /><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
+                                    {dist && <div className="flex items-center gap-1"><MapPin size={11} color="#D11F75" style={{ flexShrink: 0 }} /><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
                                     {sStatus && <span style={{ fontSize: 11, fontWeight: 600, color: statusColor(sStatus.color) }}>● {sStatus.label}</span>}
                                   </div>
                                 </div>
@@ -621,7 +612,7 @@ export default function MapPage() {
                 >
                   <button onClick={() => setListExpanded(true)} className="w-full flex items-center justify-between py-3 px-4" style={{ borderBottom: '1px solid var(--f-glass-border)' }}>
                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
-                      Stores near you · <span style={{ color: '#FF6BB4' }}>{validStores.length}</span>
+                      Stores near you · <span style={{ color: '#D11F75' }}>{validStores.length}</span>
                     </p>
                     <span style={{ fontSize: 11, color: 'var(--f-text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <ArrowUp size={10} color="var(--f-text-3)" /> Swipe up

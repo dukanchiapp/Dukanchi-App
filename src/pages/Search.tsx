@@ -295,60 +295,55 @@ export default function SearchPage() {
       }}
     >
       <div className="max-w-md mx-auto">
-        {/* Sticky header */}
+        {/* Sticky gradient header */}
         <div
           className="sticky top-0 z-20"
           style={{
-            background: 'var(--f-sticky-bg)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderBottom: '1px solid var(--f-glass-border)',
+            background: 'var(--b-grad)',
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
           }}
         >
           <div
             style={{
-              padding: '14px 16px 12px',
+              padding: '0 16px 14px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <FLogo size={36} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+              <FLogo size={40} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span
                   style={{
-                    fontSize: 17,
+                    fontSize: 18,
                     fontWeight: 800,
-                    color: 'var(--f-text-1)',
+                    color: '#fff',
                     letterSpacing: '-0.02em',
-                    lineHeight: 1.15,
+                    lineHeight: 1.1,
                   }}
                 >
                   Dukanchi
                 </span>
-                <span style={{ fontSize: 10, color: 'var(--f-text-3)', lineHeight: 1.15 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.1 }}>
                   apna bazaar, apni dukaan
                 </span>
               </div>
             </div>
-            {/* Session 121: dead decorative bell → live NotificationBell (drawer +
-                unread dot), 44×44 glass tile — consistent with Home/StoreProfile. */}
+            {/* Live NotificationBell (drawer + unread dot) — white-on-gradient tile */}
             <div
               style={{
-                width: 44,
-                height: 44,
+                width: 42,
+                height: 42,
                 borderRadius: 14,
-                background: 'var(--f-glass-bg-2)',
-                border: '1px solid var(--f-glass-border)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                background: 'rgba(255,255,255,0.18)',
+                border: '1px solid rgba(255,255,255,0.35)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <NotificationBell />
+              <NotificationBell color="#fff" />
             </div>
           </div>
         </div>
@@ -436,7 +431,7 @@ export default function SearchPage() {
                     <span style={{ fontSize: 13, color: 'var(--f-text-1)', flex: 1 }}>
                       {s.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')).map((part, j) =>
                         part.toLowerCase() === query.toLowerCase()
-                          ? <strong key={j} style={{ color: '#FF6BB4' }}>{part}</strong>
+                          ? <strong key={j} style={{ color: '#D11F75' }}>{part}</strong>
                           : <span key={j}>{part}</span>
                       )}
                     </span>
@@ -457,12 +452,12 @@ export default function SearchPage() {
                 border: '1px solid var(--f-glass-border)',
               }}
             >
-              <Search size={14} color="#FF6BB4" style={{ flexShrink: 0 }} />
+              <Search size={14} color="#D11F75" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>
                 Showing results for{' '}
                 <button
                   onClick={() => setQuery(correctedQuery)}
-                  style={{ fontWeight: 700, color: '#FF6BB4', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}
+                  style={{ fontWeight: 700, color: '#D11F75', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}
                 >
                   {correctedQuery}
                 </button>
@@ -479,7 +474,7 @@ export default function SearchPage() {
               <div className="flex items-center justify-between mb-3">
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>Filters</p>
                 {hasFilters && (
-                  <button onClick={clearFilters} style={{ fontSize: 12, color: '#FF6BB4', fontWeight: 700 }}>Clear all</button>
+                  <button onClick={clearFilters} style={{ fontSize: 12, color: '#D11F75', fontWeight: 700 }}>Clear all</button>
                 )}
               </div>
               {/* Category */}
@@ -554,24 +549,19 @@ export default function SearchPage() {
                     <button
                       key={cat.value}
                       onClick={() => setQuery(cat.label)}
-                      className="flex flex-col items-center justify-center gap-2"
-                      onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,0.35)'; }}
-                      onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)'; }}
+                      className="b-tap flex flex-col items-center justify-center gap-2"
                       style={{
                         background: 'var(--f-bg-elev)',
-                        border: '1px solid var(--f-glass-border-2)',
+                        border: '1px solid var(--f-glass-border)',
                         borderRadius: 18,
                         padding: '14px 4px 12px',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                        transition: 'transform 200ms var(--f-ease), box-shadow 200ms',
                       }}
                     >
-                      {/* v3 colored icon tile — cat.color at 13% alpha bg */}
-                      <span style={{
-                        width: 40, height: 40, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: cat.color + '22', fontSize: 20, lineHeight: 1, flexShrink: 0,
+                      {/* Claymorphic colored icon tile — cat.color at 13% alpha bg */}
+                      <span className="b-clay" style={{
+                        width: 46, height: 46, background: cat.color + '22', fontSize: 24, lineHeight: 1, flexShrink: 0,
                       }}>
-                        {cat.emoji}
+                        <span className="b-clay-emoji">{cat.emoji}</span>
                       </span>
                       <span style={{
                         fontSize: 11, fontWeight: 700, color: 'var(--f-text-1)', lineHeight: 1.15, textAlign: 'center',
@@ -589,7 +579,7 @@ export default function SearchPage() {
                 <section>
                   <div className="flex items-center justify-between mb-3">
                     <p style={eyebrow}>Recent searches</p>
-                    <button onClick={clearAllHistory} className="text-xs font-semibold" style={{ color: '#FF6BB4' }}>
+                    <button onClick={clearAllHistory} className="text-xs font-semibold" style={{ color: '#D11F75' }}>
                       Clear all
                     </button>
                   </div>
@@ -685,7 +675,7 @@ export default function SearchPage() {
                                     <div className="flex flex-col gap-1 mt-1">
                                       {distance && (
                                         <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--f-text-2)' }}>
-                                          <MapPin size={10} color="#FF6BB4" style={{ flexShrink: 0 }} />
+                                          <MapPin size={10} color="#D11F75" style={{ flexShrink: 0 }} />
                                           {distance} away
                                         </span>
                                       )}
@@ -739,7 +729,7 @@ export default function SearchPage() {
                       <p style={{ fontSize: 14, color: 'var(--f-text-2)' }}>
                         No results match your filters.
                       </p>
-                      <button onClick={clearFilters} className="mt-2 text-sm font-semibold" style={{ color: '#FF6BB4' }}>
+                      <button onClick={clearFilters} className="mt-2 text-sm font-semibold" style={{ color: '#D11F75' }}>
                         Clear Filters
                       </button>
                     </div>

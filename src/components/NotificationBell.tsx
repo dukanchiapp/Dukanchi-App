@@ -6,7 +6,12 @@ import { FIcon } from './futuristic';
    View layer restyled to the deep-space glass system. The notification
    context wiring (read state, mark-read, mark-all-read) is verbatim. */
 
-export default function NotificationBell() {
+interface NotificationBellProps {
+  /** Icon color. Defaults to dark ink; pass white for gradient headers. */
+  color?: string;
+}
+
+export default function NotificationBell({ color = 'var(--f-text-1)' }: NotificationBellProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -25,7 +30,7 @@ export default function NotificationBell() {
         style={{
           position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: 36, height: 36, borderRadius: 12, cursor: 'pointer',
-          background: 'transparent', border: 'none', color: 'var(--f-text-1)',
+          background: 'transparent', border: 'none', color,
         }}
         aria-label="Notifications"
       >

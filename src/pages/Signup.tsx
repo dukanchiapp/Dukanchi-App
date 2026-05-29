@@ -23,7 +23,7 @@ const inputIcon: CSSProperties = {
   display: 'flex', pointerEvents: 'none',
 };
 
-const optStyle: CSSProperties = { background: '#0E1224', color: '#F4F2EB' };
+const optStyle: CSSProperties = { background: '#FFFFFF', color: '#1C1A18' };
 
 export default function SignupPage() {
   const [name, setName] = useState('');
@@ -106,10 +106,10 @@ export default function SignupPage() {
           {error && (
             <div style={{
               marginBottom: 20, padding: '12px 14px', display: 'flex', alignItems: 'flex-start', gap: 8,
-              background: 'rgba(255,77,106,0.12)', border: '1px solid rgba(255,77,106,0.35)', borderRadius: 12,
-              fontSize: 13, color: '#FF8FA3',
+              background: 'rgba(229,57,53,0.10)', border: '1px solid rgba(229,57,53,0.30)', borderRadius: 12,
+              fontSize: 13, color: 'var(--f-danger)',
             }}>
-              <FIcon name="alert" size={15} color="#FF8FA3" />
+              <FIcon name="alert" size={15} color="var(--f-danger)" />
               <span><span style={{ fontWeight: 700, marginRight: 4 }}>Error:</span>{error}</span>
             </div>
           )}

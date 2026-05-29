@@ -87,9 +87,9 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
       </header>
 
       <main className="p-4">
-        <div className="bg-indigo-50 rounded-xl p-4 mb-4 border border-indigo-100 flex items-start">
-          <Building className="mr-3 flex-shrink-0 mt-0.5 text-indigo-600" size={20} />
-          <p className="text-sm text-indigo-900 leading-snug font-medium">Please complete this required KYC form to verify your business. All photos must be captured live.</p>
+        <div className="bg-[#FFF3EC] rounded-xl p-4 mb-4 border border-[#FFE0CC] flex items-start">
+          <Building className="mr-3 flex-shrink-0 mt-0.5 text-[#D11F75]" size={20} />
+          <p className="text-sm text-[#1C1A18] leading-snug font-medium">Please complete this required KYC form to verify your business. All photos must be captured live.</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -103,7 +103,7 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
                   value={storeName}
                   onChange={(e) => setStoreName(e.target.value)}
                   placeholder="Enter your registered business name"
-                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none text-sm font-medium text-gray-900"
+                  className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#D11F75] focus:ring-2 focus:ring-[#FFD9C2] transition-all outline-none text-sm font-medium text-gray-900"
                 />
               </div>
 
@@ -117,13 +117,13 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
                     <button onClick={() => setSelfie('')} className="absolute top-2 right-2 bg-gray-900 text-white p-1.5 rounded-full hover:bg-gray-800 transition-colors shadow-sm border border-white/20"><X size={14}/></button>
                   </div>
                 ) : (
-                  <label className="relative border border-dashed border-indigo-300 bg-indigo-50/50 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors group overflow-hidden">
+                  <label className="relative border border-dashed border-[#FFB89E] bg-[#FFF3EC]/50 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-[#FFF3EC] transition-colors group overflow-hidden">
                     {uploadingField === 'selfie' ? (
-                      <Loader2 size={24} className="text-indigo-500 mb-2 animate-spin" />
+                      <Loader2 size={24} className="text-[#D11F75] mb-2 animate-spin" />
                     ) : (
                       <>
-                        <Camera size={24} className="text-indigo-500 mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="text-xs text-indigo-700 font-bold">Open Camera</span>
+                        <Camera size={24} className="text-[#D11F75] mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="text-xs text-[#D11F75] font-bold">Open Camera</span>
                       </>
                     )}
                     <input type="file" accept="image/*" capture="user" className="hidden" disabled={!!uploadingField} onChange={(e) => handleFileUpload(e, setSelfie, 'selfie')} />
@@ -141,13 +141,13 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
                     <button onClick={() => setStorePhoto('')} className="absolute top-2 right-2 bg-gray-900 text-white p-1.5 rounded-full hover:bg-gray-800 transition-colors shadow-sm border border-white/20"><X size={14}/></button>
                   </div>
                 ) : (
-                  <label className="relative border border-dashed border-indigo-300 bg-indigo-50/50 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors group overflow-hidden">
+                  <label className="relative border border-dashed border-[#FFB89E] bg-[#FFF3EC]/50 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-[#FFF3EC] transition-colors group overflow-hidden">
                     {uploadingField === 'storePhoto' ? (
-                      <Loader2 size={24} className="text-indigo-500 mb-2 animate-spin" />
+                      <Loader2 size={24} className="text-[#D11F75] mb-2 animate-spin" />
                     ) : (
                       <>
-                        <Camera size={24} className="text-indigo-500 mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="text-xs text-indigo-700 font-bold">Capture Storefront</span>
+                        <Camera size={24} className="text-[#D11F75] mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="text-xs text-[#D11F75] font-bold">Capture Storefront</span>
                       </>
                     )}
                     <input type="file" accept="image/*" capture="environment" className="hidden" disabled={!!uploadingField} onChange={(e) => handleFileUpload(e, setStorePhoto, 'storePhoto')} />
@@ -165,13 +165,13 @@ export default function KYCForm({ onComplete, onLogout, onBack }: { onComplete: 
                     <button onClick={() => setGstBill('')} className="absolute top-2 right-2 bg-gray-900 text-white p-1.5 rounded-full hover:bg-gray-800 transition-colors shadow-sm border border-white/20"><X size={14}/></button>
                   </div>
                 ) : (
-                  <label className="relative border border-dashed border-indigo-300 bg-indigo-50/50 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-indigo-50 transition-colors group overflow-hidden">
+                  <label className="relative border border-dashed border-[#FFB89E] bg-[#FFF3EC]/50 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:bg-[#FFF3EC] transition-colors group overflow-hidden">
                     {uploadingField === 'gstBill' ? (
-                      <Loader2 size={24} className="text-indigo-500 mb-2 animate-spin" />
+                      <Loader2 size={24} className="text-[#D11F75] mb-2 animate-spin" />
                     ) : (
                       <>
-                        <Camera size={24} className="text-indigo-500 mb-2 group-hover:scale-110 transition-transform" />
-                        <span className="text-xs text-indigo-700 font-bold">Scan Document</span>
+                        <Camera size={24} className="text-[#D11F75] mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="text-xs text-[#D11F75] font-bold">Scan Document</span>
                       </>
                     )}
                     <input type="file" accept="image/*" capture="environment" className="hidden" disabled={!!uploadingField} onChange={(e) => handleFileUpload(e, setGstBill, 'gstBill')} />
