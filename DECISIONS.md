@@ -5,6 +5,16 @@
 
 ---
 
+## 2026-05-30 — App skin flipped: dark "Futuristic v2" → warm "Bright"
+- **Decision:** Re-skin the entire app from the dark deep-space spatial-glass "Futuristic v2" theme to the warm **Bright** design system (cream `#FFF7F0` surfaces, orange→magenta `#FF6B35→#FF2A8C` gradient, claymorphic tiles, soft shadows, Inter). Done as a **visual-only** flip — no features, fields, API routes, Prisma schema, Socket.IO events, auth, or routing touched. (PR #110, Session 127.)
+- **Rationale:** Founder shipped a new "Dukanchi Bright Skin" design-system handoff. Warm/light surfaces read better outdoors in Indian daylight (street retailers/vendors use phones in sun) and feel friendlier for a mass-market local-retail B2B2C audience than the dark "Vision-OS" look.
+- **Implementation:** Kept the legacy `--f-*` CSS token **names** but remapped their **values** to Bright — so every token-consuming file re-skins from one central edit in `futuristic.css`. Canonical `--b-*` Bright tokens added alongside. Then per-page gradient headers + mockup layouts + a sweep of ~51 "escaped" indigo Tailwind utilities (settings/KYC/Review cluster) the token remap couldn't reach → Bright arbitrary values.
+- **Trade-off accepted:** Token names now lie semantically (`--f-*` = "futuristic" but holds Bright values). Accepted to avoid a massive rename diff across every consumer right before pilot. A future cleanup can rename `--f-*`→`--b-*` mechanically.
+- **Alternatives rejected:** (a) full `--f-*`→`--b-*` rename now — huge high-risk diff; (b) per-file hardcoded colors — unmaintainable, defeats the central-token win.
+- **Follow-up:** Native status bar / splash still dark (`#060814`) in `capacitor.config.ts` + `App.tsx` — update to a Bright tone on the next native rebuild. Supersedes the Futuristic v2 ADR direction (2026-05, Session 96).
+
+---
+
 ## 2026-05-11 — Dual-stack push (Web Push + FCM), not replacement
 - **Decision:** Keep existing Web Push (VAPID + webpush npm) and ADD FCM as a parallel channel for native Android users. `sendPushToUser()` fans out to both via `Promise.allSettled`.
 - **Rationale:** Web/PWA users (current production) keep working unchanged. Native APK users get proper Android system notifications (FCM). No platform left behind — graceful degradation if either service fails. Future iOS support also goes through FCM, same dispatch path.
