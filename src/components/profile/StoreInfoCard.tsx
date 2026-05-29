@@ -68,12 +68,13 @@ export function StoreInfoCard({ store, storeStatus }: StoreInfoCardProps) {
           rel="noopener noreferrer"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8,
-            padding: '11px 14px', borderRadius: 12, background: 'rgba(255,107,53,0.14)',
-            border: '1px solid rgba(255,107,53,0.38)', color: 'var(--f-orange-light)', fontSize: 13,
-            fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(255,107,53,0.18)',
+            padding: '11px 14px', borderRadius: 12,
+            background: 'linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)',
+            border: 'none', color: '#fff', fontSize: 13,
+            fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 18px rgba(37,99,235,0.32)',
           }}
         >
-          <FIcon name="navigation" size={14} color="var(--f-orange-light)" />
+          <FIcon name="navigation" size={14} color="#fff" />
           Direction to Store
         </a>
       )}

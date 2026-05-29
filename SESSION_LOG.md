@@ -6,6 +6,29 @@
 
 ---
 
+## 2026-05-30 — Session 128 — Store/Profile mockup parity fixes (logo clip, distance pill, bio read-more, Legal→Settings)
+
+**Goal:** Founder flagged 5 issues from screenshots (mockup = customer "Dolphin hotel" store profile; current bugs on own "test store" profile): (1) logo overlapped/clipped under the cover + make it bigger; (2) distance pill ("1.6km away") must show when a CUSTOMER visits any business profile via post/search/map (StoreProfile) — match mockup layout exactly; (3) move Legal & Privacy from profile → Settings; (4) bio read-more triggered by LINE count (>3 lines), not chars; (5) match mockup text + Direction button = BLUE gradient. **Visual-only** (Rule 4) — no API/route/schema/auth/socket changes.
+
+**Status:** ⏳ Code complete, NOT yet deployed (awaiting founder review + `fly deploy`). typecheck 0 (web/server/worker) ✅ · build ✓.
+
+- **Logo-clip bug (root cause + fix)** — both `StoreProfile.tsx` and `Profile.tsx` positioned the logo at `bottom:-28/-34` *inside* a cover `<div style={{ overflow:'hidden' }}>`, so the overhang was clipped ("profile picture under the other element"). Fix: outer cover wrapper is no longer clipped (`height` only); the cover IMAGE moved into its own absolutely-positioned `overflow:hidden` media layer; logo + distance pill render OUTSIDE that layer at `zIndex 4`.
+- **Logo enlarged** — StoreProfile 84→**96**px (borderRadius 22→24, fallback initial 34→40), Profile 72→**92**px (18→24, 28→38); both now a clean **4px white** "cutout" border (was dark `--f-bg-deep`) + soft shadow, matching the Bright mockup.
+- **Cover overlay → Bright** — replaced the leftover dark spatial-glow (`rgba(6,8,20,…)` radial+linear) with a single soft bottom fade `linear-gradient(180deg, transparent 52%, var(--f-bg-deep) 100%)` into the cream page. Top bar padding now `calc(env(safe-area-inset-top,0px) + 14px)`.
+- **Distance pill** — StoreProfile capsule restyled dark→**white** (`#fff`, `--b-line` border, soft shadow) with magenta-ink `#D11F75` pin + dark `--f-text-1` bold text, bottom-right of cover (mockup position). Feature itself (haversine from `LocationContext.userLoc` → `store.lat/lng`) was already present; only restyled.
+- **Bio read-more (line-based)** — both pages: `<p>` clamped to 3 lines (`-webkit-line-clamp`), a `useRef` + `useEffect` measures `scrollHeight > clientHeight + 2` and only then shows the magenta-ink "Read more"/"Read less" toggle. Replaces StoreProfile's old `description.length > 140` char heuristic; adds the toggle to Profile (was a plain `<p>`).
+- **Legal & Privacy moved to Settings** — removed `<LegalLinks variant="menu" />` from BOTH Profile views (customer menu list + retailer footer card) and the now-unused import; added a labelled "Legal & Privacy" section + `<LegalLinks variant="menu" />` to `UserSettings.tsx` (`!activeTab` view, between the tabs list and Log Out).
+- **Direction button → blue gradient** — StoreProfile + `StoreInfoCard.tsx` (own-profile card): orange/magenta → `linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)`, white text/icon, blue shadow. Info-row icon tiles re-tinted peach (`--b-orange-bg` / `--b-tint`) with `--b-orange` icons; cover FABs → dark frosted glass (better contrast on light covers).
+- **BottomNav hidden while posting** (founder follow-up — screenshot showed the bottom nav overlapping the Publish button). `PostsGrid.tsx` toggles `document.body.classList` `modal-open` while the New Post OR Edit Post sheet is open; `BottomNav.tsx` carries an `app-bottom-nav` class; `index.css` adds `body.modal-open .app-bottom-nav { display: none !important; }`. CSS-driven so it works without prop-drilling through React tree.
+
+**Compliance:** Rule A/D — no `apiFetch`/`api.ts`/`AuthContext`/`app.ts`/socket changes (visual-only) ✅. Rule B — no new silent catches ✅. Rule G — `npm run typecheck` (3 projects) + `npm run build` ✅.
+
+**Verification gaps (honest):** `StoreProfile`/`Profile` sit behind `ProtectedRoute` + need a backend + a seeded store with `lat/lng` → not meaningfully renderable in the frontend-only dev preview. Verified at typecheck + build + source-review level only; needs founder login-gated QA on a deployed build (and a real distance-bearing store for the pill). Native APK unaffected (web bundle) but un-smoke-tested.
+
+**Files:** `src/pages/StoreProfile.tsx`, `src/pages/Profile.tsx`, `src/pages/UserSettings.tsx`, `src/components/profile/StoreInfoCard.tsx`, `src/components/profile/PostsGrid.tsx`, `src/components/BottomNav.tsx`, `src/index.css`. Branch `feat/profile-mockup-parity` (initial commit `909314a` + nav-hide follow-up).
+
+---
+
 ## 2026-05-30 — Session 127 — Bright design system re-skin (whole-app dark→light flip)
 
 **Goal:** Founder shipped a new "Dukanchi Bright Skin" design-system handoff and asked to "implement this new design — ensure the whole app is on the new skin, all internal pages and all elements." Flip the entire app from the dark "Futuristic v2" spatial-glass look to the warm Bright system. **Visual-only** (Rule 4) — no features/fields/API/schema/Socket.IO/auth/routing changes.

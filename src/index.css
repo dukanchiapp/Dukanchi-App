@@ -47,3 +47,10 @@ html, body {
 .dk-update-btn {
   background: var(--dk-accent);
 }
+
+/* Session 128: hide the global BottomNav while a sheet/modal is open
+   (PostsGrid toggles body.modal-open on New Post / Edit Post). The nav was
+   overlapping the sheet's primary CTA — the Publish/Update button. */
+body.modal-open .app-bottom-nav {
+  display: none !important;
+}

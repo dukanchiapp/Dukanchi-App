@@ -30,7 +30,7 @@ export default function BottomNav() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 pb-safe z-40"
+      className="app-bottom-nav fixed bottom-0 left-0 right-0 pb-safe z-40"
       style={{
         maxWidth: 480, margin: '0 auto',
         background: 'var(--b-bg)',

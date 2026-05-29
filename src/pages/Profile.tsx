@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
@@ -15,7 +15,6 @@ import { ReviewsTab } from '../components/profile/ReviewsTab';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
 import { FIcon } from '../components/futuristic';
-import { LegalLinks } from '../components/legal/LegalLinks';
 
 /* ── Futuristic v2 skin · Phase 8 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Store + KYC + posts +
@@ -62,6 +61,11 @@ export default function ProfilePage() {
   const [interactions, setInteractions] = useState<{ likedPostIds: string[]; savedPostIds: string[]; followedStoreIds: string[] }>({
     likedPostIds: [], savedPostIds: [], followedStoreIds: [],
   });
+
+  // Session 128: line-based bio read-more for the retailer profile.
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const bioRef = useRef<HTMLParagraphElement>(null);
+  const [bioOverflow, setBioOverflow] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -117,6 +121,13 @@ export default function ProfilePage() {
     fetchStoreData();
     fetchChatCount();
   }, []);
+
+  // Measure the clamped bio and only show "Read more" when it overflows 3 lines.
+  useEffect(() => {
+    if (bioExpanded) return;
+    const el = bioRef.current;
+    if (el) setBioOverflow(el.scrollHeight > el.clientHeight + 2);
+  }, [store?.description, bioExpanded]);
 
   const fetchStoreData = async () => {
     try {
@@ -292,9 +303,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Menu — legal (DPDP public documents) */}
-            <LegalLinks variant="menu" />
-
             {/* Log out */}
             <button
               onClick={handleLogout}
@@ -467,40 +475,47 @@ export default function ProfilePage() {
       <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
-        {/* Cover */}
-        <div style={{ position: 'relative', height: 180, overflow: 'hidden' }}>
-          {store.coverUrl ? (
-            <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : store.logoUrl ? (
-            <img src={store.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.4)', transform: 'scale(1.2)' }} />
-          ) : (
-            <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
-          )}
+        {/* Cover — Session 128: outer wrapper NOT clipped so the logo overhang
+            shows (the previous overflow:hidden here clipped the logo — that was
+            the "profile picture under the other element" bug). Image sits in its
+            own clipped media layer. */}
+        <div style={{ position: 'relative', height: 160 }}>
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {store.coverUrl ? (
+              <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : store.logoUrl ? (
+              <img src={store.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.9)', transform: 'scale(1.2)' }} />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
+            )}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, transparent 52%, var(--f-bg-deep) 100%)',
+            }} />
+          </div>
           <div style={{
-            position: 'absolute', inset: 0,
-            background: `radial-gradient(circle at 18% 25%, rgba(255,107,53,0.40), transparent 45%),
-              radial-gradient(circle at 85% 15%, rgba(255,42,140,0.45), transparent 50%),
-              linear-gradient(180deg, rgba(6,8,20,0.15) 0%, rgba(6,8,20,0.55) 60%, var(--f-bg-deep) 100%)`,
-          }} />
-          <div style={{ position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '48px 14px 0', zIndex: 2 }}>
+            position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, zIndex: 3,
+            padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 0',
+          }}>
             <NotificationBell color="#fff" />
             <Link to="/settings" state={{ activeTab: 'bulk_upload' }} style={coverFab} aria-label="Settings">
               <FIcon name="settings" size={18} color="white" />
             </Link>
           </div>
           <div style={{
-            position: 'absolute', bottom: -28, left: 16, width: 72, height: 72, borderRadius: 18, overflow: 'hidden',
-            border: '3px solid var(--f-bg-deep)', background: 'var(--f-grad-primary)',
-            boxShadow: '0 0 24px rgba(255,42,140,0.45), 0 8px 24px rgba(0,0,0,0.55)',
+            position: 'absolute', bottom: -34, left: 16, zIndex: 4,
+            width: 92, height: 92, borderRadius: 24, overflow: 'hidden',
+            border: '4px solid #fff', background: 'var(--f-grad-primary)',
+            boxShadow: '0 8px 22px rgba(0,0,0,0.16)',
           }}>
             {store.logoUrl
               ? <img src={store.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 28, color: 'white' }}>{store.storeName?.charAt(0)}</div>}
+              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 38, color: 'white' }}>{store.storeName?.charAt(0)}</div>}
           </div>
         </div>
 
         {/* Store name + info */}
-        <div style={{ padding: '40px 16px 12px' }}>
+        <div style={{ padding: '48px 16px 12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
             <h1 className="f-display" style={{ fontSize: 22, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -523,7 +538,29 @@ export default function ProfilePage() {
             <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{store.category}</span>
           </div>
           {store.description && (
-            <p style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.5, margin: 0 }}>{store.description}</p>
+            <div style={{ margin: 0 }}>
+              <p
+                ref={bioRef}
+                style={{
+                  fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.5, margin: 0,
+                  display: '-webkit-box', WebkitBoxOrient: 'vertical',
+                  WebkitLineClamp: bioExpanded ? 'unset' : 3, overflow: 'hidden',
+                }}
+              >
+                {store.description}
+              </p>
+              {(bioOverflow || bioExpanded) && (
+                <button
+                  onClick={() => setBioExpanded(v => !v)}
+                  style={{
+                    marginTop: 4, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: 'var(--b-magenta-ink)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
+                  }}
+                >
+                  {bioExpanded ? 'Read less' : 'Read more'}
+                </button>
+              )}
+            </div>
           )}
 
           {/* Completion banner */}
@@ -660,18 +697,6 @@ export default function ProfilePage() {
           {activeTab === 'reviews' && !store.hideRatings && (
             <ReviewsTab reviews={reviews} />
           )}
-        </div>
-
-        {/* Legal — DPDP public documents. The retailer profile is a flat page
-            with no menu list, so legal access is a labelled card at the foot. */}
-        <div style={{ padding: '20px 16px 0' }}>
-          <p style={{
-            fontSize: 10.5, fontWeight: 800, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: 'var(--f-text-3)', margin: '0 0 10px',
-          }}>
-            Legal &amp; Privacy
-          </p>
-          <LegalLinks variant="menu" />
         </div>
       </div>
     </div>

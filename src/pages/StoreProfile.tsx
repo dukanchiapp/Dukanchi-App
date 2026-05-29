@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
@@ -23,11 +23,13 @@ import { Sentry } from '../lib/sentry-frontend';
    are preserved verbatim from the production page. */
 
 const coverFab: CSSProperties = {
-  width: 38,
-  height: 38,
-  borderRadius: 12,
-  background: 'rgba(255,255,255,0.18)',
-  border: '1px solid rgba(255,255,255,0.35)',
+  width: 42,
+  height: 42,
+  borderRadius: 14,
+  background: 'rgba(0,0,0,0.20)',
+  border: '1px solid rgba(255,255,255,0.30)',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -35,7 +37,7 @@ const coverFab: CSSProperties = {
   flexShrink: 0,
 };
 
-// Session 126: magenta-tinted rounded icon tile for the details card rows
+// Session 128: peach-tinted rounded icon tile for the details card rows
 // (matches the design mockup — address / phone / hours each sit behind a tile).
 const iconTile: CSSProperties = {
   width: 42,
@@ -45,9 +47,12 @@ const iconTile: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  background: 'rgba(255,42,140,0.14)',
-  border: '1px solid rgba(255,42,140,0.26)',
+  background: 'var(--b-orange-bg)',
+  border: '1px solid var(--b-tint)',
 };
+
+// Session 128: blue gradient for the Direction CTA (mockup-matched theme accent).
+const blueGrad = 'linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)';
 
 /** "21:00" → "9:00 PM". Leaves non-HH:MM strings untouched. */
 function fmt12(t?: string | null): string {
@@ -77,6 +82,8 @@ export default function StoreProfilePage() {
   const [selectedPost, setSelectedPost] = useState<any>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [bioExpanded, setBioExpanded] = useState(false);
+  const bioRef = useRef<HTMLParagraphElement>(null);
+  const [bioOverflow, setBioOverflow] = useState(false);
 
   // Live store status — computed at top level (hooks must run before the
   // loading/!store early returns). store is null pre-fetch → getStoreStatus
@@ -141,6 +148,14 @@ export default function StoreProfilePage() {
       }, 100);
     }
   }, [selectedPost]);
+
+  // Session 128: line-based read-more — measure the clamped <p> and only show
+  // the "Read more" toggle when the bio actually overflows 3 lines.
+  useEffect(() => {
+    if (bioExpanded) return;
+    const el = bioRef.current;
+    if (el) setBioOverflow(el.scrollHeight > el.clientHeight + 2);
+  }, [store?.description, bioExpanded]);
 
   const fetchStoreData = async () => {
     try {
@@ -260,32 +275,37 @@ export default function StoreProfilePage() {
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
-        {/* ── Cover + Logo ── */}
-        <div style={{ position: 'relative', height: 200, overflow: 'hidden' }}>
-          {store.coverUrl ? (
-            <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : store.logoUrl ? (
-            <img
-              src={store.logoUrl}
-              alt=""
-              style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(12px) brightness(0.4)', transform: 'scale(1.15)' }}
-            />
-          ) : (
-            <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
-          )}
-
-          {/* Glow + fade-to-deep overlay */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: `radial-gradient(circle at 18% 25%, rgba(255,107,53,0.40), transparent 45%),
-              radial-gradient(circle at 85% 15%, rgba(255,42,140,0.45), transparent 50%),
-              linear-gradient(180deg, rgba(6,8,20,0.15) 0%, rgba(6,8,20,0.55) 60%, var(--f-bg-deep) 100%)`,
-          }} />
+        {/* ── Cover + Logo ── Session 128: outer wrapper is NOT clipped so the
+            logo + distance pill can overhang the cover bottom (the previous
+            overflow:hidden on this layer was clipping the logo — that was the
+            "profile picture under the other element" bug). The cover IMAGE
+            lives in its own absolutely-positioned clipped media layer. */}
+        <div style={{ position: 'relative', height: 160 }}>
+          {/* Clipped media layer — image + soft fade to the cream page */}
+          <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+            {store.coverUrl ? (
+              <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : store.logoUrl ? (
+              <img
+                src={store.logoUrl}
+                alt=""
+                style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.9)', transform: 'scale(1.15)' }}
+              />
+            ) : (
+              <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
+            )}
+            {/* Bottom fade into the cream page surface */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              background: 'linear-gradient(180deg, transparent 52%, var(--f-bg-deep) 100%)',
+            }} />
+          </div>
 
           {/* Floating top bar */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '48px 14px 0',
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 3,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 0',
           }}>
             <button onClick={() => navigate(-1)} style={coverFab} aria-label="Back">
               <ChevronLeft size={18} color="white" />
@@ -320,38 +340,41 @@ export default function StoreProfilePage() {
             </div>
           </div>
 
-          {/* Logo overlapping cover bottom — Session 126: enlarged + rounder +
-              thicker dark "cutout" border to match the mockup's prominent logo. */}
+          {/* Logo overlapping cover bottom — Session 128: sits OUTSIDE the clip
+              layer (zIndex 4) so the overhang is no longer cut off. Enlarged to
+              96×96 with a white "cutout" border to match the Bright mockup. */}
           <div style={{
-            position: 'absolute', bottom: -28, left: 18, width: 84, height: 84, borderRadius: 22, overflow: 'hidden',
-            border: '4px solid var(--f-bg-deep)', background: 'var(--f-grad-primary)',
-            boxShadow: '0 0 24px rgba(255,42,140,0.45), 0 8px 24px rgba(0,0,0,0.55)',
+            position: 'absolute', bottom: -34, left: 18, zIndex: 4,
+            width: 96, height: 96, borderRadius: 24, overflow: 'hidden',
+            border: '4px solid #fff', background: 'var(--f-grad-primary)',
+            boxShadow: '0 8px 22px rgba(0,0,0,0.16)',
           }}>
             {store.logoUrl ? (
               <img src={store.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 34, color: 'white' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 40, color: 'white' }}>
                 {store.storeName?.charAt(0)}
               </div>
             )}
           </div>
 
-          {/* Session 126: distance capsule (mockup) — bottom-right of the cover. */}
+          {/* Session 128: distance capsule (mockup) — bottom-right, white pill
+              with magenta pin, sits outside the clip layer (zIndex 4). */}
           {storeDistance && (
             <div style={{
-              position: 'absolute', bottom: 16, right: 14, zIndex: 2,
+              position: 'absolute', bottom: 14, right: 16, zIndex: 4,
               display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999,
-              background: 'rgba(6,8,20,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid var(--f-glass-border-2)',
+              background: '#fff', border: '1px solid var(--b-line)',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
             }}>
-              <MapPin size={12} color="var(--f-magenta-light)" />
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--f-text-1)' }}>{storeDistance}</span>
+              <MapPin size={13} color="var(--b-magenta-ink)" />
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--f-text-1)' }}>{storeDistance}</span>
             </div>
           )}
         </div>
 
         {/* ── Store info ── */}
-        <div style={{ padding: '40px 18px 16px' }}>
+        <div style={{ padding: '48px 18px 16px' }}>
           {/* Name + rating */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
             <h1 className="f-display" style={{ fontSize: 24, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</h1>
@@ -389,6 +412,7 @@ export default function StoreProfilePage() {
           {store.description && (
             <div style={{ margin: '0 0 14px' }}>
               <p
+                ref={bioRef}
                 style={{
                   fontSize: 13, color: 'var(--f-text-2)', lineHeight: 1.55, margin: 0,
                   display: '-webkit-box', WebkitBoxOrient: 'vertical',
@@ -397,12 +421,12 @@ export default function StoreProfilePage() {
               >
                 {store.description}
               </p>
-              {store.description.length > 140 && (
+              {(bioOverflow || bioExpanded) && (
                 <button
                   onClick={() => setBioExpanded(v => !v)}
                   style={{
                     marginTop: 4, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer',
-                    color: 'var(--f-magenta-light)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
+                    color: 'var(--b-magenta-ink)', fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit',
                   }}
                 >
                   {bioExpanded ? 'Read less' : 'Read more'}
@@ -417,7 +441,7 @@ export default function StoreProfilePage() {
           <div className="f-glass f-glass-edge" style={{ padding: 14, borderRadius: 16, background: 'var(--f-glass-bg)', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {store.address && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={iconTile}><MapPin size={16} color="var(--f-magenta-light)" /></div>
+                <div style={iconTile}><MapPin size={16} color="var(--b-orange)" /></div>
                 <div style={{ minWidth: 0, paddingTop: 1 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>{store.address}</p>
                   {(store.postalCode || store.city || store.state) && (
@@ -430,13 +454,13 @@ export default function StoreProfilePage() {
             )}
             {store.phoneVisible !== false && store.phone && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={iconTile}><Phone size={15} color="var(--f-magenta-light)" /></div>
+                <div style={iconTile}><Phone size={15} color="var(--b-orange)" /></div>
                 <a href={`tel:${store.phone}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)', textDecoration: 'none' }}>{store.phone}</a>
               </div>
             )}
             {(store.is24Hours || store.openingTime || store.closingTime) && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={iconTile}><Clock size={15} color="var(--f-magenta-light)" /></div>
+                <div style={iconTile}><Clock size={15} color="var(--b-orange)" /></div>
                 <div style={{ minWidth: 0, paddingTop: 1 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>
                     {store.is24Hours ? 'Open 24 Hours' : `${fmt12(store.openingTime)} – ${fmt12(store.closingTime)}`}
@@ -454,9 +478,9 @@ export default function StoreProfilePage() {
                 rel="noopener noreferrer"
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 2,
-                  padding: '13px 14px', borderRadius: 13, background: 'var(--f-grad-primary)',
+                  padding: '13px 14px', borderRadius: 13, background: blueGrad,
                   color: 'white', fontSize: 14, fontWeight: 700, textDecoration: 'none',
-                  boxShadow: '0 0 20px rgba(255,42,140,0.40)',
+                  boxShadow: '0 6px 18px rgba(37,99,235,0.32)',
                 }}
               >
                 <Navigation size={15} color="white" />
