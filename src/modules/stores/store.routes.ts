@@ -37,9 +37,14 @@ router.post("/:storeId/bulk-import", authenticateToken, xlsUpload.single("file")
 const pincodeRouter = Router();
 pincodeRouter.get("/:code", StoreController.getPincodeInfo);
 
+// /api/geocode — Session 128.9. Reverse geocode (lat/lng → pincode + city +
+// state). Auth required to throttle abuse of the upstream Nominatim quota.
+const geocodeRouter = Router();
+geocodeRouter.get("/reverse", authenticateToken, StoreController.getReverseGeocode);
+
 // /api/products
 const productRouter = Router();
 productRouter.post("/", authenticateToken, StoreController.createProduct);
 productRouter.get("/", authenticateToken, StoreController.getProducts);
 
-export { router as storeRoutes, pincodeRouter, productRouter };
+export { router as storeRoutes, pincodeRouter, productRouter, geocodeRouter };

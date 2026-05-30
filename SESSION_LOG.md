@@ -24,6 +24,25 @@
 
 ---
 
+## 2026-05-30 — Session 128.6 — Edit-profile GPS pin → auto-fill pincode/city/state
+
+**Goal:** Founder ask — "when we store the location in edit profile system automatically picks the pincode and fills the related fields". Today retailer taps "Save my current location" → only lat/lng captured; they still type pincode manually (which then auto-fills city/state via the existing India Post endpoint). Make GPS pin do everything.
+
+**Changes:**
+
+- **`src/modules/stores/store.controller.ts`** — new `getReverseGeocode(req, res)` method. Validates lat/lng query params; checks Redis cache `geocode:rev:{lat.toFixed(3)}:{lng.toFixed(3)}` (~110m precision so neighbouring users share a cache hit, 7-day TTL); calls OpenStreetMap Nominatim with proper `User-Agent: Dukanchi/1.0` header and 5s timeout; extracts `postcode` / `city/town/village` / `state` / `suburb`; if Nominatim returns a valid 6-digit IN pincode, chains to the existing India Post API for authoritative district + state (overrides Nominatim's mappings, which can be quirky for IN); writes the merged result back to Redis; falls through gracefully on any failure (returns partial data with HTTP 200, never 500, so caller can fall back to manual entry).
+- **`src/modules/stores/store.routes.ts`** — new `geocodeRouter`, mounts `GET /reverse` with `authenticateToken` (prevents anonymous abuse of the upstream Nominatim quota — Dukanchi egresses through one IP).
+- **`src/app.ts`** — mount `geocodeRouter` at `/api/geocode`.
+- **`src/pages/RetailerDashboard.tsx`** `handleGPSUpdate` — after GPS captures lat/lng, calls `/api/geocode/reverse?lat=X&lng=Y` and sets `postalCode` / `city` / `state` / `cityOptions` / `stateOptions` from the response. Toast enriched: `📍 Location pinned · {pincode}, {city}`. Sentry-only on geocode failure (auto-fill is a convenience — never blocks the lat/lng save).
+
+**Files:** `src/modules/stores/store.controller.ts` (new method + `pubClient` import), `src/modules/stores/store.routes.ts` (new router), `src/app.ts` (mount), `src/pages/RetailerDashboard.tsx` (wire into GPS handler).
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
+
+**Status:** ⏳ Code complete on `feat/gps-reverse-geocode`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.5 — PostCard header: rating + followers + missing data fields (city/postalCode)
 
 **Goal:** Founder screenshot showed "Hameed" store header with only 2 rows visible (logo + name + status pill + category + Follow). Root-cause investigation found TWO issues: (a) PostCard never surfaced rating or followers despite both being in schema, (b) the feed Prisma include was MISSING `city` + `postalCode` selects — that's why the area row never rendered even for stores that HAVE city/postalCode data. Founder picked exact layout: `[Logo] Name + ✓ ⭐4.6(124) [Follow] / ● status · 1.6km · category / 📍 area · pincode · 2.3k followers`.
