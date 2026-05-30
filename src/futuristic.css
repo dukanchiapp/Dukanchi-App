@@ -123,6 +123,18 @@
   --c-info-bg:        #E0EAFD;
   --c-rating:         #F5B400;  /* gold — rating stars only */
 
+  /* ── Session 128.10 — Blinkit "ADD"-green action palette ─────────────────
+     Critical insight from the Blinkit screenshots: yellow is the BRAND
+     (header backgrounds, identity surfaces) but GREEN is the PRIMARY ACTION
+     color (every "ADD", "Order", "Upload" button is green). This split is
+     why their UI reads as "fast + decisive" — yellow is everywhere but the
+     thing you should TAP is unmistakably green. Use these tokens for
+     follow / publish / login / signup / submit CTAs. */
+  --c-action:         #0C831F;  /* Blinkit ADD-green — primary action solid */
+  --c-action-dk:      #0A6E1A;  /* depth on hover / active */
+  --c-action-lt:      #E8F5E9;  /* light tint backgrounds */
+  --c-action-ink:     #FFFFFF;  /* white text on green */
+
   /* Radii */
   --f-r-sm:           10px;
   --f-r-md:           12px;

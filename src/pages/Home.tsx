@@ -11,7 +11,6 @@ import { Sentry } from '../lib/sentry-frontend';
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck } from 'lucide-react';
 import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
 import { haptic } from '../lib/haptics';
-import { FLogo } from '../components/futuristic/FLogo';
 import { FLocationStrip } from '../components/futuristic/FLocationStrip';
 import { PostCard } from '../components/PostCard';
 import NotificationBell from '../components/NotificationBell';
@@ -379,16 +378,16 @@ export default function HomePage() {
           ref={topBarRef}
           className="sticky top-0 z-30"
         >
-          {/* Session 128.8 — Premium white header. The orange→magenta wash was
-              consuming the entire viewport top → gradient lost its meaning as a
-              brand signature. Now: WHITE surface + 40×40 gradient logo tile (the
-              brand still pops, but in a contained, badge-like way) + dark text +
-              outlined-orange Bell tile. Safe-area pad still fills the notch. */}
+          {/* Session 128.10 — Blinkit-style yellow header. Yellow is the brand
+              canvas (not just an accent). Dark "Dukanchi" text + dark tagline
+              for high contrast (the Blinkit signature). Status-bar/notch tint
+              by safe-area pad — the yellow fills it. */}
           <div
             style={{
-              background: '#FFFFFF',
+              background: 'var(--b-yellow)',
               paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
-              borderBottom: '1px solid var(--f-glass-border)',
+              borderBottom: '1px solid var(--b-yellow-dk)',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.40) inset',
             }}
           >
             <div
@@ -400,37 +399,53 @@ export default function HomePage() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                <FLogo size={40} />
+                {/* Session 128.10 — On yellow header the yellow FLogo would
+                    disappear. Render a WHITE tile with dark "द" instead — the
+                    Blinkit pattern (clean white surface on yellow brand canvas). */}
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    background: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <span style={{ fontSize: 21, fontWeight: 800, color: 'var(--b-yellow-ink)', lineHeight: 1 }}>द</span>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <span
                     style={{
-                      fontSize: 18,
+                      fontSize: 19,
                       fontWeight: 800,
-                      color: 'var(--f-text-1)',
+                      color: 'var(--b-yellow-ink)',
                       letterSpacing: '-0.02em',
                       lineHeight: 1.1,
                     }}
                   >
                     Dukanchi
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--f-text-3)', lineHeight: 1.1 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(26,26,26,0.70)', lineHeight: 1.1 }}>
                     apna bazaar, apni dukaan
                   </span>
                 </div>
               </div>
-              {/* Session 128.9 — Blinkit yellow bell tile. Solid yellow with
-                  dark icon (high contrast = high readability, the Blinkit way). */}
+              {/* Session 128.10 — Blinkit-style white circle on yellow header
+                  (compare Blinkit's profile icon: clean white circle, dark
+                  glyph). Pops against the yellow brand canvas. */}
               <div
                 style={{
                   width: 42,
                   height: 42,
-                  borderRadius: 14,
-                  background: 'var(--b-yellow)',
-                  border: '1.5px solid var(--b-yellow-dk)',
+                  borderRadius: '50%',
+                  background: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(248,203,70,0.30)',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
                 }}
               >
                 <NotificationBell color="var(--b-yellow-ink)" />
@@ -539,7 +554,12 @@ export default function HomePage() {
             borderBottom: '1px solid var(--f-glass-border)',
           }}
         >
-          <div style={{ display: 'flex', padding: 4, borderRadius: 9999, gap: 2, background: 'var(--f-bg-elev-2)' }}>
+          {/* Session 128.10 — Blinkit underline-style tabs (see All/Vacations/
+              Kids/Electronics/Beauty bar on the Blinkit Home). Active tab gets
+              a thick dark underline + bold text; inactive tabs are gray. Much
+              calmer than a pill background, and standard for top-nav category
+              bars in IN commerce apps. */}
+          <div style={{ display: 'flex', gap: 24, alignItems: 'flex-end' }}>
             {tabs.map(tab => {
               const active = feedType === tab.key;
               return (
@@ -547,19 +567,16 @@ export default function HomePage() {
                   key={tab.key}
                   onClick={() => setFeedType(tab.key)}
                   style={{
-                    padding: '8px 16px',
-                    borderRadius: 9999,
-                    fontSize: 12,
-                    fontWeight: 700,
+                    padding: '8px 0 10px',
+                    fontSize: 13,
+                    fontWeight: active ? 800 : 600,
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     border: 'none',
-                    // Session 128.9 — Blinkit yellow pill with dark ink text.
-                    // High contrast, energetic, friendly. Replaces the magenta
-                    // solid (which replaced the orange→magenta gradient).
-                    background: active ? 'var(--b-yellow)' : 'transparent',
-                    color: active ? 'var(--b-yellow-ink)' : 'var(--f-text-2)',
-                    boxShadow: active ? '0 2px 6px rgba(248,203,70,0.32)' : 'none',
+                    background: 'transparent',
+                    color: active ? 'var(--b-yellow-ink)' : 'var(--f-text-3)',
+                    borderBottom: active ? '3px solid var(--b-yellow-ink)' : '3px solid transparent',
+                    transition: 'all 160ms var(--b-ease)',
                   }}
                 >
                   {tab.label}
@@ -693,10 +710,10 @@ export default function HomePage() {
                   style={{
                     marginTop: 10,
                     padding: '10px 18px', borderRadius: 9999, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: 'var(--c-brand-ink)',
-                    // Session 128.9 — Blinkit yellow with dark ink.
-                    background: 'var(--c-brand-grad)',
-                    boxShadow: '0 4px 14px rgba(230,185,46,0.40), inset 0 1px 0 rgba(255,255,255,0.45)',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: 'var(--c-action-ink)',
+                    // Session 128.10 — Blinkit ADD-green action CTA.
+                    background: 'var(--c-action)',
+                    boxShadow: '0 4px 14px rgba(12,131,31,0.32), inset 0 1px 0 rgba(255,255,255,0.18)',
                   }}
                 >
                   {feedType === 'saved' ? 'Browse posts' : 'Discover stores'}
