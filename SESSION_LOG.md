@@ -24,6 +24,31 @@
 
 ---
 
+## 2026-05-30 — Session 128.8 — Multi-color design system (white header, semantic palette, solid magenta tabs, blue verified, semantic toasts)
+
+**Goal:** Founder ask — "major theme orange gradient bhot zada dikh rha hai god tier ni lag rha i need eyecatching and color full" + explicit constraint "do not touch the logic color change in the store close timing indication". Founder picked Option C (full multi-color sweep).
+
+**Principle:** Earned attention + semantic zoning. The orange→magenta gradient was consuming 6 surfaces in a single Home viewport (header bar, bell, For-You pill, Follow button, logo tile, status pill text). Reserve the brand gradient for THE primary CTA per screen (Follow on cards). Use semantic colors for meaning: green=success/open, red=danger/closed, amber=warning, blue=info/verified/direction, gold=rating.
+
+**⚠️ STATUS-PILL COLORS PRESERVED.** Per founder constraint, `--f-status-open/yellow/orange/red` tokens AND `getLiveStatus()` 4-tier logic AND all live-status pill rendering across Home/Messages/Chat/Map/StoreProfile were left UNCHANGED. The new semantic tokens (`--c-*`) live alongside but never feed into close-timing.
+
+**Changes:**
+
+- **`src/futuristic.css`** — added semantic token block (`--c-brand-grad`, `--c-brand-solid`, `--c-success` + bg, `--c-danger` + bg, `--c-warning` + bg, `--c-info` + bg, `--c-rating`). Block-commented to warn future editors NOT to use these for store-close-timing.
+- **`src/pages/Home.tsx`** header — orange→magenta full-bleed gradient bar replaced with white surface + 40×40 gradient logo tile + dark "Dukanchi" + dark tagline. Bell button replaced from translucent-white gradient pill to peach-bg outlined-orange tile (`var(--b-orange-bg)` + `1.5px solid var(--b-orange)`).
+- **`src/pages/Home.tsx`** tabs — For-You/Following/Saved active state: `var(--f-grad-primary)` → `var(--c-brand-solid)` (#D11F75 solid). Lighter, more focused active state — gradient stays reserved for cards.
+- **`src/components/PostCard.tsx`** — VerifiedTick fill `#0C831F` (green) → `#2563EB` (blue). Trust signal distinct from open-status. Inline `★` rating colour `#F5B400` → `var(--c-rating)`.
+- **`src/components/futuristic/FLogo.tsx`** — translucent-glass tile (designed for deep-space gradient backgrounds, washed out on white) → solid orange→magenta gradient tile with white "द" and a warm shadow. Now works on ANY surface (white or gradient).
+- **`src/components/Toast.tsx`** — toast accent colour map: `success: --f-success` → `--c-success`; `error: --f-danger` → `--c-danger`; `warning: #F59E0B` → `--c-warning`; `info: --f-cyan` (read as teal) → `--c-info` (proper blue). Visual language now matches the semantic tokens consistently.
+
+**Files:** `src/futuristic.css`, `src/pages/Home.tsx`, `src/components/PostCard.tsx`, `src/components/futuristic/FLogo.tsx`, `src/components/Toast.tsx`.
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
+
+**Status:** ⏳ Code complete on `feat/multi-color-system`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.7 — Loading overlays for photo/AI flows (logo/cover/post-crop/edit-crop/chat-image)
 
 **Goal:** Founder ask — "while uploading photos and using AI feature there is no loading animation. there should be otherwise user will be confused. also check more where it is needed". Comprehensive audit + fix the gaps.

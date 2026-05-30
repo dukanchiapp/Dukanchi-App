@@ -68,11 +68,13 @@ function getImageStyles(naturalRatio: number | undefined): {
   };
 }
 
-/** Verified tick — solid Bright green, matches bright.html. */
+/** Verified tick — solid blue. Session 128.8: switched from green (#0C831F)
+    to blue (--c-info / #2563EB) so the badge reads as TRUST/identity, not
+    "Open" status. Green stays exclusively for the open-status pill. */
 function VerifiedTick({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
-      <circle cx="6.5" cy="6.5" r="6.5" fill="#0C831F" />
+      <circle cx="6.5" cy="6.5" r="6.5" fill="#2563EB" />
       <path d="M3.5 6.5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
@@ -248,7 +250,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                   lineHeight: 1,
                 }}
               >
-                <span aria-hidden="true" style={{ color: '#F5B400', fontSize: 13 }}>★</span>
+                <span aria-hidden="true" style={{ color: 'var(--c-rating)', fontSize: 13 }}>★</span>
                 {ratingText.value}
                 <span style={{ color: 'var(--f-text-3)', fontWeight: 500 }}>({ratingText.count})</span>
               </span>

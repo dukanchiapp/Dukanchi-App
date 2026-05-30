@@ -22,12 +22,14 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
     return;
   }, [onClose, confirm]);
 
-  // Futuristic v3 status accents (match --f-status-* / --f-success / --f-danger).
+  // Session 128.8 — semantic palette tokens. success=green, error=red,
+  // warning=amber, info=blue. Replaces the earlier `var(--f-cyan)` info color
+  // which read as a teal more than a clear "blue info" signal.
   const accent: Record<ToastType, string> = {
-    success: 'var(--f-success)',
-    error: 'var(--f-danger)',
-    warning: '#F59E0B',
-    info: 'var(--f-cyan)',
+    success: 'var(--c-success)',
+    error: 'var(--c-danger)',
+    warning: 'var(--c-warning)',
+    info: 'var(--c-info)',
   };
 
   const icons = {
