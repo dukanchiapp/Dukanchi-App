@@ -24,6 +24,41 @@
 
 ---
 
+## 2026-05-30 — Session 128.11 — SEO foundation: real robots.txt + sitemap.xml + Open Graph / Twitter meta
+
+**Goal:** Make dukanchi.com crawlable/indexable so it can rank for its brand. `/robots.txt` and `/sitemap.xml` previously fell through to the SPA catch-all in `server.ts:104` and returned the React HTML shell — Googlebot couldn't read either. Founder runs Google Search Console separately; this PR is the infrastructure they need to submit. Also adds Open Graph + Twitter Card meta so WhatsApp / Instagram / LinkedIn link previews look correct (the founder shares the link onboarding retailers).
+
+**Recon:**
+
+- Server entry `server.ts:95-107` — in production, `app.use(express.static(distPath))` runs THEN `app.get('*')` catch-all. Vite copies `public/*` into `dist/` at build time, so files in `public/` would technically already be served by `express.static` before the catch-all fires. But we register explicit Express routes for robust Content-Type + grep-ability.
+- Public routes from `src/App.tsx` lines 207-225: `/`, `/landing`, `/login`, `/signup`, `/search`, `/map`, 5 `/legal/*` (privacy, terms, account-deletion, grievance, cookies). Dynamic / auth-gated pages intentionally omitted.
+- `index.html` had `title` + `description` only — no OG/Twitter.
+- `Dockerfile:88` confirms `/app/public` ships in the production image.
+
+**Changes:**
+
+- **`public/robots.txt`** (NEW, 345B) — `User-agent: *` allow `/`, disallow `/admin-panel` + `/api`, sitemap link `https://dukanchi.com/sitemap.xml`.
+- **`public/sitemap.xml`** (NEW, 2213B) — 11 `<url>` entries (5 legal + 6 marketing/auth) with `<lastmod>2026-05-30</lastmod>` + `<changefreq>` + `<priority>` weights from 1.0 (home) down to 0.3 (legal subpages).
+- **`src/app.ts`** — added explicit `GET /robots.txt` (forces `text/plain`) + `GET /sitemap.xml` (forces `application/xml`) right after the `/landing` handler, BEFORE the catch-all that lives in `server.ts:104`. Block-commented to call out the deterministic-MIME + grep-ability reasons.
+- **`index.html`** — added `<link rel="canonical">` + 7 Open Graph tags (`og:type`, `og:site_name`, `og:url`, `og:title`, `og:description`, `og:image` → `https://dukanchi.com/icons/icon-512x512.png` with width/height + `og:locale` `hi_IN`) + 4 Twitter Card tags (`summary_large_image` + title/description/image).
+
+**What did NOT change:**
+- ❌ No new routes / API endpoints / schema migrations
+- ❌ No DB writes
+- ❌ No Socket.IO / CORS / auth changes
+- ❌ No feature additions
+
+**Verification:**
+
+- `npm run typecheck` → 0 (web/server/worker)
+- `npm test --run` → 133/133 ✓
+- `npm run test:e2e` → 2/2 ✓ (chromium public-render smokes)
+- `npm run build` → ✓ (`dist/robots.txt` 345B + `dist/sitemap.xml` 2213B confirmed in output)
+
+**Status:** ✅ **LIVE.** PR [#132](https://github.com/dukanchiapp/Dukanchi-App/pull/132) squash-merged to main `25a3cc6`; **Fly v56** (machine `9080d70da60d18`, sin, healthcheck passing). Rule E curl smoke (the critical bar for this task): `/robots.txt` returns `content-type: text/plain; charset=utf-8` with the real file body (NOT HTML shell); `/sitemap.xml` returns `content-type: application/xml` with the real XML body; both `dukanchi.com` (Cloudflare) AND `dukanchi-app.fly.dev` (Fly origin) match; `/health` 200 both. All 7 OG tags (`og:type / site_name / url / title / description / image / locale`) + 4 Twitter tags (`twitter:card / title / description / image`) confirmed in served HTML at `https://dukanchi.com/`. **Awaiting:** founder Google Search Console submission of `https://dukanchi.com/sitemap.xml`.
+
+---
+
 ## 2026-05-30 — Session 128.10 — Blinkit Phase 2: green action CTAs + yellow Home header + underline tabs + nav active highlight
 
 **Goal:** Founder shared 5 Blinkit screenshots after Phase 1 (Session 128.9 yellow). Studying the screens unlocked the critical pattern: **Blinkit uses yellow as the BRAND/identity canvas (header backgrounds, surfaces) but GREEN as the PRIMARY ACTION colour** — every "ADD" / "Order" / "Upload" / CTA in their UI is solid Blinkit green (`#0C831F`). This split is why their UI reads as "fast + decisive" — yellow is everywhere but the thing you should TAP is unmistakably green.
