@@ -39,7 +39,7 @@
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
 
-**Status:** ⏳ Code complete on `feat/gps-reverse-geocode`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#122](https://github.com/dukanchiapp/Dukanchi-App/pull/122) squash-merged to main `83cc0d7`; **Fly v51** (machine `9080d70da60d18`, sin, healthcheck passing). `/health` 200 on Fly origin + Cloudflare; new endpoint `GET /api/geocode/reverse?lat=X&lng=Y` correctly returns `401 application/json {"error":"Access denied"}` unauth (auth gate intact — prevents anonymous abuse of upstream Nominatim quota).
 
 ---
 
