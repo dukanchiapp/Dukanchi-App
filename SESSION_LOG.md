@@ -67,7 +67,7 @@ Blinkit's brand reads as "fast + friendly + energetic" because of high-contrast 
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓ (PWA precache 70 → 71 entries — the new SVG favicon is bundled). PNG fallback icons (8 files) still serve the old orange brand mark — best to regenerate from the new SVG in a follow-up session via an image-tooling script; for now the SVG renders correctly on every modern browser including the Capacitor WebView.
 
-**Status:** ⏳ Code complete on `feat/blinkit-yellow-theme`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#128](https://github.com/dukanchiapp/Dukanchi-App/pull/128) squash-merged to main `963cb07`; **Fly v54** (machine `9080d70da60d18`, sin, healthcheck passing). `/health` 200 on Fly + Cloudflare. Verified shipped: `<meta name="theme-color" content="#F8CB46">` confirmed in served HTML; `<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">` present; `GET /icons/icon.svg` returns `HTTP 200 image/svg+xml 2643 bytes`.
 
 ---
 
