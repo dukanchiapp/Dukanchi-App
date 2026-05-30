@@ -140,7 +140,18 @@ export class PostService {
       prisma.post.findMany({
         where: whereClause,
         include: {
-          store: { select: { id: true, storeName: true, logoUrl: true, latitude: true, longitude: true, category: true, averageRating: true, hideRatings: true, chatEnabled: true, ownerId: true, openingTime: true, closingTime: true, is24Hours: true, workingDays: true, owner: { select: { id: true, role: true } } } },
+          store: {
+            select: {
+              id: true, storeName: true, logoUrl: true, latitude: true, longitude: true,
+              category: true, averageRating: true, reviewCount: true, hideRatings: true,
+              chatEnabled: true, ownerId: true, openingTime: true, closingTime: true,
+              is24Hours: true, workingDays: true, city: true, postalCode: true,
+              owner: { select: { id: true, role: true } },
+              // Session 128.8: surface follower count in the Home PostCard
+              // header's location row ("Bandra · 400050 · 2.3k followers").
+              _count: { select: { followers: true } },
+            },
+          },
           product: { select: { id: true, productName: true, price: true, category: true } },
           likes: { where: { userId }, select: { id: true } },
           _count: { select: { likes: true } },

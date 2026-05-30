@@ -22,6 +22,15 @@ export interface PostCardProps {
   onImgLoad: (postId: string, ratio: number) => void;
 }
 
+// Session 128.8: compact follower-count formatter — 2347 → "2.3k", 12_000 → "12k",
+// 1_500_000 → "1.5M". Used in the PostCard header's location row.
+function formatCount(n: number): string {
+  if (n < 1_000) return String(n);
+  if (n < 10_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
+  if (n < 1_000_000) return `${Math.round(n / 1_000)}k`;
+  return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+}
+
 function renderCaption(caption: string) {
   const m = caption.match(/^([^.!?]+[.!?])([\s\S]*)$/);
   if (!m) return <strong style={{ fontWeight: 600 }}>{caption}</strong>;
@@ -96,6 +105,25 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
   const areaText = [post.store?.city, post.store?.postalCode]
     .filter((v) => v !== null && v !== undefined && v !== '')
     .join(' · ');
+
+  // Session 128.8 — trust signals on the PostCard header
+  //
+  // Row 1 (inline next to name): "⭐ 4.6 (124)" — only when the store has at
+  // least one review. Hidden for brand-new stores (a "(0)" reads like a fail).
+  //
+  // Row 3 (appended to area · pincode): "· 2.3k followers" — only when the
+  // store has any followers. formatCount compresses 2347 → "2.3k", 12000 → "12k".
+  const ratingText = (() => {
+    const r = post.store?.averageRating;
+    const c = post.store?.reviewCount ?? 0;
+    if (!r || c < 1 || post.store?.hideRatings) return null;
+    return { value: r.toFixed(1), count: c };
+  })();
+  const followersCount = post.store?._count?.followers ?? 0;
+  const metaLine = [
+    areaText || null,
+    followersCount > 0 ? `${formatCount(followersCount)} ${followersCount === 1 ? 'follower' : 'followers'}` : null,
+  ].filter(Boolean).join(' · ');
   const { canvasStyle, imgStyle } = getImageStyles(imgRatio);
 
   const handleImgLoad = useCallback(
@@ -204,6 +232,27 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
               </span>
             </Link>
             {post.store?.isVerified && <VerifiedTick size={14} />}
+            {/* Session 128.8: ⭐ rating + review-count chip inline with the name.
+                Hidden when the store has no reviews — "(0)" reads like a fail. */}
+            {ratingText && (
+              <span
+                aria-label={`Rating ${ratingText.value} of 5 from ${ratingText.count} reviews`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 3,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: 'var(--f-text-2)',
+                  flexShrink: 0,
+                  lineHeight: 1,
+                }}
+              >
+                <span aria-hidden="true" style={{ color: '#F5B400', fontSize: 13 }}>★</span>
+                {ratingText.value}
+                <span style={{ color: 'var(--f-text-3)', fontWeight: 500 }}>({ratingText.count})</span>
+              </span>
+            )}
             <span style={{ flex: 1 }} />
             {!isOwnPost && (
               <button
@@ -272,8 +321,9 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
             )}
           </div>
 
-          {/* Row 3: area · pincode */}
-          {areaText && (
+          {/* Row 3: area · pincode · followers (Session 128.8) — renders if
+              EITHER an area string OR follower count is present. */}
+          {metaLine && (
             <div
               style={{
                 display: 'flex',
@@ -287,7 +337,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
               }}
             >
               <MapPin size={11} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{areaText}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{metaLine}</span>
             </div>
           )}
         </div>
