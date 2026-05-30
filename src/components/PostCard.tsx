@@ -269,13 +269,15 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                   fontFamily: 'inherit',
                   flexShrink: 0,
                   lineHeight: 1,
-                  // Session 128.9 — Blinkit yellow Follow CTA with dark ink.
-                  // Solid + 3D bottom shadow + inner top highlight = the
-                  // "tactile button" feel. THE primary CTA per card.
-                  background: isFollowed ? 'var(--f-bg-elev)' : 'var(--b-yellow)',
-                  color: isFollowed ? 'var(--f-text-2)' : 'var(--b-yellow-ink)',
-                  border: isFollowed ? '1px solid var(--f-glass-border-2)' : '1px solid var(--b-yellow-dk)',
-                  boxShadow: isFollowed ? 'none' : '0 2px 6px rgba(230,185,46,0.40), inset 0 1px 0 rgba(255,255,255,0.45)',
+                  // Session 128.10 — Blinkit-pattern: yellow = brand, GREEN
+                  // = primary action. Every "ADD" / "Order" / Follow CTA in
+                  // their UI is the solid green outlined card-style button.
+                  // Solid white surface with green border + green text reads
+                  // as "tap me" without flooding the card with brand colour.
+                  background: isFollowed ? 'var(--c-action-lt)' : '#FFFFFF',
+                  color: isFollowed ? 'var(--f-text-2)' : 'var(--c-action)',
+                  border: isFollowed ? '1px solid var(--c-action-lt)' : '1.5px solid var(--c-action)',
+                  boxShadow: isFollowed ? 'none' : '0 2px 6px rgba(12,131,31,0.18)',
                 }}
               >
                 {isFollowed ? 'Following' : 'Follow'}

@@ -49,7 +49,12 @@ export default function BottomNav() {
             location.pathname === path ||
             (path !== '/' && location.pathname.startsWith(path));
           const isHome = path === '/';
-          const color = isActive ? 'var(--b-magenta-ink)' : '#A8A8A8';
+          // Session 128.10 — Blinkit bottom-nav active state: yellow rounded
+          // square BEHIND the icon (compare their Print tab) + dark icon +
+          // dark bold label. Replaces the magenta-text-only active hint with
+          // something users see from across the room.
+          const iconColor = isActive ? 'var(--b-yellow-ink)' : '#A8A8A8';
+          const labelColor = isActive ? 'var(--b-yellow-ink)' : '#A8A8A8';
           return (
             <Link
               key={path}
@@ -58,25 +63,33 @@ export default function BottomNav() {
               style={{
                 flex: 1,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                padding: '6px 0',
+                padding: '4px 0',
                 textDecoration: 'none',
-                // Kill the browser's default focus/tap ring on the active <Link>
-                // — the magenta-ink color is the only active highlight.
                 outline: 'none', WebkitTapHighlightColor: 'transparent',
                 transition: 'color 200ms var(--b-ease)',
               }}
             >
-              <Icon
-                size={22}
-                color={color}
-                fill={isHome && isActive ? color : 'none'}
-                strokeWidth={isHome && isActive ? 0 : 2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <span
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 44, height: 30, borderRadius: 12,
+                  background: isActive ? 'var(--b-yellow)' : 'transparent',
+                  boxShadow: isActive ? '0 2px 6px rgba(248,203,70,0.40)' : 'none',
+                  transition: 'background 180ms var(--b-ease)',
+                }}
+              >
+                <Icon
+                  size={20}
+                  color={iconColor}
+                  fill={isHome && isActive ? iconColor : 'none'}
+                  strokeWidth={isHome && isActive ? 0 : 2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </span>
               <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: 0.2,
-                color,
+                fontSize: 10, fontWeight: isActive ? 800 : 600, letterSpacing: 0.2,
+                color: labelColor,
               }}>
                 {label}
               </span>

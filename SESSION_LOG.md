@@ -24,6 +24,43 @@
 
 ---
 
+## 2026-05-30 — Session 128.10 — Blinkit Phase 2: green action CTAs + yellow Home header + underline tabs + nav active highlight
+
+**Goal:** Founder shared 5 Blinkit screenshots after Phase 1 (Session 128.9 yellow). Studying the screens unlocked the critical pattern: **Blinkit uses yellow as the BRAND/identity canvas (header backgrounds, surfaces) but GREEN as the PRIMARY ACTION colour** — every "ADD" / "Order" / "Upload" / CTA in their UI is solid Blinkit green (`#0C831F`). This split is why their UI reads as "fast + decisive" — yellow is everywhere but the thing you should TAP is unmistakably green.
+
+Phase 1 mistakenly made Follow/Login/Signup CTAs yellow (brand colour) instead of green (action colour). This Phase 2 corrects the split.
+
+**Changes — palette:**
+
+- **`src/futuristic.css`** — added the action-green token set: `--c-action` (#0C831F Blinkit ADD-green), `--c-action-dk` (#0A6E1A hover/active depth), `--c-action-lt` (#E8F5E9 light tint backgrounds), `--c-action-ink` (#FFFFFF white text on green). Block-commented to explain the yellow=BRAND / green=ACTION split.
+
+**Changes — surfaces:**
+
+- **Home header** — WHITE → full-bleed **YELLOW** background (`var(--b-yellow)`), with the safe-area pad inheriting the yellow tint. Logo tile inside is a WHITE rounded square with dark "द" (the yellow FLogo would disappear on yellow background). Tagline "apna bazaar, apni dukaan" → dark 70% opacity for restrained contrast. Header dropped its `border-bottom` for a darker bottom shadow.
+- **Notification bell** — peach outlined → WHITE circle with dark icon (matches Blinkit's profile icon pattern on yellow headers).
+- **Home tabs** — yellow pill background → **underline-style** active state (3px dark border-bottom + bold dark text). Inactive tabs gray + semi-bold. Matches Blinkit's All/Vacations/Kids top-nav category bar exactly. Container background removed (no more pill-track look).
+- **PostCard Follow button** — yellow gradient + dark text → **GREEN outlined card-style** (white surface + 1.5px green border + green bold text + green shadow). Followed state: light-green tint background. Matches Blinkit's "ADD" buttons exactly.
+- **Login + Signup + empty-state CTAs** — yellow gradient + dark text → **solid GREEN + white text** + green-tinted shadow. Universal action signal.
+- **BottomNav active state** — magenta-ink text only → **yellow rounded square BEHIND the icon** (44×30px, 12px radius, yellow shadow) + dark bold label. Matches Blinkit's Print tab pattern — visible from across the room.
+
+**What did NOT change:**
+
+- ❌ Status pill colors (`--f-status-*`) — UNTOUCHED per Session 128.8 constraint
+- ❌ `getLiveStatus()` logic
+- ❌ Semantic toast colors (success / error / warning / info)
+- ❌ Verified-tick blue
+- ❌ Rating-star gold
+- ❌ FLogo component (still yellow 3D — used in non-yellow surfaces); Home header instead renders an inline white tile
+- ❌ Favicon (`/icons/icon.svg`) — kept yellow 3D as the brand identity is still yellow
+
+**Files:** `src/futuristic.css`, `src/pages/Home.tsx`, `src/pages/Login.tsx`, `src/pages/Signup.tsx`, `src/components/PostCard.tsx`, `src/components/BottomNav.tsx`.
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
+
+**Status:** ⏳ Code complete on `feat/blinkit-phase2-green-action`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.9 — Blinkit yellow theme + 3D SVG favicon
 
 **Goal:** Founder ask — "use blinkit color theme also add the better 3d favicons". Pivot the primary brand from the orange→magenta gradient to Blinkit-signature yellow (`#F8CB46`) with dark ink text. Ship a 3D-feel SVG favicon. Keep semantic colors + status pill colors UNCHANGED.
