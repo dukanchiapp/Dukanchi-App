@@ -20,7 +20,7 @@
 
 **Verification:** `npm run typecheck` clean (web/server/worker), `npm run build` ✓. PostCard is publicly renderable but the Home feed is auth-gated → meaningful preview requires login on a deployed build.
 
-**Status:** ⏳ Code complete on `feat/postcard-mockup-parity`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#114](https://github.com/dukanchiapp/Dukanchi-App/pull/114) squash-merged to main `23e326e`; **Fly v47** (machine `9080d70da60d18`, region `sin`, healthcheck passing). New JS bundle `index-LIDLZlFu.js` (CSS unchanged `index-Cw4Z1gZe.css` because changes are all JSX/inline-style) — identical on `dukanchi-app.fly.dev` AND `dukanchi.com`; `/health` 200 both; old v46 bundle `index-YAC98fPR.js` now SPA-fallbacks confirming the rollover; new bundle has 0 occurrences of `"m away"` confirming `getDistance` rewrite landed.
 
 ---
 
