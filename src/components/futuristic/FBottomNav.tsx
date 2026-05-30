@@ -61,9 +61,9 @@ export function FBottomNav({ active, onChange, onAi }: FBottomNavProps) {
                 height: 52,
                 borderRadius: '50%',
                 border: 'none',
-                background: 'linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%)',
+                background: 'var(--b-grad)',
                 boxShadow:
-                  '0 0 24px rgba(255,42,140,0.65), 0 0 48px rgba(255,107,53,0.35), inset 0 1px 0 rgba(255,255,255,0.4)',
+                  '0 0 24px rgba(199,126,0,0.65), 0 0 48px rgba(234,154,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -100,7 +100,7 @@ export function FBottomNav({ active, onChange, onAi }: FBottomNavProps) {
             <FIcon
               name={it.icon}
               size={20}
-              color={isActive ? '#FF2A8C' : 'currentColor'}
+              color={isActive ? 'var(--b-magenta-ink)' : 'currentColor'}
               stroke={isActive ? 2.4 : 2}
             />
             <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: 0.3 }}>

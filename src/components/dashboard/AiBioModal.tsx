@@ -144,7 +144,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
                 onClick={isRecording ? stopRecording : startRecording}
                 disabled={loading}
                 className="absolute bottom-2 right-2 flex items-center justify-center rounded-full disabled:opacity-50"
-                style={{ width: 32, height: 32, background: isRecording ? 'var(--f-danger)' : 'var(--f-grad-primary)' }}
+                style={{ width: 32, height: 32, background: isRecording ? 'var(--f-danger)' : 'var(--b-grad)' }}
               >
                 {isRecording ? <MicOff size={14} color="white" /> : <Mic size={14} color="white" />}
               </button>
@@ -160,7 +160,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
               onClick={handleGenerate}
               disabled={loading || isRecording}
               className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 0 16px rgba(255,42,140,0.35)' }}
+              style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }}
             >
               {loading ? <><Loader2 size={15} className="animate-spin" /> AI soch raha hai...</> : <><Sparkles size={14} /> ✨ Generate karo</>}
             </button>
@@ -175,7 +175,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
                   type="button"
                   onClick={() => { onBioApply(result!.bio); handleClose(); }}
                   className="w-full py-2 rounded-xl font-bold text-sm"
-                  style={{ background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.30)' }}
+                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 14px rgba(199,126,0,0.30)' }}
                 >
                   Bio use karo
                 </button>

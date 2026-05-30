@@ -8,7 +8,7 @@ export interface CategoryDef {
 }
 
 export const CATEGORIES: CategoryDef[] = [
-  { value: 'Food', label: 'Food', fullLabel: 'Food & Restaurant', emoji: '🍕', color: '#FF6B35',
+  { value: 'Food', label: 'Food', fullLabel: 'Food & Restaurant', emoji: '🍕', color: 'var(--b-orange)',
     aliases: ['food', 'restaurant', 'cafe', 'dhaba', 'eatery'] },
   { value: 'Electronics', label: 'Electronics', fullLabel: 'Electronics & Mobile', emoji: '📱', color: '#4F46E5',
     aliases: ['electronics', 'mobile', 'phones', 'gadgets', 'accessories', 'mobile & accessories'] },

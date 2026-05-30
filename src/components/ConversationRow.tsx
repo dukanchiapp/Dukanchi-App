@@ -39,8 +39,8 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
       onClick={() => onClick(conv.userId, conv.name)}
       onMouseOver={e => {
         e.currentTarget.style.transform = 'translateX(2px)';
-        e.currentTarget.style.borderColor = 'rgba(255,42,140,0.35)';
-        e.currentTarget.style.boxShadow = '0 4px 16px rgba(255,42,140,0.12)';
+        e.currentTarget.style.borderColor = 'rgba(199,126,0,0.35)';
+        e.currentTarget.style.boxShadow = '0 4px 16px rgba(199,126,0,0.12)';
       }}
       onMouseOut={e => {
         e.currentTarget.style.transform = 'translateX(0)';
@@ -57,8 +57,8 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div style={{
           width: 48, height: 48, borderRadius: 14, overflow: 'hidden',
-          background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 0 16px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.30)',
+          background: 'var(--b-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 0 16px rgba(199,126,0,0.45), inset 0 1px 0 rgba(255,255,255,0.30)',
         }}>
           {conv.logoUrl ? (
             <img src={conv.logoUrl} alt="logo" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

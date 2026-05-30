@@ -76,7 +76,7 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
                 style={
                   type === 'error'
                     ? { background: 'var(--f-danger)', border: 'none', boxShadow: '0 0 16px rgba(255,77,106,0.35)' }
-                    : { background: 'var(--f-grad-primary)', border: 'none', boxShadow: '0 0 16px rgba(255,42,140,0.35)' }
+                    : { background: 'var(--b-grad)', border: 'none', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }
                 }
               >
                 Confirm

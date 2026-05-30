@@ -41,8 +41,8 @@ export function VoiceWaveform({
       const gap = 3;
       const barW = (w - gap * (bars - 1)) / bars;
       const grad = ctx.createLinearGradient(0, 0, w, 0);
-      grad.addColorStop(0, '#FF6B35');
-      grad.addColorStop(0.5, '#FF2A8C');
+      grad.addColorStop(0, 'var(--b-orange)');
+      grad.addColorStop(0.5, 'var(--b-magenta-ink)');
       grad.addColorStop(1, '#00E5FF');
       ctx.fillStyle = grad;
       for (let i = 0; i < bars; i++) {

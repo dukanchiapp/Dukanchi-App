@@ -141,8 +141,8 @@ function FPostCardInner({
               height: 40,
               borderRadius: '50%',
               objectFit: 'cover',
-              border: '2px solid #FF2A8C',
-              boxShadow: '0 0 14px rgba(255,42,140,0.40)',
+              border: '2px solid var(--b-magenta-ink)',
+              boxShadow: '0 0 14px rgba(199,126,0,0.40)',
             }}
           />
         </Link>
@@ -214,10 +214,10 @@ function FPostCardInner({
               cursor: 'pointer',
               background: isFollowed
                 ? 'var(--f-glass-bg-2)'
-                : 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
+                : 'var(--b-grad)',
               color: isFollowed ? 'var(--f-text-1)' : 'white',
               border: isFollowed ? '1px solid var(--f-glass-border-2)' : 'none',
-              boxShadow: isFollowed ? 'none' : '0 0 14px rgba(255,42,140,0.40)',
+              boxShadow: isFollowed ? 'none' : '0 0 14px rgba(199,126,0,0.40)',
               flexShrink: 0,
               lineHeight: 1,
             }}

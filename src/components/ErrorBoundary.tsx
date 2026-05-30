@@ -56,7 +56,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         <div style={{ display: 'flex', gap: 12 }}>
           <button onClick={this.handleReload} style={{
             padding: '12px 24px', borderRadius: 50,
-            background: '#FF6B35', color: 'white',
+            background: 'var(--b-orange)', color: 'white',
             border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer',
           }}>
             🔄 Refresh karein

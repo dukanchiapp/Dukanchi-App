@@ -116,7 +116,7 @@ function Hero3DScene() {
       if (cancelled || canvas) return;
       const THREE = (window as any).THREE;
       if (!THREE) {
-        mount.style.background = 'linear-gradient(135deg, rgba(255,107,53,0.18), rgba(255,42,140,0.18))';
+        mount.style.background = 'linear-gradient(135deg, rgba(234,154,0,0.18), rgba(199,126,0,0.18))';
         mount.style.border = '1px solid var(--f-glass-border)';
         return;
       }
@@ -310,8 +310,8 @@ export default function LandingPage() {
           <Link
             to="/login"
             style={{
-              background: 'var(--f-grad-primary)', color: 'white', borderRadius: 9999, padding: '9px 18px',
-              fontSize: 12.5, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(255,107,53,0.4)',
+              background: 'var(--b-grad)', color: 'white', borderRadius: 9999, padding: '9px 18px',
+              fontSize: 12.5, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(234,154,0,0.4)',
             }}
           >
             {c(d, 'nav.ctaText')}
@@ -336,9 +336,9 @@ export default function LandingPage() {
             <Link
               to="/signup"
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--f-grad-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--b-grad)',
                 color: 'white', borderRadius: 14, padding: '16px 24px', fontSize: 15, fontWeight: 800, textDecoration: 'none',
-                boxShadow: '0 0 28px rgba(255,107,53,0.42)',
+                boxShadow: '0 0 28px rgba(234,154,0,0.42)',
               }}
             >
               {c(d, 'hero.cta1')} <FIcon name="arrowR" size={18} color="white" />
@@ -410,7 +410,7 @@ export default function LandingPage() {
               <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px', lineHeight: 1.3, color: 'var(--f-text-1)', letterSpacing: '-0.02em' }}>{hook.title}</h3>
               <p style={{ fontSize: 13.5, color: 'var(--f-text-3)', margin: '0 0 8px', lineHeight: 1.6 }}>{hook.para1}</p>
               <p style={{ fontSize: 13.5, color: 'var(--f-text-2)', lineHeight: 1.6, margin: '0 0 14px' }}>{hook.para2}</p>
-              <div style={{ background: 'rgba(255,107,53,0.10)', border: '1px solid rgba(255,107,53,0.28)', borderRadius: 12, padding: '10px 14px' }}>
+              <div style={{ background: 'rgba(234,154,0,0.10)', border: '1px solid rgba(234,154,0,0.28)', borderRadius: 12, padding: '10px 14px' }}>
                 <p style={{ fontSize: 12, color: 'var(--f-orange-light)', fontWeight: 700, margin: 0 }}>⚡ {hook.stat}</p>
               </div>
             </div>
@@ -447,15 +447,15 @@ export default function LandingPage() {
               <div key={i} className="f-glass" style={{ ...glassCard, display: 'flex', gap: 16, alignItems: 'flex-start', borderRadius: 16, padding: 18 }}>
                 <div style={{
                   width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 900, fontSize: 18, flexShrink: 0, background: 'var(--f-grad-primary)', color: 'white',
-                  boxShadow: '0 0 16px rgba(255,42,140,0.45)',
+                  fontWeight: 900, fontSize: 18, flexShrink: 0, background: 'var(--b-grad)', color: 'white',
+                  boxShadow: '0 0 16px rgba(199,126,0,0.45)',
                 }}>
                   {step.num}
                 </div>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px', color: 'var(--f-text-1)' }}>{step.title}</p>
                   <p style={{ fontSize: 13, color: 'var(--f-text-3)', lineHeight: 1.5, margin: '0 0 8px' }}>{step.desc}</p>
-                  <span style={{ background: 'rgba(255,107,53,0.12)', color: 'var(--f-orange-light)', borderRadius: 9999, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>{step.tag}</span>
+                  <span style={{ background: 'rgba(234,154,0,0.12)', color: 'var(--f-orange-light)', borderRadius: 9999, padding: '3px 10px', fontSize: 11, fontWeight: 700 }}>{step.tag}</span>
                 </div>
               </div>
             ))}
@@ -473,8 +473,8 @@ export default function LandingPage() {
               {c(d, 'illustration.chatBubble1')}
             </div>
             <div style={{
-              background: 'var(--f-grad-primary)', borderRadius: '16px 16px 4px 16px', padding: '10px 16px',
-              textAlign: 'right', fontSize: 14, color: 'white', fontWeight: 700, boxShadow: '0 0 18px rgba(255,42,140,0.3)',
+              background: 'var(--b-grad)', borderRadius: '16px 16px 4px 16px', padding: '10px 16px',
+              textAlign: 'right', fontSize: 14, color: 'white', fontWeight: 700, boxShadow: '0 0 18px rgba(199,126,0,0.3)',
             }}>
               {c(d, 'illustration.chatBubble2')}
             </div>
@@ -511,9 +511,9 @@ export default function LandingPage() {
             <Link
               to="/signup"
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--f-grad-primary)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--b-grad)',
                 color: 'white', borderRadius: 14, padding: '16px 24px', fontSize: 15, fontWeight: 800, textDecoration: 'none',
-                boxShadow: '0 0 28px rgba(255,107,53,0.42)',
+                boxShadow: '0 0 28px rgba(234,154,0,0.42)',
               }}
             >
               {c(d, 'finalCta.cta1')} <FIcon name="arrowR" size={18} color="white" />

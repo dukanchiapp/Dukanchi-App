@@ -143,7 +143,7 @@ export default function LocationPicker({ onClose }: Props) {
               style={{ borderBottom: '0.5px solid var(--dk-border)' }}
             >
               <div
-                style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(255,107,53,0.1)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: 38, height: 38, borderRadius: 12, background: 'rgba(234,154,0,0.1)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <LocateFixed size={18} style={{ color: 'var(--dk-accent)' }} />
               </div>

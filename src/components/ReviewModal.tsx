@@ -98,7 +98,7 @@ export default function ReviewModal({ isOpen, onClose, targetId, targetType, tar
               onChange={(e) => setComment(e.target.value)}
               placeholder={`Share the details of your experience with ${targetName}...`}
               rows={4}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[#FF6B35] focus:border-transparent transition-all outline-none resize-none text-sm"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-[var(--b-orange)] focus:border-transparent transition-all outline-none resize-none text-sm"
             />
           </div>
 

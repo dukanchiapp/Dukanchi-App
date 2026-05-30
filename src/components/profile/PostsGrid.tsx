@@ -58,8 +58,8 @@ const sheetPanel: CSSProperties = {
 
 const sheetPrimaryBtn: CSSProperties = {
   width: '100%', marginTop: 16, padding: 13, borderRadius: 12, border: 'none', cursor: 'pointer',
-  fontFamily: 'inherit', background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700,
-  boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+  fontFamily: 'inherit', background: 'var(--b-grad)', color: 'white', fontSize: 14, fontWeight: 700,
+  boxShadow: '0 0 16px rgba(199,126,0,0.35)',
 };
 
 export function PostsGrid({
@@ -401,9 +401,9 @@ export function PostsGrid({
                 style={{
                   position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', border: 'none',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
-                  background: post.isPinned ? 'var(--f-grad-primary)' : 'rgba(0,0,0,0.5)',
+                  background: post.isPinned ? 'var(--b-grad)' : 'rgba(0,0,0,0.5)',
                   opacity: post.isPinned ? 1 : 0,
-                  boxShadow: post.isPinned ? '0 0 10px rgba(255,42,140,0.5)' : 'none',
+                  boxShadow: post.isPinned ? '0 0 10px rgba(199,126,0,0.5)' : 'none',
                 }}
               >
                 <FIcon name="pin" size={12} color="white" fill={post.isPinned ? 'white' : 'none'} />
@@ -428,7 +428,7 @@ export function PostsGrid({
               onClick={() => setShowNewPostModal(true)}
               style={{
                 marginTop: 16, padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                background: 'var(--f-grad-primary)', color: 'white', fontSize: 13, fontWeight: 700, boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+                background: 'var(--b-grad)', color: 'white', fontSize: 13, fontWeight: 700, boxShadow: '0 0 16px rgba(199,126,0,0.35)',
               }}
             >
               Create Post
@@ -464,7 +464,7 @@ export function PostsGrid({
                         <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--f-magenta)', flexShrink: 0 }}>
                           {store.logoUrl
                             ? <img src={store.logoUrl} alt="store" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--f-grad-primary)', color: 'white', fontWeight: 800, fontSize: 13 }}>{store.storeName?.charAt(0)}</div>}
+                            : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--b-grad)', color: 'white', fontWeight: 800, fontSize: 13 }}>{store.storeName?.charAt(0)}</div>}
                         </div>
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</p>
@@ -472,13 +472,13 @@ export function PostsGrid({
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <button onClick={() => openEditModal(post)} style={chip('rgba(255,107,53,0.15)', 'var(--f-orange-light)')}>
+                        <button onClick={() => openEditModal(post)} style={chip('rgba(234,154,0,0.15)', 'var(--f-orange-light)')}>
                           <FIcon name="pencil" size={11} color="var(--f-orange-light)" /> Edit
                         </button>
                         {!post.isOpeningPost && (
                           <button
                             onClick={(e) => handleTogglePin(e, post.id)}
-                            style={post.isPinned ? chip('var(--f-grad-primary)', 'white') : chip('var(--f-glass-bg-2)', 'var(--f-text-2)')}
+                            style={post.isPinned ? chip('var(--b-grad)', 'white') : chip('var(--f-glass-bg-2)', 'var(--f-text-2)')}
                           >
                             <FIcon name="pin" size={11} color={post.isPinned ? 'white' : 'var(--f-text-2)'} fill={post.isPinned ? 'white' : 'none'} /> {post.isPinned ? 'Unpin' : 'Pin'}
                           </button>
@@ -585,8 +585,8 @@ export function PostsGrid({
                     style={{
                       position: 'absolute', bottom: 8, left: 8, display: 'flex', alignItems: 'center', gap: 6,
                       padding: '6px 12px', borderRadius: 9999, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                      background: 'var(--f-grad-primary)', color: 'white', fontSize: 11, fontWeight: 800,
-                      opacity: aiLoading ? 0.6 : 1, boxShadow: '0 0 14px rgba(255,42,140,0.40)',
+                      background: 'var(--b-grad)', color: 'white', fontSize: 11, fontWeight: 800,
+                      opacity: aiLoading ? 0.6 : 1, boxShadow: '0 0 14px rgba(199,126,0,0.40)',
                     }}
                   >
                     <FIcon name="sparkles" size={12} color="white" />

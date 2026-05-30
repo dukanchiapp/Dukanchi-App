@@ -171,7 +171,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
           }}
           className="flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-colors"
           style={mode === 'crop'
-            ? { background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 2px 8px rgba(255,42,140,0.30)' }
+            ? { background: 'var(--b-grad)', color: 'white', boxShadow: '0 2px 8px rgba(199,126,0,0.30)' }
             : { background: 'transparent', color: 'var(--f-text-3)' }}
         >
           <Move size={12} /> <span>Crop</span>
@@ -180,7 +180,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
           onClick={() => setMode('fit')}
           className="flex-1 py-2 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 transition-colors"
           style={mode === 'fit'
-            ? { background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 2px 8px rgba(255,42,140,0.30)' }
+            ? { background: 'var(--b-grad)', color: 'white', boxShadow: '0 2px 8px rgba(199,126,0,0.30)' }
             : { background: 'transparent', color: 'var(--f-text-3)' }}
         >
           <Maximize2 size={12} /> <span>Fit</span>
@@ -240,7 +240,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
           onClick={handleComplete}
           disabled={!img || loadError}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          style={{ background: 'var(--f-grad-primary)', border: 'none', boxShadow: '0 0 16px rgba(255,42,140,0.35)' }}
+          style={{ background: 'var(--b-grad)', border: 'none', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }}
         >
           Image use karein
         </button>
