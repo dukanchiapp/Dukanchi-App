@@ -1,54 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!--
-    Session 128.9 — Dukanchi 3D yellow app icon.
-    Blinkit-inspired theme. Faux-3D using:
-      - vertical gradient (top-light → bottom-deeper yellow)
-      - top specular highlight (white sheen with low opacity)
-      - bottom inner shadow (subtle inset darkening)
-      - drop shadow under the tile (depth on a light surface)
-      - rounded square (iOS app-icon style: 22.5% corner radius)
-      - centered Devanagari "द" in near-black with a white text bevel
+    Session 128.13 — Dukanchi Bright Skin app icon.
+    Per dukanchi-bright-skin/ICONS.md:
+      • Tile: linear-gradient(135deg, #FFD63B, #FFB300) at radius ~22% of size
+      • Glyph: Devanagari "द", color #1C1A18 (dark on yellow), Sora 600
+      • Centered at ~52% of tile height
+    Flat per the Bright Skin spec — no specular sheen, no inner shadow, no
+    bevel. The brand mark stays clean so it reads at 16/32/180/512px sizes.
   -->
   <defs>
-    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"  stop-color="#FFE082"/>
-      <stop offset="55%" stop-color="#F8CB46"/>
-      <stop offset="100%" stop-color="#E6B92E"/>
+    <linearGradient id="face" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#FFD63B"/>
+      <stop offset="100%" stop-color="#FFB300"/>
     </linearGradient>
-    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%"  stop-color="#FFFFFF" stop-opacity="0.55"/>
-      <stop offset="60%" stop-color="#FFFFFF" stop-opacity="0.10"/>
-      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
-    </linearGradient>
-    <radialGradient id="bottomGlow" cx="0.5" cy="1" r="0.7">
-      <stop offset="0%"  stop-color="#7A5800" stop-opacity="0.18"/>
-      <stop offset="100%" stop-color="#7A5800" stop-opacity="0"/>
-    </radialGradient>
-    <filter id="dropShadow" x="-20%" y="-10%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="16"/>
-      <feOffset dx="0" dy="14" result="off"/>
-      <feComponentTransfer><feFuncA type="linear" slope="0.32"/></feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
-
-  <!-- Tile face with drop shadow -->
-  <g filter="url(#dropShadow)">
-    <rect x="32" y="20" width="448" height="448" rx="115" fill="url(#face)"/>
-    <!-- Top specular sheen for the 3D feel -->
-    <rect x="32" y="20" width="448" height="248" rx="115" fill="url(#sheen)"/>
-    <!-- Bottom inner darkening (depth) -->
-    <rect x="32" y="20" width="448" height="448" rx="115" fill="url(#bottomGlow)"/>
-    <!-- Subtle outer rim for definition on yellow backgrounds -->
-    <rect x="33" y="21" width="446" height="446" rx="114" fill="none" stroke="#E6B92E" stroke-width="2"/>
-  </g>
-
-  <!-- Devanagari "द" — dark ink with a soft white bevel above for the inset feel -->
-  <g font-family="Inter, Arial, sans-serif" text-anchor="middle">
-    <text x="256" y="346" font-size="288" font-weight="800" fill="#FFFFFF" fill-opacity="0.42">द</text>
-    <text x="256" y="344" font-size="288" font-weight="800" fill="#1A1A1A">द</text>
-  </g>
+  <rect x="0" y="0" width="512" height="512" rx="115" ry="115" fill="url(#face)"/>
+  <text x="256" y="266"
+        font-family="Sora, Inter, sans-serif"
+        font-weight="600"
+        font-size="320"
+        fill="#1C1A18"
+        text-anchor="middle"
+        dominant-baseline="central">द</text>
 </svg>
