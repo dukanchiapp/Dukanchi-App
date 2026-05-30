@@ -383,37 +383,73 @@ export default function ChatPage() {
         <PostPreviewOverlay post={previewPost} onClose={() => setPreviewPost(null)} />
       )}
 
-      {/* ── Header ── */}
-      <header style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px 12px', zIndex: 5,
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-        background: 'var(--b-grad)',
-      }}>
+      {/* ── Session 128.14 — Bright Skin Chat peer header per ChatScreen.jsx
+          lines 11-24: yellow gradient + b-head sheen + chip-back chevron +
+          40×40 WHITE circle avatar with magenta-ink initial + peer name +
+          (status / distance / category meta below — fed by upstream data). */}
+      <header
+        className="b-head"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 11,
+          padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 14px 14px',
+          background: 'var(--b-grad)',
+          zIndex: 5,
+        }}
+      >
         <Link
           to="/messages"
+          className="b-tap"
           style={{
-            width: 42, height: 42, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, textDecoration: 'none',
-            background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)',
+            background: 'var(--b-chip-bg)',
+            border: '1px solid var(--b-chip-line)',
+            borderRadius: 11,
+            width: 36,
+            height: 36,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            textDecoration: 'none',
           }}
           aria-label="Back to messages"
         >
-          <ChevronLeft size={20} color="#fff" />
+          <ChevronLeft size={19} color="var(--b-on-grad)" strokeWidth={2.4} />
         </Link>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 16, minWidth: 0, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)' }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
-            background: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#fff', fontWeight: 800, fontSize: 14,
-          }}>
-            {receiverLogo
-              ? <img src={receiverLogo} alt="receiver logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : (receiverInitial || '?')}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {receiverName || 'Loading...'}
-            </div>
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            background: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            color: 'var(--b-magenta-ink)',
+            flexShrink: 0,
+            overflow: 'hidden',
+            fontSize: 16,
+          }}
+        >
+          {receiverLogo
+            ? <img src={receiverLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : (receiverInitial || '?')}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              color: 'var(--b-on-grad)',
+              fontWeight: 700,
+              fontSize: 15,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {receiverName || 'Loading…'}
           </div>
         </div>
       </header>
@@ -421,10 +457,17 @@ export default function ChatPage() {
       {/* ── Messages ── */}
       <main style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
-          <span style={{
-            fontSize: 11, fontWeight: 600, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em',
-            background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)', padding: '4px 12px', borderRadius: 9999,
-          }}>
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: 'var(--b-gray-3)',
+              background: '#fff',
+              border: '1px solid var(--b-line)',
+              padding: '3px 12px',
+              borderRadius: 9999,
+            }}
+          >
             {new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
           </span>
         </div>
@@ -534,31 +577,74 @@ export default function ChatPage() {
           </div>
         )}
 
-        <form onSubmit={handleSend} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
-          <label className="f-glass" style={{ width: 42, height: 42, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-            <Paperclip size={20} color="var(--f-text-2)" />
+        {/* Session 128.14 — Composer per ChatScreen.jsx lines 45-56:
+            white surface, top border, attach + input + 44×44 green circle send. */}
+        <form
+          onSubmit={handleSend}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '10px 14px',
+            background: '#fff',
+            borderTop: '1px solid var(--b-line)',
+            flexShrink: 0,
+          }}
+        >
+          <label
+            className="b-tap"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              background: 'var(--b-surface)',
+              border: '1px solid var(--b-line)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <Paperclip size={20} color="var(--b-gray-1)" />
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder={referredPost ? 'Ask about this post…' : 'Type a message...'}
+            placeholder={referredPost ? 'Ask about this post…' : 'Message likhein…'}
             style={{
-              flex: 1, padding: '14px 18px', background: 'var(--f-bg-elev)', border: '1px solid var(--f-glass-border-2)',
-              borderRadius: 9999, color: 'var(--f-text-1)', fontSize: 14, fontFamily: 'inherit', outline: 'none', fontWeight: 500,
+              flex: 1,
+              padding: '11px 16px',
+              background: 'var(--b-surface)',
+              border: '1px solid var(--b-line)',
+              borderRadius: 9999,
+              color: 'var(--b-ink)',
+              fontSize: 14,
+              fontFamily: 'inherit',
+              outline: 'none',
+              fontWeight: 500,
+              minWidth: 0,
             }}
           />
           <button
             type="submit"
             disabled={sendDisabled}
+            className="b-tap"
+            aria-label="Send message"
             style={{
-              width: 46, height: 46, borderRadius: 14, border: 'none', flexShrink: 0,
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              border: 'none',
+              flexShrink: 0,
               cursor: sendDisabled ? 'not-allowed' : 'pointer',
               opacity: sendDisabled ? 0.5 : 1,
-              // Session 128.13 — Bright Skin: Send=green (color = function).
-              background: 'var(--b-green)', boxShadow: '0 2px 8px rgba(12,131,31,0.30)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--b-green)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             {isSending

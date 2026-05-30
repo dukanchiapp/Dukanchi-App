@@ -195,34 +195,63 @@ export default function MessagesPage() {
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
 
-        {/* ── Gradient header ── */}
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 20, padding: '0 16px 14px',
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 18px)',
-          background: 'var(--b-grad)',
-        }}>
+        {/* Session 128.14 — Bright Skin Messages header per
+            dukanchi-bright-skin/screens/MessagesScreen.jsx lines 9-11:
+            yellow gradient + b-head sheen + 24px Sora wordmark. The search
+            input + chats counter are kept on a tinted strip below the
+            gradient header (a Dukanchi-only addition, not in the spec
+            since the spec shows only the title — but our app has search
+            and a chats counter that matter operationally). */}
+        <div
+          className="b-head"
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 20,
+            padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 16px 16px',
+            background: 'var(--b-grad)',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
-            <h1 className="f-display" style={{ fontSize: 26, color: '#fff', margin: 0 }}>Messages</h1>
-            {/* Session 120: Refresh button dropped per design (was a bare reload). */}
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>{conversations.length} chats</span>
+            <h1
+              style={{
+                fontSize: 24,
+                fontWeight: 800,
+                fontFamily: 'var(--b-display)',
+                color: 'var(--b-on-grad)',
+                letterSpacing: '-0.03em',
+                margin: 0,
+              }}
+            >
+              Messages
+            </h1>
+            <span style={{ fontSize: 12, color: 'var(--b-on-grad-soft)', fontWeight: 600 }}>
+              {conversations.length} chats
+            </span>
           </div>
 
-          {/* Search */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderRadius: 12,
-            background: '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-          }}>
-            <Search size={17} color="#A8A8A8" style={{ flexShrink: 0 }} />
+          {/* Search input — white pill embedded in the gradient block */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '11px 14px',
+              borderRadius: 12,
+              background: '#fff',
+            }}
+          >
+            <Search size={17} color="var(--b-gray-2)" style={{ flexShrink: 0 }} />
             <input
               type="text"
               placeholder="Search conversations"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--f-text-1)', fontSize: 14, fontFamily: 'inherit', fontWeight: 500 }}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--b-ink)', fontSize: 14, fontFamily: 'inherit', fontWeight: 500, minWidth: 0 }}
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }}>
-                <X size={14} color="var(--f-text-3)" />
+              <button onClick={() => setSearchQuery('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', padding: 0 }} aria-label="Clear search">
+                <X size={14} color="var(--b-gray-2)" />
               </button>
             )}
           </div>
