@@ -51,7 +51,7 @@
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
 
-**Status:** ⏳ Code complete on `feat/upload-loading-overlays`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#124](https://github.com/dukanchiapp/Dukanchi-App/pull/124) squash-merged to main `fe816c7`; **Fly v52** (machine `9080d70da60d18`, sin, healthcheck passing). `/health` 200 on Fly + Cloudflare; bundle hashes identical (`index-CCpl6vst.css` unchanged + `index-DMTJfun-.js` new); code-split chunk `UploadingOverlay-DNQDOSeX.js` shipped and contains the `animate-spin` + `aria-live` + `"Uploading…"` signatures.
 
 ---
 
