@@ -41,7 +41,7 @@
 
 **Verification:** `npm run typecheck` clean (web/server/worker), `npm run build` ✓. Home feed is auth-gated → meaningful preview requires login on a deployed build.
 
-**Status:** ⏳ Code complete on `feat/home-quick-wins`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#116](https://github.com/dukanchiapp/Dukanchi-App/pull/116) squash-merged to main `1e151db`; **Fly v48** (machine `9080d70da60d18`, sin, healthcheck passing). New CSS bundle `index-CCpl6vst.css` + JS entry `index-Cnl7BrhZ.js` identical on Fly origin + Cloudflare; `/health` 200 both. Code-split chunks verified: `haptics-DmP3v6nK.js` contains `navigator.vibrate`; `Home-Cdoh0x5M.js` contains `dk-skeleton` class refs + Hinglish empty-state strings ("Koi saved post nahi" / "Abhi kisi ko follow nahi"); CSS contains all 3 keyframes (`dk-shimmer`, `dk-heart-burst`, `dk-skeleton`).
 
 ---
 
