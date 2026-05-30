@@ -13,7 +13,7 @@ import { logger } from "./lib/logger";
 
 import { authRoutes } from './modules/auth/auth.routes';
 import { userRoutes } from './modules/users/user.routes';
-import { storeRoutes, productRouter, pincodeRouter } from './modules/stores/store.routes';
+import { storeRoutes, productRouter, pincodeRouter, geocodeRouter } from './modules/stores/store.routes';
 import { postRoutes, interactionsRouter, storePostsDeleteRouter } from './modules/posts/post.routes';
 import { searchRoutes } from './modules/search/search.routes';
 import { messageRoutes } from './modules/messages/message.routes';
@@ -335,6 +335,7 @@ app.use('/api/stores', storePostsDeleteRouter);
 app.use('/api/stores', storeRoutes);
 app.use('/api/products', productRouter);
 app.use('/api/pincode', pincodeRouter);
+app.use('/api/geocode', geocodeRouter);
 app.use('/api/posts', postRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/messages', messageRoutes);

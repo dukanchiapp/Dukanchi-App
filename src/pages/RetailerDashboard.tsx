@@ -182,16 +182,40 @@ export default function RetailerDashboard() {
     navigator.geolocation.getCurrentPosition(async (pos) => {
       const lat = pos.coords.latitude, lng = pos.coords.longitude;
       setMapLat(lat); setMapLng(lng);
+
+      // Session 128.9: auto-fill pincode + city + state via the new
+      // /api/geocode/reverse endpoint (Nominatim → India Post chain, Redis
+      // cached). Runs in parallel with the lat/lng save so the form fills
+      // in even if the PUT is still in-flight. Silent fallback if it fails —
+      // user can still type pincode manually and the existing onChange handler
+      // will run the India Post lookup.
+      let autofillToast = '📍 Location pinned successfully!';
+      try {
+        const geoRes = await apiFetch(`/api/geocode/reverse?lat=${lat}&lng=${lng}`);
+        if (geoRes.ok) {
+          const g = await geoRes.json();
+          if (g.pincode) setPostalCode(g.pincode);
+          if (g.city) setCity(g.city);
+          if (g.state) setState(g.state);
+          if (Array.isArray(g.allCities) && g.allCities.length > 0) setCityOptions(g.allCities);
+          if (Array.isArray(g.allStates) && g.allStates.length > 0) setStateOptions(g.allStates);
+          if (g.pincode) autofillToast = `📍 Location pinned · ${g.pincode}${g.city ? ', ' + g.city : ''}`;
+        }
+      } catch (err) {
+        // Auto-fill is a convenience — don't fail the GPS save on this.
+        Sentry.captureException(err, { extra: { context: 'retailer.gpsReverseGeocode', lat, lng } });
+      }
+
       if (storeId) {
         try {
           await apiFetch(`/api/stores/${storeId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ latitude: lat, longitude: lng }) });
-          showToast('📍 Location pinned successfully!', { type: 'success' });
+          showToast(autofillToast, { type: 'success' });
         } catch (err) {
           showToast('Location save nahi ho paya. Try again.', { type: 'error' });
           Sentry.captureException(err, { extra: { context: 'retailer.gpsPinSave', storeId } });
         }
       } else {
-        showToast('📍 Location captured! It will be saved when you submit the form.', { type: 'info' });
+        showToast(autofillToast + ' (saved when you submit the form)', { type: 'info' });
       }
     }, () => showToast('Unable to get location. Please allow location access.', { type: 'error' }));
   };

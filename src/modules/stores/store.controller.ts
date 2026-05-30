@@ -4,6 +4,7 @@ import { StoreService } from "./store.service";
 import { BulkImportService } from "./bulkImport.service";
 import { prisma } from "../../config/prisma";
 import { logger } from "../../lib/logger";
+import { pubClient } from "../../config/redis";
 
 export class StoreController {
   static async createStore(req: Request, res: Response) {
@@ -136,6 +137,98 @@ export class StoreController {
         extra: { route: req.originalUrl, userId: (req as any).user?.userId },
       });
       return res.status(500).json({ error: "Failed to look up pincode" });
+    }
+  }
+
+  /* ── Session 128.9 — Reverse geocode (lat/lng → pincode + city + state) ──
+     Used by the edit-profile GPS-pin button: user taps "Save my location"
+     → we reverse-geocode via OpenStreetMap Nominatim (free, no key) to extract
+     pincode, then optionally enrich city/state via the existing India Post
+     lookup (authoritative for IN addresses). Redis-cached for 7 days keyed on
+     lat/lng rounded to 3 decimals (~110m), so neighbouring users in the same
+     building/lane share a cache hit. Sentry-only on errors; returns the
+     partial data we DID get (rather than 500) so the caller can still set
+     what it has and fall back to manual entry for the rest.
+
+     Auth required — prevents anonymous abuse of the Nominatim quota
+     (1 req/s/IP, but Dukanchi's egress is one IP so we must conserve). */
+  static async getReverseGeocode(req: Request, res: Response) {
+    try {
+      const lat = parseFloat(String(req.query.lat));
+      const lng = parseFloat(String(req.query.lng));
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({ error: "Invalid lat/lng" });
+      }
+
+      // ~110m precision cache key — collapses near-identical pins into 1 hit
+      const cacheKey = `geocode:rev:${lat.toFixed(3)}:${lng.toFixed(3)}`;
+      try {
+        const cached = await pubClient.get(cacheKey);
+        if (cached) return res.json(JSON.parse(cached as string));
+      } catch { /* Redis down — fall through to live lookup */ }
+
+      type NominatimAddress = {
+        postcode?: string;
+        suburb?: string; neighbourhood?: string; city_district?: string;
+        city?: string; town?: string; village?: string;
+        state?: string; country?: string;
+      };
+
+      // 1) Nominatim reverse geocode — User-Agent required by their TOS.
+      const nominRes = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        {
+          headers: { 'Accept-Language': 'en', 'User-Agent': 'Dukanchi/1.0 (contact@dukanchi.com)' },
+          signal: AbortSignal.timeout(5_000),
+        }
+      );
+      const nominData = (await nominRes.json().catch(() => null)) as { address?: NominatimAddress } | null;
+      const a = nominData?.address ?? {};
+
+      const pincode = a.postcode && /^\d{6}$/.test(a.postcode) ? a.postcode : null;
+      const nominCity = a.city || a.town || a.village || a.city_district || a.suburb || null;
+      const nominState = a.state || null;
+      const suburb = a.suburb || a.neighbourhood || a.city_district || null;
+
+      let city: string | null = nominCity;
+      let state: string | null = nominState;
+      let allCities: string[] = [];
+      let allStates: string[] = [];
+
+      // 2) If we got a valid IN pincode, enrich via the India Post API which
+      //    is more authoritative for Indian addresses (returns district + state).
+      if (pincode) {
+        try {
+          const ipRes = await fetch(`https://api.postalpincode.in/pincode/${pincode}`, {
+            signal: AbortSignal.timeout(5_000),
+          });
+          const ipData = (await ipRes.json()) as Array<{ Status: string; PostOffice: Array<{ Name: string; District: string; State: string }> | null }>;
+          if (ipData?.[0]?.Status === 'Success' && (ipData[0].PostOffice?.length ?? 0) > 0) {
+            const postOffices = ipData[0].PostOffice ?? [];
+            city = postOffices[0].District;
+            state = postOffices[0].State;
+            allCities = [...new Set(postOffices.map((p) => p.District))];
+            allStates = [...new Set(postOffices.map((p) => p.State))];
+          }
+        } catch {
+          // India Post failed — keep Nominatim values, fall through.
+        }
+      }
+
+      const result = { pincode, city, state, suburb, allCities, allStates, country: a.country ?? null };
+
+      // 7-day cache — addresses don't change on us.
+      try { await pubClient.set(cacheKey, JSON.stringify(result), { EX: 7 * 24 * 60 * 60 }); }
+      catch { /* Redis down — don't fail the request */ }
+
+      return res.json(result);
+    } catch (error) {
+      logger.error({ err: error, lat: req.query.lat, lng: req.query.lng }, "reverse geocode error");
+      Sentry.captureException(error, {
+        extra: { route: req.originalUrl, userId: (req as any).user?.userId, lat: req.query.lat, lng: req.query.lng },
+      });
+      // Return empty payload (200) — caller can fall back to manual entry without erroring.
+      return res.json({ pincode: null, city: null, state: null, suburb: null, allCities: [], allStates: [], country: null });
     }
   }
 
