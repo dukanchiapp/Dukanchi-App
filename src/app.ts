@@ -374,6 +374,31 @@ app.get('/landing', (_req, res) => {
   return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
+// ── 9.0 SEO — index-friendly root (Session 128.12) ───────────────────────────
+// Fixes the "Page with redirect" verdict in Google Search Console for the bare
+// domain. Before this PR, every visit to `/` (incl. Googlebot, which is always
+// logged-out) ran the pre-React inline script at index.html:100-107 which fires
+// `window.location.replace('/landing')` for non-PWA browser users — a textbook
+// client-side redirect that blocks indexing of `dukanchi.com/`.
+//
+// Strategy: short-circuit `/` at the server. If the auth cookie is present,
+// fall through to the SPA so logged-in users get <HomePage /> exactly as before.
+// If absent (Googlebot, fresh visitor), serve `public/landing.html` directly —
+// same HTML the existing /landing route returns, but at the canonical "/" URL,
+// no JavaScript redirect, indexable.
+//
+// Mounted BEFORE server.ts's `express.static(distPath)` + `app.get('*')`
+// catch-all (both registered after app.ts handlers).
+app.get('/', (req, res, next) => {
+  // Presence-only check (no signature verification). An expired/invalid token
+  // still falls through to the SPA, which then resolves to /login as today —
+  // the goal here is purely to remove the unauthenticated-redirect that broke
+  // Google indexing, not to gate auth.
+  const hasAccessToken = !!(req.cookies && req.cookies.dk_token);
+  if (hasAccessToken) return next();
+  return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
+});
+
 // ── 9a. SEO — robots.txt + sitemap.xml (Session 128.11) ──────────────────────
 // Express's static dist/ handler already would serve these files (Vite copies
 // public/* into dist/ at build time, and express.static runs BEFORE the SPA
