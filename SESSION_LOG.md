@@ -45,7 +45,7 @@
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
 
-**Status:** ⏳ Code complete on `feat/multi-color-system`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#126](https://github.com/dukanchiapp/Dukanchi-App/pull/126) squash-merged to main `febae67`; **Fly v53** (machine `9080d70da60d18`, sin, healthcheck passing). New CSS bundle `index-Bm4ry6bg.css` (semantic tokens added) + new JS entry `index-BPE6Ud0N.js`; identical on Fly origin + Cloudflare; `/health` 200 both. Verified shipped: 6 semantic tokens (`--c-brand-solid` / `--c-success` / `--c-danger` / `--c-warning` / `--c-info` / `--c-rating`) all present in CSS; `#2563EB` (blue verified tick) confirmed in `Home-jL0rdplm.js` chunk.
 
 ---
 
