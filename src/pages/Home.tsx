@@ -171,7 +171,9 @@ export default function HomePage() {
         Math.cos((lat * Math.PI) / 180) *
         Math.sin(dLon / 2) ** 2;
     const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
+    // Session 128.2: drop the "away" suffix to match the mockup's compact
+    // "1.6 km" / "320 m" PostCard header format.
+    return d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
   };
 
   const handleImgLoad = useCallback((postId: string, ratio: number) => {

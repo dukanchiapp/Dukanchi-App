@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-05-30 — Session 128.2 — Home PostCard header → mockup parity (logo letter fallback, soft ring, red pin, compact distance)
+
+**Goal:** Founder screenshots — target Bright card header ("Nikhil Bhai · Open 24h · 1.6 km · Services · 📍 Bandra · 400050") vs current Home post card ("test store · ... · 📍 Kurla West"). Match the target's clean circular logo + letter fallback + red pin + compact distance.
+
+**Changes (visual-only, Rule 4):**
+
+- **PostCard.tsx** — Avatar gains a letter fallback: when `post.store.logoUrl` is missing, render a 52×52 circular `linear-gradient(135deg,#FF6B35,#FF2A8C)` div with the storeName's first letter in 22px white (matches the mockup's "N" tile). Existing img branch also bumped to 52×52; heavy magenta double-ring shadow (`0 0 0 2px ..., 0 0 0 3.5px #FF2A8C, ...`) softened to a single `0 2px 8px rgba(255,42,140,0.20)` to match the cleaner mockup. Location pin recoloured `var(--f-text-3)` (gray) → `var(--b-magenta-ink)` (#D11F75) and bumped 10→11px.
+- **Home.tsx** `getDistance` — dropped the "away" suffix → returns `"1.6 km"` / `"320 m"` to match the mockup's compact format. StoreProfile's cover pill keeps `"1.6 km away"` (different surface, deliberate per Session 128 spec).
+- **Area row** — already pulls `post.store.city · post.store.postalCode` (`areaText` filter+join from before), so the founder's requirement "area name can be taken from the profile details" is already satisfied — no data-layer change needed.
+
+**Files:** `src/components/PostCard.tsx`, `src/pages/Home.tsx`.
+
+**Verification:** `npm run typecheck` clean (web/server/worker), `npm run build` ✓. PostCard is publicly renderable but the Home feed is auth-gated → meaningful preview requires login on a deployed build.
+
+**Status:** ⏳ Code complete on `feat/postcard-mockup-parity`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.1 — Docs-LIVE follow-up (PR #112, Fly v46)
 
 **Goal:** Per the docs convention (see [[deploy-mechanism]]), after a deploy is verified land a `docs(session-N): ... LIVE` PR so the SESSION_LOG / STATUS entries reflect post-deploy state on main.

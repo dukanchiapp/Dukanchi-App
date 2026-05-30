@@ -119,22 +119,48 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
     >
       {/* Card header — 3 sub-rows (name+verified+follow / status+distance+category / area) */}
       <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        {/* Avatar — real logo image with double-ring shadow + gradient fallback */}
-        <Link to={storeLink} style={{ flexShrink: 0 }}>
-          <img
-            src={post.store?.logoUrl || '/uploads/default-logo.png'}
-            alt={post.store?.storeName}
-            loading="lazy"
-            decoding="async"
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: '50%',
-              objectFit: 'cover',
-              background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
-              boxShadow: '0 0 0 2px var(--f-bg-elev), 0 0 0 3.5px #FF2A8C, 0 4px 12px rgba(255,42,140,0.30)',
-            }}
-          />
+        {/* Avatar — clean circular gradient with first-letter fallback when the
+            store has no logoUrl (matches the Bright mockup — see the "N" on the
+            Nikhil Bhai header). Soft single-color outer ring, no heavy shadow. */}
+        <Link to={storeLink} style={{ flexShrink: 0, display: 'block' }}>
+          {post.store?.logoUrl ? (
+            <img
+              src={post.store.logoUrl}
+              alt={post.store?.storeName}
+              loading="lazy"
+              decoding="async"
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                objectFit: 'cover',
+                display: 'block',
+                background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
+                boxShadow: '0 2px 8px rgba(255,42,140,0.20)',
+              }}
+            />
+          ) : (
+            <div
+              aria-label={post.store?.storeName}
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
+                color: '#fff',
+                fontWeight: 800,
+                fontSize: 22,
+                lineHeight: 1,
+                textTransform: 'uppercase',
+                boxShadow: '0 2px 8px rgba(255,42,140,0.20)',
+              }}
+            >
+              {post.store?.storeName?.charAt(0) ?? '?'}
+            </div>
+          )}
         </Link>
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -240,7 +266,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                 overflow: 'hidden',
               }}
             >
-              <MapPin size={10} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+              <MapPin size={11} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{areaText}</span>
             </div>
           )}
