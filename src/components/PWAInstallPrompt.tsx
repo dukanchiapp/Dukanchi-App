@@ -79,14 +79,14 @@ export default function PWAInstallPrompt() {
             left: 12,
             right: 12,
             zIndex: 9000,
-            background: '#FF6B35',
+            background: 'var(--b-orange)',
             borderRadius: 16,
             padding: '14px 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
-            boxShadow: '0 8px 32px rgba(255,107,53,0.45)',
+            boxShadow: '0 8px 32px rgba(234,154,0,0.45)',
             animation: 'slideUp 0.3s ease',
           }}
         >
@@ -97,7 +97,7 @@ export default function PWAInstallPrompt() {
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <button
               onClick={handleInstall}
-              style={{ background: 'white', color: '#FF6B35', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              style={{ background: 'white', color: 'var(--b-orange)', border: 'none', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               Install Karo
             </button>
@@ -144,7 +144,7 @@ export default function PWAInstallPrompt() {
                 ['3.', '"Add" tap karo — ho gaya!'],
               ].map(([num, text]) => (
                 <p key={num} style={{ fontSize: 14, color: '#374151', marginBottom: 6, display: 'flex', gap: 8 }}>
-                  <span style={{ fontWeight: 700, color: '#FF6B35', minWidth: 18 }}>{num}</span>
+                  <span style={{ fontWeight: 700, color: 'var(--b-orange)', minWidth: 18 }}>{num}</span>
                   {text}
                 </p>
               ))}
@@ -152,7 +152,7 @@ export default function PWAInstallPrompt() {
             <button
               onClick={() => setShowIOSModal(false)}
               style={{
-                width: '100%', background: '#FF6B35', color: 'white', border: 'none',
+                width: '100%', background: 'var(--b-orange)', color: 'white', border: 'none',
                 borderRadius: 12, padding: '14px', fontSize: 15, fontWeight: 700, cursor: 'pointer',
               }}
             >

@@ -151,7 +151,7 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 9999,
           border: 'none', cursor: 'pointer', fontFamily: 'var(--f-font)', fontSize: 13, fontWeight: 700,
-          background: 'var(--f-grad-primary)', color: 'white', boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+          background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 16px rgba(199,126,0,0.35)',
         }}
       >
         {t.retry}
@@ -169,7 +169,7 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
         className="sr-only focus:not-sr-only"
         style={{
           position: 'absolute', top: 8, left: 8, zIndex: 60, padding: '8px 14px', borderRadius: 10,
-          background: 'var(--f-grad-primary)', color: 'white', fontSize: 12, fontWeight: 700, textDecoration: 'none',
+          background: 'var(--b-grad)', color: 'white', fontSize: 12, fontWeight: 700, textDecoration: 'none',
         }}
       >
         {t.skipToContent}

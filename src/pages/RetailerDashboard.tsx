@@ -323,10 +323,10 @@ export default function RetailerDashboard() {
           <main className="p-4">
             {kycStatus === 'pending' ? (
               <div className="rounded-2xl p-6 text-center" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(255,107,53,0.12)' }}><Clock size={28} color="var(--f-orange)" /></div>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'rgba(234,154,0,0.12)' }}><Clock size={28} color="var(--f-orange)" /></div>
                 <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--f-text-1)' }}>Verification In Progress</h2>
                 <p className="text-sm leading-relaxed" style={{ color: 'var(--f-text-3)' }}>Your documents are being reviewed by our team. This usually takes 24-48 hours.</p>
-                <div className="mt-4 text-xs font-medium px-4 py-2.5 rounded-xl" style={{ background: 'rgba(255,107,53,0.12)', color: 'var(--f-orange)' }}>Status: Under Review</div>
+                <div className="mt-4 text-xs font-medium px-4 py-2.5 rounded-xl" style={{ background: 'rgba(234,154,0,0.12)', color: 'var(--f-orange)' }}>Status: Under Review</div>
               </div>
             ) : kycStatus === 'rejected' ? (
               <div className="rounded-2xl p-6" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
@@ -350,7 +350,7 @@ export default function RetailerDashboard() {
             ) : (
               <div className="rounded-2xl p-6" style={{ background: 'var(--f-glass-bg)', border: '0.5px solid var(--f-glass-border)' }}>
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,42,140,0.12)' }}><Shield size={24} color="var(--f-magenta)" /></div>
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(199,126,0,0.12)' }}><Shield size={24} color="var(--f-magenta)" /></div>
                   <div>
                     <h2 className="text-lg font-bold" style={{ color: 'var(--f-text-1)' }}>Verify Your Identity</h2>
                     <p className="text-xs" style={{ color: 'var(--f-text-3)' }}>Required before setting up your store</p>

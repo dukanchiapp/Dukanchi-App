@@ -10,7 +10,7 @@ import { Sentry } from '../lib/sentry-frontend';
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { Search, X, SlidersHorizontal, ArrowRight, Clock, MapPin, Store, Navigation, ChevronRight, Check } from 'lucide-react';
-import { FLogo } from '../components/futuristic/FLogo';
+import Header from '../components/bright/Header';
 import { RadarPulse } from '../components/futuristic/RadarPulse';
 import NotificationBell from '../components/NotificationBell';
 
@@ -295,57 +295,18 @@ export default function SearchPage() {
       }}
     >
       <div className="max-w-md mx-auto">
-        {/* Sticky gradient header */}
-        <div
-          className="sticky top-0 z-20"
-          style={{
-            background: 'var(--b-grad)',
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
-          }}
-        >
-          <div
-            style={{
-              padding: '0 16px 14px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-              <FLogo size={40} />
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: '#fff',
-                    letterSpacing: '-0.02em',
-                    lineHeight: 1.1,
-                  }}
-                >
-                  Dukanchi
-                </span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.1 }}>
-                  apna bazaar, apni dukaan
-                </span>
+        {/* Session 128.13 — Bright Skin <Header> primitive (replaces bespoke
+            sticky FLogo + gradient block). */}
+        <div className="sticky top-0 z-20">
+          <Header
+            title="Dukanchi"
+            tagline="apna bazaar, apni dukaan"
+            trailing={
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <NotificationBell color="var(--b-on-grad)" />
               </div>
-            </div>
-            {/* Live NotificationBell (drawer + unread dot) — white-on-gradient tile */}
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.18)',
-                border: '1px solid rgba(255,255,255,0.35)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <NotificationBell color="#fff" />
-            </div>
-          </div>
+            }
+          />
         </div>
 
         <main className="px-4 pt-5 pb-4">
@@ -396,9 +357,9 @@ export default function SearchPage() {
                 style={{
                   width: 46, height: 46, borderRadius: 14,
                   background: hasFilters || showFilters
-                    ? 'linear-gradient(135deg, #FF6B35, #FF2A8C)'
+                    ? 'var(--b-grad)'
                     : 'var(--f-glass-bg-2)',
-                  border: '1px solid ' + (hasFilters || showFilters ? 'rgba(255,42,140,0.45)' : 'var(--f-glass-border-2)'),
+                  border: '1px solid ' + (hasFilters || showFilters ? 'rgba(199,126,0,0.45)' : 'var(--f-glass-border-2)'),
                 }}
               >
                 <SlidersHorizontal size={18} color={hasFilters || showFilters ? 'white' : 'var(--f-text-1)'} />
@@ -487,7 +448,7 @@ export default function SearchPage() {
                     className="px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={
                       selectedCategory === cat.value
-                        ? { background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', border: 'none', boxShadow: '0 0 12px rgba(255,42,140,0.4)' }
+                        ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none', boxShadow: 'var(--b-elev-2)' }
                         : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
                     }
                   >
@@ -505,7 +466,7 @@ export default function SearchPage() {
                     className="px-3 py-1.5 rounded-full text-xs font-semibold"
                     style={
                       sortBy === opt.key
-                        ? { background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', border: 'none', boxShadow: '0 0 12px rgba(255,42,140,0.4)' }
+                        ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none', boxShadow: 'var(--b-elev-2)' }
                         : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
                     }
                   >
@@ -654,8 +615,8 @@ export default function SearchPage() {
                                     style={{
                                       borderRadius: '50%',
                                       background: store.logoUrl ? '#000' : 'var(--f-glass-bg-2)',
-                                      border: '2px solid #FF2A8C',
-                                      boxShadow: '0 0 14px rgba(255,42,140,0.35)',
+                                      border: '2px solid var(--b-magenta-ink)',
+                                      boxShadow: '0 0 14px rgba(199,126,0,0.35)',
                                     }}
                                   >
                                     {store.logoUrl
@@ -707,7 +668,7 @@ export default function SearchPage() {
                                   <button
                                     onClick={e => { e.stopPropagation(); openDirections(store); }}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold"
-                                    style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.4)' }}
+                                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 14px rgba(199,126,0,0.4)' }}
                                   >
                                     <Navigation size={13} color="white" />
                                     Navigate
@@ -753,15 +714,15 @@ export default function SearchPage() {
                   style={{
                     borderRadius: 22,
                     background: 'var(--f-modal-bg)',
-                    border: '1px solid rgba(255,42,140,0.30)',
+                    border: '1px solid rgba(199,126,0,0.30)',
                     backdropFilter: 'blur(28px)',
                     WebkitBackdropFilter: 'blur(28px)',
-                    boxShadow: '0 0 32px rgba(255,42,140,0.20), inset 0 1px 0 rgba(255,255,255,0.12)',
+                    boxShadow: '0 0 32px rgba(199,126,0,0.20), inset 0 1px 0 rgba(255,255,255,0.12)',
                   }}
                 >
                   <div className="p-4">
                     <div className="flex items-start gap-3">
-                      <span style={{ fontSize: 26, filter: 'drop-shadow(0 0 12px rgba(255,42,140,0.7))' }}>📍</span>
+                      <span style={{ fontSize: 26, filter: 'drop-shadow(0 0 12px rgba(199,126,0,0.7))' }}>📍</span>
                       <div className="flex-1 min-w-0">
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--f-text-1)', marginBottom: 3, letterSpacing: '-0.02em' }}>
                           Aur dhundho nearby?
@@ -775,9 +736,9 @@ export default function SearchPage() {
                       onClick={openAskModal}
                       className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
                       style={{
-                        background: 'linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%)',
+                        background: 'var(--b-grad)',
                         color: 'white',
-                        boxShadow: '0 0 24px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
+                        boxShadow: '0 0 24px rgba(199,126,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
                       }}
                     >
                       Nearby shops se poocho
@@ -834,7 +795,7 @@ export default function SearchPage() {
                    actual network duration, then flips to success on askResult). */
                 <div className="text-center py-6" style={{ animation: 'f-fade-up 0.3s var(--f-ease)' }}>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
-                    <RadarPulse size={220} color="#FF2A8C" shopCount={12} />
+                    <RadarPulse size={220} color="#EA9A00" shopCount={12} />
                   </div>
                   <h2 className="f-display" style={{ fontSize: 20, color: 'var(--f-text-1)', margin: '16px 0 4px' }}>
                     Broadcasting… <span className="f-grad-text">nearby shops</span>
@@ -876,7 +837,7 @@ export default function SearchPage() {
                   <button
                     onClick={() => { setAskModalOpen(false); setAskResult(null); navigate('/messages'); }}
                     className="mt-5 w-full py-3 rounded-xl font-bold text-sm"
-                    style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', boxShadow: '0 0 20px rgba(255,42,140,0.4)' }}
+                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 20px rgba(199,126,0,0.4)' }}
                   >
                     Messages mein jaao
                   </button>
@@ -911,7 +872,7 @@ export default function SearchPage() {
                           className="flex-1 py-2.5 rounded-xl text-sm font-bold"
                           style={
                             askAreaMode === mode
-                              ? { background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', border: 'none', boxShadow: '0 0 12px rgba(255,42,140,0.4)' }
+                              ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none', boxShadow: 'var(--b-elev-2)' }
                               : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
                           }
                         >
@@ -948,7 +909,7 @@ export default function SearchPage() {
                     <p style={{ ...eyebrow, marginBottom: 8 }}>Kitne door tak?</p>
                     <div className="flex items-center justify-between mb-2">
                       <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>1 km</span>
-                      <span className="f-mono" style={{ fontSize: 15, fontWeight: 700, color: '#FF2A8C' }}>{askRadius} km ke andar</span>
+                      <span className="f-mono" style={{ fontSize: 15, fontWeight: 700, color: 'var(--b-magenta-ink)' }}>{askRadius} km ke andar</span>
                       <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>20 km</span>
                     </div>
                     <input
@@ -959,7 +920,7 @@ export default function SearchPage() {
                       value={askRadius}
                       onChange={e => setAskRadius(Number(e.target.value))}
                       className="w-full"
-                      style={{ accentColor: '#FF2A8C' }}
+                      style={{ accentColor: 'var(--b-magenta-ink)' }}
                     />
                   </div>
 
@@ -969,9 +930,9 @@ export default function SearchPage() {
                     disabled={askSending || askGeocodingArea}
                     className="w-full py-3.5 rounded-xl font-bold text-sm"
                     style={{
-                      background: 'linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%)',
+                      background: 'var(--b-grad)',
                       color: 'white',
-                      boxShadow: '0 0 24px rgba(255,42,140,0.45)',
+                      boxShadow: '0 0 24px rgba(199,126,0,0.45)',
                       opacity: askSending || askGeocodingArea ? 0.7 : 1,
                     }}
                   >

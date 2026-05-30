@@ -16,6 +16,11 @@ import './index.css';
 // Additive — consumed by the futuristic redesign screens; no effect on
 // existing screens until they adopt the --f-* system.
 import './futuristic.css';
+// Bright Skin (Session 128.13) — drop-in component classes + animations.
+// Loaded LAST so its :root + [data-theme="yellow"] block overrides any earlier
+// --b-* values from futuristic.css. <html data-theme="yellow"> activates the
+// yellow theme. See dukanchi-bright-skin/IMPLEMENT.md for the source of truth.
+import './bright-skin.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

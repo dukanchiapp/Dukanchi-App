@@ -46,8 +46,8 @@ export default function Splash() {
               inset: 0,
               borderRadius: '50%',
               border: '2px solid transparent',
-              borderTopColor: '#FF2A8C',
-              borderRightColor: 'rgba(255,42,140,0.30)',
+              borderTopColor: 'var(--b-magenta-ink)',
+              borderRightColor: 'rgba(199,126,0,0.30)',
               animation: 'f-spin-slow 1.2s linear infinite',
             }}
           />
@@ -56,7 +56,7 @@ export default function Splash() {
               position: 'absolute',
               inset: 6,
               borderRadius: '50%',
-              background: 'radial-gradient(circle, rgba(255,42,140,0.18), transparent 70%)',
+              background: 'radial-gradient(circle, rgba(199,126,0,0.18), transparent 70%)',
             }}
           />
           <FLogo size={64} />

@@ -20,7 +20,7 @@ export default function NotFoundPage() {
         <Link
           to="/"
           className="inline-flex items-center px-6 py-3 rounded-xl font-semibold text-sm"
-          style={{ background: 'var(--f-grad-primary)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(255,42,140,0.30)' }}
+          style={{ background: 'var(--b-grad)', color: '#fff', textDecoration: 'none', boxShadow: '0 4px 14px rgba(199,126,0,0.30)' }}
         >
           <Home size={18} className="mr-2" />
           Go Home

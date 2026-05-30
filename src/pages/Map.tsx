@@ -160,7 +160,7 @@ export default function MapPage() {
         y: Math.max(10, Math.min(90, y)),
         h: 28 + (i % 3) * 12, // deterministic height variety
         label: (s.storeName?.charAt(0) || '?').toUpperCase(),
-        color: catDef?.color || '#FF2A8C',
+        color: catDef?.color || 'var(--b-magenta-ink)',
       };
     });
   }, [validStores, userLocation]);
@@ -296,7 +296,7 @@ export default function MapPage() {
               </div>
             ) : mapMode === '3d' && userLocation ? (
               /* Session 122: 3D isometric view — real stores projected onto the grid. */
-              <IsoMap stores={isoStores} focused={selectedStore?.id} onSelect={handleIsoSelect} accent="#FF2A8C" />
+              <IsoMap stores={isoStores} focused={selectedStore?.id} onSelect={handleIsoSelect} accent="var(--b-magenta-ink)" />
             ) : isLoaded && userLocation ? (
               <GoogleMap
                 mapContainerStyle={MAP_CONTAINER_STYLE}
@@ -318,7 +318,7 @@ export default function MapPage() {
                   icon={{
                     path: google.maps.SymbolPath.CIRCLE,
                     scale: 10,
-                    fillColor: '#FF6B35',
+                    fillColor: 'var(--b-orange)',
                     fillOpacity: 1,
                     strokeWeight: 3,
                     strokeColor: '#ffffff',
@@ -329,7 +329,7 @@ export default function MapPage() {
                 {/* Store markers */}
                 {validStores.map(store => {
                   const catDef = CATEGORIES.find(c => matchCategory(store.category, c.value));
-                  const pinColor = catDef?.color || '#FF6B35';
+                  const pinColor = catDef?.color || 'var(--b-orange)';
                   const emoji = catDef?.emoji || '🏪';
                   return (
                     <Marker
@@ -354,7 +354,7 @@ export default function MapPage() {
                 <div className="text-center">
                   <div
                     className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin mx-auto mb-2"
-                    style={{ borderColor: 'var(--f-glass-border-2)', borderTopColor: '#FF2A8C' }}
+                    style={{ borderColor: 'var(--f-glass-border-2)', borderTopColor: 'var(--b-magenta-ink)' }}
                   />
                   <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>Loading map…</p>
                 </div>
@@ -369,11 +369,11 @@ export default function MapPage() {
                 backdropFilter: 'blur(20px)',
                 WebkitBackdropFilter: 'blur(20px)',
                 borderRadius: 9999,
-                border: '1px solid rgba(255,42,140,0.30)',
-                boxShadow: '0 0 14px rgba(255,42,140,0.25)',
+                border: '1px solid rgba(199,126,0,0.30)',
+                boxShadow: '0 0 14px rgba(199,126,0,0.25)',
               }}
             >
-              <span style={{ color: '#FF2A8C', fontSize: 11, textShadow: '0 0 8px #FF2A8C' }}>●</span>
+              <span style={{ color: 'var(--b-magenta-ink)', fontSize: 11, textShadow: '0 0 8px rgba(199,126,0,0.45)' }}>●</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-1)' }}>
                 <span style={{ color: '#D11F75', fontWeight: 800 }}>{validStores.length}</span> stores nearby
               </span>
@@ -402,9 +402,9 @@ export default function MapPage() {
                       className="flex items-center gap-1"
                       style={{
                         padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
-                        background: active ? 'linear-gradient(135deg, #FF6B35, #FF2A8C)' : 'transparent',
+                        background: active ? 'var(--b-grad)' : 'transparent',
                         color: active ? 'white' : 'var(--f-text-2)', border: 'none',
-                        boxShadow: active ? '0 2px 8px rgba(255,42,140,0.30)' : 'none',
+                        boxShadow: active ? '0 2px 8px rgba(199,126,0,0.30)' : 'none',
                       }}
                     >
                       <Icon size={12} color={active ? 'white' : 'var(--f-text-2)'} /> {m.label}
@@ -418,10 +418,10 @@ export default function MapPage() {
             <div className="absolute bottom-3 right-3 flex flex-col gap-2">
               <button
                 onClick={recenterMap}
-                style={{ ...fabStyle, border: '1px solid rgba(255,107,53,0.45)', boxShadow: '0 0 16px rgba(255,107,53,0.4)' }}
+                style={{ ...fabStyle, border: '1px solid rgba(234,154,0,0.45)', boxShadow: 'var(--b-elev-2)' }}
                 aria-label="Re-center map"
               >
-                <Crosshair size={18} color="#FF6B35" />
+                <Crosshair size={18} color="var(--b-orange)" />
               </button>
             </div>
           </div>
@@ -437,8 +437,8 @@ export default function MapPage() {
                   style={{
                     width: 52, height: 52, borderRadius: 14,
                     background: selectedStore.logoUrl ? '#000' : 'var(--f-glass-bg-2)',
-                    border: '2px solid #FF2A8C',
-                    boxShadow: '0 0 14px rgba(255,42,140,0.35)',
+                    border: '2px solid var(--b-magenta-ink)',
+                    boxShadow: '0 0 14px rgba(199,126,0,0.35)',
                   }}
                 >
                   {selectedStore.logoUrl ? (
@@ -503,7 +503,7 @@ export default function MapPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
-                  style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white', boxShadow: '0 0 14px rgba(255,42,140,0.4)' }}
+                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 14px rgba(199,126,0,0.4)' }}
                 >
                   <Navigation size={14} color="white" />
                   Navigate
@@ -567,7 +567,7 @@ export default function MapPage() {
                             className="rounded-2xl overflow-hidden"
                             style={{
                               background: 'var(--f-glass-bg)',
-                              border: selectedStore?.id === store.id ? '1.5px solid rgba(255,42,140,0.55)' : '1px solid var(--f-glass-border)',
+                              border: selectedStore?.id === store.id ? '1.5px solid var(--b-magenta-ink)' : '1px solid var(--f-glass-border)',
                             }}
                           >
                             <button onClick={() => { flyToStore(store); setListExpanded(false); }} className="w-full text-left p-3">
@@ -587,7 +587,7 @@ export default function MapPage() {
                             </button>
                             <div className="flex gap-2 px-3 pb-3">
                               <Link to={`/store/${store.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}><Store size={12} color="var(--f-text-1)" /> View Store</Link>
-                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)', color: 'white' }}><Navigation size={12} color="white" /> Navigate</a>
+                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--b-grad)', color: 'white' }}><Navigation size={12} color="white" /> Navigate</a>
                             </div>
                           </div>
                         );
@@ -643,7 +643,7 @@ export default function MapPage() {
                             width: 145,
                             background: 'var(--f-glass-bg)',
                             borderRadius: 14,
-                            border: selectedStore?.id === store.id ? '1.5px solid rgba(255,42,140,0.55)' : '1px solid var(--f-glass-border)',
+                            border: selectedStore?.id === store.id ? '1.5px solid var(--b-magenta-ink)' : '1px solid var(--f-glass-border)',
                           }}
                         >
                           <div style={{ width: '100%', height: 56, background: 'var(--f-glass-bg-2)', position: 'relative', borderRadius: '14px 14px 0 0', overflow: 'hidden' }}>

@@ -12,6 +12,8 @@ import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, U
 import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
 import { haptic } from '../lib/haptics';
 import { FLocationStrip } from '../components/futuristic/FLocationStrip';
+import Header from '../components/bright/Header';
+import Button from '../components/bright/Button';
 import { PostCard } from '../components/PostCard';
 import NotificationBell from '../components/NotificationBell';
 
@@ -364,7 +366,7 @@ export default function HomePage() {
             ) : (
               <ChevronRight
                 size={18}
-                color={pullY >= PULL_THRESHOLD ? 'var(--b-magenta-ink)' : 'var(--f-text-3)'}
+                color={pullY >= PULL_THRESHOLD ? 'var(--b-magenta-ink)' : 'var(--b-gray-2)'}
                 style={{ transform: 'rotate(90deg)' }}
               />
             )}
@@ -378,80 +380,21 @@ export default function HomePage() {
           ref={topBarRef}
           className="sticky top-0 z-30"
         >
-          {/* Session 128.10 — Blinkit-style yellow header. Yellow is the brand
-              canvas (not just an accent). Dark "Dukanchi" text + dark tagline
-              for high contrast (the Blinkit signature). Status-bar/notch tint
-              by safe-area pad — the yellow fills it. */}
-          <div
-            style={{
-              background: 'var(--b-yellow)',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
-              borderBottom: '1px solid var(--b-yellow-dk)',
-              boxShadow: '0 1px 0 rgba(255,255,255,0.40) inset',
-            }}
-          >
-            <div
-              style={{
-                padding: '0 16px 14px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                {/* Session 128.10 — On yellow header the yellow FLogo would
-                    disappear. Render a WHITE tile with dark "द" instead — the
-                    Blinkit pattern (clean white surface on yellow brand canvas). */}
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    background: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                  }}
-                >
-                  <span style={{ fontSize: 21, fontWeight: 800, color: 'var(--b-yellow-ink)', lineHeight: 1 }}>द</span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span
-                    style={{
-                      fontSize: 19,
-                      fontWeight: 800,
-                      color: 'var(--b-yellow-ink)',
-                      letterSpacing: '-0.02em',
-                      lineHeight: 1.1,
-                    }}
-                  >
-                    Dukanchi
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(26,26,26,0.70)', lineHeight: 1.1 }}>
-                    apna bazaar, apni dukaan
-                  </span>
-                </div>
+          {/* Session 128.13 — Bright Skin <Header> primitive. Yellow gradient
+              with animated mesh sheen, dark wordmark, "द" logo tile, bell
+              with unread dot. Replaces the bespoke Session 128.10 yellow
+              header. The bell click-target opens the notification drawer
+              via the existing <NotificationBell /> (mounted as trailing). */}
+          <Header
+            title="Dukanchi"
+            tagline="apna bazaar, apni dukaan"
+            unread={false}
+            trailing={
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <NotificationBell color="var(--b-on-grad)" />
               </div>
-              {/* Session 128.10 — Blinkit-style white circle on yellow header
-                  (compare Blinkit's profile icon: clean white circle, dark
-                  glyph). Pops against the yellow brand canvas. */}
-              <div
-                style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: '50%',
-                  background: '#FFFFFF',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-                }}
-              >
-                <NotificationBell color="var(--b-yellow-ink)" />
-              </div>
-            </div>
-          </div>
+            }
+          />
           <FLocationStrip
             name={userLocCtx ? userLocCtx.name : 'your area'}
             onChange={() => setShowLocationPicker(true)}
@@ -468,7 +411,7 @@ export default function HomePage() {
                 overflow: 'hidden',
                 aspectRatio: '2.2 / 1',
                 background: 'var(--f-bg-elev)',
-                boxShadow: '0 6px 18px rgba(230,185,46,0.22)',
+                boxShadow: 'var(--b-elev-2)',
               }}
             >
               <div
@@ -679,25 +622,25 @@ export default function HomePage() {
                 width: 84, height: 84, borderRadius: 28,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 6,
-                background: 'var(--b-orange-bg)',
-                border: '1px solid var(--b-tint)',
+                background: 'var(--b-tint)',
+                border: '1px solid var(--b-line)',
               }}>
                 {feedType === 'saved' ? (
-                  <Bookmark size={36} color="var(--b-orange)" strokeWidth={1.8} />
+                  <Bookmark size={36} color="var(--b-magenta-ink)" strokeWidth={1.8} />
                 ) : feedType === 'following' ? (
-                  <UserCheck size={36} color="var(--b-orange)" strokeWidth={1.8} />
+                  <UserCheck size={36} color="var(--b-magenta-ink)" strokeWidth={1.8} />
                 ) : (
-                  <Store size={36} color="var(--b-orange)" strokeWidth={1.8} />
+                  <Store size={36} color="var(--b-magenta-ink)" strokeWidth={1.8} />
                 )}
               </div>
-              <p className="f-display" style={{ fontSize: 17, fontWeight: 800, color: 'var(--f-text-1)', margin: 0 }}>
+              <p style={{ fontSize: 17, fontWeight: 800, fontFamily: 'var(--b-display)', color: 'var(--b-ink)', letterSpacing: '-0.03em', margin: 0 }}>
                 {feedType === 'saved'
                   ? 'Koi saved post nahi'
                   : feedType === 'following'
                   ? 'Abhi kisi ko follow nahi kiya'
                   : 'Yahan koi post nahi'}
               </p>
-              <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: 0, maxWidth: 280, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13, color: 'var(--b-gray-2)', margin: 0, maxWidth: 280, lineHeight: 1.5 }}>
                 {feedType === 'saved'
                   ? 'Posts pe bookmark dabaiye, yahan dikhenge — baad mein dhoondhna easy hoga.'
                   : feedType === 'following'
@@ -705,19 +648,13 @@ export default function HomePage() {
                   : 'Filter badal ke ya nearby radius badha ke try kariye, ya naye stores follow kariye.'}
               </p>
               {feedType !== 'global' && (
-                <button
+                <Button
+                  variant="green"
                   onClick={() => setFeedType('global')}
-                  style={{
-                    marginTop: 10,
-                    padding: '10px 18px', borderRadius: 9999, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: 'var(--c-action-ink)',
-                    // Session 128.10 — Blinkit ADD-green action CTA.
-                    background: 'var(--c-action)',
-                    boxShadow: '0 4px 14px rgba(12,131,31,0.32), inset 0 1px 0 rgba(255,255,255,0.18)',
-                  }}
+                  style={{ marginTop: 10, padding: '10px 18px', fontSize: 13 }}
                 >
                   {feedType === 'saved' ? 'Browse posts' : 'Discover stores'}
-                </button>
+                </Button>
               )}
             </div>
           ) : (
@@ -753,8 +690,8 @@ export default function HomePage() {
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      background: '#F8CB46',
-                      boxShadow: '0 0 10px rgba(230,185,46,0.8)',
+                      background: 'var(--b-magenta-ink)',
+                      boxShadow: '0 0 10px rgba(199,126,0,0.55)',
                       animation: 'pulse 1.2s ease-in-out infinite',
                       animationDelay: `${i * 0.2}s`,
                       opacity: 0.8,

@@ -87,13 +87,13 @@ export default function NotificationBell({ color = 'var(--f-text-1)' }: Notifica
                     style={{
                       padding: 14, cursor: 'pointer', display: 'flex', gap: 12,
                       borderBottom: '1px solid var(--f-glass-border)',
-                      background: !notif.isRead ? 'rgba(255,42,140,0.06)' : 'transparent',
+                      background: !notif.isRead ? 'rgba(199,126,0,0.06)' : 'transparent',
                     }}
                   >
                     <div style={{ marginTop: 2 }}>
                       <div style={{
                         width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: notif.type === 'NEW_POST' ? 'rgba(255,42,140,0.15)' : 'var(--f-glass-bg-2)',
+                        background: notif.type === 'NEW_POST' ? 'rgba(199,126,0,0.15)' : 'var(--f-glass-bg-2)',
                       }}>
                         <FIcon
                           name={notif.type === 'NEW_POST' ? 'image' : 'bell'}
@@ -117,7 +117,7 @@ export default function NotificationBell({ color = 'var(--f-text-1)' }: Notifica
                     {!notif.isRead && (
                       <div style={{
                         width: 8, height: 8, borderRadius: '50%', background: 'var(--f-magenta)',
-                        marginTop: 6, flexShrink: 0, boxShadow: '0 0 8px rgba(255,42,140,0.6)',
+                        marginTop: 6, flexShrink: 0, boxShadow: '0 0 8px rgba(199,126,0,0.6)',
                       }} />
                     )}
                   </li>

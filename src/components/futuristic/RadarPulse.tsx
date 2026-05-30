@@ -15,7 +15,7 @@ interface RadarPulseProps {
 
 export function RadarPulse({
   size = 240,
-  color = '#FF2A8C',
+  color = 'var(--b-magenta-ink)',
   shopCount = 8,
 }: RadarPulseProps) {
   const shops = useMemo(
@@ -118,7 +118,7 @@ export function RadarPulse({
           borderRadius: '50%',
           background: 'white',
           transform: 'translate(-50%, -50%)',
-          boxShadow: '0 0 16px white, 0 0 32px #FF6B35',
+          boxShadow: '0 0 16px white, 0 0 32px var(--b-orange)',
         }}
       />
     </div>

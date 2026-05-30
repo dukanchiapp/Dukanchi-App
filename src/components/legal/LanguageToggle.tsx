@@ -38,9 +38,9 @@ export function LanguageToggle() {
             style={{
               padding: '5px 13px', borderRadius: 9999, border: 'none', cursor: 'pointer',
               fontSize: 11.5, fontWeight: 700, fontFamily: 'var(--f-font)',
-              background: active ? 'var(--f-grad-primary)' : 'transparent',
+              background: active ? 'var(--b-grad)' : 'transparent',
               color: active ? 'white' : 'var(--f-text-2)',
-              boxShadow: active ? '0 0 12px rgba(255,42,140,0.35)' : 'none',
+              boxShadow: active ? '0 0 12px rgba(199,126,0,0.35)' : 'none',
             }}
           >
             {label}

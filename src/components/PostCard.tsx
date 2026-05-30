@@ -1,11 +1,36 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Bookmark, Share2, MessageCircle, MapPin } from 'lucide-react';
+import { Heart, Bookmark, Share2, MessageSquare, MapPin } from 'lucide-react';
 import { getStoreStatus } from '../lib/storeUtils';
-import { getLiveStatus } from '../lib/liveStatus';
+import { getLiveStatus, LIVE_STATUS_COLORS } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
 import { haptic } from '../lib/haptics';
+import StatusPill, { type BrightStatus } from './bright/StatusPill';
 import { Post } from '../types';
+
+/* ── Session 128.13 — Bright Skin PostCard ──────────────────────────────────
+   Re-skinned per dukanchi-bright-skin/IMPLEMENT.md + react-stubs/PostCard.jsx.
+   ALL behaviour from Sessions 128.3 → 128.10 preserved:
+     • Props interface, memoization
+     • Double-tap-to-like + heart-burst (dk-heart-burst keyframe)
+     • Haptics on tap (--c-action / etc kept at the lib layer)
+     • formatCount + renderCaption + getImageStyles helpers
+     • Adaptive image canvas (portrait/square/landscape)
+     • Rating chip + verified tick + area · pincode · followers row
+     • Distance + category in meta row
+     • Live-status 4-tier mapping (getLiveStatus UNCHANGED — only the
+       visual presentation moves to <StatusPill>)
+
+   Visual surface swapped to bright skin per IMPLEMENT.md:
+     • Card: white #fff, 22px radius, 1px solid #F1ECE4, --b-elev-card shadow
+     • Avatar: 46×46 circle (spec), gradient fallback uses --b-grad
+     • Verified tick: 14px GREEN (#0C831F) per ICONS.md custom badge spec
+     • Name: Inter 15px/700 var(--b-ink), max 170px ellipsis nowrap
+     • Distance: var(--b-gray-2) 700, category: var(--b-magenta-ink) 700
+     • Action row: Like=red, Chat=blue, Share=green, Save=ink (function colors)
+     • Caption: 14px var(--b-gray-1) line-height 1.5
+     • Price: Inter 800
+   ─────────────────────────────────────────────────────────────────────────── */
 
 export interface PostCardProps {
   post: Post;
@@ -46,10 +71,10 @@ function getImageStyles(naturalRatio: number | undefined): {
   canvasStyle: React.CSSProperties;
   imgStyle: React.CSSProperties;
 } {
-  // Bright skin: warm cream letterbox behind contained portrait photos.
   // Adaptive aspect-ratio logic preserved — portrait/unknown → 4:5 (contain,
-  // no crop), square → 1:1, landscape → natural ratio.
-  const CANVAS_BG = 'var(--f-bg-elev-2)';
+  // no crop), square → 1:1, landscape → natural ratio. Letterbox bg matches
+  // the bright surface so portrait photos sit on cream, not a dark frame.
+  const CANVAS_BG = 'var(--b-surface)';
   if (!naturalRatio || naturalRatio < 0.9) {
     return {
       canvasStyle: { aspectRatio: '4/5', background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
@@ -68,53 +93,72 @@ function getImageStyles(naturalRatio: number | undefined): {
   };
 }
 
-/** Verified tick — solid blue. Session 128.8: switched from green (#0C831F)
-    to blue (--c-info / #2563EB) so the badge reads as TRUST/identity, not
-    "Open" status. Green stays exclusively for the open-status pill. */
+/** Verified tick — solid GREEN (#0C831F) per dukanchi-bright-skin/ICONS.md
+    custom badge spec. The Bright Skin uses green for the trust badge AND for
+    the open-status pill — they're the same shade by design (the green of
+    "this is good"). Was blue in Session 128.8; reverted per the spec. */
 function VerifiedTick({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0 }}>
-      <circle cx="6.5" cy="6.5" r="6.5" fill="#2563EB" />
+      <circle cx="6.5" cy="6.5" r="6.5" fill="#0C831F" />
       <path d="M3.5 6.5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-const ghostBtn: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
+const iconBtn: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
-  gap: 6,
+  background: 'transparent',
+  border: 'none',
   cursor: 'pointer',
   padding: 0,
+  gap: 5,
 };
 
-function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance, imgRatio, onLike, onSave, onFollow, onShare, onImgLoad }: PostCardProps) {
+/** Map the existing 4-tier liveStatus output to a <StatusPill> status keyword.
+    Logic untouched — only the visual presentation moves. */
+function tierFromColor(color: string): BrightStatus {
+  if (color === LIVE_STATUS_COLORS.red) return 'closed';
+  if (color === LIVE_STATUS_COLORS.orange) return 'orange';
+  if (color === LIVE_STATUS_COLORS.yellow) return 'soon';
+  return 'open';
+}
+
+function PostCardInner({
+  post,
+  isLiked,
+  isSaved,
+  isFollowed,
+  likeCount,
+  distance,
+  imgRatio,
+  onLike,
+  onSave,
+  onFollow,
+  onShare,
+  onImgLoad,
+}: PostCardProps) {
   const isOwnPost = post.isOwnPost === true;
   const storeLink = isOwnPost ? '/profile' : `/store/${post.storeId}`;
+
   const status = getStoreStatus(
     post.store?.openingTime ?? undefined,
     post.store?.closingTime ?? undefined,
     post.store?.is24Hours ?? undefined,
-    post.store?.workingDays ?? undefined
+    post.store?.workingDays ?? undefined,
   );
-  // Live status capsule (Session 116): bridge getStoreStatus →
-  // useClosingSoon (ticks the countdown) → getLiveStatus (4-tier color).
   const closingSoon = useClosingSoon(status?.minutesUntilClose ?? null);
   const live = getLiveStatus({ closingSoon, status: status?.label ?? null });
+  const liveTier = tierFromColor(live.color);
+
   // Row 3 area · pincode — Store has city + postalCode (no dedicated `area`).
   const areaText = [post.store?.city, post.store?.postalCode]
     .filter((v) => v !== null && v !== undefined && v !== '')
     .join(' · ');
 
-  // Session 128.8 — trust signals on the PostCard header
-  //
   // Row 1 (inline next to name): "⭐ 4.6 (124)" — only when the store has at
   // least one review. Hidden for brand-new stores (a "(0)" reads like a fail).
-  //
-  // Row 3 (appended to area · pincode): "· 2.3k followers" — only when the
-  // store has any followers. formatCount compresses 2347 → "2.3k", 12000 → "12k".
   const ratingText = (() => {
     const r = post.store?.averageRating;
     const c = post.store?.reviewCount ?? 0;
@@ -135,21 +179,17 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
         onImgLoad(post.id, naturalWidth / naturalHeight);
       }
     },
-    [post.id, onImgLoad]
+    [post.id, onImgLoad],
   );
 
-  // ── Double-tap to like (Session 128.3) ───────────────────────────────────
-  // Instagram-style: two taps within 300ms on the image → like + heart burst.
-  // We only TRIGGER like if not already liked (a second double-tap shouldn't
-  // unlike — that's the heart icon's job). Burst animates regardless so the
-  // tap always feels acknowledged.
+  // ── Double-tap to like (Session 128.3) — preserved verbatim ─────────────
   const lastTapRef = useRef<number>(0);
   const [burstKey, setBurstKey] = useState(0);
   const handleImgTap = useCallback(() => {
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
       lastTapRef.current = 0;
-      setBurstKey(k => k + 1);
+      setBurstKey((k) => k + 1);
       haptic('medium');
       if (!isLiked) onLike(post.id);
     } else {
@@ -161,17 +201,15 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
     <div
       style={{
         overflow: 'hidden',
-        background: 'var(--f-bg-elev)',
-        border: '1px solid var(--f-glass-border)',
+        background: '#fff',
+        border: '1px solid #F1ECE4',
         borderRadius: 22,
-        boxShadow: '0 2px 12px rgba(24,16,8,0.06)',
+        boxShadow: 'var(--b-elev-card)',
       }}
     >
-      {/* Card header — 3 sub-rows (name+verified+follow / status+distance+category / area) */}
-      <div style={{ padding: '14px 14px 12px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        {/* Avatar — clean circular gradient with first-letter fallback when the
-            store has no logoUrl (matches the Bright mockup — see the "N" on the
-            Nikhil Bhai header). Soft single-color outer ring, no heavy shadow. */}
+      {/* Card header */}
+      <div style={{ padding: '12px 13px 11px', display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+        {/* Avatar 46×46 — per spec */}
         <Link to={storeLink} style={{ flexShrink: 0, display: 'block' }}>
           {post.store?.logoUrl ? (
             <img
@@ -180,33 +218,30 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
               loading="lazy"
               decoding="async"
               style={{
-                width: 52,
-                height: 52,
+                width: 46,
+                height: 46,
                 borderRadius: '50%',
                 objectFit: 'cover',
                 display: 'block',
-                background: 'linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%)',
-                boxShadow: '0 2px 8px rgba(230,185,46,0.30), inset 0 1px 0 rgba(255,255,255,0.45)',
+                background: 'var(--b-grad)',
               }}
             />
           ) : (
             <div
               aria-label={post.store?.storeName}
               style={{
-                width: 52,
-                height: 52,
+                width: 46,
+                height: 46,
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%)',
-                color: '#1A1A1A',
+                background: 'var(--b-grad)',
+                color: 'var(--b-on-grad)',
                 fontWeight: 800,
-                fontSize: 22,
+                fontSize: 18,
                 lineHeight: 1,
                 textTransform: 'uppercase',
-                textShadow: '0 1px 0 rgba(255,255,255,0.45)',
-                boxShadow: '0 2px 8px rgba(230,185,46,0.30), inset 0 1px 0 rgba(255,255,255,0.45)',
               }}
             >
               {post.store?.storeName?.charAt(0) ?? '?'}
@@ -215,16 +250,17 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
         </Link>
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
-          {/* Row 1: name + verified + spacer + Follow */}
+          {/* Row 1: name + verified + rating + spacer + Follow (green per spec) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             <Link to={storeLink} style={{ minWidth: 0, textDecoration: 'none' }}>
               <span
                 style={{
                   fontSize: 15,
                   fontWeight: 700,
-                  color: 'var(--f-text-1)',
+                  color: 'var(--b-ink)',
                   letterSpacing: '-0.01em',
                   lineHeight: 1.2,
+                  maxWidth: 170,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -235,49 +271,45 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
               </span>
             </Link>
             {post.store?.isVerified && <VerifiedTick size={14} />}
-            {/* Session 128.8: ⭐ rating + review-count chip inline with the name.
-                Hidden when the store has no reviews — "(0)" reads like a fail. */}
             {ratingText && (
               <span
                 aria-label={`Rating ${ratingText.value} of 5 from ${ratingText.count} reviews`}
                 style={{
+                  background: 'var(--b-green)',
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: 5,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 3,
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: 'var(--f-text-2)',
+                  gap: 2,
                   flexShrink: 0,
                   lineHeight: 1,
                 }}
               >
-                <span aria-hidden="true" style={{ color: 'var(--c-rating)', fontSize: 13 }}>★</span>
-                {ratingText.value}
-                <span style={{ color: 'var(--f-text-3)', fontWeight: 500 }}>({ratingText.count})</span>
+                {ratingText.value} <span aria-hidden="true">★</span>
+                <span style={{ opacity: 0.75, fontWeight: 600, marginLeft: 2 }}>({ratingText.count})</span>
               </span>
             )}
             <span style={{ flex: 1 }} />
             {!isOwnPost && (
               <button
-                onClick={() => onFollow(post.storeId)}
+                onClick={() => { haptic('light'); onFollow(post.storeId); }}
+                className="b-tap"
                 style={{
                   padding: '6px 14px',
-                  borderRadius: 9999,
-                  fontSize: 11.5,
-                  fontWeight: 700,
+                  borderRadius: 10,
+                  fontSize: 12,
+                  fontWeight: 800,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
                   flexShrink: 0,
                   lineHeight: 1,
-                  // Session 128.10 — Blinkit-pattern: yellow = brand, GREEN
-                  // = primary action. Every "ADD" / "Order" / Follow CTA in
-                  // their UI is the solid green outlined card-style button.
-                  // Solid white surface with green border + green text reads
-                  // as "tap me" without flooding the card with brand colour.
-                  background: isFollowed ? 'var(--c-action-lt)' : '#FFFFFF',
-                  color: isFollowed ? 'var(--f-text-2)' : 'var(--c-action)',
-                  border: isFollowed ? '1px solid var(--c-action-lt)' : '1.5px solid var(--c-action)',
-                  boxShadow: isFollowed ? 'none' : '0 2px 6px rgba(12,131,31,0.18)',
+                  background: isFollowed ? 'var(--b-green-bg)' : 'var(--b-green)',
+                  color: isFollowed ? 'var(--b-green)' : '#fff',
+                  border: isFollowed ? '1.5px solid var(--b-green)' : 'none',
+                  transition: 'transform 0.16s var(--b-ease)',
                 }}
               >
                 {isFollowed ? 'Following' : 'Follow'}
@@ -285,7 +317,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
             )}
           </div>
 
-          {/* Row 2: status capsule + distance + category */}
+          {/* Row 2: status pill + distance + category */}
           <div
             style={{
               display: 'flex',
@@ -294,43 +326,30 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
               fontSize: 11,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              fontWeight: 500,
             }}
           >
-            <span
-              style={{
-                color: live.color,
-                fontWeight: 700,
-                flexShrink: 0,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 7px',
-                borderRadius: 9999,
-                background: live.color + '1A',
-                border: `1px solid ${live.color}40`,
-                fontSize: 10.5,
-                lineHeight: 1.2,
-              }}
-            >
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: live.color, display: 'inline-block' }} />
-              {live.label}
-            </span>
+            <StatusPill status={liveTier} label={live.label} />
             {distance && (
-              <span style={{ color: 'var(--f-text-3)', fontWeight: 600, flexShrink: 0 }}>{distance}</span>
+              <span style={{ color: 'var(--b-gray-2)', fontWeight: 700, flexShrink: 0 }}>{distance}</span>
             )}
             {post.store?.category && (
               <>
-                <span style={{ color: 'var(--f-text-4)', flexShrink: 0 }}>·</span>
-                <span style={{ color: '#D11F75', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ color: 'var(--b-gray-3)', flexShrink: 0 }}>·</span>
+                <span
+                  style={{
+                    color: 'var(--b-magenta-ink)',
+                    fontWeight: 700,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
                   {post.store.category}
                 </span>
               </>
             )}
           </div>
 
-          {/* Row 3: area · pincode · followers (Session 128.8) — renders if
-              EITHER an area string OR follower count is present. */}
+          {/* Row 3: area · pincode · followers */}
           {metaLine && (
             <div
               style={{
@@ -338,21 +357,20 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                 alignItems: 'center',
                 gap: 5,
                 fontSize: 10.5,
-                color: 'var(--f-text-3)',
+                color: 'var(--b-gray-2)',
                 fontWeight: 500,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
               }}
             >
-              <MapPin size={11} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
+              <MapPin size={11} color="#EA9A00" style={{ flexShrink: 0 }} />
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{metaLine}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Image canvas — aspect ratio adapts to photo dimensions. Session 128.3:
-          double-tap → like + heart burst. */}
+      {/* Image canvas — double-tap → like + heart burst preserved */}
       <div style={canvasStyle} onClick={handleImgTap}>
         <img
           src={post.imageUrl || `https://picsum.photos/seed/${post.id}/800/800`}
@@ -368,8 +386,8 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
             key={burstKey}
             className="dk-heart-burst"
             size={96}
-            color="#FF2A8C"
-            fill="#FF2A8C"
+            color="var(--b-red)"
+            fill="var(--b-red)"
             strokeWidth={1.5}
           />
         )}
@@ -379,35 +397,35 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
               position: 'absolute',
               bottom: 12,
               left: 12,
-              background: 'rgba(0,0,0,0.7)',
-              color: 'white',
+              background: 'rgba(28,20,12,0.78)',
+              color: '#fff',
               padding: '4px 10px',
               borderRadius: 8,
               fontSize: 14,
-              fontWeight: 700,
+              fontWeight: 800,
               backdropFilter: 'blur(4px)',
             }}
           >
-            ₹{Number(post.price).toLocaleString()}
+            ₹{Number(post.price).toLocaleString('en-IN')}
           </div>
         )}
       </div>
 
       {/* Action bar + caption */}
-      <div style={{ padding: '12px 16px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
-          <button onClick={() => onLike(post.id)} style={ghostBtn}>
+      <div style={{ padding: '11px 13px 13px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          {/* Like — red (filled when active) */}
+          <button onClick={() => onLike(post.id)} style={iconBtn} aria-label={isLiked ? 'Unlike' : 'Like'}>
             <Heart
               size={22}
-              fill={isLiked ? '#FF4D6A' : 'none'}
-              color={isLiked ? '#FF4D6A' : 'var(--f-text-1)'}
+              fill={isLiked ? 'var(--b-red)' : 'none'}
+              color="var(--b-red)"
               strokeWidth={2}
             />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>
-              {likeCount}
-            </span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--b-red)' }}>{likeCount}</span>
           </button>
 
+          {/* Chat — blue */}
           {!isOwnPost && post.store?.chatEnabled !== false && (
             <Link
               to={`/chat/${post.store?.ownerId}`}
@@ -419,25 +437,32 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                   price: post.price,
                 },
               }}
-              style={{ ...ghostBtn, textDecoration: 'none' }}
+              style={{ ...iconBtn, textDecoration: 'none' }}
+              aria-label="Open chat"
             >
-              <MessageCircle size={21} fill="none" color="var(--f-text-1)" strokeWidth={2} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>Chat</span>
+              <MessageSquare size={21} fill="none" color="var(--b-blue)" strokeWidth={2} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--b-blue)' }}>Chat</span>
             </Link>
           )}
 
-          <button onClick={() => onShare(post)} style={ghostBtn}>
-            <Share2 size={20} fill="none" color="var(--f-text-1)" strokeWidth={2} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>Share</span>
+          {/* Share — green */}
+          <button onClick={() => onShare(post)} style={iconBtn} aria-label="Share post">
+            <Share2 size={20} fill="none" color="var(--b-green)" strokeWidth={2} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--b-green)' }}>Share</span>
           </button>
 
           <span style={{ flex: 1 }} />
 
-          <button onClick={() => onSave(post.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+          {/* Save — ink (filled when active) */}
+          <button
+            onClick={() => onSave(post.id)}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}
+            aria-label={isSaved ? 'Unsave' : 'Save'}
+          >
             <Bookmark
-              size={22}
-              fill={isSaved ? 'var(--f-text-1)' : 'none'}
-              color="var(--f-text-1)"
+              size={20}
+              fill={isSaved ? 'var(--b-ink)' : 'none'}
+              color="var(--b-ink)"
               strokeWidth={2}
             />
           </button>
@@ -445,11 +470,11 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
 
         {post.product && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--b-ink)' }}>
               {post.product.productName}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#D11F75' }}>
-              ₹{post.product.price?.toLocaleString()}
+            <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--b-ink)' }}>
+              ₹{post.product.price?.toLocaleString('en-IN')}
             </span>
           </div>
         )}
@@ -457,7 +482,7 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
         {post.caption && (
           <p
             className="line-clamp-3"
-            style={{ fontSize: 13, color: 'var(--f-text-2)', lineHeight: '1.45', marginTop: 6 }}
+            style={{ fontSize: 14, color: 'var(--b-gray-1)', lineHeight: 1.5, marginTop: 6 }}
           >
             {renderCaption(post.caption)}
           </p>

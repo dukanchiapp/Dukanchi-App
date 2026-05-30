@@ -320,14 +320,14 @@ export default function UserSettings() {
             <div
               style={{
                 display: 'flex', alignItems: 'center', gap: 14, padding: 16, borderRadius: 18,
-                background: 'linear-gradient(135deg, rgba(255,107,53,0.10), rgba(255,42,140,0.10))',
+                background: 'var(--b-tint)',
                 border: '1px solid var(--f-glass-border-2)',
               }}
             >
               <div style={{
                 width: 56, height: 56, borderRadius: 18, flexShrink: 0,
-                background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontWeight: 800, fontSize: 22, boxShadow: '0 4px 14px rgba(255,42,140,0.30)',
+                background: 'var(--b-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontWeight: 800, fontSize: 22, boxShadow: '0 4px 14px rgba(199,126,0,0.30)',
               }}>
                 {(user?.name || 'U').charAt(0).toUpperCase()}
               </div>
@@ -357,8 +357,8 @@ export default function UserSettings() {
                     style={{ padding: '14px 16px', background: 'transparent', border: 'none', cursor: 'pointer', borderBottom: i < tabs.length - 1 ? '1px solid var(--f-glass-border)' : 'none' }}
                   >
                     <div className="flex items-center" style={{ gap: 12 }}>
-                      <span style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,42,140,0.10)', border: '1px solid rgba(255,42,140,0.20)' }}>
-                        <Icon size={15} color="#FF2A8C" />
+                      <span style={{ width: 32, height: 32, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(199,126,0,0.12)', border: '1px solid rgba(199,126,0,0.20)' }}>
+                        <Icon size={15} color="var(--b-magenta-ink)" />
                       </span>
                       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)' }}>{tab.label}</span>
                     </div>

@@ -258,7 +258,7 @@ export default function MessagesPage() {
                 <div style={{ padding: 16 }}>
                   <span style={{
                     display: 'inline-block', padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 800,
-                    letterSpacing: 0.4, background: 'rgba(255,107,53,0.18)', color: 'var(--f-orange-light)', marginBottom: 8,
+                    letterSpacing: 0.4, background: 'var(--b-tint)', color: 'var(--f-orange-light)', marginBottom: 8,
                   }}>
                     STOCK REQUEST 📦
                   </span>
@@ -333,7 +333,7 @@ export default function MessagesPage() {
               <div style={{
                 width: 80, height: 80, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 16, background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
-                boxShadow: '0 0 30px rgba(255,42,140,0.20)',
+                boxShadow: '0 0 30px rgba(199,126,0,0.20)',
               }}>
                 <MessageCircle size={34} color="var(--f-magenta-light)" />
               </div>
@@ -354,7 +354,7 @@ export default function MessagesPage() {
                     <div key={store.id} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div style={{
                         width: 44, height: 44, borderRadius: 12, overflow: 'hidden', flexShrink: 0,
-                        background: 'var(--f-grad-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'var(--b-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {store.logoUrl
                           ? <img src={store.logoUrl} alt={store.storeName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -370,8 +370,8 @@ export default function MessagesPage() {
                         to={`/chat/${store.ownerId}`}
                         style={{
                           flexShrink: 0, padding: '6px 16px', borderRadius: 9999, fontSize: 12, fontWeight: 700,
-                          textDecoration: 'none', background: 'var(--f-grad-primary)', color: 'white',
-                          boxShadow: '0 0 14px rgba(255,42,140,0.35)',
+                          textDecoration: 'none', background: 'var(--b-grad)', color: 'white',
+                          boxShadow: '0 0 14px rgba(199,126,0,0.35)',
                         }}
                       >
                         Chat
@@ -393,7 +393,7 @@ export default function MessagesPage() {
             >
               <div style={{
                 width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', background: 'var(--f-grad-primary)', boxShadow: '0 0 16px rgba(255,42,140,0.45)',
+                justifyContent: 'center', background: 'var(--b-grad)', boxShadow: '0 0 16px rgba(199,126,0,0.45)',
               }}>
                 <MessageCircle size={20} color="white" />
               </div>

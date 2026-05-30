@@ -13,7 +13,7 @@ interface LiveOrbProps {
 export function LiveOrb({
   count = 8,
   label = 'live near you',
-  color = '#FF2A8C',
+  color = 'var(--b-magenta-ink)',
 }: LiveOrbProps) {
   return (
     <div

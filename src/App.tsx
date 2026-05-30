@@ -129,7 +129,7 @@ function BrowserModeBanner() {
     }}>
       <span style={{ color: '#666' }}>💡 App install karein better experience ke liye</span>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <a href="/landing" style={{ color: '#FF6B35', fontWeight: 600, textDecoration: 'none' }}>Install</a>
+        <a href="/landing" style={{ color: 'var(--b-orange)', fontWeight: 600, textDecoration: 'none' }}>Install</a>
         <button
           onClick={() => {
             try { sessionStorage.setItem('dk-banner-dismissed', '1'); } catch(e) {}

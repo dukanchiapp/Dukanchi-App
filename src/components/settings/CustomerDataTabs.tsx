@@ -50,7 +50,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
                 </Link>
                 <button
                   onClick={() => onUnfollow(s.id)}
-                  style={{ padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: '1px solid #FFE4D6', background: 'white', color: '#FF6B35', cursor: 'pointer', flexShrink: 0 }}
+                  style={{ padding: '6px 12px', borderRadius: 20, fontSize: 11, fontWeight: 600, border: '1px solid #FFE4D6', background: 'white', color: 'var(--b-orange)', cursor: 'pointer', flexShrink: 0 }}
                 >
                   Unfollow
                 </button>
@@ -111,7 +111,7 @@ export const CustomerDataTabs = React.memo(function CustomerDataTabs({
         loading ? <SkeletonList /> : searchHistory.length > 0 ? (
           <div className="space-y-2">
             <div className="flex justify-end">
-              <button onClick={onClearHistory} style={{ fontSize: 12, color: '#FF6B35', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+              <button onClick={onClearHistory} style={{ fontSize: 12, color: 'var(--b-orange)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
                 Clear All
               </button>
             </div>

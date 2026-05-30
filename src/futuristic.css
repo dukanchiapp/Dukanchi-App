@@ -21,9 +21,9 @@
   --b-yellow-ink:  #1A1A1A;        /* dark text ON yellow */
   --b-grad:        linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%);
   --b-grad-warm:   linear-gradient(180deg, #FFE082 0%, #F8CB46 50%, #E6B92E 100%);
-  --b-orange:      #FF6B35;
+  --b-orange:      var(--b-orange);
   --b-orange-light:#FFA94D;
-  --b-magenta:     #FF2A8C;
+  --b-magenta:     var(--b-magenta-ink);
   --b-magenta-ink: #D11F75;
   --b-violet:      #7C3AED;
   --b-cyan:        #0EA5C4;
@@ -60,9 +60,9 @@
   --f-glass-shadow:   0 2px 12px rgba(24, 16, 8, 0.06);
 
   /* Brand — orange anchored, magenta companion */
-  --f-orange:         #FF6B35;
+  --f-orange:         var(--b-orange);
   --f-orange-light:   #FFA94D;
-  --f-magenta:        #FF2A8C;
+  --f-magenta:        var(--b-magenta-ink);
   --f-magenta-light:  #FF6BB4;
   --f-cyan:           #0EA5C4;
   --f-violet:         #7C3AED;
@@ -75,9 +75,9 @@
      53 surfaces still consume it with white text overlays. New Blinkit-
      yellow CTAs use `--c-brand-grad` (yellow + dark text). Migrate sites
      individually to avoid contrast regressions. */
-  --f-grad-primary:      linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
-  --f-grad-primary-soft: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(255,42,140,0.12));
-  --f-grad-accent:       linear-gradient(135deg, #FF2A8C 0%, #7C3AED 100%);
+  --f-grad-primary:      var(--b-grad);
+  --f-grad-primary-soft: var(--b-tint);
+  --f-grad-accent:       linear-gradient(135deg, var(--b-magenta-ink) 0%, var(--b-violet) 100%);
   --f-grad-signal:       linear-gradient(135deg, #0EA5C4 0%, #7C3AED 100%);
   --f-grad-aurora:       none;
 
@@ -200,7 +200,7 @@
   content: "";
   position: absolute;
   top: 0; left: 12%; right: 12%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,107,53,0.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(234,154,0,0.25), transparent);
   pointer-events: none;
   border-radius: inherit;
 }
@@ -226,7 +226,7 @@
 /* ─── Buttons ─── */
 
 .f-btn-primary {
-  background: var(--f-grad-primary);
+  background: var(--b-grad);
   color: white;
   border: none;
   border-radius: var(--f-r-pill);
@@ -269,7 +269,7 @@
 }
 
 .f-grad-text {
-  background: linear-gradient(135deg, #FF6B35 0%, #D11F75 100%);
+  background: var(--b-grad);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -321,8 +321,8 @@ h1, h2, h3, .f-display { text-shadow: none; }
 .b-rating { background: var(--b-green); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 5px; display: inline-flex; align-items: center; gap: 2px; }
 
 /* buttons */
-.b-btn-grad { background: var(--b-grad); border: none; color: #fff; font-weight: 800; font-family: inherit; cursor: pointer; box-shadow: 0 3px 10px rgba(255,42,140,0.30); transition: transform 0.16s var(--b-ease), box-shadow 0.16s var(--b-ease); }
-.b-btn-grad:active { transform: scale(0.95); box-shadow: 0 2px 6px rgba(255,42,140,0.25); }
+.b-btn-grad { background: var(--b-grad); border: none; color: #fff; font-weight: 800; font-family: inherit; cursor: pointer; box-shadow: 0 3px 10px rgba(199,126,0,0.30); transition: transform 0.16s var(--b-ease), box-shadow 0.16s var(--b-ease); }
+.b-btn-grad:active { transform: scale(0.95); box-shadow: 0 2px 6px rgba(199,126,0,0.25); }
 .b-btn-out { background: var(--b-tint); border: 1.5px solid var(--b-orange); color: var(--b-orange); font-weight: 800; font-family: inherit; cursor: pointer; transition: transform 0.16s var(--b-ease); }
 .b-btn-out:active { transform: scale(0.95); }
 
@@ -380,8 +380,8 @@ h1, h2, h3, .f-display { text-shadow: none; }
   to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes f-glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(255,107,53,0.4), 0 0 40px rgba(255,42,140,0.3); }
-  50%      { box-shadow: 0 0 30px rgba(255,107,53,0.6), 0 0 60px rgba(255,42,140,0.5); }
+  0%, 100% { box-shadow: 0 0 20px rgba(234,154,0,0.4), 0 0 40px rgba(199,126,0,0.3); }
+  50%      { box-shadow: 0 0 30px rgba(234,154,0,0.6), 0 0 60px rgba(199,126,0,0.5); }
 }
 @keyframes f-spin-slow { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 @keyframes f-tilt-3d {

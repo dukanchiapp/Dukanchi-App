@@ -38,11 +38,11 @@ export function FloatingProductCard({
           height: '78%',
           borderRadius: 24,
           background:
-            product?.image || 'linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%)',
+            product?.image || 'var(--b-grad)',
           animation: 'f-tilt-3d 6s ease-in-out infinite',
           transformStyle: 'preserve-3d',
           boxShadow:
-            '0 30px 60px rgba(255,42,140,0.35), 0 0 60px rgba(255,107,53,0.25)',
+            '0 30px 60px rgba(199,126,0,0.35), 0 0 60px rgba(234,154,0,0.25)',
           position: 'relative',
           overflow: 'hidden',
         }}
