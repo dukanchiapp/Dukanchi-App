@@ -24,6 +24,28 @@
 
 ---
 
+## 2026-05-30 — Session 128.4 — Smart feed ranking (Phase A+B): saves, recency, diversity, seen-penalty, chat-affinity, category preference, time-of-day
+
+**Goal:** Founder ask — "no smart logic behind showing posts". Audit showed there WAS a 5-factor scoring formula (freshness 40 + distance 25 + engagement 20 + followed 15 + opening +5), but it was global, not personalised — only `isFollowed` was per-user. Ship Phase A (non-ML ranking improvements, no schema changes) + Phase B (small per-user signals via existing models + Redis) in one bundle to address the "feels random" feedback before going to Phase C (pgvector taste-similarity).
+
+**Changes (backend ranking only, no schema, no breaking API change):**
+
+`src/modules/posts/post.service.ts` `getFeed`:
+
+- **Engagement** now includes saves (×2 weight — save = intent) AND recent likes from the last 24h (×2 weight — trending signal). Was: `likes / 50`. Now: `(likes + saves×2 + recentLikes×2) / 50`. Per-post aggregates via `prisma.savedItem.groupBy` + `prisma.like.groupBy` on the candidate set (batched).
+- **New scoring weights** — freshness 25% (was 40), distance 15% (was 25), engagement 15% (was 20), followed 20% (was 15 → bumped per Phase A), categoryMatch 10% (new — top-3 categories from user's last 50 likes), chatAffinity 5% (new — user's DM partners in last 30 days resolved to store IDs), timeOfDay 5% (new — IST hour-bucket × store.category heuristic), pinned 5% (new — `Post.isPinned` was schema-only), opening 5% (was a flat +5% bonus; now in the matrix). Sum ≈ 1.05.
+- **Seen-post penalty** — Redis SET `feed:seen:{userId}` with 7-day TTL. `sMIsMember` check on candidates → posts seen in last 7d get `score × 0.4` (60% drop). Picked posts written back via `sAdd` + `expire` fire-and-forget.
+- **Diversity cap** — max 2 posts per store per page in the picked set. Prevents a store flooding the top with 5 posts in a row.
+- **Candidate fetch** stays at `limit × 3`; chat-partner store lookup is a separate query (only when the user has any chats); save+recent-like groupBys are batched. Net: 3-5 extra Prisma queries vs. before, all parallel where possible.
+
+**Files:** `src/modules/posts/post.service.ts` (full `getFeed` rewrite + new `getTimeOfDayCategories` helper + `pubClient` import).
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test` 133/133 ✓, `npm run build` ✓. Behavioural verification requires deployed login + a user with some like/save/chat history to exercise the new signals.
+
+**Status:** ⏳ Code complete on `feat/feed-ranking-phaseAB`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.3 — Home feed Quick Wins (skeleton, pull-to-refresh, double-tap-to-like, haptics, empty states, silent-catch toasts)
 
 **Goal:** First UX-strategy bucket after the founder UI-suggestions ask — high-visibility low-risk Home-feed polish that lifts native feel + perceived speed.
