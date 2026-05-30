@@ -4,6 +4,7 @@ import StarRating from '../StarRating';
 import { CATEGORIES } from '../../constants/categories';
 import { apiFetch } from '../../lib/api';
 import { Sentry } from '../../lib/sentry-frontend';
+import { UploadingOverlay } from '../ui/UploadingOverlay';
 
 interface StoreFormFieldsProps {
   store: any;
@@ -13,6 +14,9 @@ interface StoreFormFieldsProps {
   coverFileInputRef: React.RefObject<HTMLInputElement | null>;
   handleLogoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleCoverUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  // Session 128.10
+  logoUploading?: boolean;
+  coverUploading?: boolean;
   selectedCategory: string;
   setSelectedCategory: (v: string) => void;
   descriptionRef: React.RefObject<HTMLTextAreaElement | null>;
@@ -44,7 +48,7 @@ interface StoreFormFieldsProps {
 
 export function StoreFormFields({
   store, logoUrl, coverUrl, fileInputRef, coverFileInputRef,
-  handleLogoUpload, handleCoverUpload,
+  handleLogoUpload, handleCoverUpload, logoUploading = false, coverUploading = false,
   selectedCategory, setSelectedCategory,
   descriptionRef, descriptionValue, setDescriptionValue, openAiModal,
   mapLat, mapLng, handleGPSUpdate,
@@ -65,13 +69,14 @@ export function StoreFormFields({
       {/* Logo upload */}
       <div className="flex flex-col items-center justify-center mb-6">
         <div className="relative">
-          <div className="overflow-hidden" style={{ width: 88, height: 88, borderRadius: 20, border: '3px solid var(--f-glass-border-2)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', background: 'var(--f-glass-bg-2)' }}>
+          <div className="overflow-hidden relative" style={{ width: 88, height: 88, borderRadius: 20, border: '3px solid var(--f-glass-border-2)', boxShadow: '0 4px 16px rgba(0,0,0,0.4)', background: 'var(--f-glass-bg-2)' }}>
             <img src={logoUrl || store?.logoUrl || '/uploads/default-logo.png'} alt="Store Logo" className="w-full h-full object-cover" />
+            {logoUploading && <UploadingOverlay label="Uploading…" size={26} radius={17} />}
           </div>
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 p-2 rounded-full" style={{ background: 'var(--f-orange)', border: '2px solid var(--f-bg-deep)' }}>
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={logoUploading} className="absolute bottom-0 right-0 p-2 rounded-full" style={{ background: 'var(--f-orange)', border: '2px solid var(--f-bg-deep)', opacity: logoUploading ? 0.6 : 1, cursor: logoUploading ? 'wait' : 'pointer' }}>
             <Camera size={15} color="white" />
           </button>
-          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
         </div>
         <p className="mt-2 cursor-pointer font-semibold text-xs" style={{ color: 'var(--f-orange)' }} onClick={() => fileInputRef.current?.click()}>Change Logo</p>
         {store && !store?.hideRatings && typeof store.averageRating === 'number' && (
@@ -92,10 +97,11 @@ export function StoreFormFields({
               <p className="text-xs font-medium" style={{ color: 'var(--f-text-3)' }}>No cover photo</p>
             </div>
           )}
-          <button type="button" onClick={() => coverFileInputRef.current?.click()} className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: 'rgba(0,0,0,0.6)', color: 'white', backdropFilter: 'blur(4px)' }}>
+          {coverUploading && <UploadingOverlay label="Uploading cover…" size={30} radius={0} />}
+          <button type="button" onClick={() => coverFileInputRef.current?.click()} disabled={coverUploading} className="absolute bottom-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold" style={{ background: 'rgba(0,0,0,0.6)', color: 'white', backdropFilter: 'blur(4px)', opacity: coverUploading ? 0.5 : 1, cursor: coverUploading ? 'wait' : 'pointer' }}>
             <Camera size={12} /> {coverUrl ? 'Change Cover' : 'Add Cover Photo'}
           </button>
-          <input ref={coverFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} />
+          <input ref={coverFileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverUpload} disabled={coverUploading} />
         </div>
       </div>
 

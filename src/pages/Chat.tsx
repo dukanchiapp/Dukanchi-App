@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, Send, Paperclip, X, Tag, ShoppingCart, AlertCircle } from 'lucide-react';
+import { UploadingOverlay } from '../components/ui/UploadingOverlay';
 import { useAuth } from '../context/AuthContext';
 import { io, Socket } from 'socket.io-client';
 import { Message } from '../types';
@@ -514,10 +515,15 @@ export default function ChatPage() {
           }}>
             <div style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--f-glass-border-2)' }}>
               <img src={imagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {/* Session 128.10: show an overlay on the 64×64 thumb while
+                  /api/upload is in flight — the Send button has its own spinner
+                  but this thumbnail was silent. */}
+              {isSending && imageFile && <UploadingOverlay label="" size={20} radius={10} />}
               <button
                 type="button"
                 onClick={clearImagePreview}
-                style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: 'pointer', display: 'flex' }}
+                disabled={isSending}
+                style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: isSending ? 'not-allowed' : 'pointer', display: 'flex', opacity: isSending ? 0.4 : 1, zIndex: 6 }}
               >
                 <X size={12} color="#fff" />
               </button>

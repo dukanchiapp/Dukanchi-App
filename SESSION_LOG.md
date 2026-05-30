@@ -24,6 +24,37 @@
 
 ---
 
+## 2026-05-30 — Session 128.7 — Loading overlays for photo/AI flows (logo/cover/post-crop/edit-crop/chat-image)
+
+**Goal:** Founder ask — "while uploading photos and using AI feature there is no loading animation. there should be otherwise user will be confused. also check more where it is needed". Comprehensive audit + fix the gaps.
+
+**Audit findings:**
+
+✅ Already good: Login/Signup (isLoading + spinner), AI photo→post (aiLoading + "AI soch raha hai…"), AI voice→post (same), AiBioModal (loading + Loader2), Chat send button (isSending + spinner), KYC photo tile (uploadingField swaps Camera→Loader2 spinner).
+
+❌ Gaps fixed in this PR:
+1. **Logo upload** (RetailerDashboard `handleLogoUpload` → StoreFormFields logo tile) — was silent ~3-6s gap during R2 round-trip; user had no idea anything was happening.
+2. **Cover upload** (same path, cover tile) — same gap.
+3. **New-post cropper → upload** (PostsGrid cropper.onComplete) — cropper closed, then 3-6s blank state before preview lit up.
+4. **Edit-post cropper → upload** (same in edit modal) — same gap.
+5. **Chat image upload** (Chat send) — Send button had spinner but the 64×64 image preview thumbnail was silent during the upload step.
+
+**Changes:**
+
+- **`src/components/ui/UploadingOverlay.tsx`** (NEW) — shared component. Drop inside any positioned container; renders a dim layer + `animate-spin` ring + optional label. Props: `label`, `size`, `radius`. Uses the same Tailwind `animate-spin` we already use in Login/Signup/Chat send for visual consistency. ARIA `role="status"` + `aria-live="polite"` for screen readers.
+- **`src/pages/RetailerDashboard.tsx`** — new `logoUploading` + `coverUploading` states; `handleLogoUpload` + `handleCoverUpload` wrap try/finally to set them; passed as new props to StoreFormFields.
+- **`src/components/dashboard/StoreFormFields.tsx`** — accepts `logoUploading?` and `coverUploading?` props; logo tile + cover tile both get `<UploadingOverlay />` during upload; Camera buttons + file inputs disabled during upload (`opacity: 0.6` + `cursor: wait`).
+- **`src/components/profile/PostsGrid.tsx`** — new `postImageUploading` + `editImageUploading` states. New-post cropper `onComplete` closes cropper immediately + sets uploading state + renders a 3:4 placeholder + overlay while POST `/api/upload` is in flight (was a 3-6s silent gap). Edit-post cropper gets the same treatment + the "Replace Photo" label disabled during upload.
+- **`src/pages/Chat.tsx`** — image preview thumbnail (64×64) renders `<UploadingOverlay size={20} radius={10} />` while `isSending && imageFile`; remove-X button disabled during send.
+
+**Files:** `src/components/ui/UploadingOverlay.tsx` (NEW), `src/pages/RetailerDashboard.tsx`, `src/components/dashboard/StoreFormFields.tsx`, `src/components/profile/PostsGrid.tsx`, `src/pages/Chat.tsx`.
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
+
+**Status:** ⏳ Code complete on `feat/upload-loading-overlays`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.6 — Edit-profile GPS pin → auto-fill pincode/city/state
 
 **Goal:** Founder ask — "when we store the location in edit profile system automatically picks the pincode and fills the related fields". Today retailer taps "Save my current location" → only lat/lng captured; they still type pincode manually (which then auto-fills city/state via the existing India Post endpoint). Make GPS pin do everything.
