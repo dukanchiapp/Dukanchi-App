@@ -1,24 +1,39 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, MapPin, MessageCircle, User } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
-/* ── Bright skin · flat white bottom bar ──
-   Routes, active-tab detection, and the hide-on-auth/chat/landing logic are
-   preserved verbatim. Visual layer ported to the Bright design (bright.html
-   .bnav): a flat full-width white bar (no floating glass pill), active tab in
-   magenta-ink #D11F75, Home icon filled when active. */
+/* ── Session 128.13 — Bright Skin BottomNav ─────────────────────────────────
+   Replaces the previous BottomNav (Session 128.10 Blinkit-Phase-2 yellow-pill
+   active state). Visual contract now matches dukanchi-bright-skin/react-stubs/
+   BottomNav.jsx EXACTLY: 62px tall, white surface, hairline top border, active
+   tab tinted with var(--b-magenta-ink) (#C77E00 in the yellow theme).
 
-const navItems: { path: string; icon: LucideIcon; label: string }[] = [
-  { path: '/', icon: Home, label: 'Home' },
-  { path: '/search', icon: Search, label: 'Search' },
-  { path: '/map', icon: MapPin, label: 'Map' },
-  { path: '/messages', icon: MessageCircle, label: 'Chat' },
-  { path: '/profile', icon: User, label: 'Profile' },
+   Preserved from previous BottomNav:
+   - Route → tab mapping (Home / Search / Map / Chat / Profile)
+   - Hide on /chat/*, /signup, /login, /landing
+   - app-bottom-nav class so body.modal-open hides it (Session 128.1
+     post-sheet anti-overlap rule in src/index.css)
+   - max-w 480 mobile-first container preserved by the layout above
+   ─────────────────────────────────────────────────────────────────────────── */
+
+const ICONS: Record<string, string> = {
+  home:    '<path d="M3 9.5L12 2l9 7.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1z"/>',
+  search:  '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  map:     '<path d="M9 3L3 6v15l6-3 6 3 6-3V3l-6 3-6-3z"/><path d="M9 3v15M15 6v15"/>',
+  chat:    '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+};
+
+const TABS: { key: keyof typeof ICONS; label: string; path: string }[] = [
+  { key: 'home',    label: 'Home',    path: '/' },
+  { key: 'search',  label: 'Search',  path: '/search' },
+  { key: 'map',     label: 'Map',     path: '/map' },
+  { key: 'chat',    label: 'Chat',    path: '/messages' },
+  { key: 'profile', label: 'Profile', path: '/profile' },
 ];
 
 export default function BottomNav() {
   const location = useLocation();
 
+  // Hide-on-route rules preserved from prior BottomNav.
   if (
     location.pathname.startsWith('/chat/') ||
     location.pathname === '/signup' ||
@@ -32,71 +47,63 @@ export default function BottomNav() {
     <div
       className="app-bottom-nav fixed bottom-0 left-0 right-0 pb-safe z-40"
       style={{
-        maxWidth: 480, margin: '0 auto',
-        background: 'var(--b-bg)',
+        maxWidth: 480,
+        margin: '0 auto',
+        background: '#fff',
         borderTop: '1px solid var(--b-line)',
-        boxShadow: '0 -4px 20px rgba(255,107,53,0.06)',
+        height: 62,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-around',
+        flexShrink: 0,
       }}
     >
-      <div
-        style={{
-          height: 62,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-around',
-        }}
-      >
-        {navItems.map(({ path, icon: Icon, label }) => {
-          const isActive =
-            location.pathname === path ||
-            (path !== '/' && location.pathname.startsWith(path));
-          const isHome = path === '/';
-          // Session 128.10 — Blinkit bottom-nav active state: yellow rounded
-          // square BEHIND the icon (compare their Print tab) + dark icon +
-          // dark bold label. Replaces the magenta-text-only active hint with
-          // something users see from across the room.
-          const iconColor = isActive ? 'var(--b-yellow-ink)' : '#A8A8A8';
-          const labelColor = isActive ? 'var(--b-yellow-ink)' : '#A8A8A8';
-          return (
-            <Link
-              key={path}
-              to={path}
-              aria-current={isActive ? 'page' : undefined}
+      {TABS.map(({ key, label, path }) => {
+        const isActive =
+          location.pathname === path ||
+          (path !== '/' && location.pathname.startsWith(path));
+        const col = isActive ? 'var(--b-magenta-ink)' : 'var(--b-gray-3)';
+        return (
+          <Link
+            key={key}
+            to={path}
+            aria-current={isActive ? 'page' : undefined}
+            className="b-tap b-ripple"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 3,
+              textDecoration: 'none',
+              padding: '6px 10px',
+              outline: 'none',
+              WebkitTapHighlightColor: 'transparent',
+              transition: 'color 200ms var(--b-ease)',
+            }}
+          >
+            <svg
+              width={23}
+              height={23}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={col}
+              strokeWidth={isActive ? 2.4 : 2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              dangerouslySetInnerHTML={{ __html: ICONS[key] }}
+            />
+            <span
               style={{
-                flex: 1,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                padding: '4px 0',
-                textDecoration: 'none',
-                outline: 'none', WebkitTapHighlightColor: 'transparent',
-                transition: 'color 200ms var(--b-ease)',
+                fontSize: 10.5,
+                fontWeight: isActive ? 800 : 600,
+                color: col,
               }}
             >
-              <span
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: 44, height: 30, borderRadius: 12,
-                  background: isActive ? 'var(--b-yellow)' : 'transparent',
-                  boxShadow: isActive ? '0 2px 6px rgba(248,203,70,0.40)' : 'none',
-                  transition: 'background 180ms var(--b-ease)',
-                }}
-              >
-                <Icon
-                  size={20}
-                  color={iconColor}
-                  fill={isHome && isActive ? iconColor : 'none'}
-                  strokeWidth={isHome && isActive ? 0 : 2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </span>
-              <span style={{
-                fontSize: 10, fontWeight: isActive ? 800 : 600, letterSpacing: 0.2,
-                color: labelColor,
-              }}>
-                {label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+              {label}
+            </span>
+          </Link>
+        );
+      })}
     </div>
   );
 }
