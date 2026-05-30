@@ -24,6 +24,25 @@
 
 ---
 
+## 2026-05-30 — Session 128.5 — PostCard header: rating + followers + missing data fields (city/postalCode)
+
+**Goal:** Founder screenshot showed "Hameed" store header with only 2 rows visible (logo + name + status pill + category + Follow). Root-cause investigation found TWO issues: (a) PostCard never surfaced rating or followers despite both being in schema, (b) the feed Prisma include was MISSING `city` + `postalCode` selects — that's why the area row never rendered even for stores that HAVE city/postalCode data. Founder picked exact layout: `[Logo] Name + ✓ ⭐4.6(124) [Follow] / ● status · 1.6km · category / 📍 area · pincode · 2.3k followers`.
+
+**Changes:**
+
+- **`post.service.ts`** feed include — added `reviewCount`, `city`, `postalCode`, and `_count: { select: { followers: true } }` to the store select. `averageRating` was already included.
+- **`PostCard.tsx`** Row 1 — `⭐ 4.6 (124)` chip inline after the verified tick; only renders when `averageRating > 0 && reviewCount ≥ 1 && !hideRatings` (a "(0)" reads like a fail for brand-new stores). Star is gold `#F5B400` at 13px, value in text-2, count in text-3.
+- **`PostCard.tsx`** Row 3 — `areaText` replaced by `metaLine` = `areaText + ' · ' + formatCount(followers) + ' followers'`. Renders if EITHER is present. `formatCount` compresses 2347 → "2.3k", 12_000 → "12k", 1.5M → "1.5M".
+- **No schema migration.** No API breaking change. `live.label` already renders "Closes in 30m" automatically via the existing `getLiveStatus` 60-min tier — no logic touch needed.
+
+**Files:** `src/modules/posts/post.service.ts` (feed include), `src/components/PostCard.tsx` (rating chip + metaLine + formatCount helper).
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
+
+**Status:** ⏳ Code complete on `feat/postcard-rating-followers`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.4 — Smart feed ranking (Phase A+B): saves, recency, diversity, seen-penalty, chat-affinity, category preference, time-of-day
 
 **Goal:** Founder ask — "no smart logic behind showing posts". Audit showed there WAS a 5-factor scoring formula (freshness 40 + distance 25 + engagement 20 + followed 15 + opening +5), but it was global, not personalised — only `isFollowed` was per-user. Ship Phase A (non-ML ranking improvements, no schema changes) + Phase B (small per-user signals via existing models + Redis) in one bundle to address the "feels random" feedback before going to Phase C (pgvector taste-similarity).
