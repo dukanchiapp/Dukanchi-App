@@ -54,3 +54,40 @@ html, body {
 body.modal-open .app-bottom-nav {
   display: none !important;
 }
+
+/* Session 128.3: shimmer for skeleton loaders (Home feed, future use).
+   Subtle warm-cream gradient sweep at 1.4s cycle — matches the Bright skin. */
+@keyframes dk-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.dk-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--b-tint) 0%,
+    #FFF6EC 50%,
+    var(--b-tint) 100%
+  );
+  background-size: 200% 100%;
+  animation: dk-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dk-skeleton { animation: none; }
+}
+
+/* Session 128.3: double-tap heart burst on PostCard image. */
+@keyframes dk-heart-burst {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  20%  { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+}
+.dk-heart-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  pointer-events: none;
+  animation: dk-heart-burst 0.7s ease-out forwards;
+  filter: drop-shadow(0 4px 12px rgba(255,42,140,0.45));
+}

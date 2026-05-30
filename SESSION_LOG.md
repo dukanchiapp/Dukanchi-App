@@ -24,6 +24,27 @@
 
 ---
 
+## 2026-05-30 — Session 128.3 — Home feed Quick Wins (skeleton, pull-to-refresh, double-tap-to-like, haptics, empty states, silent-catch toasts)
+
+**Goal:** First UX-strategy bucket after the founder UI-suggestions ask — high-visibility low-risk Home-feed polish that lifts native feel + perceived speed.
+
+**Changes (visual + interaction, no API/auth/socket changes):**
+
+- **Skeleton loaders** — new `src/components/feed/PostCardSkeleton.tsx` mirrors the real PostCard shape (52×52 avatar + 2 text rows + 4:5 image canvas + action bar dots) with a `.dk-skeleton` shimmer (1.4s sweep, warm-cream gradient). Replaces the static placeholder Home.tsx had during initial fetch. Honours `prefers-reduced-motion`.
+- **Pull-to-refresh** — touch handlers (`onTouchStart` / `onTouchMove` / `onTouchEnd` / `onTouchCancel`) on the Home root. Arms only when `window.scrollY === 0`; pulls eased with `/2` divisor capped at 120px; release past 70px triggers a new `useFeed.refresh()` (page-1 refetch with dedupe-set reset) + medium haptic. Fixed-positioned indicator at top: white circle + rotating chevron during drag, magenta spinner during refresh.
+- **Double-tap to like** — Instagram pattern on PostCard image: two taps within 300ms → like (only if not already liked — second double-tap shouldn't unlike) + 96px magenta heart-burst animation (0.7s scale + fade, `dk-heart-burst` CSS) + medium haptic.
+- **Haptics util** — new `src/lib/haptics.ts` wraps `navigator.vibrate` with 5 patterns (light/medium/heavy/success/error). Wired into Home `toggleLike` (light) / `toggleSave` (light) / `toggleFollow` (medium) / `handleShare` (light) + PostCard double-tap (medium) + StoreProfile `toggleLike` + pull-to-refresh release (medium). Works in Android WebView (where the APK runs) + Chrome; iOS Safari ignores silently.
+- **Empty states** — Home For-you/Following/Saved no-posts state redesigned: 84×84 peach tile with tab-specific icon (Bookmark/UserCheck/Store) + Hindi/Hinglish headline + sub-copy + gradient CTA pill that flips the tab to `global` from Saved/Following.
+- **Silent-catch toasts** — fixed two Rule B violations: `StoreProfile.toggleLike` (was console-only on POST failure; now toast + optimistic rollback + Sentry) and `BusinessSettingsTabs.handleToggleSetting` (was silently failing PUT; now toast on non-OK).
+
+**Files:** `src/components/feed/PostCardSkeleton.tsx` (NEW), `src/lib/haptics.ts` (NEW), `src/index.css` (shimmer + heart-burst keyframes), `src/components/PostCard.tsx` (double-tap + burst + haptic), `src/pages/Home.tsx` (skeleton swap + pull-to-refresh + empty states + haptics on toggles), `src/hooks/useFeed.ts` (`refresh()`), `src/pages/StoreProfile.tsx` (toggleLike toast + haptic), `src/components/settings/BusinessSettingsTabs.tsx` (toggle toast), `tsconfig.app.json` (`haptics.ts` include per Rule G).
+
+**Verification:** `npm run typecheck` clean (web/server/worker), `npm run build` ✓. Home feed is auth-gated → meaningful preview requires login on a deployed build.
+
+**Status:** ⏳ Code complete on `feat/home-quick-wins`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.1 — Docs-LIVE follow-up (PR #112, Fly v46)
 
 **Goal:** Per the docs convention (see [[deploy-mechanism]]), after a deploy is verified land a `docs(session-N): ... LIVE` PR so the SESSION_LOG / STATUS entries reflect post-deploy state on main.

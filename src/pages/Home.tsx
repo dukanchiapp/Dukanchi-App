@@ -8,7 +8,9 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
-import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store } from 'lucide-react';
+import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck } from 'lucide-react';
+import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
+import { haptic } from '../lib/haptics';
 import { FLogo } from '../components/futuristic/FLogo';
 import { FLocationStrip } from '../components/futuristic/FLocationStrip';
 import { PostCard } from '../components/PostCard';
@@ -64,7 +66,7 @@ export default function HomePage() {
   const [savedLoading, setSavedLoading] = useState(false);
 
   // Feed hook — handles global/following pagination
-  const { posts: feedPosts, loading: feedLoading, loadingMore, hasMore, loadMore } = useFeed({
+  const { posts: feedPosts, loading: feedLoading, loadingMore, hasMore, loadMore, refresh } = useFeed({
     feedType,
     locationRange,
     lat: userLocCtx?.lat,
@@ -189,6 +191,8 @@ export default function HomePage() {
         likedPostIds: wasLiked ? prev.likedPostIds.filter(id => id !== postId) : [...prev.likedPostIds, postId],
       };
     });
+    // Session 128.3: tactile feedback on Android WebView / Chrome.
+    haptic('light');
     try {
       const res = await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' });
       if (!res.ok) throw new Error(`Like failed: ${res.status}`);
@@ -210,6 +214,7 @@ export default function HomePage() {
         savedPostIds: wasSaved ? prev.savedPostIds.filter(id => id !== postId) : [...prev.savedPostIds, postId],
       };
     });
+    haptic('light');
     try {
       const res = await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' });
       if (!res.ok) throw new Error(`Save failed: ${res.status}`);
@@ -231,6 +236,7 @@ export default function HomePage() {
         followedStoreIds: wasFollowed ? prev.followedStoreIds.filter(id => id !== storeId) : [...prev.followedStoreIds, storeId],
       };
     });
+    haptic('medium');
     try {
       const res = await apiFetch(`/api/stores/${storeId}/follow`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) throw new Error(`Follow failed: ${res.status}`);
@@ -249,6 +255,7 @@ export default function HomePage() {
       text: post.caption || `See this post from ${post.store?.storeName}`,
       url: window.location.origin + `/store/${post.storeId}`,
     };
+    haptic('light');
     try {
       if (navigator.share) {
         await navigator.share(shareData);
@@ -276,8 +283,52 @@ export default function HomePage() {
     { key: 'saved', label: 'Saved' },
   ];
 
+  // ── Pull-to-refresh (Session 128.3) ───────────────────────────────────────
+  // Native-feel gesture: at scrollY=0, capture the touch start Y. Track the
+  // downward drag in pullY (capped at PULL_MAX, eased with a /2 divisor). On
+  // release past PULL_THRESHOLD, fire refresh() + medium haptic. Touch handlers
+  // pass-through (capture phase off) — they do NOT block native scroll once
+  // the user has scrolled away from the very top.
+  const PULL_THRESHOLD = 70;
+  const PULL_MAX = 120;
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStartRef = useRef<number | null>(null);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (refreshing) return;
+    // Only arm the pull when the user starts at the absolute top of the page.
+    if (window.scrollY > 0) { pullStartRef.current = null; return; }
+    pullStartRef.current = e.touches[0]?.clientY ?? null;
+  }, [refreshing]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (refreshing || pullStartRef.current === null) return;
+    // If the user scrolled the page in the meantime, abort the pull.
+    if (window.scrollY > 0) { pullStartRef.current = null; setPullY(0); return; }
+    const delta = (e.touches[0]?.clientY ?? 0) - pullStartRef.current;
+    if (delta <= 0) { setPullY(0); return; }
+    // Soft cap with a /2 ease so the indicator slows as you pull further.
+    setPullY(Math.min(PULL_MAX, delta / 2));
+  }, [refreshing]);
+
+  const onTouchEnd = useCallback(async () => {
+    if (refreshing) return;
+    const armed = pullY >= PULL_THRESHOLD;
+    pullStartRef.current = null;
+    if (!armed) { setPullY(0); return; }
+    setRefreshing(true);
+    haptic('medium');
+    try { await refresh(); }
+    finally { setRefreshing(false); setPullY(0); }
+  }, [pullY, refreshing, refresh]);
+
   return (
     <div
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchEnd}
       style={{
         minHeight: '100vh',
         backgroundColor: 'var(--f-bg-deep)',
@@ -286,6 +337,41 @@ export default function HomePage() {
         fontFamily: 'var(--f-font)',
       }}
     >
+      {/* Pull-to-refresh indicator (Session 128.3) — pinned at the top, fades
+          in with pullY, spins once refreshing. Sits at zIndex 40 so the sticky
+          header (z30) doesn't cover it during the pull. */}
+      {(pullY > 0 || refreshing) && (
+        <div
+          style={{
+            position: 'fixed',
+            top: `calc(env(safe-area-inset-top, 0px) + ${refreshing ? 18 : Math.max(0, pullY - 28)}px)`,
+            left: 0, right: 0, zIndex: 40,
+            display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+            transition: refreshing ? 'top 200ms ease' : 'none',
+          }}
+        >
+          <div style={{
+            width: 38, height: 38, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: '#fff', border: '1px solid var(--b-line)',
+            boxShadow: '0 6px 16px rgba(0,0,0,0.12)',
+            transform: refreshing ? 'none' : `rotate(${Math.min(360, pullY * 4)}deg)`,
+          }}>
+            {refreshing ? (
+              <div className="animate-spin" style={{
+                width: 18, height: 18, borderRadius: '50%',
+                border: '2.5px solid var(--b-tint)', borderTopColor: 'var(--b-magenta-ink)',
+              }} />
+            ) : (
+              <ChevronRight
+                size={18}
+                color={pullY >= PULL_THRESHOLD ? 'var(--b-magenta-ink)' : 'var(--f-text-3)'}
+                style={{ transform: 'rotate(90deg)' }}
+              />
+            )}
+          </div>
+        </div>
+      )}
       <div className="max-w-md mx-auto">
 
         {/* ── Sticky top block (gradient Header + Location) ── */}
@@ -550,53 +636,61 @@ export default function HomePage() {
         {/* ── Feed ── */}
         <main style={{ padding: '14px 14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
           {loading ? (
-            [1, 2, 3].map(i => (
-              <div key={i} className="f-glass" style={{ borderRadius: 22, overflow: 'hidden' }}>
-                <div style={{ padding: 14, display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      background: 'var(--f-glass-bg-2)',
-                    }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        width: '50%',
-                        height: 11,
-                        borderRadius: 6,
-                        background: 'var(--f-glass-bg-2)',
-                      }}
-                    />
-                    <div
-                      style={{
-                        width: '70%',
-                        height: 9,
-                        borderRadius: 6,
-                        background: 'var(--f-glass-bg)',
-                        marginTop: 6,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ aspectRatio: '4/5', background: 'var(--f-glass-bg)' }} />
-              </div>
-            ))
+            // Session 128.3: shimmery PostCardSkeleton (matches the real card's
+            // 52×52 avatar + text rows + 4:5 canvas + action bar — no layout
+            // jump when real content lands).
+            [0, 1, 2].map(i => <PostCardSkeleton key={i} />)
           ) : posts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '64px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
-                <Store size={44} color="var(--f-text-4)" />
+            // Session 128.3: richer empty state — illustration glyph + headline
+            // + sub-copy + a primary CTA that adapts to the active tab (saved →
+            // browse feed; following → discover stores; for-you → expand radius).
+            <div style={{
+              textAlign: 'center', padding: '56px 24px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+            }}>
+              <div style={{
+                width: 84, height: 84, borderRadius: 28,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 6,
+                background: 'var(--b-orange-bg)',
+                border: '1px solid var(--b-tint)',
+              }}>
+                {feedType === 'saved' ? (
+                  <Bookmark size={36} color="var(--b-orange)" strokeWidth={1.8} />
+                ) : feedType === 'following' ? (
+                  <UserCheck size={36} color="var(--b-orange)" strokeWidth={1.8} />
+                ) : (
+                  <Store size={36} color="var(--b-orange)" strokeWidth={1.8} />
+                )}
               </div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-2)' }}>
-                {feedType === 'saved' ? 'No saved posts yet.' : 'No posts found.'}
-              </p>
-              <p style={{ fontSize: 12, color: 'var(--f-text-3)', marginTop: 4 }}>
+              <p className="f-display" style={{ fontSize: 17, fontWeight: 800, color: 'var(--f-text-1)', margin: 0 }}>
                 {feedType === 'saved'
-                  ? 'Bookmark posts to see them here.'
-                  : 'Try adjusting your filters or follow more stores.'}
+                  ? 'Koi saved post nahi'
+                  : feedType === 'following'
+                  ? 'Abhi kisi ko follow nahi kiya'
+                  : 'Yahan koi post nahi'}
               </p>
+              <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: 0, maxWidth: 280, lineHeight: 1.5 }}>
+                {feedType === 'saved'
+                  ? 'Posts pe bookmark dabaiye, yahan dikhenge — baad mein dhoondhna easy hoga.'
+                  : feedType === 'following'
+                  ? 'Pasandeeda stores ko Follow kariye — unke naye posts seedha yahan aayenge.'
+                  : 'Filter badal ke ya nearby radius badha ke try kariye, ya naye stores follow kariye.'}
+              </p>
+              {feedType !== 'global' && (
+                <button
+                  onClick={() => setFeedType('global')}
+                  style={{
+                    marginTop: 10,
+                    padding: '10px 18px', borderRadius: 9999, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff',
+                    background: 'linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%)',
+                    boxShadow: '0 4px 14px rgba(255,42,140,0.32)',
+                  }}
+                >
+                  {feedType === 'saved' ? 'Browse posts' : 'Discover stores'}
+                </button>
+              )}
             </div>
           ) : (
             posts.map(post => (
