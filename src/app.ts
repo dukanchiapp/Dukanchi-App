@@ -374,6 +374,23 @@ app.get('/landing', (_req, res) => {
   return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
+// ── 9a. SEO — robots.txt + sitemap.xml (Session 128.11) ──────────────────────
+// Express's static dist/ handler already would serve these files (Vite copies
+// public/* into dist/ at build time, and express.static runs BEFORE the SPA
+// catch-all in server.ts). But we register explicit routes here for two
+// reasons:
+//   1. Forces deterministic Content-Type (text/plain + application/xml) so
+//      crawlers don't choke on a mis-detected MIME.
+//   2. Makes the SEO contract explicit + easy to grep — future server-side
+//      refactors can't accidentally regress these to the SPA shell.
+// Note: explicit routes mounted BEFORE server.ts's app.get('*') catch-all.
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain').sendFile(path.resolve(process.cwd(), 'public', 'robots.txt'));
+});
+app.get('/sitemap.xml', (_req, res) => {
+  res.type('application/xml').sendFile(path.resolve(process.cwd(), 'public', 'sitemap.xml'));
+});
+
 // ── 9b. Admin panel — static files + SPA fallback ────────────────────────────
 const adminDistPath = path.resolve(process.cwd(), 'admin-panel', 'dist');
 app.use('/admin-panel', express.static(adminDistPath));

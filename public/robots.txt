@@ -1,0 +1,11 @@
+# Dukanchi — robots policy
+# Session 128.11: replaces the SPA-shell HTML response (catch-all wins by
+# default for /robots.txt unless served from public/dist before the SPA
+# fallback). Now Express returns this real file with text/plain.
+
+User-agent: *
+Allow: /
+Disallow: /admin-panel
+Disallow: /api
+
+Sitemap: https://dukanchi.com/sitemap.xml
