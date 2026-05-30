@@ -16,15 +16,24 @@
       try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
     }
 
+    // Session 128.12 hotfix: this page is now served at BOTH "/" and "/landing".
+    // The PWA / browser-mode "bounce to app root" redirects below MUST guard
+    // against self-redirect — when an unauthed PWA user lands on "/", the
+    // server has already served us this landing.html (no dk_token cookie), and
+    // replacing to "/" would re-hit the same server response → tight loop.
+    // Solution: only redirect to "/" when NOT already there. Unauthed PWA users
+    // at "/" stay on the landing page; they can tap a CTA to reach /login.
+    var alreadyAtRoot = window.location.pathname === '/';
+
     if (matchStandalone || stickyFlag) {
-      window.location.replace('/');
+      if (!alreadyAtRoot) window.location.replace('/');
       return;
     }
 
     // Browser-mode user revisiting /landing — skip back to app
     var browserMode = false;
     try { browserMode = localStorage.getItem('dk-browser-mode') === '1'; } catch(e) {}
-    if (browserMode) {
+    if (browserMode && !alreadyAtRoot) {
       window.location.replace('/');
     }
   })();
