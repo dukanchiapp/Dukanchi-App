@@ -23,6 +23,10 @@ export default function RetailerDashboard() {
   const [mapLng, setMapLng] = useState<number>(0);
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [coverUrl, setCoverUrl] = useState<string>('');
+  // Session 128.10: upload progress for the logo + cover tiles — passed down
+  // to StoreFormFields so it can render <UploadingOverlay /> during R2 round-trip.
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [coverUploading, setCoverUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('General');
@@ -223,6 +227,9 @@ export default function RetailerDashboard() {
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const formData = new FormData(); formData.append('file', file);
+    // Session 128.10: surface the upload state so StoreFormFields can render
+    // an overlay spinner on the logo tile — was silent before.
+    setLogoUploading(true);
     try {
       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) { const data = await res.json(); setLogoUrl(data.url); }
@@ -230,12 +237,15 @@ export default function RetailerDashboard() {
     } catch (err) {
       showToast('Logo upload nahi ho paya. Try again.', { type: 'error' });
       Sentry.captureException(err, { extra: { context: 'retailer.logoUpload' } });
+    } finally {
+      setLogoUploading(false);
     }
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     const formData = new FormData(); formData.append('file', file);
+    setCoverUploading(true);
     try {
       const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
       if (res.ok) { const data = await res.json(); setCoverUrl(data.url); }
@@ -243,6 +253,8 @@ export default function RetailerDashboard() {
     } catch (err) {
       showToast('Cover photo upload nahi ho paya. Try again.', { type: 'error' });
       Sentry.captureException(err, { extra: { context: 'retailer.coverUpload' } });
+    } finally {
+      setCoverUploading(false);
     }
   };
 
@@ -381,6 +393,7 @@ export default function RetailerDashboard() {
                   logoUrl={logoUrl} coverUrl={coverUrl}
                   fileInputRef={fileInputRef} coverFileInputRef={coverFileInputRef}
                   handleLogoUpload={handleLogoUpload} handleCoverUpload={handleCoverUpload}
+                  logoUploading={logoUploading} coverUploading={coverUploading}
                   selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
                   descriptionRef={descriptionRef} descriptionValue={descriptionValue} setDescriptionValue={setDescriptionValue}
                   openAiModal={() => setAiModalOpen(true)}

@@ -6,6 +6,7 @@ import { apiFetch } from '../../lib/api';
 import { captureEvent } from '../../lib/posthog';
 import { Sentry } from '../../lib/sentry-frontend';
 import { FIcon } from '../futuristic';
+import { UploadingOverlay } from '../ui/UploadingOverlay';
 
 /* ── Futuristic v2 skin · Phase 8 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Post pin/delete/edit,
@@ -80,6 +81,9 @@ export function PostsGrid({
   const [newPostUploading, setNewPostUploading] = useState(false);
   const [showCropper, setShowCropper] = useState(false);
   const [rawImageUrl, setRawImageUrl] = useState('');
+  // Session 128.10: cropper -> R2 upload progress (the cropper closes and the
+  // POST /api/upload kicks off — previously this was a silent ~3-6s gap).
+  const [postImageUploading, setPostImageUploading] = useState(false);
 
   // ── AI / voice state ────────────────────────────────────────────────────────
   const [aiLoading, setAiLoading] = useState(false);
@@ -98,6 +102,7 @@ export function PostsGrid({
   const [editUploading, setEditUploading] = useState(false);
   const [editShowCropper, setEditShowCropper] = useState(false);
   const [editRawImageUrl, setEditRawImageUrl] = useState('');
+  const [editImageUploading, setEditImageUploading] = useState(false);
 
   // ── Blob URL lifecycle (Session 114) ───────────────────────────────────────
   // The cropper takes a local blob: URL from URL.createObjectURL. These URLs
@@ -545,6 +550,11 @@ export function PostsGrid({
                   onComplete={async (blob) => {
                     // Session 113: blob arrives ready-to-upload from
                     // compressImage(). No data: URI round-trip.
+                    // Session 128.10: close cropper immediately + show a
+                    // placeholder + overlay so the upload feels acknowledged
+                    // (was a silent 3-6s gap before the preview lit up).
+                    setShowCropper(false); setRawImageUrl('');
+                    setPostImageUploading(true);
                     try {
                       const formData = new FormData();
                       formData.append('file', blob, 'cropped-post.jpg');
@@ -554,8 +564,9 @@ export function PostsGrid({
                     } catch (err) {
                       showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
                       Sentry.captureException(err, { extra: { context: 'postsGrid.cropperUploadNew' } });
+                    } finally {
+                      setPostImageUploading(false);
                     }
-                    setShowCropper(false); setRawImageUrl('');
                   }}
                   onCancel={() => { setShowCropper(false); setRawImageUrl(''); }}
                 />
@@ -581,6 +592,13 @@ export function PostsGrid({
                     <FIcon name="sparkles" size={12} color="white" />
                     {aiLoading ? 'AI soch raha hai...' : '✨ AI se caption banao'}
                   </button>
+                </div>
+              ) : postImageUploading ? (
+                // Session 128.10: 3:4 placeholder + spinner while the cropped
+                // blob is being POSTed to /api/upload. Same aspect-ratio so
+                // the sheet doesn't jump when the preview lands.
+                <div style={{ position: 'relative', width: '100%', aspectRatio: '3/4', borderRadius: 12, background: 'var(--f-glass-bg)', border: '1.5px dashed var(--f-glass-border-2)' }}>
+                  <UploadingOverlay label="Photo upload ho rahi hai…" size={32} radius={11} />
                 </div>
               ) : (
                 <label style={{
@@ -667,8 +685,8 @@ export function PostsGrid({
                 <ImageCropper
                   imageUrl={editRawImageUrl}
                   onComplete={async (blob) => {
-                    // Session 113: blob arrives ready-to-upload from
-                    // compressImage(). No data: URI round-trip.
+                    setEditShowCropper(false); setEditRawImageUrl('');
+                    setEditImageUploading(true);
                     try {
                       const formData = new FormData();
                       formData.append('file', blob, 'edited-post.jpg');
@@ -678,20 +696,23 @@ export function PostsGrid({
                     } catch (err) {
                       showToast('Image upload nahi ho paya. Try again.', { type: 'error' });
                       Sentry.captureException(err, { extra: { context: 'postsGrid.cropperUploadEdit' } });
+                    } finally {
+                      setEditImageUploading(false);
                     }
-                    setEditShowCropper(false); setEditRawImageUrl('');
                   }}
                   onCancel={() => { setEditShowCropper(false); setEditRawImageUrl(''); }}
                 />
               ) : (
                 <div style={{ position: 'relative' }}>
                   <img src={editImage} alt="Post" style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 12, display: 'block' }} />
+                  {editImageUploading && <UploadingOverlay label="Photo upload ho rahi hai…" size={30} radius={12} />}
                   <label style={{
-                    position: 'absolute', bottom: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer',
+                    position: 'absolute', bottom: 8, right: 8, display: 'flex', alignItems: 'center', gap: 4, cursor: editImageUploading ? 'wait' : 'pointer',
                     background: 'rgba(0,0,0,0.6)', color: 'white', padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700,
+                    opacity: editImageUploading ? 0.5 : 1, pointerEvents: editImageUploading ? 'none' : 'auto',
                   }}>
                     <FIcon name="pencil" size={12} color="white" /> Replace Photo
-                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleEditImageUpload} />
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleEditImageUpload} disabled={editImageUploading} />
                   </label>
                 </div>
               )}
