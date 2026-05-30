@@ -11,7 +11,6 @@ import { Sentry } from '../lib/sentry-frontend';
 import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck } from 'lucide-react';
 import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
 import { haptic } from '../lib/haptics';
-import { FLocationStrip } from '../components/futuristic/FLocationStrip';
 import Header from '../components/bright/Header';
 import Button from '../components/bright/Button';
 import { PostCard } from '../components/PostCard';
@@ -395,10 +394,58 @@ export default function HomePage() {
               </div>
             }
           />
-          <FLocationStrip
-            name={userLocCtx ? userLocCtx.name : 'your area'}
-            onChange={() => setShowLocationPicker(true)}
-          />
+          {/* Session 128.14 — Location strip ON the yellow gradient (per
+              dukanchi-bright-skin/screens/HomeScreen.jsx lines 13-20). The
+              FLocationStrip used a peach surface; spec extends the gradient
+              down through the location row for a seamless brand block. */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              background: 'var(--b-grad)',
+              borderBottom: '1px solid var(--b-chip-line)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                color: 'var(--b-on-grad)',
+                fontSize: 12.5,
+                fontWeight: 600,
+                minWidth: 0,
+              }}
+            >
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+                <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
+                <circle cx={12} cy={10} r={2.5} />
+              </svg>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Showing stores near {userLocCtx ? userLocCtx.name : 'your area'}
+              </span>
+            </div>
+            <button
+              onClick={() => setShowLocationPicker(true)}
+              className="b-tap"
+              style={{
+                fontSize: 12,
+                fontWeight: 800,
+                color: 'var(--b-on-grad)',
+                background: 'var(--b-chip-bg)',
+                border: '1px solid var(--b-chip-line)',
+                borderRadius: 9999,
+                padding: '4px 12px',
+                cursor: 'pointer',
+                flexShrink: 0,
+                fontFamily: 'inherit',
+              }}
+            >
+              Change
+            </button>
+          </div>
         </div>
 
         {/* ── Carousel banner ── */}
@@ -482,43 +529,39 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* ── Tabs + distance filter ── */}
+        {/* ── Tabs + distance filter ── Session 128.14: plain surface bg
+            (per HomeScreen.jsx) so the tab gradient pill reads cleanly. */}
         <div
           className="sticky z-20"
           style={{
             top: topBarHeight,
-            padding: '10px 16px',
+            padding: '14px 16px 6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'var(--f-sticky-bg)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            borderBottom: '1px solid var(--f-glass-border)',
+            background: 'var(--b-surface)',
           }}
         >
-          {/* Session 128.10 — Blinkit underline-style tabs (see All/Vacations/
-              Kids/Electronics/Beauty bar on the Blinkit Home). Active tab gets
-              a thick dark underline + bold text; inactive tabs are gray. Much
-              calmer than a pill background, and standard for top-nav category
-              bars in IN commerce apps. */}
-          <div style={{ display: 'flex', gap: 24, alignItems: 'flex-end' }}>
+          {/* Session 128.14 — Bright Skin spec tabs (gradient pill on active,
+              transparent on inactive — per HomeScreen.jsx lines 30-39). */}
+          <div style={{ display: 'flex', gap: 8 }}>
             {tabs.map(tab => {
               const active = feedType === tab.key;
               return (
                 <button
                   key={tab.key}
                   onClick={() => setFeedType(tab.key)}
+                  className="b-tap"
                   style={{
-                    padding: '8px 0 10px',
-                    fontSize: 13,
-                    fontWeight: active ? 800 : 600,
+                    padding: '8px 16px',
+                    borderRadius: 9999,
+                    fontSize: 12,
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    fontFamily: 'inherit',
                     border: 'none',
-                    background: 'transparent',
-                    color: active ? 'var(--b-yellow-ink)' : 'var(--f-text-3)',
-                    borderBottom: active ? '3px solid var(--b-yellow-ink)' : '3px solid transparent',
+                    fontFamily: 'inherit',
+                    background: active ? 'var(--b-grad)' : 'transparent',
+                    color: active ? 'var(--b-on-grad)' : 'var(--b-gray-2)',
                     transition: 'all 160ms var(--b-ease)',
                   }}
                 >
@@ -530,19 +573,20 @@ export default function HomePage() {
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowFilters(!showFilters)}
+              className="b-tap"
               style={{
-                width: 34,
-                height: 34,
+                width: 38,
+                height: 38,
                 borderRadius: 12,
-                border: '1px solid var(--f-glass-border)',
-                background: 'var(--f-glass-bg)',
+                border: '1px solid var(--b-line)',
+                background: '#fff',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
               }}
             >
-              <SlidersHorizontal size={15} color="var(--f-text-1)" />
+              <SlidersHorizontal size={18} color="var(--b-ink)" />
             </button>
             {showFilters && (
               <div

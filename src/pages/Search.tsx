@@ -10,9 +10,7 @@ import { Sentry } from '../lib/sentry-frontend';
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { Search, X, SlidersHorizontal, ArrowRight, Clock, MapPin, Store, Navigation, ChevronRight, Check } from 'lucide-react';
-import Header from '../components/bright/Header';
 import { RadarPulse } from '../components/futuristic/RadarPulse';
-import NotificationBell from '../components/NotificationBell';
 
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
 
@@ -295,27 +293,24 @@ export default function SearchPage() {
       }}
     >
       <div className="max-w-md mx-auto">
-        {/* Session 128.13 — Bright Skin <Header> primitive (replaces bespoke
-            sticky FLogo + gradient block). */}
-        <div className="sticky top-0 z-20">
-          <Header
-            title="Dukanchi"
-            tagline="apna bazaar, apni dukaan"
-            trailing={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <NotificationBell color="var(--b-on-grad)" />
-              </div>
-            }
-          />
-        </div>
-
-        <main className="px-4 pt-5 pb-4">
-          {/* Big heading */}
+        {/* Session 128.14 — Bright Skin Search header (per SearchScreen.jsx
+            lines 11-23): yellow gradient block + b-head mesh sheen + big 23px
+            Sora title + white inline search bar with magnifier + filter pill.
+            Mounts in the same sticky slot the bespoke Header occupied. */}
+        <div
+          className="b-head sticky top-0 z-20"
+          style={{
+            background: 'var(--b-grad)',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 16px 16px',
+          }}
+        >
           <h1
-            className="f-display"
             style={{
-              fontSize: 22,
-              color: 'var(--f-text-1)',
+              fontSize: 23,
+              fontWeight: 800,
+              fontFamily: 'var(--b-display)',
+              color: 'var(--b-on-grad)',
+              letterSpacing: '-0.03em',
               marginBottom: 14,
             }}
           >
@@ -324,59 +319,74 @@ export default function SearchPage() {
 
           {/* Search input + filter button */}
           <div className="relative" ref={suggestionsRef}>
-            <div className="flex items-center gap-2 mb-0">
-              <div
-                className="flex items-center gap-2 flex-1"
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                background: '#fff',
+                borderRadius: 14,
+                padding: '12px 14px',
+              }}
+            >
+              <Search size={20} color="var(--b-gray-2)" strokeWidth={2} style={{ flexShrink: 0 }} />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Shops, products, categories…"
+                value={query}
+                onChange={e => { setQuery(e.target.value); setShowSuggestions(true); }}
+                onFocus={() => setShowSuggestions(true)}
                 style={{
-                  background: 'var(--f-glass-bg)',
-                  border: '1px solid var(--f-glass-border)',
-                  borderRadius: 14,
-                  padding: '11px 14px',
+                  border: 'none',
+                  outline: 'none',
+                  flex: 1,
+                  fontSize: 14,
+                  fontFamily: 'inherit',
+                  color: 'var(--b-ink)',
+                  background: 'transparent',
+                  minWidth: 0,
                 }}
-              >
-                <Search size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  placeholder="Search products, brands, or stores..."
-                  value={query}
-                  onChange={e => { setQuery(e.target.value); setShowSuggestions(true); }}
-                  onFocus={() => setShowSuggestions(true)}
-                  className="flex-1 bg-transparent outline-none text-sm"
-                  style={{ color: 'var(--f-text-1)' }}
-                />
-                {query ? (
-                  <button onClick={() => { setQuery(''); setSuggestions([]); setCorrectedQuery(null); }}>
-                    <X size={15} color="var(--f-text-3)" />
-                  </button>
-                ) : null}
-              </div>
+              />
+              {query ? (
+                <button
+                  onClick={() => { setQuery(''); setSuggestions([]); setCorrectedQuery(null); }}
+                  style={{ background: 'transparent', border: 'none', display: 'flex', cursor: 'pointer', padding: 0 }}
+                  aria-label="Clear search"
+                >
+                  <X size={15} color="var(--b-gray-2)" />
+                </button>
+              ) : null}
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center justify-center flex-shrink-0"
+                className="b-tap"
                 style={{
-                  width: 46, height: 46, borderRadius: 14,
-                  background: hasFilters || showFilters
-                    ? 'var(--b-grad)'
-                    : 'var(--f-glass-bg-2)',
-                  border: '1px solid ' + (hasFilters || showFilters ? 'rgba(199,126,0,0.45)' : 'var(--f-glass-border-2)'),
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  background: hasFilters || showFilters ? 'var(--b-grad)' : 'var(--b-tint)',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
                 }}
+                aria-label="Filters"
               >
-                <SlidersHorizontal size={18} color={hasFilters || showFilters ? 'white' : 'var(--f-text-1)'} />
+                <SlidersHorizontal size={17} color={hasFilters || showFilters ? 'var(--b-on-grad)' : 'var(--b-orange)'} strokeWidth={2} />
               </button>
             </div>
 
             {/* Autocomplete suggestions dropdown */}
             {showSuggestions && suggestions.length > 0 && query.length >= 1 && (
               <div
-                className="absolute left-0 right-12 z-30 mt-1 overflow-hidden"
+                className="absolute left-0 right-0 z-30 mt-1 overflow-hidden"
                 style={{
-                  background: 'var(--f-modal-bg)',
+                  background: '#fff',
                   borderRadius: 14,
-                  border: '1px solid var(--f-glass-border-2)',
-                  backdropFilter: 'blur(28px)',
-                  WebkitBackdropFilter: 'blur(28px)',
-                  boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                  border: '1px solid var(--b-line)',
+                  boxShadow: 'var(--b-elev-2)',
                   maxHeight: 280,
                   overflowY: 'auto',
                 }}
@@ -402,7 +412,10 @@ export default function SearchPage() {
               </div>
             )}
           </div>
+        </div>
 
+        {/* Session 128.14 — body surface (everything below the gradient header) */}
+        <main style={{ padding: '16px 16px 24px', background: 'var(--b-surface)' }}>
           {/* Did you mean? correction banner */}
           {correctedQuery && isSearching && (
             <div
