@@ -43,10 +43,10 @@ function PostRefCard({ text, onTap }: { text: string; onTap: (post: any) => void
       <div style={{ padding: '8px 12px', minWidth: 0, flex: 1 }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 4,
-          background: 'var(--f-grad-primary)', borderRadius: 9999, padding: '2px 8px',
+          background: 'var(--b-grad)', borderRadius: 9999, padding: '2px 8px',
         }}>
-          <Tag size={8} color="white" />
-          <span style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'white' }}>Post</span>
+          <Tag size={8} color="var(--b-on-grad)" />
+          <span style={{ fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--b-on-grad)' }}>Post</span>
         </span>
         {post.price && (
           <p style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.1, color: 'var(--f-text-1)', margin: 0 }}>₹{Number(post.price).toLocaleString()}</p>
@@ -136,10 +136,10 @@ function ReferredPostBanner({ post, onDismiss }: {
   return (
     <div style={{
       margin: '0 14px 8px', display: 'flex', alignItems: 'center', gap: 12, padding: 10,
-      background: 'rgba(255,107,53,0.10)', border: '1px solid rgba(255,107,53,0.28)', borderRadius: 16,
+      background: 'var(--b-tint)', border: '1px solid rgba(234,154,0,0.40)', borderRadius: 16,
     }}>
       {post.imageUrl && (
-        <img src={post.imageUrl} alt="post" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 12, flexShrink: 0, border: '1px solid rgba(255,107,53,0.30)' }} />
+        <img src={post.imageUrl} alt="post" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 12, flexShrink: 0, border: '1px solid rgba(234,154,0,0.40)' }} />
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 10, fontWeight: 800, color: 'var(--f-orange-light)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 2px' }}>Enquiring about</p>
@@ -450,11 +450,14 @@ export default function ChatPage() {
             >
               <div style={{
                 padding: isPostRef ? 6 : '11px 15px', fontSize: 14, lineHeight: 1.45, fontWeight: 500,
-                color: isMe ? '#fff' : 'var(--f-text-1)',
-                background: isMe ? 'var(--f-grad-primary)' : 'var(--f-bg-elev)',
-                border: isMe ? 'none' : '1px solid var(--f-glass-border-2)',
+                // Session 128.13 — Bright Skin chat bubble:
+                //   isMe → green bg + white text (Send=green = my voice)
+                //   incoming → white card + ink text + soft warm border
+                color: isMe ? '#fff' : 'var(--b-ink)',
+                background: isMe ? 'var(--b-green)' : '#fff',
+                border: isMe ? 'none' : '1px solid var(--b-line)',
                 borderRadius: isMe ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
-                boxShadow: isMe ? '0 4px 14px rgba(255,42,140,0.25)' : '0 1px 3px rgba(0,0,0,0.25)',
+                boxShadow: isMe ? '0 2px 8px rgba(12,131,31,0.20)' : 'var(--b-elev-card)',
               }}>
                 {isPostRef ? (
                   <PostRefCard text={msg.message!} onTap={setPreviewPost} />
@@ -553,7 +556,8 @@ export default function ChatPage() {
               width: 46, height: 46, borderRadius: 14, border: 'none', flexShrink: 0,
               cursor: sendDisabled ? 'not-allowed' : 'pointer',
               opacity: sendDisabled ? 0.5 : 1,
-              background: 'var(--f-grad-primary)', boxShadow: '0 4px 14px rgba(255,42,140,0.4)',
+              // Session 128.13 — Bright Skin: Send=green (color = function).
+              background: 'var(--b-green)', boxShadow: '0 2px 8px rgba(12,131,31,0.30)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
