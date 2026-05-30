@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Dukanchi · Design Tokens</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Brand */
+    --o-50:#FFF1EC; --o-100:#FFE0D4; --o-200:#FFC2A8; --o-300:#FF9D72;
+    --o-400:#FF6B35; --o-500:#F0531C; --o-600:#C9410F;
+    --magenta:#FF2A8C; --magenta-ink:#D11F75;
+    --grad:linear-gradient(135deg,#FF6B35 0%,#FF2A8C 100%);
+    /* Semantic */
+    --green:#0C831F; --green-bg:#E8F5E9;
+    --amber:#F0B429; --amber-bg:#FEF6E0;
+    --orange-st:#FB7A1E; --orange-st-bg:#FFF0E2;
+    --red:#E53935; --red-bg:#FDECEA;
+    /* Neutral (warm-tinted, not cold grey) */
+    --ink:#1C1A18; --g1:#3A3633; --g2:#7E7873; --g3:#A8A29C; --line:#EEEAE5;
+    --bg:#FFFFFF; --surface:#FAF7F3; --tint:#FFF1EC;
+    --font:'Inter',-apple-system,system-ui,sans-serif;
+    --mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font);background:var(--surface);color:var(--ink);padding:32px 24px 80px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .logo{width:48px;height:48px;border-radius:15px;background:var(--grad);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;font-weight:600;box-shadow:0 6px 18px rgba(255,107,53,0.35)}
+  h1{font-size:28px;font-weight:800;letter-spacing:-0.03em}
+  .sub{color:var(--g2);font-size:14px;margin-top:2px}
+  .dir{margin:18px 0 36px;padding:16px 18px;border-radius:16px;background:var(--tint);border:1px solid var(--o-100);font-size:13.5px;color:var(--g1);line-height:1.6}
+  .dir b{color:var(--o-500)}
+  section{margin-bottom:40px}
+  h2{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--g3);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 1px 3px rgba(28,26,24,0.04)}
+
+  /* swatches */
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+  .sw{border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  .sw .chip{height:64px;display:flex;align-items:flex-end;padding:8px}
+  .sw .meta{padding:8px 10px;background:#fff}
+  .sw .nm{font-size:12px;font-weight:700}
+  .sw .hex{font-size:10px;color:var(--g2);font-family:var(--mono);margin-top:1px}
+  .sw .chip .tok{font-size:9px;font-family:var(--mono);color:rgba(255,255,255,0.85);font-weight:600}
+
+  /* type */
+  .type-row{display:flex;align-items:baseline;gap:16px;padding:10px 0;border-bottom:1px dashed var(--line)}
+  .type-row:last-child{border:none}
+  .type-row .tk{width:130px;flex-shrink:0;font-family:var(--mono);font-size:11px;color:var(--g2)}
+
+  /* spacing + radii */
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  .spc{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .spc .bar{background:var(--grad);border-radius:3px;width:22px}
+  .spc .lbl{font-size:10px;font-family:var(--mono);color:var(--g2)}
+  .rad{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .rad .box{width:64px;height:64px;background:var(--o-50);border:1.5px solid var(--o-400)}
+  .rad .lbl{font-size:10px;font-family:var(--mono);color:var(--g2)}
+
+  /* shadows */
+  .shads{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px}
+  .shad{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .shad .box{width:100%;height:70px;background:#fff;border-radius:14px}
+  .shad .lbl{font-size:11px;font-weight:600}
+  .shad .v{font-size:9px;color:var(--g2);font-family:var(--mono);text-align:center}
+
+  /* components */
+  .comp{display:flex;flex-direction:column;gap:14px}
+  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:5px}
+  .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .pill.open{color:var(--green);background:var(--green-bg)}
+  .pill.soon{color:var(--amber);background:var(--amber-bg)}
+  .pill.orange{color:var(--orange-st);background:var(--orange-st-bg)}
+  .pill.closed{color:var(--red);background:var(--red-bg)}
+  .btn-g{background:var(--grad);border:none;color:#fff;font-weight:800;font-family:inherit;font-size:14px;padding:13px 22px;border-radius:14px;box-shadow:0 4px 12px rgba(255,42,140,0.30);cursor:pointer}
+  .btn-o{background:var(--tint);border:1.5px solid var(--o-400);color:var(--o-500);font-weight:800;font-family:inherit;font-size:13px;padding:10px 18px;border-radius:12px;cursor:pointer}
+  .toggle{width:46px;height:27px;border-radius:9999px;background:var(--grad);position:relative;box-shadow:0 2px 8px rgba(255,42,140,0.3)}
+  .toggle i{position:absolute;top:3px;left:22px;width:21px;height:21px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(0,0,0,0.2)}
+  .clay{width:54px;height:54px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 6px 14px rgba(28,20,12,0.12),inset 0 2px 3px rgba(255,255,255,0.85),inset 0 -3px 5px rgba(0,0,0,0.06)}
+  .grid-comp{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .label-sm{font-size:11px;color:var(--g2);font-weight:600;margin-bottom:8px}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo">द</div>
+    <div><h1>Dukanchi · Design Tokens</h1><div class="sub">apna bazaar, apni dukaan — visual system v2 (warm light)</div></div>
+  </div>
+  <div class="dir">
+    <b>Direction:</b> Warm, premium, light-mode. India-rooted &amp; trustworthy — boutique-marketplace-meets-modern-fintech. Soft shadows (no glass), humanist geometric sans (Inter), warm-tinted neutrals (never cold grey), orange #FF6B35 as the brand signature with a magenta companion for the signature gradient. Friendly 3D claymorphic category tiles, gentle guided motion. Avoids: neon, dark chrome, heavy glassmorphism, cold corporate greys.
+  </div>
+
+  <section>
+    <h2>Brand · Orange scale + gradient</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:var(--o-50)"><span class="tok" style="color:#C9410F">o-50</span></div><div class="meta"><div class="nm">Tint</div><div class="hex">#FFF1EC</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--o-100)"><span class="tok" style="color:#C9410F">o-100</span></div><div class="meta"><div class="nm">Tint 2</div><div class="hex">#FFE0D4</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--o-300)"><span class="tok">o-300</span></div><div class="meta"><div class="nm">Light</div><div class="hex">#FF9D72</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--o-400)"><span class="tok">o-400 ★</span></div><div class="meta"><div class="nm">Brand</div><div class="hex">#FF6B35</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--o-500)"><span class="tok">o-500</span></div><div class="meta"><div class="nm">Deep</div><div class="hex">#F0531C</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--magenta)"><span class="tok">magenta</span></div><div class="meta"><div class="nm">Companion</div><div class="hex">#FF2A8C</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--grad)"><span class="tok">grad</span></div><div class="meta"><div class="nm">Gradient</div><div class="hex">135° O→M</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Semantic · Live status + feedback</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:var(--green)"><span class="tok">green</span></div><div class="meta"><div class="nm">Open</div><div class="hex">#0C831F</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--amber)"><span class="tok" style="color:#5a4a00">amber</span></div><div class="meta"><div class="nm">≤60 min</div><div class="hex">#F0B429</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--orange-st)"><span class="tok">orange</span></div><div class="meta"><div class="nm">≤30 min</div><div class="hex">#FB7A1E</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--red)"><span class="tok">red</span></div><div class="meta"><div class="nm">≤15 / Closed</div><div class="hex">#E53935</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Neutral · Warm-tinted (not cold grey)</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:var(--ink)"><span class="tok">ink</span></div><div class="meta"><div class="nm">Text</div><div class="hex">#1C1A18</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--g1)"><span class="tok">g1</span></div><div class="meta"><div class="nm">Body</div><div class="hex">#3A3633</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--g2)"><span class="tok">g2</span></div><div class="meta"><div class="nm">Muted</div><div class="hex">#7E7873</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--g3)"><span class="tok" style="color:#3A3633">g3</span></div><div class="meta"><div class="nm">Faint</div><div class="hex">#A8A29C</div></div></div>
+      <div class="sw"><div class="chip" style="background:var(--surface)"><span class="tok" style="color:#7E7873">surface</span></div><div class="meta"><div class="nm">App bg</div><div class="hex">#FAF7F3</div></div></div>
+      <div class="sw"><div class="chip" style="background:#fff;border-bottom:1px solid #eee"><span class="tok" style="color:#A8A29C">bg</span></div><div class="meta"><div class="nm">Card</div><div class="hex">#FFFFFF</div></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Typography · Inter</h2>
+    <div class="card">
+      <div class="type-row"><span class="tk">display / 28·800</span><span style="font-size:28px;font-weight:800;letter-spacing:-0.03em">Kya dhoondh rahe ho?</span></div>
+      <div class="type-row"><span class="tk">h1 / 22·800</span><span style="font-size:22px;font-weight:800;letter-spacing:-0.02em">Sharma Electronics</span></div>
+      <div class="type-row"><span class="tk">h2 / 16·800</span><span style="font-size:16px;font-weight:800;letter-spacing:-0.02em">Stores near you</span></div>
+      <div class="type-row"><span class="tk">title / 15·700</span><span style="font-size:15px;font-weight:700">Nikhil Bhai</span></div>
+      <div class="type-row"><span class="tk">body / 14·500</span><span style="font-size:14px;font-weight:500;color:var(--g1)">apna bazaar, apni dukaan</span></div>
+      <div class="type-row"><span class="tk">sm / 13·500</span><span style="font-size:13px;font-weight:500;color:var(--g1)">Showing stores near Bandra Kurla Complex</span></div>
+      <div class="type-row"><span class="tk">meta / 11·700</span><span style="font-size:11px;font-weight:700;color:var(--g2)">1.6 KM AWAY</span></div>
+      <div class="type-row"><span class="tk">price / 18·800 mono</span><span style="font-size:18px;font-weight:800;font-family:var(--mono)">₹1,499</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Spacing · 4-base scale</h2>
+    <div class="card"><div class="row">
+      <div class="spc"><div class="bar" style="height:4px"></div><span class="lbl">4</span></div>
+      <div class="spc"><div class="bar" style="height:8px"></div><span class="lbl">8</span></div>
+      <div class="spc"><div class="bar" style="height:12px"></div><span class="lbl">12</span></div>
+      <div class="spc"><div class="bar" style="height:16px"></div><span class="lbl">16</span></div>
+      <div class="spc"><div class="bar" style="height:20px"></div><span class="lbl">20</span></div>
+      <div class="spc"><div class="bar" style="height:24px"></div><span class="lbl">24</span></div>
+      <div class="spc"><div class="bar" style="height:32px"></div><span class="lbl">32</span></div>
+      <div class="spc"><div class="bar" style="height:40px"></div><span class="lbl">40</span></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>Radii</h2>
+    <div class="card"><div class="row">
+      <div class="rad"><div class="box" style="border-radius:8px"></div><span class="lbl">sm·8</span></div>
+      <div class="rad"><div class="box" style="border-radius:12px"></div><span class="lbl">md·12</span></div>
+      <div class="rad"><div class="box" style="border-radius:14px"></div><span class="lbl">lg·14</span></div>
+      <div class="rad"><div class="box" style="border-radius:18px"></div><span class="lbl">xl·18</span></div>
+      <div class="rad"><div class="box" style="border-radius:20px"></div><span class="lbl">2xl·20</span></div>
+      <div class="rad"><div class="box" style="border-radius:9999px"></div><span class="lbl">pill</span></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>Shadows · soft, warm-tinted</h2>
+    <div class="card"><div class="shads">
+      <div class="shad"><div class="box" style="box-shadow:0 1px 3px rgba(28,26,24,0.06)"></div><div class="lbl">card</div><div class="v">0 1px 3px /.06</div></div>
+      <div class="shad"><div class="box" style="box-shadow:0 2px 12px rgba(28,20,12,0.08)"></div><div class="lbl">raised</div><div class="v">0 2px 12px /.08</div></div>
+      <div class="shad"><div class="box" style="box-shadow:0 6px 18px rgba(255,107,53,0.22)"></div><div class="lbl">brand glow</div><div class="v">0 6px 18px orange</div></div>
+      <div class="shad"><div class="box" style="box-shadow:0 -8px 24px rgba(28,20,12,0.08)"></div><div class="lbl">sheet</div><div class="v">0 -8px 24px /.08</div></div>
+    </div></div>
+  </section>
+
+  <section>
+    <h2>Components</h2>
+    <div class="card comp">
+      <div>
+        <div class="label-sm">Live status capsules</div>
+        <div class="grid-comp"><span class="pill open">Open till 10pm</span><span class="pill soon">Closes in 48m</span><span class="pill orange">Closes in 22m</span><span class="pill closed">Closed</span></div>
+      </div>
+      <div>
+        <div class="label-sm">Buttons</div>
+        <div class="grid-comp"><button class="btn-g">Nearby shops se poocho</button><button class="btn-o">Follow</button></div>
+      </div>
+      <div>
+        <div class="label-sm">Toggle + claymorphic category tiles</div>
+        <div class="grid-comp">
+          <div class="toggle"><i></i></div>
+          <div class="clay" style="background:#FCE4EC">📱</div>
+          <div class="clay" style="background:#F1F8E9">🛒</div>
+          <div class="clay" style="background:#FFEBEE">💊</div>
+          <div class="clay" style="background:#FFF8E1">💍</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Motion</h2>
+    <div class="card" style="font-size:13px;color:var(--g1);line-height:1.9">
+      <div><b style="font-family:var(--mono);color:var(--o-500)">--ease: cubic-bezier(0.16,1,0.3,1)</b> — primary easing (gentle settle)</div>
+      <div><b style="font-family:var(--mono)">screen-in 0.4s</b> — transform-only slide on screen change</div>
+      <div><b style="font-family:var(--mono)">stagger 0.5s</b> — cards rise top→bottom, 0.08s steps (guides focus)</div>
+      <div><b style="font-family:var(--mono)">tap 0.16s</b> — scale(0.94) press feedback on all tappables</div>
+      <div><b style="font-family:var(--mono)">breathe 2.2s</b> — live-status dot soft pulse (not a hard blink)</div>
+      <div style="color:var(--g2);margin-top:6px">All motion is transform/opacity only · respects <span style="font-family:var(--mono)">prefers-reduced-motion</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Applied screens</h2>
+    <div class="card" style="font-size:13px;color:var(--g1);line-height:1.8">
+      The full token system is applied across all screens in <b style="color:var(--o-500)">bright.html</b> (Home · Search · Map · Chat · Profile) — open it to see the skin in motion.
+    </div>
+  </section>
+</div>
+</body></html>
