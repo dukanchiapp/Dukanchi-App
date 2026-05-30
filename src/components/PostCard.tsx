@@ -1,9 +1,10 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Bookmark, Share2, MessageCircle, MapPin } from 'lucide-react';
 import { getStoreStatus } from '../lib/storeUtils';
 import { getLiveStatus } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
+import { haptic } from '../lib/haptics';
 import { Post } from '../types';
 
 export interface PostCardProps {
@@ -106,6 +107,25 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
     },
     [post.id, onImgLoad]
   );
+
+  // ── Double-tap to like (Session 128.3) ───────────────────────────────────
+  // Instagram-style: two taps within 300ms on the image → like + heart burst.
+  // We only TRIGGER like if not already liked (a second double-tap shouldn't
+  // unlike — that's the heart icon's job). Burst animates regardless so the
+  // tap always feels acknowledged.
+  const lastTapRef = useRef<number>(0);
+  const [burstKey, setBurstKey] = useState(0);
+  const handleImgTap = useCallback(() => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      lastTapRef.current = 0;
+      setBurstKey(k => k + 1);
+      haptic('medium');
+      if (!isLiked) onLike(post.id);
+    } else {
+      lastTapRef.current = now;
+    }
+  }, [isLiked, onLike, post.id]);
 
   return (
     <div
@@ -273,8 +293,9 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
         </div>
       </div>
 
-      {/* Image canvas — aspect ratio adapts to photo dimensions */}
-      <div style={canvasStyle}>
+      {/* Image canvas — aspect ratio adapts to photo dimensions. Session 128.3:
+          double-tap → like + heart burst. */}
+      <div style={canvasStyle} onClick={handleImgTap}>
         <img
           src={post.imageUrl || `https://picsum.photos/seed/${post.id}/800/800`}
           alt={post.product?.productName || 'Post'}
@@ -284,6 +305,16 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
           decoding="async"
           onLoad={handleImgLoad}
         />
+        {burstKey > 0 && (
+          <Heart
+            key={burstKey}
+            className="dk-heart-burst"
+            size={96}
+            color="#FF2A8C"
+            fill="#FF2A8C"
+            strokeWidth={1.5}
+          />
+        )}
         {post.price && (
           <div
             style={{

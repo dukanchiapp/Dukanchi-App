@@ -66,5 +66,15 @@ export function useFeed({ feedType, locationRange, lat, lng, enabled = true }: U
     fetchPage(next);
   }, [page, hasMore, loadingMore, loading, fetchPage]);
 
-  return { posts, setPosts, loading, loadingMore, hasMore, loadMore };
+  // Session 128.3: explicit page-1 refetch for pull-to-refresh. Resets the
+  // dedupe set + page cursor and returns the promise so the caller can await
+  // it (the pull-to-refresh indicator hides on resolve).
+  const refresh = useCallback(async () => {
+    seenIdsRef.current = new Set();
+    setPage(1);
+    setHasMore(true);
+    await fetchPage(1);
+  }, [fetchPage]);
+
+  return { posts, setPosts, loading, loadingMore, hasMore, loadMore, refresh };
 }

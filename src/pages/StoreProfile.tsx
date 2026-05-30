@@ -16,6 +16,7 @@ import { useToast } from '../context/ToastContext';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
+import { haptic } from '../lib/haptics';
 
 /* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. All store/post/review
@@ -115,9 +116,19 @@ export default function StoreProfilePage() {
   }, [currentUserId]);
 
   const toggleLike = async (postId: string) => {
-    const isLiked = interactions.likedPostIds.includes(postId);
-    setInteractions(prev => ({ ...prev, likedPostIds: isLiked ? prev.likedPostIds.filter(i => i !== postId) : [...prev.likedPostIds, postId] }));
-    try { await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' }); } catch (e) { console.error(e); }
+    const wasLiked = interactions.likedPostIds.includes(postId);
+    setInteractions(prev => ({ ...prev, likedPostIds: wasLiked ? prev.likedPostIds.filter(i => i !== postId) : [...prev.likedPostIds, postId] }));
+    // Session 128.3: tactile feedback + surface failures via toast + rollback
+    // the optimistic write (was a console-only silent catch — Rule B violation).
+    haptic('light');
+    try {
+      const res = await apiFetch(`/api/posts/${postId}/like`, { method: 'POST' });
+      if (!res.ok) throw new Error(`Like failed: ${res.status}`);
+    } catch (err) {
+      showToast('Like nahi ho saka, dobara try karein', { type: 'error' });
+      setInteractions(prev => ({ ...prev, likedPostIds: wasLiked ? [...prev.likedPostIds, postId] : prev.likedPostIds.filter(i => i !== postId) }));
+      Sentry.captureException(err, { extra: { context: 'storeProfile.toggleLike' } });
+    }
   };
 
   const handleShare = async (post: any) => {

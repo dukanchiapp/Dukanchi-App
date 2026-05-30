@@ -18,14 +18,21 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
 
   const handleToggleSetting = async (key: string, value: boolean) => {
     if (!store) return;
+    // Session 128.3: surface failures via toast (was a console-only silent
+    // catch — Rule B violation: user toggled a setting, the toggle visually
+    // moved, but the PUT was silently rejected and they never knew).
     try {
       const res = await apiFetch(`/api/stores/${store.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ [key]: value }),
       });
-      if (res.ok) setStore({ ...store, [key]: value });
-    } catch (e) { console.error(e); }
+      if (!res.ok) throw new Error(`Setting save failed: ${res.status}`);
+      setStore({ ...store, [key]: value });
+    } catch (err) {
+      showToast('Setting save nahi hui, dobara try karein', { type: 'error' });
+      console.error(err);
+    }
   };
 
   return (
