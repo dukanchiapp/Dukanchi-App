@@ -418,22 +418,22 @@ export default function HomePage() {
                   </span>
                 </div>
               </div>
-              {/* Outlined-orange Bell tile (Session 128.8) — replaces the
-                  translucent-white gradient pill. Premium, restrained, hugs the
-                  orange brand mark without flooding the header with it. */}
+              {/* Session 128.9 — Blinkit yellow bell tile. Solid yellow with
+                  dark icon (high contrast = high readability, the Blinkit way). */}
               <div
                 style={{
                   width: 42,
                   height: 42,
                   borderRadius: 14,
-                  background: 'var(--b-orange-bg)',
-                  border: '1.5px solid var(--b-orange)',
+                  background: 'var(--b-yellow)',
+                  border: '1.5px solid var(--b-yellow-dk)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(248,203,70,0.30)',
                 }}
               >
-                <NotificationBell color="var(--b-orange)" />
+                <NotificationBell color="var(--b-yellow-ink)" />
               </div>
             </div>
           </div>
@@ -453,7 +453,7 @@ export default function HomePage() {
                 overflow: 'hidden',
                 aspectRatio: '2.2 / 1',
                 background: 'var(--f-bg-elev)',
-                boxShadow: '0 6px 18px rgba(255,42,140,0.20)',
+                boxShadow: '0 6px 18px rgba(230,185,46,0.22)',
               }}
             >
               <div
@@ -554,12 +554,12 @@ export default function HomePage() {
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     border: 'none',
-                    // Session 128.8: solid magenta-ink instead of the
-                    // orange→magenta gradient. The brand gradient is reserved
-                    // for the ONE primary CTA per screen (Follow on cards).
-                    background: active ? 'var(--c-brand-solid)' : 'transparent',
-                    color: active ? '#fff' : 'var(--f-text-2)',
-                    boxShadow: active ? '0 2px 6px rgba(209,31,117,0.24)' : 'none',
+                    // Session 128.9 — Blinkit yellow pill with dark ink text.
+                    // High contrast, energetic, friendly. Replaces the magenta
+                    // solid (which replaced the orange→magenta gradient).
+                    background: active ? 'var(--b-yellow)' : 'transparent',
+                    color: active ? 'var(--b-yellow-ink)' : 'var(--f-text-2)',
+                    boxShadow: active ? '0 2px 6px rgba(248,203,70,0.32)' : 'none',
                   }}
                 >
                   {tab.label}
@@ -693,9 +693,10 @@ export default function HomePage() {
                   style={{
                     marginTop: 10,
                     padding: '10px 18px', borderRadius: 9999, border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff',
-                    background: 'linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%)',
-                    boxShadow: '0 4px 14px rgba(255,42,140,0.32)',
+                    fontFamily: 'inherit', fontSize: 13, fontWeight: 800, color: 'var(--c-brand-ink)',
+                    // Session 128.9 — Blinkit yellow with dark ink.
+                    background: 'var(--c-brand-grad)',
+                    boxShadow: '0 4px 14px rgba(230,185,46,0.40), inset 0 1px 0 rgba(255,255,255,0.45)',
                   }}
                 >
                   {feedType === 'saved' ? 'Browse posts' : 'Discover stores'}
@@ -735,8 +736,8 @@ export default function HomePage() {
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      background: '#FF2A8C',
-                      boxShadow: '0 0 10px rgba(255,42,140,0.7)',
+                      background: '#F8CB46',
+                      boxShadow: '0 0 10px rgba(230,185,46,0.8)',
                       animation: 'pulse 1.2s ease-in-out infinite',
                       animationDelay: `${i * 0.2}s`,
                       opacity: 0.8,

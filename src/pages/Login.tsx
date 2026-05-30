@@ -132,8 +132,9 @@ export default function LoginPage() {
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 padding: 13, borderRadius: 9999, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer',
-                background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700, fontFamily: 'inherit',
-                boxShadow: '0 0 24px rgba(255,107,53,0.40)', opacity: isLoading ? 0.7 : 1,
+                // Session 128.9 — Blinkit yellow CTA with dark ink + 3D shadow.
+                background: 'var(--c-brand-grad)', color: 'var(--c-brand-ink)', fontSize: 14, fontWeight: 800, fontFamily: 'inherit',
+                boxShadow: '0 6px 18px rgba(230,185,46,0.40), inset 0 1px 0 rgba(255,255,255,0.50)', opacity: isLoading ? 0.7 : 1,
               }}
             >
               {isLoading ? (
