@@ -57,7 +57,7 @@ Phase 1 mistakenly made Follow/Login/Signup CTAs yellow (brand colour) instead o
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
 
-**Status:** ⏳ Code complete on `feat/blinkit-phase2-green-action`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#130](https://github.com/dukanchiapp/Dukanchi-App/pull/130) squash-merged to main `fa04004`; **Fly v55** (machine `9080d70da60d18`, sin, healthcheck passing). New bundles `index-Bm6Cz8Ul.css` + `index-BlTTpHi2.js` identical on Fly origin + Cloudflare; `/health` 200 both. All 4 `--c-action / -dk / -lt / -ink` tokens verified in shipped CSS.
 
 ---
 
