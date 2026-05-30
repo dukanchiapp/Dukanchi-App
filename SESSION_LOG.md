@@ -42,7 +42,7 @@
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test` 133/133 ✓, `npm run build` ✓. Behavioural verification requires deployed login + a user with some like/save/chat history to exercise the new signals.
 
-**Status:** ⏳ Code complete on `feat/feed-ranking-phaseAB`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#118](https://github.com/dukanchiapp/Dukanchi-App/pull/118) squash-merged to main `cafd795`; **Fly v49** (machine `9080d70da60d18`, sin, healthcheck passing). Backend-only change — no frontend bundle hash to verify. `/api/posts` returns `HTTP 401 application/json {"error":"Access denied"}` unauth (auth gate intact, new ranking code only fires post-auth); `/health` 200 on both Fly origin + Cloudflare.
 
 ---
 
