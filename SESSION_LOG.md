@@ -39,7 +39,7 @@
 
 **Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓.
 
-**Status:** ⏳ Code complete on `feat/postcard-rating-followers`, awaiting CI + Fly deploy.
+**Status:** ✅ **LIVE.** PR [#120](https://github.com/dukanchiapp/Dukanchi-App/pull/120) squash-merged to main `300caa9`; **Fly v50** (machine `9080d70da60d18`, sin, healthcheck passing). New JS bundle `index-BZYg4u5M.js` identical on Fly origin + Cloudflare; `/health` 200 both; `/api/posts` unauth → 401 application/json (auth gate intact).
 
 ---
 
