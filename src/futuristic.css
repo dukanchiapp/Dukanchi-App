@@ -84,6 +84,27 @@
   --f-status-orange:  #FB7A1E;  /* Closes in 16–30 min — orange */
   --f-status-red:     #E53935;  /* Closes in ≤15 min OR any "Closed*" — red */
 
+  /* ── Session 128.8 — Semantic palette (multi-color design system) ────────
+     These tokens give NON-status surfaces (verified tick, info toasts,
+     direction button, category pills, rating star, "new" badges, etc.) a
+     consistent semantic colour set so the orange→magenta brand gradient can
+     be reserved for the ONE primary CTA per screen ("earned attention").
+
+     ⚠️ DO NOT use these for store-close-timing indicators — those have
+     their own --f-status-* tokens above and getLiveStatus() logic which
+     is purposely kept untouched. */
+  --c-brand-grad:     linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
+  --c-brand-solid:    #D11F75;  /* magenta-ink — solid active state, tabs */
+  --c-success:        #0C831F;  /* green — success toasts, "in stock" */
+  --c-success-bg:     #E8F5E9;
+  --c-danger:         #E53935;  /* red — error toasts, delete confirms */
+  --c-danger-bg:      #FDECEA;
+  --c-warning:        #F0B429;  /* amber — warning toasts, hot deals */
+  --c-warning-bg:     #FEF6E0;
+  --c-info:           #2563EB;  /* blue — verified tick, direction, links */
+  --c-info-bg:        #E0EAFD;
+  --c-rating:         #F5B400;  /* gold — rating stars only */
+
   /* Radii */
   --f-r-sm:           10px;
   --f-r-md:           12px;

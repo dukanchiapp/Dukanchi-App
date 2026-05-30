@@ -379,11 +379,16 @@ export default function HomePage() {
           ref={topBarRef}
           className="sticky top-0 z-30"
         >
-          {/* Gradient header — orange→magenta, fills the safe-area notch */}
+          {/* Session 128.8 — Premium white header. The orange→magenta wash was
+              consuming the entire viewport top → gradient lost its meaning as a
+              brand signature. Now: WHITE surface + 40×40 gradient logo tile (the
+              brand still pops, but in a contained, badge-like way) + dark text +
+              outlined-orange Bell tile. Safe-area pad still fills the notch. */}
           <div
             style={{
-              background: 'var(--b-grad)',
+              background: '#FFFFFF',
               paddingTop: 'calc(env(safe-area-inset-top, 0px) + 14px)',
+              borderBottom: '1px solid var(--f-glass-border)',
             }}
           >
             <div
@@ -401,32 +406,34 @@ export default function HomePage() {
                     style={{
                       fontSize: 18,
                       fontWeight: 800,
-                      color: '#fff',
+                      color: 'var(--f-text-1)',
                       letterSpacing: '-0.02em',
                       lineHeight: 1.1,
                     }}
                   >
                     Dukanchi
                   </span>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.1 }}>
+                  <span style={{ fontSize: 11, color: 'var(--f-text-3)', lineHeight: 1.1 }}>
                     apna bazaar, apni dukaan
                   </span>
                 </div>
               </div>
-              {/* Live NotificationBell (unread badge + drawer) — white-on-gradient tile */}
+              {/* Outlined-orange Bell tile (Session 128.8) — replaces the
+                  translucent-white gradient pill. Premium, restrained, hugs the
+                  orange brand mark without flooding the header with it. */}
               <div
                 style={{
                   width: 42,
                   height: 42,
                   borderRadius: 14,
-                  background: 'rgba(255,255,255,0.18)',
-                  border: '1px solid rgba(255,255,255,0.35)',
+                  background: 'var(--b-orange-bg)',
+                  border: '1.5px solid var(--b-orange)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <NotificationBell color="#fff" />
+                <NotificationBell color="var(--b-orange)" />
               </div>
             </div>
           </div>
@@ -547,9 +554,12 @@ export default function HomePage() {
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     border: 'none',
-                    background: active ? 'var(--f-grad-primary)' : 'transparent',
+                    // Session 128.8: solid magenta-ink instead of the
+                    // orange→magenta gradient. The brand gradient is reserved
+                    // for the ONE primary CTA per screen (Follow on cards).
+                    background: active ? 'var(--c-brand-solid)' : 'transparent',
                     color: active ? '#fff' : 'var(--f-text-2)',
-                    boxShadow: active ? '0 2px 8px rgba(255,42,140,0.30)' : 'none',
+                    boxShadow: active ? '0 2px 6px rgba(209,31,117,0.24)' : 'none',
                   }}
                 >
                   {tab.label}
