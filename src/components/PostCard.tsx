@@ -185,8 +185,8 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                 borderRadius: '50%',
                 objectFit: 'cover',
                 display: 'block',
-                background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
-                boxShadow: '0 2px 8px rgba(255,42,140,0.20)',
+                background: 'linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%)',
+                boxShadow: '0 2px 8px rgba(230,185,46,0.30), inset 0 1px 0 rgba(255,255,255,0.45)',
               }}
             />
           ) : (
@@ -199,13 +199,14 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
-                color: '#fff',
+                background: 'linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%)',
+                color: '#1A1A1A',
                 fontWeight: 800,
                 fontSize: 22,
                 lineHeight: 1,
                 textTransform: 'uppercase',
-                boxShadow: '0 2px 8px rgba(255,42,140,0.20)',
+                textShadow: '0 1px 0 rgba(255,255,255,0.45)',
+                boxShadow: '0 2px 8px rgba(230,185,46,0.30), inset 0 1px 0 rgba(255,255,255,0.45)',
               }}
             >
               {post.store?.storeName?.charAt(0) ?? '?'}
@@ -268,10 +269,13 @@ function PostCardInner({ post, isLiked, isSaved, isFollowed, likeCount, distance
                   fontFamily: 'inherit',
                   flexShrink: 0,
                   lineHeight: 1,
-                  background: isFollowed ? 'var(--f-bg-elev)' : 'linear-gradient(135deg, #FF6B35, #FF2A8C)',
-                  color: isFollowed ? 'var(--f-text-2)' : 'white',
-                  border: isFollowed ? '1px solid var(--f-glass-border-2)' : 'none',
-                  boxShadow: isFollowed ? 'none' : '0 2px 8px rgba(255,42,140,0.32)',
+                  // Session 128.9 — Blinkit yellow Follow CTA with dark ink.
+                  // Solid + 3D bottom shadow + inner top highlight = the
+                  // "tactile button" feel. THE primary CTA per card.
+                  background: isFollowed ? 'var(--f-bg-elev)' : 'var(--b-yellow)',
+                  color: isFollowed ? 'var(--f-text-2)' : 'var(--b-yellow-ink)',
+                  border: isFollowed ? '1px solid var(--f-glass-border-2)' : '1px solid var(--b-yellow-dk)',
+                  boxShadow: isFollowed ? 'none' : '0 2px 6px rgba(230,185,46,0.40), inset 0 1px 0 rgba(255,255,255,0.45)',
                 }}
               >
                 {isFollowed ? 'Following' : 'Follow'}

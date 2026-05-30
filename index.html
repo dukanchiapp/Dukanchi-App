@@ -14,7 +14,16 @@
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#FF6B35" />
+    <!-- Session 128.9 — Blinkit-yellow theme. Used by the browser chrome tint
+         (Chrome tab bar, Android status bar in PWA mode, iOS Safari toolbar). -->
+    <meta name="theme-color" content="#F8CB46" />
+
+    <!-- Session 128.9 — 3D yellow favicon (SVG, infinite resolution). Modern
+         browsers prefer this over the PNG fallback. PNGs remain in the
+         manifest for legacy installers + Android home-screen. -->
+    <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+    <link rel="alternate icon" type="image/png" href="/icons/icon-192x192.png" />
+    <link rel="mask-icon" href="/icons/icon.svg" color="#F8CB46" />
 
     <!-- Apple / iOS PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes" />

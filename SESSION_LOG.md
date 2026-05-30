@@ -24,6 +24,53 @@
 
 ---
 
+## 2026-05-30 — Session 128.9 — Blinkit yellow theme + 3D SVG favicon
+
+**Goal:** Founder ask — "use blinkit color theme also add the better 3d favicons". Pivot the primary brand from the orange→magenta gradient to Blinkit-signature yellow (`#F8CB46`) with dark ink text. Ship a 3D-feel SVG favicon. Keep semantic colors + status pill colors UNCHANGED.
+
+**Brand pivot logic:**
+
+Blinkit's brand reads as "fast + friendly + energetic" because of high-contrast yellow + dark text. The orange→magenta gradient (from the Bright design system, Session 110) reads more like "fashion/lifestyle gradient" — not the right tone for a hyperlocal commerce app. Yellow ALSO subconsciously codes for "delivery / commerce / speed" in the Indian market.
+
+**Changes — palette:**
+
+- **`src/futuristic.css`** — added `--b-yellow` (#F8CB46), `--b-yellow-dk` (#E6B92E), `--b-yellow-lt` (#FFE082 top highlight), `--b-yellow-bg` (#FEF6D8 tint), `--b-yellow-ink` (#1A1A1A dark text on yellow). `--b-grad` + `--b-grad-warm` now produce the yellow 3D vertical gradient. `--c-brand-grad` + `--c-brand-solid` migrated to yellow. New `--c-brand-ink` for dark text on yellow surfaces. **`--f-grad-primary` (legacy orange-magenta) was deliberately KEPT** — 53 surfaces reference it with white text overlays; migrating individually to avoid contrast regressions.
+
+**Changes — surfaces:**
+
+- **Home header bell** — orange tile → yellow tile + dark bell icon, dark border, soft yellow shadow.
+- **Home tabs** active state — solid magenta-ink → solid yellow + dark ink text.
+- **FLogo** — now a true 3D yellow app-icon tile: vertical gradient (top-light → bottom-dark) + 50% top white sheen overlay + dark "द" with white text-shadow bevel. Soft yellow glow when `glow=true`.
+- **PostCard Follow button** — was a brand gradient with white text → solid yellow + dark ink text + dark yellow border + inset top highlight (the "Blinkit Add to Cart" look).
+- **PostCard avatar gradient circle** (with letter fallback) — orange-magenta → yellow 3D gradient, dark letter.
+- **Login + Signup CTAs** — migrated explicitly: `--c-brand-grad` + `--c-brand-ink` + Blinkit 3D shadow (`inset 0 1px 0 rgba(255,255,255,0.50)`).
+- **Home empty-state CTA** — migrated to yellow with dark ink.
+- **Home carousel shadow + loading-pulse dots** — recoloured from magenta to yellow.
+
+**Changes — favicons / PWA:**
+
+- **`public/icons/icon.svg`** (NEW) — 512×512 viewBox 3D SVG. Vertical face gradient (`#FFE082 → #F8CB46 → #E6B92E`) + top 50% specular white sheen (gives the tile a "tactile button" lit-from-above feel) + bottom radial inner-shadow (depth) + outer rim 2px stroke (definition on white) + drop-shadow filter (4px down, 32px blur, 32% opacity — the tile floats off any background). Centered Devanagari "द" in dark ink with a white 2px-above bevel for inset feel. iOS 22.5% corner radius.
+- **`index.html`** — `theme-color` `#FF6B35` → `#F8CB46`. Added `<link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />` + `<link rel="mask-icon">` + `<link rel="alternate icon">` PNG fallback for legacy browsers.
+- **`public/manifest.json`** — `theme_color` → yellow. Added the SVG as the first entry in the icons array (modern browsers prefer SVG for home-screen install).
+
+**What did NOT change:**
+
+- ❌ `--f-status-open/yellow/orange/red` (close-timing) — UNTOUCHED per Session 128.8 constraint
+- ❌ `getLiveStatus()` logic — UNTOUCHED
+- ❌ Status pill rendering across Home / Messages / Chat / Map / StoreProfile — UNTOUCHED
+- ❌ Semantic toast colors — UNTOUCHED (success green, error red, warning amber, info blue still valid)
+- ❌ Verified tick blue — UNTOUCHED
+- ❌ Rating star gold — UNTOUCHED
+- ❌ `--f-grad-primary` (legacy magenta gradient) — KEPT until 53 white-text consumers migrate
+
+**Files:** `src/futuristic.css`, `src/pages/Home.tsx`, `src/pages/Login.tsx`, `src/pages/Signup.tsx`, `src/components/PostCard.tsx`, `src/components/futuristic/FLogo.tsx`, `index.html`, `public/manifest.json`, `public/icons/icon.svg` (NEW).
+
+**Verification:** `npm run typecheck` 0 (web/server/worker), `npm test --run` 133/133 ✓, `npm run build` ✓ (PWA precache 70 → 71 entries — the new SVG favicon is bundled). PNG fallback icons (8 files) still serve the old orange brand mark — best to regenerate from the new SVG in a follow-up session via an image-tooling script; for now the SVG renders correctly on every modern browser including the Capacitor WebView.
+
+**Status:** ⏳ Code complete on `feat/blinkit-yellow-theme`, awaiting CI + Fly deploy.
+
+---
+
 ## 2026-05-30 — Session 128.8 — Multi-color design system (white header, semantic palette, solid magenta tabs, blue verified, semantic toasts)
 
 **Goal:** Founder ask — "major theme orange gradient bhot zada dikh rha hai god tier ni lag rha i need eyecatching and color full" + explicit constraint "do not touch the logic color change in the store close timing indication". Founder picked Option C (full multi-color sweep).

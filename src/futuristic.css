@@ -9,8 +9,18 @@
 
 :root {
   /* ── Bright design-system tokens (canonical) ── */
-  --b-grad:      linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
-  --b-grad-warm: linear-gradient(135deg, #FFB020 0%, #FF6B35 45%, #FF2A8C 100%);
+  /* Session 128.9 — Blinkit-style theme. Replaced orange→magenta gradient
+     with the signature Blinkit yellow (#F8CB46). High-contrast yellow + dark
+     text reads "energetic + delivery-fast" instead of "fashion gradient".
+     Old --b-grad still works (now a subtle yellow 3D gradient — used for the
+     FLogo tile) but most surfaces use the FLAT --b-yellow solid. */
+  --b-yellow:      #F8CB46;        /* Blinkit-signature solid yellow */
+  --b-yellow-dk:   #E6B92E;        /* hover/active depth */
+  --b-yellow-lt:   #FFE082;        /* top highlight for 3D feel */
+  --b-yellow-bg:   #FEF6D8;        /* subtle tint backgrounds */
+  --b-yellow-ink:  #1A1A1A;        /* dark text ON yellow */
+  --b-grad:        linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%);
+  --b-grad-warm:   linear-gradient(180deg, #FFE082 0%, #F8CB46 50%, #E6B92E 100%);
   --b-orange:      #FF6B35;
   --b-orange-light:#FFA94D;
   --b-magenta:     #FF2A8C;
@@ -61,6 +71,10 @@
   --f-danger:         #E53935;
 
   /* Gradients — the brand signature */
+  /* Session 128.9 — kept as the legacy orange→magenta gradient on purpose:
+     53 surfaces still consume it with white text overlays. New Blinkit-
+     yellow CTAs use `--c-brand-grad` (yellow + dark text). Migrate sites
+     individually to avoid contrast regressions. */
   --f-grad-primary:      linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
   --f-grad-primary-soft: linear-gradient(135deg, rgba(255,107,53,0.12), rgba(255,42,140,0.12));
   --f-grad-accent:       linear-gradient(135deg, #FF2A8C 0%, #7C3AED 100%);
@@ -93,8 +107,12 @@
      ⚠️ DO NOT use these for store-close-timing indicators — those have
      their own --f-status-* tokens above and getLiveStatus() logic which
      is purposely kept untouched. */
-  --c-brand-grad:     linear-gradient(135deg, #FF6B35 0%, #FF2A8C 100%);
-  --c-brand-solid:    #D11F75;  /* magenta-ink — solid active state, tabs */
+  /* Session 128.9 — Blinkit theme: primary action = solid yellow with dark
+     ink text. Gradient retained for the FLogo + 3D favicon (depth feel),
+     but flat surfaces (Follow button, tabs active, bell) use the solid. */
+  --c-brand-grad:     linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%);
+  --c-brand-solid:    #F8CB46;
+  --c-brand-ink:      #1A1A1A;  /* dark text/icon ON yellow surfaces */
   --c-success:        #0C831F;  /* green — success toasts, "in stock" */
   --c-success-bg:     #E8F5E9;
   --c-danger:         #E53935;  /* red — error toasts, delete confirms */

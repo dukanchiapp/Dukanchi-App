@@ -6,11 +6,12 @@
   "scope": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
-  "theme_color": "#FF6B35",
+  "theme_color": "#F8CB46",
   "orientation": "portrait",
   "lang": "hi-IN",
   "categories": ["shopping", "lifestyle"],
   "icons": [
+    { "src": "/icons/icon.svg",         "sizes": "any",     "type": "image/svg+xml", "purpose": "any" },
     { "src": "/icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png", "purpose": "maskable any" },
     { "src": "/icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "maskable any" },
     { "src": "/icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "maskable any" },
