@@ -24,6 +24,65 @@
 
 ---
 
+## 2026-05-30 — Session 128.12 — Fix root `/` client-side redirect (the actual indexing blocker)
+
+**Goal:** Fix the Google Search Console "Page with redirect" verdict for `dukanchi.com/`. Session 128.11 (v56) added real `robots.txt` + `sitemap.xml` + OG/Twitter meta — necessary infra, but did NOT unblock indexing of the bare domain because `/` still consistently emits a client-side redirect to `/landing`.
+
+**RECON FINDING — what `/` did for a logged-out visitor BEFORE this PR:**
+
+```
+1. GET https://dukanchi.com/  →  Express returns SPA HTML (dist/index.html, 200)
+2. Browser executes the inline <script> at index.html:60-109 BEFORE React mounts
+3. Logic:
+   • Capacitor.isNativePlatform() = false  (browser)
+   • matchMedia('display-mode: standalone') = false
+   • localStorage 'dk-browser-mode' = null
+   • path = '/'   (not /landing, not /legal/)
+   • Lines 104-107 fire:  window.location.replace('/landing')  ← THE BLOCKER
+4. Browser navigates /landing → Express serves public/landing.html (200)
+5. Google Search Console: dukanchi.com/ = "Page with redirect" → bare domain not indexed
+```
+
+Secondary blocker (only fires if pre-React redirect is bypassed): `src/components/ProtectedRoute.tsx:19-21` → `<Navigate to="/login" replace />` for logged-out users.
+
+**Fix (minimal, server-side, scoped to `/` for unauthenticated only):**
+
+- **`src/app.ts`** — new explicit `GET /` route registered BEFORE `server.ts`'s `express.static` + SPA catch-all. Checks for `dk_token` cookie (presence-only, no JWT verification at this layer). Present → `next()` falls through to SPA → React Router resolves `/` → `<ProtectedRoute><HomePage /></ProtectedRoute>` exactly as before. Absent → `res.sendFile(public/landing.html)` directly — same real marketing content the existing `/landing` route returns, but at the canonical bare-domain URL, no JavaScript redirect, indexable.
+- **`public/landing.html`** — added `<link rel="canonical" href="https://dukanchi.com/">` to the `<head>`. The page is served at BOTH `/` and `/landing`; the canonical points to `/` so Google understands they're the same page and indexes the bare domain.
+
+**What did NOT change (preserved per task constraint):**
+
+- ❌ Pre-React inline script in `index.html` — still handles PWA detection + browser-mode opt-out + other route protections. Doesn't conflict because the server short-circuit runs BEFORE the SPA HTML is ever sent to logged-out visitors.
+- ❌ `src/components/ProtectedRoute.tsx` — `/login` redirect logic for other protected routes is unchanged.
+- ❌ Auth flow / JWT cookie / Socket.IO / API endpoints / schema
+- ❌ v56 robots.txt / sitemap.xml / OG / Twitter meta — fully intact and verified
+- ❌ All other routes (`/login`, `/signup`, `/search`, `/map`, `/legal/*`, `/landing`)
+
+**Files:** `src/app.ts` (+25 lines block-commented), `public/landing.html` (+5 lines including canonical).
+
+**Verification (Phase 3 gates):**
+
+- `npm run typecheck` → 0 (web/server/worker)
+- `npm test --run` → 133/133 ✓
+- `npm run test:e2e` → 2/2 ✓
+- `npm run build` → ✓
+- Local prod-mode behavioural test (`NODE_ENV=production node --import tsx server.ts`):
+  - `GET /` NO cookie → 200, `text/html`, 59KB landing.html body, canonical present, NO redirect ✅
+  - `GET /` WITH `dk_token` cookie → 200, 5KB SPA index.html, `id="root"` + asset chunks ✅
+  - `/login`, `/landing`, `/robots.txt`, `/sitemap.xml` all 200 with correct content-types ✅
+
+**Status:** ✅ **LIVE.** PR [#134](https://github.com/dukanchiapp/Dukanchi-App/pull/134) squash-merged to main `44288d9`; **Fly v57** (machine `9080d70da60d18`, sin, healthcheck passing — DNS resolver hiccup on first deploy attempt, recovered after wait). Production curl smoke verified:
+- `/health` 200 on Fly + Cloudflare
+- `GET https://dukanchi.com/` (NO cookie, Googlebot sim) → `HTTP 200 Content-Type: text/html; charset=UTF-8` + 59207 bytes + `<html lang="hi">` + `<link rel="canonical" href="https://dukanchi.com/">` + marketing markers (`Dukanchi`, `HERO`, `landing`) → bare domain returns real landing content, NO server redirect
+- `GET https://dukanchi.com/` (with `dk_token` cookie, logged-in sim) → 200 5484 bytes SPA index.html with `id="root"` + `/assets/index-BlTTpHi2.js` + `/assets/index-Bm6Cz8Ul.css` — logged-in flow UNCHANGED
+- `/login`, `/landing` reachable; `/robots.txt` `text/plain` + `/sitemap.xml` `application/xml` v56 fully intact
+
+**Known follow-up:** Landing.html's own inline script (lines 5-31) does `window.location.replace('/')` when PWA standalone OR `dk-browser-mode` opt-out is detected. Now that landing.html is served at `/` for logged-out users, an unauthed PWA user (rare — fresh install pre-login) visiting `/` could hit a short browser-aborted redirect loop. Hotfix follows in a separate PR: add `pathname !== '/'` guard to the inline script. Does NOT affect Googlebot (which doesn't trigger either condition) so the SEO fix stands.
+
+**Awaiting:** Founder → Google Search Console "Test Live URL" on `https://dukanchi.com/` (should now show real landing content, no redirect) → click "Request Indexing".
+
+---
+
 ## 2026-05-30 — Session 128.11 — SEO foundation: real robots.txt + sitemap.xml + Open Graph / Twitter meta
 
 **Goal:** Make dukanchi.com crawlable/indexable so it can rank for its brand. `/robots.txt` and `/sitemap.xml` previously fell through to the SPA catch-all in `server.ts:104` and returned the React HTML shell — Googlebot couldn't read either. Founder runs Google Search Console separately; this PR is the infrastructure they need to submit. Also adds Open Graph + Twitter Card meta so WhatsApp / Instagram / LinkedIn link previews look correct (the founder shares the link onboarding retailers).
