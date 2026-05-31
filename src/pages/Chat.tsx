@@ -478,7 +478,24 @@ export default function ChatPage() {
       </header>
 
       {/* ── Messages ── */}
-      <main style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Session 128.21: doodle BG per founder ("ye image chat ka BG").
+          backgroundAttachment: 'local' keeps the pattern scrolling with the
+          content (iOS Safari ignores 'fixed' on overflowing containers, so
+          'local' gives the most consistent behaviour cross-platform).
+          The cream `--b-surface` underlay shows through warm transparent
+          regions of the JPEG so the page tone stays consistent. */}
+      <main
+        style={{
+          flex: 1, overflowY: 'auto', padding: '12px 16px',
+          display: 'flex', flexDirection: 'column', gap: 8,
+          backgroundColor: 'var(--b-surface)',
+          backgroundImage: 'url(/chat-bg-pattern.png)',
+          backgroundSize: '420px auto',
+          backgroundRepeat: 'repeat',
+          backgroundPosition: 'top left',
+          backgroundAttachment: 'local',
+        }}
+      >
         <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
           <span
             style={{
