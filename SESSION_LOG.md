@@ -6,6 +6,39 @@
 
 ---
 
+## 2026-05-31 — Session 128.19 — UI batch 4 + Map loader root-cause fix + unread heuristic + notification triggers
+
+**Goal:** Founder's 17-point list after PR #146 / Fly v66. Visual tweaks (distance pill content + position, cover fade, Follow color, info-tile icons, Ask-Nearby color, Messages/Chat header size), structural (Search filter expansion, Map smart filter), and three real fixes (Map "Loading map…" on prod, unread bubble, notification volume).
+
+**Changes (10 files, +382/-119):**
+
+1. **StoreProfile distance capsule** (`src/pages/StoreProfile.tsx`) — three changes in one row:
+   - **Content reverted to distance ONLY**. Session 128.17 had added a `store.city / store.postalCode` fallback when distance couldn't be computed; founder rejected it ("the capsule showing delhi is wrong it's showing city, actually should show the distance"). Now returns `null` and the pill simply doesn't render when there's no usable distance.
+   - **Repositioned** — moved out of the cover overlay (bottom-right) and into the store-name row. `justify-content: space-between` pushes it to the right end while the name + rating cluster stays left. Founder ask: "vo capsule store name ke saamne chahiye vertically adjust karna hai, horizontally position change nahi krni."
+   - 📍 emoji preserved inside the pill.
+2. **StoreProfile cover bottom fade** removed (`linear-gradient(180deg, transparent 52%, var(--f-bg-deep) 100%)`). The cover image now meets the page surface with a hard edge.
+3. **Follow button → green** (StoreProfile) — `var(--f-grad-primary)` yellow → `var(--c-action, var(--b-green))`. Matches the Phase 2 green-CTA convention used by New Post.
+4. **StoreProfile info-tile icons → emojis** (`📍 ☎️ 🕐` replacing lucide MapPin / Phone / Clock). Sized 17-18px to fit the existing iconTile bounds. `MapPin` + `Clock` imports dropped (now unused).
+5. **Ask Nearby CTA → green gradient on all 4 surfaces** (`src/pages/Search.tsx`): discovery-state tile button, in-search tile button, modal Send button, "Messages mein jaao" success CTA. `var(--b-grad)` yellow → `var(--c-action, var(--b-green))` everywhere.
+6. **Messages + Chat header padding shrunk** — `52→16px` above the safe-area inset on both pages, matching the Home Header from Session 128.18.
+7. **Search filter — radius + area selector** — added `searchRadius` (0-20 km, 0 = no limit) and `searchAreaMode` ('all' | 'my') state. Filter panel grew Area toggle (All India / Meri location) + Radius slider (disabled until userLocation arrives). `filteredStores` pipeline now drops stores beyond radius when area=my+userLoc; sort respects `sortBy` ('relevance' | 'name'). `hasFilters` + `clearFilters` updated.
+8. **Map smart filter drawer** (`src/pages/Map.tsx`) — new `Layers` button beside the search input opens a drawer with `mapStatusFilter` (All | Open now) + `mapRadius` slider. `filteredStores` now applies status + radius alongside the category chip + search query.
+9. **Map "Loading map…" stuck on prod — root-cause fix.** Diagnosis: `.env` is gitignored AND `.dockerignored`, so `VITE_GOOGLE_MAPS_API_KEY` was inlined as an empty string at Docker-build time. `useJsApiLoader` silently fell through and `isLoaded` never flipped true → the page sat on the loader forever. Fix: added `ARG VITE_GOOGLE_MAPS_API_KEY` + `ENV` export in `Dockerfile` right before `npm run build:web`, plus `[build.args]` in `fly.toml` with the actual value. The key is HTTP-referrer-restricted in GCP (dukanchi.com, *.fly.dev, localhost), so committing it is acceptable — it would otherwise ship in the public JS bundle anyway. Verified post-deploy: `Map-ByL1kAsW.js` chunk on Fly origin contains `AIzaSyADeyki3lGmZwnz1yaRCbPFq57vG6SCWkc`.
+10. **Map renders without userLocation** — dropped the `&& userLocation` gate on the `<GoogleMap>` branch. Falls back to India centroid (20.5937, 78.9629) at zoom 5 when location hasn't been granted. The user-dot `<Marker>` is still gated behind userLocation. No more infinite loader when the browser hasn't prompted/granted geolocation.
+11. **Conversation unread red bubble** — heuristic in `message.service.getConversations`: messages are ordered DESC, so the FIRST message we encounter for each `otherId` is the most recent; if its `receiverId === userId`, set `unread: 1`. `ConversationRow` already renders the red badge when `unread > 0` (existing UI code). True per-message read state needs a `Message.readAt` migration — tracked separately.
+12. **Notification triggers expanded** so the bell surfaces more than just `NEW_POST`:
+    - `store.service.toggleFollow` creates a `NEW_FOLLOWER` notification for the store owner when a new follower != owner. Fire-and-forget.
+    - `post.service.toggleLike` creates a `NEW_LIKE` notification for the post author when the liker != author. Fire-and-forget.
+    Both gated to prevent self-notifications.
+
+**Files:** 10 modified — `Dockerfile`, `fly.toml`, `src/modules/messages/message.service.ts`, `src/modules/posts/post.service.ts`, `src/modules/stores/store.service.ts`, `src/pages/Chat.tsx`, `src/pages/Map.tsx`, `src/pages/Messages.tsx`, `src/pages/Search.tsx`, `src/pages/StoreProfile.tsx`.
+
+**Verification:** `npm run typecheck` ✅ (web/server/worker), `npm test -- --run` ✅ (133/133), `npm run build` ✅. Production smoke on Fly v68: `/health` 200 application/json both Fly + Cloudflare; `Map-ByL1kAsW.js` chunk contains the `AIzaSy…` API key (was missing on v67 because the first deploy reused the cached image — `--no-cache` rebuild forced the ARG to take effect).
+
+**Status:** ✅ **LIVE.** PR [#148](https://github.com/dukanchiapp/Dukanchi-App/pull/148) squash-merged to main `4c8737b`; **Fly v68** (machine `9080d70da60d18`, region `sin`, healthcheck passing). **Native APK rebuild + manual test pending** per Rule D — changes touch shared CSS + Map loader + notification system, all consumed by Capacitor via the same web bundle.
+
+---
+
 ## 2026-05-31 — Session 128.18 — Founder UI corrections batch 3 (collapsing header, grey PostCard actions, upward Map sheet, green New Post, orange RETAIL tag, status-bar color, Search size-match)
 
 **Goal:** Founder shared 5 screenshots after PR #144 (Fly v65) landed — seven-point list: (1) PostCard Heart/Chat/Share row should be grey (currently red/blue/green palette), (2) Home brand header should scroll AWAY while the location strip stays sticky, (3) Search header is bigger than Home — should match, (4) status bar color should match the header gradient, (5) Map "Stores near you" panel expands DOWN inline — should expand UP over the map area, (6) "+ New Post" button yellow → green, (7) "RETAIL" capsule yellow → orange.
