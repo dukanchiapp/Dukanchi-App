@@ -6,6 +6,24 @@
 
 ---
 
+## 2026-06-01 — Session 128.21 — Doodle-pattern BG on Chat + PostCard letterbox
+
+**Goal:** Founder shared a cream doodle pattern (shopping icons, OPEN signs, dukaan glyphs at ~1143×2048) and asked it serve TWO purposes: (1) replace the flat cream backdrop in the Chat messages area, (2) appear as the fallback background inside every PostCard's image canvas — visible wherever the user-uploaded photo doesn't fill the slot ("post card mein jaha photo hoti hai ye har post mein image ka bg rahega — jab koi user post card se different ratio wali photo upload karega to blank space ki jagah ye dikhega").
+
+**Changes (3 files, +37/-8):**
+
+1. **Asset shipped** — `public/chat-bg-pattern.png` (305169 bytes). Note: file is actually a JPEG byte-for-byte despite the `.png` extension (founder dropped it that way), but browsers content-sniff and Express serves with `image/png` MIME; both Chromium + Safari decode without warning, so no rename needed. PWA precache count 74 → 75 entries (1918 → 2227 KiB), so the asset loads instantly after first install.
+2. **Chat backdrop** (`src/pages/Chat.tsx`) — the messages `<main>` scroll container now layers `backgroundImage: url(/chat-bg-pattern.png)` over a `--b-surface` cream underlay. `backgroundSize: '420px auto'`, `repeat`, `backgroundAttachment: 'local'`. The `local` attachment is deliberate — iOS Safari ignores `fixed` on overflowing containers and would just disable the BG; `local` gives consistent cross-platform scroll-with-content behaviour.
+3. **PostCard image-canvas fallback** (`src/components/PostCard.tsx`) — `getImageStyles()` previously set `CANVAS_BG = 'var(--b-surface)'` (single token shared by all three aspect-ratio branches). Now refactored into a `CANVAS_BG_STYLE` object that layers `backgroundColor` + `backgroundImage` + `backgroundSize: '320px auto'` + `repeat`. Spread into all three branches (portrait `4/5` + contain, square `1/1` + cover, landscape natural-ratio + cover). The pattern is most visible in the portrait/contain case (letterbox space around the photo); the square + landscape branches use `objectFit: 'cover'` so the image fills the canvas — the pattern is masked but still there as fallback if the image ever fails to load.
+
+**Files:** 3 modified/added — `public/chat-bg-pattern.png` (added), `src/components/PostCard.tsx`, `src/pages/Chat.tsx`.
+
+**Verification:** `npm run typecheck` ✅ (web/server/worker), `npm test -- --run` ✅ (133/133), `npm run build` ✅; `dist/chat-bg-pattern.png` confirmed shipped at 305169 bytes. Production smoke on Fly v70: `GET /chat-bg-pattern.png` returns `HTTP 200 image/png 305169` byte-for-byte from both `dukanchi-app.fly.dev` (Fly origin) and `dukanchi.com` (Cloudflare edge). The existing CSP `img-src 'self' …` already allows the asset — no policy change needed.
+
+**Status:** ✅ **LIVE.** PR [#152](https://github.com/dukanchiapp/Dukanchi-App/pull/152) squash-merged to main; **Fly v70** (machine `9080d70da60d18`, region `sin`, healthcheck passing). **Native APK rebuild + manual test pending** per Rule D — Capacitor will fetch the asset from the same web bundle.
+
+---
+
 ## 2026-06-01 — Session 128.20 — UI batch 5 + Notification root-cause fix + Profile parity
 
 **Goal:** Founder's 8-point list after PR #148 / Fly v68. Mostly visual + behavioural — Profile↔StoreProfile parity, WhatsApp-style unread bubble, clickable Chat header, Map filter polish, Search card area + blue Navigate, plus the real root-cause behind "notifications not appearing".
