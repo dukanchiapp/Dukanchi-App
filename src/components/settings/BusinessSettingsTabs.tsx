@@ -41,7 +41,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div><h3 className="font-bold text-gray-900">Hide Ratings</h3><p className="text-xs text-gray-500 mt-1">When enabled, the Reviews tab is hidden from your public profile.</p></div>
-            <button onClick={() => handleToggleSetting('hideRatings', !store?.hideRatings)} className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ml-4 ${store?.hideRatings ? 'bg-[#D11F75]' : 'bg-gray-300'}`}>
+            <button onClick={() => handleToggleSetting('hideRatings', !store?.hideRatings)} className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ml-4 ${store?.hideRatings ? 'bg-[#C77E00]' : 'bg-gray-300'}`}>
               <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${store?.hideRatings ? 'translate-x-6' : 'translate-x-0'}`}></span>
             </button>
           </div>
@@ -51,7 +51,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
             <div><h3 className="font-bold text-gray-900">Enable Direct Chat</h3><p className="text-xs text-gray-500 mt-1">Allow customers to message you directly.</p></div>
-            <button onClick={() => handleToggleSetting('chatEnabled', !store?.chatEnabled)} className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ml-4 ${store?.chatEnabled ? 'bg-[#D11F75]' : 'bg-gray-300'}`}>
+            <button onClick={() => handleToggleSetting('chatEnabled', !store?.chatEnabled)} className={`w-12 h-6 rounded-full transition-colors relative flex-shrink-0 ml-4 ${store?.chatEnabled ? 'bg-[#C77E00]' : 'bg-gray-300'}`}>
               <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${store?.chatEnabled ? 'translate-x-6' : 'translate-x-0'}`}></span>
             </button>
           </div>
@@ -62,7 +62,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
           <CreditCard className="mx-auto h-12 w-12 text-gray-400 mb-4" /><h3 className="font-bold text-gray-900 mb-2">Subscription Plans</h3>
           <p className="text-sm text-gray-500 mb-6">Upgrade for promoted posts, analytics, and priority support.</p>
           <div className="space-y-3">
-            <div className="border border-[#FFD2BC] rounded-xl p-4 text-left bg-[#FFF3EC]"><div className="flex justify-between items-center"><div><h4 className="font-bold text-gray-900">Pre-Launch Pro</h4><p className="text-xs text-gray-500">All premium features</p></div><span className="text-xs bg-[#D11F75] text-white px-2 py-1 rounded-full font-medium shadow-sm">Current</span></div></div>
+            <div className="border border-[#FFD2BC] rounded-xl p-4 text-left bg-[#FFF6DD]"><div className="flex justify-between items-center"><div><h4 className="font-bold text-gray-900">Pre-Launch Pro</h4><p className="text-xs text-gray-500">All premium features</p></div><span className="text-xs bg-[#C77E00] text-white px-2 py-1 rounded-full font-medium shadow-sm">Current</span></div></div>
           </div>
         </div>
       )}
@@ -70,7 +70,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
           <Megaphone className="mx-auto h-12 w-12 text-gray-400 mb-4" /><h3 className="font-bold text-gray-900 mb-2">Store Marketing</h3>
           <p className="text-sm text-gray-500 mb-4">Boost visibility with promoted posts and targeted campaigns.</p>
-          <span className="text-xs text-[#D11F75] font-bold bg-[#FFF3EC] px-3 py-1.5 rounded-full">Coming Soon</span>
+          <span className="text-xs text-[#C77E00] font-bold bg-[#FFF6DD] px-3 py-1.5 rounded-full">Coming Soon</span>
         </div>
       )}
       {activeTab === 'report' && isBusinessOwner && (
@@ -108,7 +108,7 @@ export const BusinessSettingsTabs = React.memo(function BusinessSettingsTabs({
           <p className="text-sm text-gray-500 mb-4">Have questions? We'd love to hear from you.</p>
           <textarea id="help-text" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#FF8A5C] mb-3" rows={4} placeholder="Tell us what's on your mind..." />
           <button
-            className="w-full bg-[#D11F75] text-white py-2.5 rounded-xl font-medium hover:bg-[#B01A63] transition-colors"
+            className="w-full bg-[#C77E00] text-white py-2.5 rounded-xl font-medium hover:bg-[#A86A00] transition-colors"
             onClick={async () => {
               const description = (document.getElementById('help-text') as HTMLTextAreaElement)?.value?.trim();
               if (!description) { showToast('Please enter your message.', { type: 'error' }); return; }

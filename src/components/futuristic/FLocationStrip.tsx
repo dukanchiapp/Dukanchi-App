@@ -5,7 +5,7 @@
  *
  * Session 126.3: re-skinned to the handoff EXACTLY — copy is now
  * "Showing stores near <strong>{name}</strong>" (was the drifted v2
- * "{name} nearby" pill). Pin + Change → #D11F75. Values copied verbatim from
+ * "{name} nearby" pill). Pin + Change → var(--b-magenta-ink). Values copied verbatim from
  * screens.jsx lines 95-110. Prop contract (name, onChange) unchanged.
  */
 import { MapPin } from 'lucide-react';
@@ -30,7 +30,7 @@ export function FLocationStrip({ name, onChange }: FLocationStripProps) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-        <MapPin size={14} color="#D11F75" style={{ flexShrink: 0 }} />
+        <MapPin size={14} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
         <span
           style={{
             fontSize: 13,
@@ -49,7 +49,7 @@ export function FLocationStrip({ name, onChange }: FLocationStripProps) {
         style={{
           background: 'transparent',
           border: 'none',
-          color: '#D11F75',
+          color: 'var(--b-magenta-ink)',
           fontSize: 13,
           fontWeight: 700,
           cursor: 'pointer',

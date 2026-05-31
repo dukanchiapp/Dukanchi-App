@@ -18,18 +18,18 @@ export const AccountDetailsTab = React.memo(function AccountDetailsTab({ isRetai
       <div className="space-y-3">
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Full Name</label>
-          <input type="text" id="details-name" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#D11F75] focus:ring-2 focus:ring-[#FFD9C2] transition-all outline-none text-sm" defaultValue={user?.name || ''} />
+          <input type="text" id="details-name" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#C77E00] focus:ring-2 focus:ring-[#FFE6B3] transition-all outline-none text-sm" defaultValue={user?.name || ''} />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Phone Number</label>
-          <input type="text" id="details-phone" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#D11F75] focus:ring-2 focus:ring-[#FFD9C2] transition-all outline-none text-sm" defaultValue={(user as any)?.phone || ''} />
+          <input type="text" id="details-phone" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:border-[#C77E00] focus:ring-2 focus:ring-[#FFE6B3] transition-all outline-none text-sm" defaultValue={(user as any)?.phone || ''} />
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Email Address</label>
           <input type="email" id="details-email" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none text-sm" defaultValue={user?.email || ''} />
         </div>
         <button
-          className="w-full bg-[#D11F75] text-white py-3 rounded-xl font-medium hover:bg-[#B01A63] transition-colors mt-4"
+          className="w-full bg-[#C77E00] text-white py-3 rounded-xl font-medium hover:bg-[#A86A00] transition-colors mt-4"
           onClick={async () => {
             const name = (document.getElementById('details-name') as HTMLInputElement).value;
             const phone = (document.getElementById('details-phone') as HTMLInputElement).value;

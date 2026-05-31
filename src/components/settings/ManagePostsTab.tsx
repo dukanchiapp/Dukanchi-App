@@ -55,9 +55,9 @@ export const ManagePostsTab = React.memo(function ManagePostsTab({
             <div key={post.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden flex items-center">
               <button
                 onClick={() => onToggleSelect(post.id)}
-                className={`flex-shrink-0 w-10 h-full flex items-center justify-center border-r border-gray-100 ${selectedPostIds.has(post.id) ? 'bg-[#FFF3EC]' : 'bg-white'}`}
+                className={`flex-shrink-0 w-10 h-full flex items-center justify-center border-r border-gray-100 ${selectedPostIds.has(post.id) ? 'bg-[#FFF6DD]' : 'bg-white'}`}
               >
-                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${selectedPostIds.has(post.id) ? 'bg-[#D11F75] border-[#D11F75]' : 'border-gray-300'}`}>
+                <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${selectedPostIds.has(post.id) ? 'bg-[#C77E00] border-[#C77E00]' : 'border-gray-300'}`}>
                   {selectedPostIds.has(post.id) && <Check size={12} className="text-white" />}
                 </div>
               </button>
@@ -67,7 +67,7 @@ export const ManagePostsTab = React.memo(function ManagePostsTab({
               <div className="flex-1 px-3 py-2 min-w-0">
                 <p className="text-sm text-gray-900 font-medium truncate">{post.caption || 'No caption'}</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">{new Date(post.createdAt).toLocaleDateString()}</p>
-                {post.isPinned && <span className="text-[10px] bg-[#FFE7D9] text-[#D11F75] px-1.5 py-0.5 rounded font-bold mt-1 inline-block">Pinned</span>}
+                {post.isPinned && <span className="text-[10px] bg-[#FFF6DD] text-[#C77E00] px-1.5 py-0.5 rounded font-bold mt-1 inline-block">Pinned</span>}
               </div>
               <button onClick={() => onDeleteSingle(post.id)} className="flex-shrink-0 p-3 text-gray-400 hover:text-red-500 transition-colors">
                 <Trash2 size={16} />

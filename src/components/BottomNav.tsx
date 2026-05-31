@@ -63,6 +63,9 @@ export default function BottomNav() {
           location.pathname === path ||
           (path !== '/' && location.pathname.startsWith(path));
         const col = isActive ? 'var(--b-magenta-ink)' : 'var(--b-gray-3)';
+        // Session 128.15 — bright.html line 78: Home icon is FILLED when
+        // active (filled glyph + 0 stroke); other icons keep the stroke.
+        const homeFilledActive = key === 'home' && isActive;
         return (
           <Link
             key={key}
@@ -85,9 +88,9 @@ export default function BottomNav() {
               width={23}
               height={23}
               viewBox="0 0 24 24"
-              fill="none"
+              fill={homeFilledActive ? col : 'none'}
               stroke={col}
-              strokeWidth={isActive ? 2.4 : 2}
+              strokeWidth={homeFilledActive ? 0 : (isActive ? 2.4 : 2)}
               strokeLinecap="round"
               strokeLinejoin="round"
               dangerouslySetInnerHTML={{ __html: ICONS[key] }}
