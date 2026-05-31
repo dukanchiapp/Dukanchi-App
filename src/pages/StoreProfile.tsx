@@ -408,9 +408,11 @@ export default function StoreProfilePage() {
           {/* Role + category */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: store.description ? 10 : 14 }}>
             {store.owner?.role && store.owner.role !== 'customer' && (
+              // Session 128.18: RETAIL badge → orange per founder ("retail
+              // store tag capsule should be of orange color").
               <span style={{
                 padding: '3px 10px', borderRadius: 9999, fontSize: 9, fontWeight: 800, letterSpacing: 0.8,
-                textTransform: 'uppercase', background: 'var(--f-grad-primary)', color: 'white',
+                textTransform: 'uppercase', background: 'var(--b-orange)', color: '#fff',
                 boxShadow: 'var(--b-elev-card)',
               }}>
                 {store.owner.role === 'retailer' ? 'Retail' : store.owner.role}
@@ -512,12 +514,15 @@ export default function StoreProfilePage() {
           <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
             {isOwner ? (
               <>
+                {/* Session 128.18: New Post button → Blinkit ADD-green per
+                    founder ("new post button should be of green color"),
+                    matching the Phase 2 green-CTA convention. */}
                 <Link
                   to="/profile"
                   style={{
                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                    padding: '11px 14px', borderRadius: 12, textDecoration: 'none', background: 'var(--f-grad-primary)',
-                    color: 'white', fontSize: 13, fontWeight: 700, boxShadow: 'var(--b-elev-card)',
+                    padding: '11px 14px', borderRadius: 12, textDecoration: 'none', background: 'var(--c-action, var(--b-green))',
+                    color: '#fff', fontSize: 13, fontWeight: 700, boxShadow: 'var(--b-elev-card)',
                   }}
                 >
                   <Plus size={14} color="white" /> New Post

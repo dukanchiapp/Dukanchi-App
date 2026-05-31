@@ -617,9 +617,10 @@ export default function ProfilePage() {
                 if (btn) btn.click();
               }}
               style={{
+                // Session 128.18: New Post button → Blinkit ADD-green per founder.
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 14px',
                 borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                background: 'var(--f-grad-primary)', color: 'white', fontSize: 13, fontWeight: 700,
+                background: 'var(--c-action, var(--b-green))', color: '#fff', fontSize: 13, fontWeight: 700,
                 boxShadow: 'var(--b-elev-card)',
               }}
             >

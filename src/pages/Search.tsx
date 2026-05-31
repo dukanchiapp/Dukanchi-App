@@ -301,7 +301,7 @@ export default function SearchPage() {
           className="b-head sticky top-0 z-20"
           style={{
             background: 'var(--b-grad)',
-            padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 16px 16px',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px',
           }}
         >
           <h1
