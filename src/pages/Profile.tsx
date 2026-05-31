@@ -488,10 +488,9 @@ export default function ProfilePage() {
             ) : (
               <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
             )}
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, transparent 52%, var(--f-bg-deep) 100%)',
-            }} />
+            {/* Session 128.20: bottom fade-to-cream removed for parity with
+                StoreProfile (Session 128.19 — founder ask). Cover image now
+                meets the page surface with a hard edge. */}
           </div>
           <div style={{
             position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, zIndex: 3,
@@ -527,15 +526,26 @@ export default function ProfilePage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: store.description ? 8 : 0 }}>
             {user?.role && user.role !== 'customer' && (
+              // Session 128.20: RETAIL badge → orange for parity with
+              // StoreProfile (Session 128.18). Profile previously kept yellow.
               <span style={{
                 padding: '3px 10px', borderRadius: 9999, fontSize: 9, fontWeight: 800, letterSpacing: 0.8,
-                textTransform: 'uppercase', background: 'var(--f-grad-primary)', color: 'white',
+                textTransform: 'uppercase', background: 'var(--b-orange)', color: '#fff',
                 boxShadow: 'var(--b-elev-card)',
               }}>
                 {user.role === 'retailer' ? 'Retail' : user.role}
               </span>
             )}
-            <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{store.category}</span>
+            {store.category && <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{store.category}</span>}
+            {storeStatus && (
+              <>
+                <span style={{ fontSize: 12, color: 'var(--f-text-4)' }}>·</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }} />
+                  {storeStatus.label}
+                </span>
+              </>
+            )}
           </div>
           {store.description && (
             <div style={{ margin: 0 }}>

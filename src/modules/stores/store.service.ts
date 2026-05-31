@@ -118,20 +118,26 @@ export class StoreService {
         await prisma.follow.create({ data: { userId, storeId } });
 
         // Session 128.19: notify store owner of new follower so the bell
-        // surfaces others' activity. Only when the follower != the owner
-        // (no self-notifications). Fire-and-forget — failures must not
-        // block the follow itself.
+        // surfaces others' activity. Session 128.20: also emit via socket
+        // so the bell badge updates in real-time without a page refresh.
         if (store.owner && store.owner.id !== userId) {
           const follower = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
           const followerName = follower?.name || 'Someone';
+          const content = `${followerName} started following ${store.storeName}`;
           prisma.notification.create({
             data: {
               userId: store.owner.id,
               type: 'NEW_FOLLOWER',
-              content: `${followerName} started following ${store.storeName}`,
+              content,
               referenceId: storeId,
             },
           }).catch(() => { /* notification persistence is best-effort */ });
+          try {
+            const { getIO } = await import('../../config/socket');
+            getIO().to(store.owner.id).emit('newNotification', {
+              type: 'NEW_FOLLOWER', content, referenceId: storeId, isRead: false,
+            });
+          } catch { /* socket emit best-effort */ }
         }
 
         return { following: true };

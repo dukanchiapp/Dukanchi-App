@@ -82,10 +82,24 @@ export default function MapPage() {
     return d < 1 ? `${Math.round(d * 1000)}m` : `${d.toFixed(1)} km`;
   };
 
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+    googleMapsApiKey: mapsKey,
     id: 'google-map-script',
   });
+
+  // Session 128.20: log map-loader state once on mount + whenever it flips,
+  // to give the founder something actionable in the browser console if the
+  // map still fails to render on prod. Distinguishes "missing key", "load
+  // error", and "still loading" so we can stop guessing.
+  useEffect(() => {
+    if (!mapsKey) {
+      console.warn('[Map] VITE_GOOGLE_MAPS_API_KEY is empty — Map will never load. Check fly.toml [build.args] + Dockerfile ARG.');
+    } else {
+      // eslint-disable-next-line no-console
+      console.info('[Map] loader state', { isLoaded, hasLoadError: !!loadError, keyLen: mapsKey.length });
+    }
+  }, [isLoaded, loadError, mapsKey]);
 
   useEffect(() => {
     setStoresLoading(true);
@@ -361,7 +375,9 @@ export default function MapPage() {
               return (
                 <button
                   key={chip.value}
-                  onClick={() => setSelectedCategory(chip.value)}
+                  // Session 128.20: clicking the already-selected category
+                  // resets selection to '' (All), per founder ask.
+                  onClick={() => setSelectedCategory(prev => prev === chip.value ? '' : chip.value)}
                   className="b-tap"
                   style={{
                     flexShrink: 0,
@@ -475,16 +491,35 @@ export default function MapPage() {
                 })}
               </GoogleMap>
             ) : (
+              // Session 128.20: loading placeholder gained a Refresh button —
+              // if the user lands here with a stale SW cache (the v66 chunk
+              // had no API key) a single tap rebuilds the page and the new
+              // chunk lands. Diagnostic copy tells the founder whether the
+              // key is empty (deploy/build problem) vs still loading.
               <div
                 className="w-full h-full flex items-center justify-center"
                 style={{ background: 'var(--f-bg-elev)' }}
               >
-                <div className="text-center">
+                <div className="text-center px-4">
                   <div
                     className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin mx-auto mb-2"
                     style={{ borderColor: 'var(--f-glass-border-2)', borderTopColor: 'var(--b-magenta-ink)' }}
                   />
-                  <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>Loading map…</p>
+                  <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
+                    {mapsKey ? 'Loading map…' : 'Map API key missing — please contact support.'}
+                  </p>
+                  {mapsKey && (
+                    <button
+                      onClick={() => window.location.reload()}
+                      style={{
+                        marginTop: 10, padding: '6px 14px', borderRadius: 9999, border: 'none',
+                        background: 'var(--b-grad)', color: 'var(--b-on-grad)',
+                        fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      Refresh
+                    </button>
+                  )}
                 </div>
               </div>
             )}

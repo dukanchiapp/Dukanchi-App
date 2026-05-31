@@ -329,9 +329,8 @@ export class PostService {
     } else {
       await prisma.like.create({ data: { userId, postId } });
 
-      // Session 128.19: notify post author of new like so the bell surfaces
-      // others' activity. Only when the liker != the author (no self-
-      // notifications). Fire-and-forget — failures must not block the like.
+      // Session 128.19: notify post author of new like. Session 128.20:
+      // also emit via socket so the bell updates without a refresh.
       const post = await prisma.post.findUnique({
         where: { id: postId },
         select: { store: { select: { owner: { select: { id: true } }, storeName: true } } },
@@ -340,14 +339,21 @@ export class PostService {
       if (authorId && authorId !== userId) {
         const liker = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
         const likerName = liker?.name || 'Someone';
+        const content = `${likerName} liked your post`;
         prisma.notification.create({
           data: {
             userId: authorId,
             type: 'NEW_LIKE',
-            content: `${likerName} liked your post`,
+            content,
             referenceId: postId,
           },
         }).catch(() => { /* notification persistence is best-effort */ });
+        try {
+          const { getIO } = await import('../../config/socket');
+          getIO().to(authorId).emit('newNotification', {
+            type: 'NEW_LIKE', content, referenceId: postId, isRead: false,
+          });
+        } catch { /* socket emit best-effort */ }
       }
 
       return { liked: true };

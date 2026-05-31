@@ -1,64 +1,87 @@
 import type { CSSProperties } from 'react';
-import { getStoreStatus, statusColor } from '../../lib/storeUtils';
-import { FIcon } from '../futuristic';
+import { getStoreStatus } from '../../lib/storeUtils';
 
-/* Futuristic v2 skin · Phase 8 / feat/futuristic-redesign.
-   Glass store-info card. Field conditionals preserved verbatim. */
+/* Session 128.20: rewritten to mirror the StoreProfile inline info card —
+   peach-tinted icon tiles + emojis (📍 ☎️ 🕐) + bold address/hours + blue
+   Direction button. Founder asked Profile (own) to match StoreProfile
+   (others') visually; this is the shared surface. */
 
 interface StoreInfoCardProps {
   store: any;
   storeStatus: ReturnType<typeof getStoreStatus>;
 }
 
-const row: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0' };
+const iconTile: CSSProperties = {
+  width: 42,
+  height: 42,
+  borderRadius: 13,
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  background: 'var(--b-orange-bg)',
+  border: '1px solid var(--b-tint)',
+};
 
-export function StoreInfoCard({ store, storeStatus }: StoreInfoCardProps) {
+const blueGrad = 'linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)';
+
+/** "21:00" → "9:00 PM". Leaves non-HH:MM strings untouched. */
+function fmt12(t?: string | null): string {
+  if (!t) return '';
+  const [hStr, m] = t.split(':');
+  let h = parseInt(hStr, 10);
+  if (Number.isNaN(h)) return t;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m ?? '00'} ${ampm}`;
+}
+
+export function StoreInfoCard({ store, storeStatus: _storeStatus }: StoreInfoCardProps) {
   const hasInfo = store.address || store.postalCode || store.city || store.state || store.phone ||
-    storeStatus || store.openingTime || store.closingTime || store.workingDays ||
+    store.openingTime || store.closingTime || store.workingDays ||
     (store.latitude && store.longitude && store.latitude !== 0);
   if (!hasInfo) return null;
 
   return (
-    <div className="f-glass f-glass-edge" style={{ marginTop: 16, padding: '12px 14px', borderRadius: 16, background: 'var(--f-glass-bg)' }}>
+    <div
+      className="f-glass f-glass-edge"
+      style={{
+        marginTop: 16, padding: 14, borderRadius: 16, background: 'var(--f-glass-bg)',
+        display: 'flex', flexDirection: 'column', gap: 12,
+      }}
+    >
       {store.address && (
-        <div style={{ ...row, alignItems: 'flex-start' }}>
-          <FIcon name="mapPin" size={14} color="var(--f-magenta-light)" />
-          <span style={{ fontSize: 12.5, color: 'var(--f-text-1)', fontWeight: 500 }}>{store.address}</span>
-        </div>
-      )}
-      {(store.postalCode || store.city || store.state) && (
-        <div style={{ ...row, paddingLeft: 24 }}>
-          <span style={{ fontSize: 11, color: 'var(--f-text-3)' }}>
-            {store.postalCode && <span>{store.postalCode}</span>}
-            {(store.city || store.state) && (
-              <span>{store.postalCode ? ' · ' : ''}{[store.city, store.state].filter(Boolean).join(', ')}</span>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={iconTile}><span style={{ fontSize: 18, lineHeight: 1 }}>📍</span></div>
+          <div style={{ minWidth: 0, paddingTop: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>
+              {store.address}
+            </p>
+            {(store.postalCode || store.city || store.state) && (
+              <p style={{ fontSize: 11.5, color: 'var(--f-text-3)', margin: '2px 0 0' }}>
+                {[store.postalCode, [store.city, store.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+              </p>
             )}
-          </span>
+          </div>
         </div>
       )}
       {store.phoneVisible !== false && store.phone && (
-        <div style={row}>
-          <FIcon name="phone" size={14} color="var(--f-magenta-light)" />
-          <a href={`tel:${store.phone}`} style={{ fontSize: 12.5, color: 'var(--f-text-2)', textDecoration: 'none' }}>{store.phone}</a>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={iconTile}><span style={{ fontSize: 17, lineHeight: 1 }}>☎️</span></div>
+          <a href={`tel:${store.phone}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)', textDecoration: 'none' }}>{store.phone}</a>
         </div>
       )}
-      {storeStatus && (
-        <div style={row}>
-          <FIcon name="clock" size={14} color={statusColor(storeStatus.color)} />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: statusColor(storeStatus.color) }}>{storeStatus.label}</span>
-        </div>
-      )}
-      {(store.openingTime || store.closingTime) && !store.is24Hours && (
-        <div style={row}>
-          <FIcon name="clock" size={14} color="var(--f-text-3)" />
-          <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
-            Hours: {store.openingTime || '--:--'} – {store.closingTime || '--:--'}
-          </span>
-        </div>
-      )}
-      {store.workingDays && (
-        <div style={{ ...row, paddingLeft: 24 }}>
-          <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{store.workingDays}</span>
+      {(store.is24Hours || store.openingTime || store.closingTime) && (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={iconTile}><span style={{ fontSize: 17, lineHeight: 1 }}>🕐</span></div>
+          <div style={{ minWidth: 0, paddingTop: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>
+              {store.is24Hours ? 'Open 24 Hours' : `${fmt12(store.openingTime)} – ${fmt12(store.closingTime)}`}
+            </p>
+            {store.workingDays && (
+              <p style={{ fontSize: 11.5, color: 'var(--f-text-3)', margin: '2px 0 0' }}>{store.workingDays}</p>
+            )}
+          </div>
         </div>
       )}
       {store.latitude && store.longitude && store.latitude !== 0 && (
@@ -67,14 +90,17 @@ export function StoreInfoCard({ store, storeStatus }: StoreInfoCardProps) {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8,
-            padding: '11px 14px', borderRadius: 12,
-            background: 'linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)',
-            border: 'none', color: '#fff', fontSize: 13,
-            fontWeight: 700, textDecoration: 'none', boxShadow: '0 6px 18px rgba(37,99,235,0.32)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 2,
+            padding: '13px 14px', borderRadius: 13, background: blueGrad,
+            color: '#fff', fontSize: 14, fontWeight: 700, textDecoration: 'none',
+            boxShadow: '0 6px 18px rgba(37,99,235,0.32)',
           }}
         >
-          <FIcon name="navigation" size={14} color="#fff" />
+          {/* SVG arrow (no lucide import here keeps the component lightweight) */}
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
+          </svg>
           Direction to Store
         </a>
       )}
