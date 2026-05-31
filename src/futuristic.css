@@ -21,10 +21,10 @@
   --b-yellow-ink:  #1A1A1A;        /* dark text ON yellow */
   --b-grad:        linear-gradient(180deg, #FFD75A 0%, #F8CB46 55%, #E6B92E 100%);
   --b-grad-warm:   linear-gradient(180deg, #FFE082 0%, #F8CB46 50%, #E6B92E 100%);
-  --b-orange:      var(--b-orange);
-  --b-orange-light:#FFA94D;
-  --b-magenta:     var(--b-magenta-ink);
-  --b-magenta-ink: #D11F75;
+  --b-orange:      #EA9A00;
+  --b-orange-light:#FFC95A;
+  --b-magenta:     #EA9A00;
+  --b-magenta-ink: #C77E00;
   --b-violet:      #7C3AED;
   --b-cyan:        #0EA5C4;
   --b-green:       #0C831F;
@@ -60,9 +60,9 @@
   --f-glass-shadow:   0 2px 12px rgba(24, 16, 8, 0.06);
 
   /* Brand — orange anchored, magenta companion */
-  --f-orange:         var(--b-orange);
-  --f-orange-light:   #FFA94D;
-  --f-magenta:        var(--b-magenta-ink);
+  --f-orange:         #EA9A00;
+  --f-orange-light:   #FFC95A;
+  --f-magenta:        #C77E00;
   --f-magenta-light:  #FF6BB4;
   --f-cyan:           #0EA5C4;
   --f-violet:         #7C3AED;

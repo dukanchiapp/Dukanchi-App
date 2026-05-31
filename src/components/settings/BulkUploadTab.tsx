@@ -47,8 +47,8 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
     <div className="space-y-4">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-xl bg-[#FFF3EC] flex items-center justify-center flex-shrink-0">
-            <Upload size={20} className="text-[#D11F75]" />
+          <div className="w-10 h-10 rounded-xl bg-[#FFF6DD] flex items-center justify-center flex-shrink-0">
+            <Upload size={20} className="text-[#C77E00]" />
           </div>
           <div>
             <h3 className="font-bold text-gray-900">Import from Excel / CSV</h3>
@@ -56,7 +56,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
           </div>
         </div>
 
-        <label className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-medium text-sm cursor-pointer transition-colors ${importLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#D11F75] text-white hover:bg-[#B01A63]'}`}>
+        <label className={`flex items-center justify-center gap-2 w-full py-3 rounded-xl font-medium text-sm cursor-pointer transition-colors ${importLoading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#C77E00] text-white hover:bg-[#A86A00]'}`}>
           {importLoading ? (
             <>
               <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -83,7 +83,7 @@ export const BulkUploadTab = React.memo(function BulkUploadTab({ store, token }:
             <p className="text-green-700 text-xs mt-1">
               Columns detected: {Object.entries(importResult.mappingUsed).map(([k, v]) => `${v} → ${k}`).join(', ')}
             </p>
-            <Link to="/profile" className="text-[#D11F75] text-xs font-medium mt-1 inline-block hover:underline">
+            <Link to="/profile" className="text-[#C77E00] text-xs font-medium mt-1 inline-block hover:underline">
               View imported products →
             </Link>
           </div>

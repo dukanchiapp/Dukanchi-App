@@ -402,7 +402,7 @@ export default function SearchPage() {
                     <span style={{ fontSize: 13, color: 'var(--f-text-1)', flex: 1 }}>
                       {s.split(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')).map((part, j) =>
                         part.toLowerCase() === query.toLowerCase()
-                          ? <strong key={j} style={{ color: '#D11F75' }}>{part}</strong>
+                          ? <strong key={j} style={{ color: 'var(--b-magenta-ink)' }}>{part}</strong>
                           : <span key={j}>{part}</span>
                       )}
                     </span>
@@ -426,12 +426,12 @@ export default function SearchPage() {
                 border: '1px solid var(--f-glass-border)',
               }}
             >
-              <Search size={14} color="#D11F75" style={{ flexShrink: 0 }} />
+              <Search size={14} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>
                 Showing results for{' '}
                 <button
                   onClick={() => setQuery(correctedQuery)}
-                  style={{ fontWeight: 700, color: '#D11F75', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}
+                  style={{ fontWeight: 700, color: 'var(--b-magenta-ink)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}
                 >
                   {correctedQuery}
                 </button>
@@ -448,7 +448,7 @@ export default function SearchPage() {
               <div className="flex items-center justify-between mb-3">
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>Filters</p>
                 {hasFilters && (
-                  <button onClick={clearFilters} style={{ fontSize: 12, color: '#D11F75', fontWeight: 700 }}>Clear all</button>
+                  <button onClick={clearFilters} style={{ fontSize: 12, color: 'var(--b-magenta-ink)', fontWeight: 700 }}>Clear all</button>
                 )}
               </div>
               {/* Category */}
@@ -493,19 +493,46 @@ export default function SearchPage() {
           {/* Discovery state */}
           {!isSearching && (
             <>
-              {/* Trending near you */}
+              {/* Session 128.15 — Trending: horizontal-scroll row per spec
+                  (SearchScreen.jsx makes them a `flex-wrap` but bright.html
+                  shows them as a single non-wrapping row). overflow-x:auto
+                  + flexWrap:nowrap keeps them visible without clipping. */}
               <section className="mb-6" style={{ marginTop: 16 }}>
                 <p style={{ ...eyebrow, marginBottom: 12 }}>Trending near you</p>
-                <div className="flex flex-wrap gap-2">
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 8,
+                    flexWrap: 'nowrap',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    paddingBottom: 4,
+                    paddingRight: 16,
+                    marginRight: -16,
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                  }}
+                >
                   {TRENDING.map((item, idx) => (
                     <button
                       key={item}
                       onClick={() => setQuery(item)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+                      className="b-tap"
                       style={{
-                        background: 'var(--f-bg-elev)',
-                        color: 'var(--f-text-1)',
-                        border: '1px solid var(--f-glass-border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '9px 15px',
+                        borderRadius: 9999,
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--b-ink)',
+                        background: '#fff',
+                        border: '1px solid var(--b-line)',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
                       }}
                     >
                       {idx === 0 && <span>🔥</span>}
@@ -518,7 +545,19 @@ export default function SearchPage() {
               {/* Browse by category */}
               <section className="mb-6">
                 <p style={{ ...eyebrow, marginBottom: 12 }}>Browse by category</p>
-                <div className="grid grid-cols-4 gap-2.5">
+                {/* Session 128.15 — Category 4-col grid: explicit 16px right
+                    padding (per founder direction) so the 4th column never
+                    clips at the safe-area / scrollbar edge. */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                    gap: 10,
+                    boxSizing: 'border-box',
+                    width: '100%',
+                    paddingRight: 16,
+                  }}
+                >
                   {ALL_CATEGORIES.map(cat => (
                     <button
                       key={cat.value}
@@ -553,7 +592,7 @@ export default function SearchPage() {
                 <section>
                   <div className="flex items-center justify-between mb-3">
                     <p style={eyebrow}>Recent searches</p>
-                    <button onClick={clearAllHistory} className="text-xs font-semibold" style={{ color: '#D11F75' }}>
+                    <button onClick={clearAllHistory} className="text-xs font-semibold" style={{ color: 'var(--b-magenta-ink)' }}>
                       Clear all
                     </button>
                   </div>
@@ -649,7 +688,7 @@ export default function SearchPage() {
                                     <div className="flex flex-col gap-1 mt-1">
                                       {distance && (
                                         <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--f-text-2)' }}>
-                                          <MapPin size={10} color="#D11F75" style={{ flexShrink: 0 }} />
+                                          <MapPin size={10} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
                                           {distance} away
                                         </span>
                                       )}
@@ -703,7 +742,7 @@ export default function SearchPage() {
                       <p style={{ fontSize: 14, color: 'var(--f-text-2)' }}>
                         No results match your filters.
                       </p>
-                      <button onClick={clearFilters} className="mt-2 text-sm font-semibold" style={{ color: '#D11F75' }}>
+                      <button onClick={clearFilters} className="mt-2 text-sm font-semibold" style={{ color: 'var(--b-magenta-ink)' }}>
                         Clear Filters
                       </button>
                     </div>
@@ -899,7 +938,7 @@ export default function SearchPage() {
                           📍 {userLocCtx.name}
                         </p>
                       ) : (
-                        <p style={{ fontSize: 13, color: '#FFA94D' }}>Location detect nahi ho rahi — settings check karo</p>
+                        <p style={{ fontSize: 13, color: 'var(--b-orange)' }}>Location detect nahi ho rahi — settings check karo</p>
                       )
                     ) : (
                       <input

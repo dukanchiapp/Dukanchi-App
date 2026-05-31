@@ -107,7 +107,7 @@ export default function ReviewModal({ isOpen, onClose, targetId, targetType, tar
           <button
             type="submit"
             disabled={isSubmitting || rating === 0}
-            className="w-full py-3 bg-[#D11F75] hover:bg-[#B01A63] text-white font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center space-x-2"
+            className="w-full py-3 bg-[#C77E00] hover:bg-[#A86A00] text-white font-semibold rounded-xl transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center space-x-2"
           >
             {isSubmitting ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

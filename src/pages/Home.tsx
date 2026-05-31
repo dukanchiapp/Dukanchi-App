@@ -13,8 +13,9 @@ import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
 import { haptic } from '../lib/haptics';
 import Header from '../components/bright/Header';
 import Button from '../components/bright/Button';
+import NotificationsDrawer from '../components/NotificationsDrawer';
+import { useNotifications } from '../context/NotificationContext';
 import { PostCard } from '../components/PostCard';
-import NotificationBell from '../components/NotificationBell';
 
 // Futuristic (v2) carousel chevron — glass circle. Shared L/R style.
 const fChevBtn: CSSProperties = {
@@ -40,6 +41,9 @@ export default function HomePage() {
   const [locationRange, setLocationRange] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  // Session 128.15 — notifications drawer state (Header's bell triggers this).
+  const [notifsOpen, setNotifsOpen] = useState(false);
+  const { unreadCount } = useNotifications();
   const { location: userLocCtx } = useUserLocation();
   const userLoc = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
 
@@ -379,20 +383,16 @@ export default function HomePage() {
           ref={topBarRef}
           className="sticky top-0 z-30"
         >
-          {/* Session 128.13 — Bright Skin <Header> primitive. Yellow gradient
-              with animated mesh sheen, dark wordmark, "द" logo tile, bell
-              with unread dot. Replaces the bespoke Session 128.10 yellow
-              header. The bell click-target opens the notification drawer
-              via the existing <NotificationBell /> (mounted as trailing). */}
+          {/* Session 128.15 — <Header> primitive's built-in chip-bg bell is
+              the single bell (per react-stubs/Header.jsx). Earlier we passed
+              <NotificationBell /> in the `trailing` slot which rendered a
+              SECOND bell. Now we use Header's bell + a separate controlled
+              <NotificationsDrawer />, matching bright.html exactly. */}
           <Header
             title="Dukanchi"
             tagline="apna bazaar, apni dukaan"
-            unread={false}
-            trailing={
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <NotificationBell color="var(--b-on-grad)" />
-              </div>
-            }
+            unread={unreadCount > 0}
+            onBell={() => setNotifsOpen(true)}
           />
           {/* Session 128.14 — Location strip ON the yellow gradient (per
               dukanchi-bright-skin/screens/HomeScreen.jsx lines 13-20). The
@@ -638,7 +638,7 @@ export default function HomePage() {
                   >
                     {opt.label}
                     {locationRange === opt.key && (
-                      <Check size={14} color="#D11F75" />
+                      <Check size={14} color="var(--b-magenta-ink)" />
                     )}
                   </button>
                 ))}
@@ -766,6 +766,9 @@ export default function HomePage() {
       {showLocationPicker && (
         <LocationPicker onClose={() => setShowLocationPicker(false)} />
       )}
+
+      {/* Session 128.15 — Notifications drawer (controlled by Header's bell). */}
+      <NotificationsDrawer isOpen={notifsOpen} onClose={() => setNotifsOpen(false)} />
     </div>
   );
 }

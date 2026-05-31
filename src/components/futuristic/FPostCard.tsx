@@ -328,7 +328,7 @@ function FPostCardInner({
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--f-text-1)' }}>
               {post.product.productName}
             </span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#D11F75' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--b-magenta-ink)' }}>
               ₹{post.product.price?.toLocaleString()}
             </span>
           </div>
