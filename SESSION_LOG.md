@@ -6,6 +6,28 @@
 
 ---
 
+## 2026-05-31 — Session 128.18 — Founder UI corrections batch 3 (collapsing header, grey PostCard actions, upward Map sheet, green New Post, orange RETAIL tag, status-bar color, Search size-match)
+
+**Goal:** Founder shared 5 screenshots after PR #144 (Fly v65) landed — seven-point list: (1) PostCard Heart/Chat/Share row should be grey (currently red/blue/green palette), (2) Home brand header should scroll AWAY while the location strip stays sticky, (3) Search header is bigger than Home — should match, (4) status bar color should match the header gradient, (5) Map "Stores near you" panel expands DOWN inline — should expand UP over the map area, (6) "+ New Post" button yellow → green, (7) "RETAIL" capsule yellow → orange.
+
+**Changes (8 files, +130/-103):**
+
+1. **PostCard actions → grey** (`src/components/PostCard.tsx`) — Heart/Chat/Share icons + counts: `var(--b-red)` / `var(--b-blue)` / `var(--b-green)` → uniform `var(--b-gray-1)`. Liked state still fills the heart (now in dark grey) so active-vs-inactive contrast is preserved.
+2. **Home collapsing header** (`src/pages/Home.tsx`) — brand row (logo + tagline + bell) extracted FROM the sticky block: now non-sticky and scrolls away on downward scroll. The `topBarRef` now wraps only the location strip, which keeps `sticky top-0 z-30`. Tabs offset (`top: topBarHeight`) now measures just the location strip — so as the brand row scrolls past, the location strip lands at the top of the viewport and the tabs stick directly below it.
+3. **Search header size-match** (`src/pages/Search.tsx`) — top padding `calc(env(safe-area-inset-top, 0px) + 52px)` → `+ 16px` so the gradient block height matches the Home Header.
+4. **Status-bar color** (`index.html` + `public/manifest.json`) — `<meta name="theme-color">` `#FFB300` → `#FFD63B` (gradient TOP-LEFT corner). `manifest.json` `theme_color` `#F8CB46` (stale legacy Blinkit value) → `#FFD63B`. The OS chrome (Android Chrome / iOS Safari status bar) now reads as a continuation of the visible header band — no more orange-to-yellow seam at the top edge.
+5. **Map "Stores near you" sheet** (`src/pages/Map.tsx`) — refactored AGAIN. 128.17 inlined it (to fix unscrollability) but that made it expand DOWNWARD. New approach: `position: sticky; bottom: 80` anchors it just above the 72px BottomNav (with 8px gap). The EXPANDED layout uses `flex-direction: column-reverse` so the panel header sits at the BOTTOM of the sheet and the scrollable list renders ABOVE it — the list visually grows UPWARD over the map area, matching the founder's drawer mental model. Main container `paddingBottom: 80 → 280` keeps empty-state content reachable above the sticky sheet. Glow shadows + glass-blur replaced with `var(--b-elev-2)` + plain `#fff` (Rule: app-wide neon strip from 128.17).
+6. **"+ New Post" → green** (`src/pages/StoreProfile.tsx` + `src/pages/Profile.tsx`) — both surfaces: `background: 'var(--f-grad-primary)'` (yellow gradient) → `'var(--c-action, var(--b-green))'` (Blinkit ADD-green, Phase 2 convention).
+7. **RETAIL badge → orange** (`src/pages/StoreProfile.tsx`) — capsule background `'var(--f-grad-primary)'` → `'var(--b-orange)'` (#EA9A00) solid pill.
+
+**Files:** 8 modified — `src/components/PostCard.tsx`, `src/pages/Home.tsx`, `src/pages/Search.tsx`, `src/pages/Map.tsx`, `src/pages/StoreProfile.tsx`, `src/pages/Profile.tsx`, `index.html`, `public/manifest.json`.
+
+**Verification:** `npm run typecheck` ✅ (web/server/worker), `npm test -- --run` ✅ (133/133), `npm run build` ✅. Shipped `dist/index.html` + `dist/manifest.json` both confirm `#FFD63B`.
+
+**Status:** ✅ **LIVE.** PR [#146](https://github.com/dukanchiapp/Dukanchi-App/pull/146) squash-merged to main `708e8e2`; **Fly v66** (machine `9080d70da60d18`, region `sin`, healthcheck passing). `/health` 200 application/json on both `dukanchi-app.fly.dev` + `dukanchi.com`; production `<meta name="theme-color" content="#FFD63B">` confirmed in served HTML. **Native APK rebuild + manual test pending** per Rule D — changes touch the Header primitive + shared CSS + theme-color manifest, all of which Capacitor consumes.
+
+---
+
 ## 2026-05-31 — Session 128.17 — Founder UI corrections (header, neon strip, map scroll, distance pill, 📍 emojis)
 
 **Goal:** Founder shared 5 screenshots after PR #142 landed (centering fix LIVE on Fly v64) — "abhi bhi elements design sahi nahi hai acche se check karo or correct karo" plus a six-bullet punch list: (1) Home header big + location tile should match the brand block, (2) bulk search belongs on Search under Recent (max 3 recents), (3) Map missing 3D/Map toggle, unscrollable, branding should be black, filter missing, (4) remove neon effect from whole app, (5) StoreProfile distance capsule missing, (6) use 📍 emoji everywhere except BottomNav.
