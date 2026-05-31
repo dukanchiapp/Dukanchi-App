@@ -8,6 +8,15 @@ primary_region = "sin"
 
 [build]
   dockerfile = "Dockerfile"
+  # Session 128.19: VITE_* build args. `.env` is gitignored + dockerignored
+  # so Vite would inline an empty string for these public keys at build
+  # time, which is why the Map page sat on "Loading map…" — `useJsApiLoader`
+  # silently fell through with no key. Fly passes these as `--build-arg` to
+  # match the `ARG` in Dockerfile. The Google Maps key is HTTP-referrer-
+  # restricted in the GCP console (dukanchi.com, *.fly.dev, localhost), so
+  # committing the value is safe — it would otherwise ship in the public JS.
+  [build.args]
+    VITE_GOOGLE_MAPS_API_KEY = "AIzaSyADeyki3lGmZwnz1yaRCbPFq57vG6SCWkc"
 
 [env]
   NODE_ENV = "production"

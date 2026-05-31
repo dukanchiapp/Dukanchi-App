@@ -82,6 +82,15 @@ export class MessageService {
       if (!seen.has(otherId)) {
         const other = msg.senderId === userId ? msg.receiver : msg.sender;
         const otherStore = other.stores?.[0];
+        // Session 128.19: unread heuristic without a schema migration.
+        // `messages` is ordered DESC, so the first message we encounter for
+        // each otherId is the most recent. If that message was sent TO the
+        // current user (receiverId === userId), treat the conversation as
+        // having one unread message — surfaces the red dot in
+        // ConversationRow. Frontend can layer a `last-viewed-at` localStorage
+        // gate on top to clear the badge after open. True unread counts
+        // require adding `readAt` to the Message model (tracked separately).
+        const isUnreadHeuristic = msg.receiverId === userId;
         seen.set(otherId, {
           userId: otherId,
           name: otherStore?.storeName || other.name,
@@ -93,6 +102,7 @@ export class MessageService {
           lastMessage: msg.message,
           lastImageUrl: msg.imageUrl,
           timestamp: msg.createdAt,
+          unread: isUnreadHeuristic ? 1 : 0,
           // Session 126: store meta for rich conversation rows. null when the
           // other party owns no store (customer ↔ customer chats stay plain).
           store: otherStore ? {

@@ -393,7 +393,7 @@ export default function ChatPage() {
           display: 'flex',
           alignItems: 'center',
           gap: 11,
-          padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 14px 14px',
+          padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 14px 14px',
           background: 'var(--b-grad)',
           zIndex: 5,
         }}

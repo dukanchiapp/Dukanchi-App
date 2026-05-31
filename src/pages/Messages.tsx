@@ -208,7 +208,7 @@ export default function MessagesPage() {
             position: 'sticky',
             top: 0,
             zIndex: 20,
-            padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 16px 16px',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px',
             background: 'var(--b-grad)',
           }}
         >

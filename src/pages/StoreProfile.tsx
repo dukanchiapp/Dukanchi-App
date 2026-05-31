@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, Share2, Store, MapPin, Phone, Clock, Navigation,
+  ChevronLeft, Share2, Store, Phone, Navigation,
   Plus, Check, MessageCircle, Star, Heart, Settings,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
@@ -260,24 +260,18 @@ export default function StoreProfilePage() {
   // v3 live status — 4-tier color (red ≤15 / orange ≤30 / yellow ≤60 / green)
   // via getLiveStatus, ticking through useClosingSoon (declared at top).
   const live = storeStatus ? getLiveStatus({ closingSoon, status: storeStatus.label }) : null;
-  // Distance user → store (mockup: "1.6 km away" pill on the cover).
-  // Session 128.17: fall back to store.city / store.postalCode when distance
-  // can't be computed (no user location, or no store coords) — founder
-  // screenshots showed the capsule missing entirely on the cover. Pill is
-  // now always shown if the store has any locality info.
+  // Distance user → store. Session 128.19: founder rejected the city /
+  // postalCode fallback from 128.17 ("the capsule showing delhi is wrong
+  // it's showing city, actually should show the distance between user and
+  // the store") — distance ONLY, or hide the pill entirely.
   const storeDistance: string | null = (() => {
-    if (userLoc && store.latitude && store.longitude) {
-      const R = 6371;
-      const dLat = (store.latitude - userLoc.lat) * Math.PI / 180;
-      const dLon = (store.longitude - userLoc.lng) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLoc.lat * Math.PI / 180) * Math.cos(store.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-      const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
-    }
-    // Fallback: show area / pincode when distance isn't available.
-    if (store.city) return store.city;
-    if (store.postalCode) return String(store.postalCode);
-    return null;
+    if (!userLoc || !store.latitude || !store.longitude) return null;
+    const R = 6371;
+    const dLat = (store.latitude - userLoc.lat) * Math.PI / 180;
+    const dLon = (store.longitude - userLoc.lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLoc.lat * Math.PI / 180) * Math.cos(store.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
   })();
   const showReviews = !store.hideRatings;
   const sortedPosts = [...posts].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
@@ -313,11 +307,10 @@ export default function StoreProfilePage() {
             ) : (
               <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
             )}
-            {/* Bottom fade into the cream page surface */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(180deg, transparent 52%, var(--f-bg-deep) 100%)',
-            }} />
+            {/* Session 128.19: bottom fade-to-cream gradient removed per
+                founder ("profile banner ke bottom mein jo blur element
+                design hai vo remove kar"). Cover image now meets the
+                page surface with a hard edge. */}
           </div>
 
           {/* Floating top bar */}
@@ -377,32 +370,40 @@ export default function StoreProfilePage() {
             )}
           </div>
 
-          {/* Session 128: distance capsule (mockup) — bottom-right, white pill
-              with magenta pin, sits outside the clip layer (zIndex 4). */}
-          {storeDistance && (
-            <div style={{
-              position: 'absolute', bottom: 14, right: 16, zIndex: 4,
-              display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999,
-              background: '#fff', border: '1px solid var(--b-line)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
-            }}>
-              <span style={{ fontSize: 13, lineHeight: 1 }}>📍</span>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--f-text-1)' }}>{storeDistance}</span>
-            </div>
-          )}
+          {/* Session 128.19: distance capsule moved OUT of the cover overlay
+              and INTO the store-name row below — founder ask: "vo capsule
+              store name ke saamne chahiye vertically adjust karna hai,
+              horizontally position change nahi krni." The pill now sits at
+              the right end of the name row, sharing the baseline with the
+              <h1>{store.storeName}</h1>. */}
         </div>
 
         {/* ── Store info ── */}
         <div style={{ padding: '48px 18px 16px' }}>
-          {/* Name + rating */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-            <h1 className="f-display" style={{ fontSize: 24, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <StarRating rating={store.averageRating ?? 0} size={15} />
-              {store.averageRating != null && store.averageRating > 0 && (
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-2)' }}>{store.averageRating.toFixed(1)}</span>
-              )}
+          {/* Name + rating + distance capsule (Session 128.19: distance pill
+              relocated from cover bottom-right → right end of name row, per
+              founder. justify-content: space-between pushes the pill to the
+              right while the name+rating cluster stays left. */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minWidth: 0 }}>
+              <h1 className="f-display" style={{ fontSize: 24, color: 'var(--f-text-1)', margin: 0 }}>{store.storeName}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <StarRating rating={store.averageRating ?? 0} size={15} />
+                {store.averageRating != null && store.averageRating > 0 && (
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-2)' }}>{store.averageRating.toFixed(1)}</span>
+                )}
+              </div>
             </div>
+            {storeDistance && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 9999,
+                background: '#fff', border: '1px solid var(--b-line)', boxShadow: 'var(--b-elev-card)',
+                flexShrink: 0,
+              }}>
+                <span style={{ fontSize: 13, lineHeight: 1 }}>📍</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--f-text-1)' }}>{storeDistance}</span>
+              </div>
+            )}
           </div>
 
           {/* Role + category */}
@@ -460,9 +461,12 @@ export default function StoreProfilePage() {
               (12-hour) + full-gradient Direction button (matches the mockup).
               Live status now lives inline in the meta row above. */}
           <div className="f-glass f-glass-edge" style={{ padding: 14, borderRadius: 16, background: 'var(--f-glass-bg)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Session 128.19: info-tile lucide SVGs replaced with relevant
+                emojis (📍 ☎️ 🕐) per founder ("relevant emoji's se replace
+                karo"). Emoji sized to fit the existing iconTile bounds. */}
             {store.address && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={iconTile}><MapPin size={16} color="var(--b-orange)" /></div>
+                <div style={iconTile}><span style={{ fontSize: 18, lineHeight: 1 }}>📍</span></div>
                 <div style={{ minWidth: 0, paddingTop: 1 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>{store.address}</p>
                   {(store.postalCode || store.city || store.state) && (
@@ -475,13 +479,13 @@ export default function StoreProfilePage() {
             )}
             {store.phoneVisible !== false && store.phone && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={iconTile}><Phone size={15} color="var(--b-orange)" /></div>
+                <div style={iconTile}><span style={{ fontSize: 17, lineHeight: 1 }}>☎️</span></div>
                 <a href={`tel:${store.phone}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)', textDecoration: 'none' }}>{store.phone}</a>
               </div>
             )}
             {(store.is24Hours || store.openingTime || store.closingTime) && (
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={iconTile}><Clock size={15} color="var(--b-orange)" /></div>
+                <div style={iconTile}><span style={{ fontSize: 17, lineHeight: 1 }}>🕐</span></div>
                 <div style={{ minWidth: 0, paddingTop: 1 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', margin: 0, lineHeight: 1.3 }}>
                     {store.is24Hours ? 'Open 24 Hours' : `${fmt12(store.openingTime)} – ${fmt12(store.closingTime)}`}
@@ -540,14 +544,17 @@ export default function StoreProfilePage() {
               </>
             ) : (
               <>
+                {/* Session 128.19: Follow button → green per founder
+                    ("follow button green color"). Matches the Phase 2
+                    green-CTA convention used for New Post / signup CTA. */}
                 <button
                   onClick={toggleFollow}
                   style={{
                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     padding: '11px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
                     border: isFollowing ? '1px solid var(--f-glass-border)' : 'none',
-                    background: isFollowing ? 'var(--f-glass-bg-2)' : 'var(--f-grad-primary)',
-                    color: isFollowing ? 'var(--f-text-1)' : 'white', fontSize: 13, fontWeight: 700,
+                    background: isFollowing ? 'var(--f-glass-bg-2)' : 'var(--c-action, var(--b-green))',
+                    color: isFollowing ? 'var(--f-text-1)' : '#fff', fontSize: 13, fontWeight: 700,
                     boxShadow: isFollowing ? 'none' : 'var(--b-elev-card)',
                   }}
                 >
