@@ -411,21 +411,24 @@ function PostCardInner({
         )}
       </div>
 
-      {/* Action bar + caption */}
+      {/* Action bar + caption — Session 128.18: founder asked for a uniform
+          GREY treatment on Like/Chat/Share. Liked state still fills the
+          heart (now in --b-gray-1 ink) so the active vs. inactive contrast
+          is preserved without the rainbow-icon palette. */}
       <div style={{ padding: '11px 13px 13px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          {/* Like — red (filled when active) */}
+          {/* Like — grey (filled ink when active) */}
           <button onClick={() => onLike(post.id)} style={iconBtn} aria-label={isLiked ? 'Unlike' : 'Like'}>
             <Heart
               size={22}
-              fill={isLiked ? 'var(--b-red)' : 'none'}
-              color="var(--b-red)"
+              fill={isLiked ? 'var(--b-gray-1)' : 'none'}
+              color="var(--b-gray-1)"
               strokeWidth={2}
             />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--b-red)' }}>{likeCount}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--b-gray-1)' }}>{likeCount}</span>
           </button>
 
-          {/* Chat — blue */}
+          {/* Chat — grey */}
           {!isOwnPost && post.store?.chatEnabled !== false && (
             <Link
               to={`/chat/${post.store?.ownerId}`}
@@ -440,15 +443,15 @@ function PostCardInner({
               style={{ ...iconBtn, textDecoration: 'none' }}
               aria-label="Open chat"
             >
-              <MessageSquare size={21} fill="none" color="var(--b-blue)" strokeWidth={2} />
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--b-blue)' }}>Chat</span>
+              <MessageSquare size={21} fill="none" color="var(--b-gray-1)" strokeWidth={2} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--b-gray-1)' }}>Chat</span>
             </Link>
           )}
 
-          {/* Share — green */}
+          {/* Share — grey */}
           <button onClick={() => onShare(post)} style={iconBtn} aria-label="Share post">
-            <Share2 size={20} fill="none" color="var(--b-green)" strokeWidth={2} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--b-green)' }}>Share</span>
+            <Share2 size={20} fill="none" color="var(--b-gray-1)" strokeWidth={2} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--b-gray-1)' }}>Share</span>
           </button>
 
           <span style={{ flex: 1 }} />

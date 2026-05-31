@@ -16,9 +16,13 @@
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
-    <!-- Session 128.13 — Bright Skin theme-color matches the yellow gradient
-         end-stop (#FFB300) per dukanchi-bright-skin/ICONS.md. -->
-    <meta name="theme-color" content="#FFB300" />
+    <!-- Session 128.18 — theme-color updated to the TOP-LEFT corner of the
+         yellow gradient (#FFD63B) so the OS status bar (Android Chrome /
+         iOS Safari) reads as a continuation of the visible header band.
+         Founder feedback: "the status bar should match the color of
+         header." Previously was #FFB300 (the gradient end-stop), which on
+         devices showed a visible orange-to-yellow seam at the top edge. -->
+    <meta name="theme-color" content="#FFD63B" />
 
     <!-- Session 128.9 — 3D yellow favicon (SVG, infinite resolution). Modern
          browsers prefer this over the PNG fallback. PNGs remain in the

@@ -183,7 +183,11 @@ export default function MapPage() {
         minHeight: '100vh',
         backgroundColor: 'var(--f-bg-deep)',
         backgroundImage: 'var(--f-page-bg)',
-        paddingBottom: 80,
+        // Session 128.18: extra 200px on top of the 80px BottomNav buffer so
+        // the sticky bottom sheet (`position: sticky; bottom: 80`) never
+        // covers the empty-state copy below the map. The sheet collapses to
+        // ~180px tall when not expanded; 200 leaves a clean gap.
+        paddingBottom: 280,
         fontFamily: 'var(--f-font)',
       }}
     >
@@ -544,28 +548,41 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* Session 128.17: bottom sheet was previously `position: fixed`,
-            which made the surface land on top of the map AND on top of the
-            BottomNav, leaving the page unscrollable below the map. Re-rooted
-            as an inline block under the map container — the whole page now
-            scrolls naturally, and there is enough vertical room below the
-            map for the card list. */}
+        {/* Session 128.18: bottom sheet refactored AGAIN — Session 128.17
+            shipped this as an inline block under the map, but the founder
+            says it now expands DOWN inline whereas they want it to expand
+            UPWARD (drawer-style, growing over the map area). Solution:
+            anchor as `position: sticky; bottom: 0` over a `paddingBottom`
+            spacer on the main scroll container, so the page is fully
+            scrollable AND the sheet sits glued to the bottom of the
+            viewport. In the expanded layout, the panel header sits at the
+            BOTTOM of the sheet (clickable to collapse) and the scrollable
+            list renders ABOVE it via `flex-direction: column-reverse` — so
+            the visual growth direction is upward, matching the founder's
+            mental model. Glow shadows replaced with whisper-soft elevation
+            (Rule: app-wide neon strip from 128.17). */}
         {validStores.length > 0 && (
-          <div className="px-4 mt-3">
+          <div
+            className="px-4"
+            style={{
+              position: 'sticky',
+              bottom: 80, // sits just above the 72px BottomNav + a 8px gap
+              zIndex: 25,
+              marginTop: 12,
+            }}
+          >
             <div>
-              {/* ── Expanded: header on top, scrollable list ── */}
+              {/* ── Expanded: list ABOVE header (column-reverse) ── */}
               {listExpanded && (
                 <div
                   style={{
-                    background: 'var(--f-modal-bg)',
-                    backdropFilter: 'blur(28px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+                    background: '#fff',
                     borderRadius: 20,
-                    border: '1px solid var(--f-glass-border-2)',
-                    boxShadow: '0 -10px 30px rgba(0,0,0,0.4)',
+                    border: '1px solid var(--b-line)',
+                    boxShadow: 'var(--b-elev-2)',
                     overflow: 'hidden',
                     display: 'flex',
-                    flexDirection: 'column',
+                    flexDirection: 'column-reverse',
                     maxHeight: '55vh',
                     marginBottom: 8,
                   }}
@@ -573,12 +590,12 @@ export default function MapPage() {
                   <button
                     onClick={() => setListExpanded(false)}
                     className="w-full flex items-center justify-between py-3 px-4 flex-shrink-0"
-                    style={{ borderBottom: '1px solid var(--f-glass-border)' }}
+                    style={{ borderTop: '1px solid var(--b-line)', background: '#fff' }}
                   >
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--b-ink)' }}>
                       Stores near you · <span style={{ color: 'var(--b-magenta-ink)' }}>{validStores.length}</span>
                     </p>
-                    <ChevronDown size={16} color="var(--f-text-3)" />
+                    <ChevronDown size={16} color="var(--b-gray-2)" />
                   </button>
                   <div className="overflow-y-auto overscroll-contain" style={{ scrollbarWidth: 'thin', padding: '8px 12px' }}>
                     <div className="space-y-2">
@@ -625,21 +642,19 @@ export default function MapPage() {
               {!listExpanded && (
                 <div
                   style={{
-                    background: 'var(--f-modal-bg)',
-                    backdropFilter: 'blur(28px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+                    background: '#fff',
                     borderRadius: 20,
-                    border: '1px solid var(--f-glass-border-2)',
-                    boxShadow: '0 -10px 30px rgba(0,0,0,0.4)',
+                    border: '1px solid var(--b-line)',
+                    boxShadow: 'var(--b-elev-2)',
                     overflow: 'hidden',
                   }}
                 >
-                  <button onClick={() => setListExpanded(true)} className="w-full flex items-center justify-between py-3 px-4" style={{ borderBottom: '1px solid var(--f-glass-border)' }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)' }}>
+                  <button onClick={() => setListExpanded(true)} className="w-full flex items-center justify-between py-3 px-4" style={{ borderBottom: '1px solid var(--b-line)' }}>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--b-ink)' }}>
                       Stores near you · <span style={{ color: 'var(--b-magenta-ink)' }}>{validStores.length}</span>
                     </p>
-                    <span style={{ fontSize: 11, color: 'var(--f-text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <ArrowUp size={10} color="var(--f-text-3)" /> Swipe up
+                    <span style={{ fontSize: 11, color: 'var(--b-gray-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ArrowUp size={10} color="var(--b-gray-2)" /> Swipe up
                     </span>
                   </button>
 

@@ -378,73 +378,72 @@ export default function HomePage() {
       )}
       <div className="max-w-md mx-auto">
 
-        {/* ── Sticky top block (gradient Header + Location) ── */}
+        {/* ── Session 128.18: collapsing-header pattern. The brand row
+            (logo + tagline + bell) is now NON-sticky — it scrolls away when
+            the user scrolls down through the feed. The location strip below
+            it IS sticky and stays glued to the top of the viewport. When
+            the user scrolls back to the very top, the brand row reappears
+            above the location strip. Founder's exact ask: "when i scroll
+            up the logo header will go upward but the 'Showing stores near
+            your area' will be stick on top and when fully scrolled down
+            then the logo will again at top." ───────────────────────────── */}
+        <Header
+          title="Dukanchi"
+          tagline="apna bazaar, apni dukaan"
+          unread={unreadCount > 0}
+          onBell={() => setNotifsOpen(true)}
+        />
+
+        {/* Sticky location strip — yellow gradient continues the brand block
+            visually when both are on-screen; once the brand row scrolls
+            past the top, this strip is the only yellow surface remaining at
+            the top of the viewport. Status-bar `theme-color` (#FFD63B) is
+            also yellow so the OS chrome blends seamlessly on native. */}
         <div
           ref={topBarRef}
           className="sticky top-0 z-30"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 16px 10px',
+            background: 'var(--b-grad)',
+          }}
         >
-          {/* Session 128.15 — <Header> primitive's built-in chip-bg bell is
-              the single bell (per react-stubs/Header.jsx). Earlier we passed
-              <NotificationBell /> in the `trailing` slot which rendered a
-              SECOND bell. Now we use Header's bell + a separate controlled
-              <NotificationsDrawer />, matching bright.html exactly. */}
-          <Header
-            title="Dukanchi"
-            tagline="apna bazaar, apni dukaan"
-            unread={unreadCount > 0}
-            onBell={() => setNotifsOpen(true)}
-          />
-          {/* Session 128.14 — Location strip ON the yellow gradient (per
-              dukanchi-bright-skin/screens/HomeScreen.jsx lines 13-20). The
-              FLocationStrip used a peach surface; spec extends the gradient
-              down through the location row for a seamless brand block. */}
-          {/* Session 128.17: location strip matches the Header gradient with
-              NO divider — they read as one continuous yellow brand block per
-              founder feedback. 📍 emoji replaces the lucide MapPin SVG. */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '6px 16px 10px',
-              background: 'var(--b-grad)',
+              gap: 6,
+              color: 'var(--b-on-grad)',
+              fontSize: 12.5,
+              fontWeight: 600,
+              minWidth: 0,
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                color: 'var(--b-on-grad)',
-                fontSize: 12.5,
-                fontWeight: 600,
-                minWidth: 0,
-              }}
-            >
-              <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>📍</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                Showing stores near {userLocCtx ? userLocCtx.name : 'your area'}
-              </span>
-            </div>
-            <button
-              onClick={() => setShowLocationPicker(true)}
-              className="b-tap"
-              style={{
-                fontSize: 12,
-                fontWeight: 800,
-                color: 'var(--b-on-grad)',
-                background: 'var(--b-chip-bg)',
-                border: '1px solid var(--b-chip-line)',
-                borderRadius: 9999,
-                padding: '4px 12px',
-                cursor: 'pointer',
-                flexShrink: 0,
-                fontFamily: 'inherit',
-              }}
-            >
-              Change
-            </button>
+            <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>📍</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              Showing stores near {userLocCtx ? userLocCtx.name : 'your area'}
+            </span>
           </div>
+          <button
+            onClick={() => setShowLocationPicker(true)}
+            className="b-tap"
+            style={{
+              fontSize: 12,
+              fontWeight: 800,
+              color: 'var(--b-on-grad)',
+              background: 'var(--b-chip-bg)',
+              border: '1px solid var(--b-chip-line)',
+              borderRadius: 9999,
+              padding: '4px 12px',
+              cursor: 'pointer',
+              flexShrink: 0,
+              fontFamily: 'inherit',
+            }}
+          >
+            Change
+          </button>
         </div>
 
         {/* ── Carousel banner ── */}
