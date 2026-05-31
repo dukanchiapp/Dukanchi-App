@@ -257,13 +257,13 @@ function Hero3DScene() {
     <div style={{ position: 'relative', width: '100%', maxWidth: 360, margin: '32px auto 0' }}>
       <div ref={mountRef} style={{ width: '100%', aspectRatio: '1 / 1', borderRadius: 28 }} />
       <span style={{ ...sceneTag, top: '6%', left: '0%' }}>
-        <span style={{ color: 'var(--f-success)', textShadow: '0 0 8px var(--f-success)' }}>●</span> Sharma Electronics · 1.2km
+        <span style={{ color: 'var(--f-success)', textShadow: 'none' }}>●</span> Sharma Electronics · 1.2km
       </span>
       <span style={{ ...sceneTag, top: '46%', right: '0%' }}>
-        <span style={{ color: 'var(--f-success)', textShadow: '0 0 8px var(--f-success)' }}>●</span> Mehta Kirana · 300m
+        <span style={{ color: 'var(--f-success)', textShadow: 'none' }}>●</span> Mehta Kirana · 300m
       </span>
       <span style={{ ...sceneTag, bottom: '10%', left: '8%' }}>
-        <span style={{ color: 'var(--f-success)', textShadow: '0 0 8px var(--f-success)' }}>●</span> Vivo Mobile · 800m
+        <span style={{ color: 'var(--f-success)', textShadow: 'none' }}>●</span> Vivo Mobile · 800m
       </span>
     </div>
   );
@@ -311,7 +311,7 @@ export default function LandingPage() {
             to="/login"
             style={{
               background: 'var(--b-grad)', color: 'white', borderRadius: 9999, padding: '9px 18px',
-              fontSize: 12.5, fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 18px rgba(234,154,0,0.4)',
+              fontSize: 12.5, fontWeight: 700, textDecoration: 'none', boxShadow: 'var(--b-elev-card)',
             }}
           >
             {c(d, 'nav.ctaText')}
@@ -338,7 +338,7 @@ export default function LandingPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--b-grad)',
                 color: 'white', borderRadius: 14, padding: '16px 24px', fontSize: 15, fontWeight: 800, textDecoration: 'none',
-                boxShadow: '0 0 28px rgba(234,154,0,0.42)',
+                boxShadow: 'var(--b-elev-card)',
               }}
             >
               {c(d, 'hero.cta1')} <FIcon name="arrowR" size={18} color="white" />
@@ -448,7 +448,7 @@ export default function LandingPage() {
                 <div style={{
                   width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 900, fontSize: 18, flexShrink: 0, background: 'var(--b-grad)', color: 'white',
-                  boxShadow: '0 0 16px rgba(199,126,0,0.45)',
+                  boxShadow: 'var(--b-elev-card)',
                 }}>
                   {step.num}
                 </div>
@@ -474,7 +474,7 @@ export default function LandingPage() {
             </div>
             <div style={{
               background: 'var(--b-grad)', borderRadius: '16px 16px 4px 16px', padding: '10px 16px',
-              textAlign: 'right', fontSize: 14, color: 'white', fontWeight: 700, boxShadow: '0 0 18px rgba(199,126,0,0.3)',
+              textAlign: 'right', fontSize: 14, color: 'white', fontWeight: 700, boxShadow: 'var(--b-elev-card)',
             }}>
               {c(d, 'illustration.chatBubble2')}
             </div>
@@ -513,7 +513,7 @@ export default function LandingPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'var(--b-grad)',
                 color: 'white', borderRadius: 14, padding: '16px 24px', fontSize: 15, fontWeight: 800, textDecoration: 'none',
-                boxShadow: '0 0 28px rgba(234,154,0,0.42)',
+                boxShadow: 'var(--b-elev-card)',
               }}
             >
               {c(d, 'finalCta.cta1')} <FIcon name="arrowR" size={18} color="white" />

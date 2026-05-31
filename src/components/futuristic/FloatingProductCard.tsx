@@ -41,8 +41,7 @@ export function FloatingProductCard({
             product?.image || 'var(--b-grad)',
           animation: 'f-tilt-3d 6s ease-in-out infinite',
           transformStyle: 'preserve-3d',
-          boxShadow:
-            '0 30px 60px rgba(199,126,0,0.35), 0 0 60px rgba(234,154,0,0.25)',
+          boxShadow: '0 30px 60px rgba(199,126,0,0.35)',
           position: 'relative',
           overflow: 'hidden',
         }}

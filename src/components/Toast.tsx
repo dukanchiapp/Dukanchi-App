@@ -75,8 +75,8 @@ export default function Toast({ message, type, onClose, confirm }: ToastProps) {
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white"
                 style={
                   type === 'error'
-                    ? { background: 'var(--f-danger)', border: 'none', boxShadow: '0 0 16px rgba(255,77,106,0.35)' }
-                    : { background: 'var(--b-grad)', border: 'none', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }
+                    ? { background: 'var(--f-danger)', border: 'none', boxShadow: 'var(--b-elev-card)' }
+                    : { background: 'var(--b-grad)', border: 'none', boxShadow: 'var(--b-elev-card)' }
                 }
               >
                 Confirm

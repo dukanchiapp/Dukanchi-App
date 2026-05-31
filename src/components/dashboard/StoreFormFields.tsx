@@ -167,7 +167,7 @@ export function StoreFormFields({
                     <p className="text-xs font-medium" style={{ color: 'var(--f-text-2)' }}>📍 Coordinates saved</p>
                     <p className="text-[10px]" style={{ color: 'var(--f-text-3)' }}>{mapLat.toFixed(6)}, {mapLng.toFixed(6)}</p>
                   </div>
-                  <button type="button" onClick={handleGPSUpdate} className="text-xs text-white px-3 py-1.5 rounded-lg font-medium flex items-center" style={{ background: 'var(--b-grad)', boxShadow: '0 0 12px rgba(199,126,0,0.30)' }}>
+                  <button type="button" onClick={handleGPSUpdate} className="text-xs text-white px-3 py-1.5 rounded-lg font-medium flex items-center" style={{ background: 'var(--b-grad)', boxShadow: 'var(--b-elev-card)' }}>
                     <Navigation size={12} className="mr-1" /> Update Location
                   </button>
                 </div>
@@ -306,7 +306,7 @@ export function StoreFormFields({
 
       {/* Save Button */}
       <div className="pt-4">
-        <button type="submit" disabled={saving} className="w-full py-3.5 rounded-xl font-bold tracking-wide disabled:opacity-50" style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }}>
+        <button type="submit" disabled={saving} className="w-full py-3.5 rounded-xl font-bold tracking-wide disabled:opacity-50" style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}>
           {saving ? 'Saving...' : 'Save Profile Changes'}
         </button>
       </div>

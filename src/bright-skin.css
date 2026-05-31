@@ -144,24 +144,11 @@
 .b-tilt { transform-style: preserve-3d; transition: transform 0.3s var(--b-ease), box-shadow 0.3s var(--b-ease); will-change: transform; }
 .b-tilt-wrap { perspective: 900px; }
 
-/* ── Animated gradient-mesh header (premium, alive) ── */
-.b-head { position: relative; overflow: hidden; }
-.b-head::before {
-  content: ""; position: absolute; inset: -40%; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(40% 50% at 18% 20%, rgba(255,255,255,0.40), transparent 60%),
-    radial-gradient(45% 55% at 85% 15%, rgba(255,255,255,0.22), transparent 55%),
-    radial-gradient(50% 60% at 70% 95%, rgba(255,179,0,0.45), transparent 60%);
-  animation: b-mesh 9s ease-in-out infinite alternate;
-}
-[data-theme="yellow"] .b-head::before {
-  background:
-    radial-gradient(40% 50% at 18% 20%, rgba(255,255,255,0.55), transparent 60%),
-    radial-gradient(45% 55% at 85% 15%, rgba(255,255,255,0.30), transparent 55%),
-    radial-gradient(50% 60% at 70% 95%, rgba(255,179,0,0.45), transparent 60%);
-}
-.b-head > * { position: relative; z-index: 1; }
-@keyframes b-mesh { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(3%,2%) scale(1.08); } 100% { transform: translate(-3%,-2%) scale(1.04); } }
+/* ── Session 128.17: header is now a flat yellow band — the animated
+   radial-mesh sheen ("neon" overlay) was visibly washing color over the
+   white card surface below and the founder asked for it removed app-wide.
+   .b-head still exists as a hook for layout/positioning; ::before is gone. */
+.b-head { position: relative; }
 
 /* ── Tactile ripple ── */
 .b-ripple { position: relative; overflow: hidden; }

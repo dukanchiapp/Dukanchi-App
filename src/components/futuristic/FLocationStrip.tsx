@@ -8,7 +8,7 @@
  * "{name} nearby" pill). Pin + Change → var(--b-magenta-ink). Values copied verbatim from
  * screens.jsx lines 95-110. Prop contract (name, onChange) unchanged.
  */
-import { MapPin } from 'lucide-react';
+// MapPin retired — 📍 emoji used instead. Session 128.17.
 
 interface FLocationStripProps {
   name: string;
@@ -30,7 +30,7 @@ export function FLocationStrip({ name, onChange }: FLocationStripProps) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-        <MapPin size={14} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
+        <span style={{ fontSize: 14, lineHeight: 1, flexShrink: 0 }}>📍</span>
         <span
           style={{
             fontSize: 13,

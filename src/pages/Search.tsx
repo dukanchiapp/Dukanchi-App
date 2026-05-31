@@ -9,7 +9,7 @@ import { captureEvent } from '../lib/posthog';
 import { Sentry } from '../lib/sentry-frontend';
 import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { Search, X, SlidersHorizontal, ArrowRight, Clock, MapPin, Store, Navigation, ChevronRight, Check } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ArrowRight, Clock, Store, Navigation, ChevronRight, Check } from 'lucide-react';
 import { RadarPulse } from '../components/futuristic/RadarPulse';
 
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
@@ -587,9 +587,11 @@ export default function SearchPage() {
                 </div>
               </section>
 
-              {/* Recent searches */}
+              {/* Recent searches — Session 128.17: capped to 3 most-recent
+                  per founder direction (was up to 8). The full history still
+                  lives server-side; this just trims the UI. */}
               {searchHistory.length > 0 && (
-                <section>
+                <section style={{ marginBottom: 24 }}>
                   <div className="flex items-center justify-between mb-3">
                     <p style={eyebrow}>Recent searches</p>
                     <button onClick={clearAllHistory} className="text-xs font-semibold" style={{ color: 'var(--b-magenta-ink)' }}>
@@ -597,27 +599,69 @@ export default function SearchPage() {
                     </button>
                   </div>
                   <div>
-                    {searchHistory.map((q, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between py-2.5"
-                        style={{ borderBottom: i < searchHistory.length - 1 ? '1px solid var(--f-glass-border)' : 'none' }}
-                      >
-                        <button
-                          onClick={() => setQuery(q)}
-                          className="flex items-center gap-2.5 flex-1 text-left"
+                    {searchHistory.slice(0, 3).map((q, i) => {
+                      const visibleCount = Math.min(searchHistory.length, 3);
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between py-2.5"
+                          style={{ borderBottom: i < visibleCount - 1 ? '1px solid var(--f-glass-border)' : 'none' }}
                         >
-                          <Clock size={15} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
-                          <span style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{q}</span>
-                        </button>
-                        <button onClick={() => removeHistoryItem(q)} className="ml-2 p-1">
-                          <X size={14} color="var(--f-text-3)" />
-                        </button>
-                      </div>
-                    ))}
+                          <button
+                            onClick={() => setQuery(q)}
+                            className="flex items-center gap-2.5 flex-1 text-left"
+                          >
+                            <Clock size={15} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+                            <span style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{q}</span>
+                          </button>
+                          <button onClick={() => removeHistoryItem(q)} className="ml-2 p-1">
+                            <X size={14} color="var(--f-text-3)" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
               )}
+
+              {/* Session 128.17: "Aur dhundho nearby?" (bulk Ask-Nearby) tile
+                  promoted into discovery state, BELOW Recent Searches — was
+                  previously only visible WHILE typing. Founder wanted this as
+                  a discoverable entry point. Same handler (openAskModal); no
+                  neon glow halo (Rule: app-wide glow strip). */}
+              <section>
+                <div
+                  className="overflow-hidden"
+                  style={{
+                    borderRadius: 18,
+                    background: '#fff',
+                    border: '1px solid var(--b-line)',
+                    boxShadow: 'var(--b-elev-card)',
+                  }}
+                >
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>📍</span>
+                      <div className="flex-1 min-w-0">
+                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--b-ink)', marginBottom: 3, letterSpacing: '-0.02em' }}>
+                          Aur dhundho nearby?
+                        </p>
+                        <p style={{ fontSize: 12, color: 'var(--b-gray-2)', lineHeight: 1.5 }}>
+                          Aapke area ki shops se seedha poocho — sirf wahi dikhenge jiske paas stock hai
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={openAskModal}
+                      className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
+                      style={{ background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none' }}
+                    >
+                      Nearby shops se poocho
+                      <ChevronRight size={15} color="var(--b-on-grad)" />
+                    </button>
+                  </div>
+                </div>
+              </section>
             </>
           )}
 
@@ -668,7 +712,7 @@ export default function SearchPage() {
                                       borderRadius: '50%',
                                       background: store.logoUrl ? '#000' : 'var(--f-glass-bg-2)',
                                       border: '2px solid var(--b-magenta-ink)',
-                                      boxShadow: '0 0 14px rgba(199,126,0,0.35)',
+                                      boxShadow: 'var(--b-elev-card)',
                                     }}
                                   >
                                     {store.logoUrl
@@ -688,7 +732,7 @@ export default function SearchPage() {
                                     <div className="flex flex-col gap-1 mt-1">
                                       {distance && (
                                         <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--f-text-2)' }}>
-                                          <MapPin size={10} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
+                                          <span style={{ fontSize: 11, lineHeight: 1, flexShrink: 0 }}>📍</span>
                                           {distance} away
                                         </span>
                                       )}
@@ -720,7 +764,7 @@ export default function SearchPage() {
                                   <button
                                     onClick={e => { e.stopPropagation(); openDirections(store); }}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold"
-                                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 14px rgba(199,126,0,0.4)' }}
+                                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
                                   >
                                     <Navigation size={13} color="white" />
                                     Navigate
@@ -769,12 +813,12 @@ export default function SearchPage() {
                     border: '1px solid rgba(199,126,0,0.30)',
                     backdropFilter: 'blur(28px)',
                     WebkitBackdropFilter: 'blur(28px)',
-                    boxShadow: '0 0 32px rgba(199,126,0,0.20), inset 0 1px 0 rgba(255,255,255,0.12)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
                   }}
                 >
                   <div className="p-4">
                     <div className="flex items-start gap-3">
-                      <span style={{ fontSize: 26, filter: 'drop-shadow(0 0 12px rgba(199,126,0,0.7))' }}>📍</span>
+                      <span style={{ fontSize: 26, filter: 'none' }}>📍</span>
                       <div className="flex-1 min-w-0">
                         <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--f-text-1)', marginBottom: 3, letterSpacing: '-0.02em' }}>
                           Aur dhundho nearby?
@@ -790,7 +834,7 @@ export default function SearchPage() {
                       style={{
                         background: 'var(--b-grad)',
                         color: 'white',
-                        boxShadow: '0 0 24px rgba(199,126,0,0.45), inset 0 1px 0 rgba(255,255,255,0.25)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)',
                       }}
                     >
                       Nearby shops se poocho
@@ -889,7 +933,7 @@ export default function SearchPage() {
                   <button
                     onClick={() => { setAskModalOpen(false); setAskResult(null); navigate('/messages'); }}
                     className="mt-5 w-full py-3 rounded-xl font-bold text-sm"
-                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 20px rgba(199,126,0,0.4)' }}
+                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
                   >
                     Messages mein jaao
                   </button>
@@ -984,7 +1028,7 @@ export default function SearchPage() {
                     style={{
                       background: 'var(--b-grad)',
                       color: 'white',
-                      boxShadow: '0 0 24px rgba(199,126,0,0.45)',
+                      boxShadow: 'var(--b-elev-card)',
                       opacity: askSending || askGeocodingArea ? 0.7 : 1,
                     }}
                   >

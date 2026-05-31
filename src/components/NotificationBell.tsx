@@ -40,7 +40,7 @@ export default function NotificationBell({ color = 'var(--f-text-1)' }: Notifica
             position: 'absolute', top: 2, right: 2, display: 'flex', alignItems: 'center', justifyContent: 'center',
             minWidth: 16, height: 16, padding: '0 4px', borderRadius: 9999,
             background: 'var(--f-danger)', color: 'white', fontSize: 9, fontWeight: 800,
-            border: '2px solid var(--f-bg-deep)', boxShadow: '0 0 8px rgba(255,77,106,0.6)',
+            border: '2px solid var(--f-bg-deep)', boxShadow: 'var(--b-elev-card)',
           }}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
@@ -117,7 +117,7 @@ export default function NotificationBell({ color = 'var(--f-text-1)' }: Notifica
                     {!notif.isRead && (
                       <div style={{
                         width: 8, height: 8, borderRadius: '50%', background: 'var(--f-magenta)',
-                        marginTop: 6, flexShrink: 0, boxShadow: '0 0 8px rgba(199,126,0,0.6)',
+                        marginTop: 6, flexShrink: 0, boxShadow: 'var(--b-elev-card)',
                       }} />
                     )}
                   </li>

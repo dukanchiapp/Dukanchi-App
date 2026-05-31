@@ -147,7 +147,7 @@ export function IsoMap({
               inset: 0,
               borderRadius: '50%',
               background: 'var(--b-magenta-ink)',
-              boxShadow: '0 0 16px rgba(199,126,0,0.7), 0 0 36px rgba(199,126,0,0.4)',
+              boxShadow: 'var(--b-elev-card)',
             }}
           />
         </div>

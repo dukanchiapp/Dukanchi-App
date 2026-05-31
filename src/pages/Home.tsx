@@ -398,14 +398,16 @@ export default function HomePage() {
               dukanchi-bright-skin/screens/HomeScreen.jsx lines 13-20). The
               FLocationStrip used a peach surface; spec extends the gradient
               down through the location row for a seamless brand block. */}
+          {/* Session 128.17: location strip matches the Header gradient with
+              NO divider — they read as one continuous yellow brand block per
+              founder feedback. 📍 emoji replaces the lucide MapPin SVG. */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '10px 16px',
+              padding: '6px 16px 10px',
               background: 'var(--b-grad)',
-              borderBottom: '1px solid var(--b-chip-line)',
             }}
           >
             <div
@@ -419,10 +421,7 @@ export default function HomePage() {
                 minWidth: 0,
               }}
             >
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-                <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" />
-                <circle cx={12} cy={10} r={2.5} />
-              </svg>
+              <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>📍</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 Showing stores near {userLocCtx ? userLocCtx.name : 'your area'}
               </span>
@@ -735,7 +734,7 @@ export default function HomePage() {
                       height: 8,
                       borderRadius: '50%',
                       background: 'var(--b-magenta-ink)',
-                      boxShadow: '0 0 10px rgba(199,126,0,0.55)',
+                      boxShadow: 'var(--b-elev-card)',
                       animation: 'pulse 1.2s ease-in-out infinite',
                       animationDelay: `${i * 0.2}s`,
                       opacity: 0.8,

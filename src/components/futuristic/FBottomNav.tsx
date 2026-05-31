@@ -62,8 +62,7 @@ export function FBottomNav({ active, onChange, onAi }: FBottomNavProps) {
                 borderRadius: '50%',
                 border: 'none',
                 background: 'var(--b-grad)',
-                boxShadow:
-                  '0 0 24px rgba(199,126,0,0.65), 0 0 48px rgba(234,154,0,0.35), inset 0 1px 0 rgba(255,255,255,0.4)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

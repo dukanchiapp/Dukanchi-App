@@ -151,7 +151,7 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 9999,
           border: 'none', cursor: 'pointer', fontFamily: 'var(--f-font)', fontSize: 13, fontWeight: 700,
-          background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 16px rgba(199,126,0,0.35)',
+          background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)',
         }}
       >
         {t.retry}
