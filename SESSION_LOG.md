@@ -6,6 +6,33 @@
 
 ---
 
+## 2026-06-01 — Session 128.20 — UI batch 5 + Notification root-cause fix + Profile parity
+
+**Goal:** Founder's 8-point list after PR #148 / Fly v68. Mostly visual + behavioural — Profile↔StoreProfile parity, WhatsApp-style unread bubble, clickable Chat header, Map filter polish, Search card area + blue Navigate, plus the real root-cause behind "notifications not appearing".
+
+**Changes (10 files, +262/-93):**
+
+1. **Profile.tsx ↔ StoreProfile parity.** `src/components/profile/StoreInfoCard.tsx` rewritten in place to mirror StoreProfile's inline info card — peach-tinted icon tiles (var(--b-orange-bg)) + emojis (📍 ☎️ 🕐) + bold address + bold hours (12-hour fmt) + blue Direction-to-Store CTA (linear-gradient #2E9BFF → #1D4ED8). Profile.tsx cover bottom-fade gradient REMOVED (parity with 128.19 StoreProfile). RETAIL badge `var(--f-grad-primary)` yellow → `var(--b-orange)` solid (parity with 128.18). Live status now renders inline next to the category badge (was previously inside the StoreInfoCard).
+2. **StoreProfile stats row** — 3-tile glass grid (Posts / Followers / Reviews) inserted between the info card and the action buttons. Surfaces the follower count the founder said was missing (`store._count.followers ?? 0`). Same layout used on own Profile so the two pages now read identically below the cover.
+3. **Unread bubble moved off avatar → RIGHT side** (`src/components/ConversationRow.tsx`). Avatar layer no longer overlays a badge. Right-side bubble renders BEFORE the chevron and only when:
+   - backend's `conv.unread > 0` (from 128.19 heuristic), AND
+   - localStorage `dk-chat-viewed:{otherId}` is older than the conv's last-message timestamp
+   When user opens Chat.tsx, the mount-time effect writes the current ISO timestamp to that localStorage key — bubble disappears on next Messages render. WhatsApp-style dismiss-on-open without a schema migration. Last-message text/weight also keyed off `isUnread` instead of raw `conv.unread`. memo comparator extended with `timestamp` so updates flow through.
+4. **Chat header clickable + meta sub-line** (`src/pages/Chat.tsx`). New `receiverStore` state captures the peer's store data (already fetched). When set, the name + new category·area sub-line are wrapped in `<Link to="/store/{storeId}">`. Customer↔customer chats keep the plain non-clickable header (no store).
+5. **Map category chip toggle-off** (`src/pages/Map.tsx`). onClick switched from `setSelectedCategory(chip.value)` to `setSelectedCategory(prev => prev === chip.value ? '' : chip.value)` — clicking the active chip resets to All.
+6. **Map loader diagnostics**. `console.warn` when `VITE_GOOGLE_MAPS_API_KEY` is empty (build problem) + `console.info` on every loader-state flip. Loading placeholder rewritten — shows "API key missing — please contact support" copy when key is empty, otherwise shows "Loading map…" + a Refresh button (so stale-SW users can rebuild from one tap).
+7. **Search result card** (`src/pages/Search.tsx`) — added a `🏙️ City · pincode` line below the distance row (falls back to address when neither city nor pincode is set). **Navigate button → blue gradient** (`linear-gradient(135deg, #2E9BFF, #1D4ED8)` + `0 6px 18px rgba(37,99,235,0.32)` shadow) — matches the Direction-to-Store CTA used on StoreProfile + StoreInfoCard.
+8. **NotificationContext root-cause fix** (`src/context/NotificationContext.tsx`). The useEffect had `[]` deps and an early-return on `!user`. If AuthContext resolved the user async (every cold-load), `fetchNotifications()` NEVER ran for the lifetime of the page — explaining "notification bell still not functioning" despite 128.19's trigger additions. Switched deps to `[user?.id]` (stable string, avoids re-render thrash) so the initial fetch + socket setup runs once auth resolves. eslint-disable-next-line on exhaustive-deps because the cleanup captures `newSocket` from the same closure.
+9. **Socket emit on follow + like notifications** (`src/modules/stores/store.service.ts`, `src/modules/posts/post.service.ts`). The 128.19 additions only persisted the notification row to Postgres; the client wouldn't see it until next fetchNotifications. Now also emits `newNotification` via `getIO().to(targetId).emit(…)` — matches the `publishPostNotifications` worker pattern and gives real-time bell-badge updates. Dynamic `await import('../../config/socket')` to avoid loading the socket module in cold-path code.
+
+**Files:** 10 modified — `src/components/ConversationRow.tsx`, `src/components/profile/StoreInfoCard.tsx`, `src/context/NotificationContext.tsx`, `src/modules/posts/post.service.ts`, `src/modules/stores/store.service.ts`, `src/pages/Chat.tsx`, `src/pages/Map.tsx`, `src/pages/Profile.tsx`, `src/pages/Search.tsx`, `src/pages/StoreProfile.tsx`.
+
+**Verification:** `npm run typecheck` ✅ (web/server/worker), `npm test -- --run` ✅ (133/133), `npm run build` ✅. Production smoke on Fly v69: `/health` 200 application/json both Fly + Cloudflare; new `Map-DjpbUILQ.js` chunk still contains the `AIzaSy…` API key.
+
+**Status:** ✅ **LIVE.** PR [#150](https://github.com/dukanchiapp/Dukanchi-App/pull/150) squash-merged to main; **Fly v69** (machine `9080d70da60d18`, region `sin`, healthcheck passing). **Native APK rebuild + manual test pending** per Rule D — changes touch shared components (StoreInfoCard, ConversationRow), NotificationContext, and Chat header which Capacitor consumes via the web bundle.
+
+---
+
 ## 2026-05-31 — Session 128.19 — UI batch 4 + Map loader root-cause fix + unread heuristic + notification triggers
 
 **Goal:** Founder's 17-point list after PR #146 / Fly v66. Visual tweaks (distance pill content + position, cover fade, Follow color, info-tile icons, Ask-Nearby color, Messages/Chat header size), structural (Search filter expansion, Map smart filter), and three real fixes (Map "Loading map…" on prod, unread bubble, notification volume).
