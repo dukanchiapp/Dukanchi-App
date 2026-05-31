@@ -71,24 +71,36 @@ function getImageStyles(naturalRatio: number | undefined): {
   canvasStyle: React.CSSProperties;
   imgStyle: React.CSSProperties;
 } {
-  // Adaptive aspect-ratio logic preserved — portrait/unknown → 4:5 (contain,
-  // no crop), square → 1:1, landscape → natural ratio. Letterbox bg matches
-  // the bright surface so portrait photos sit on cream, not a dark frame.
-  const CANVAS_BG = 'var(--b-surface)';
+  // Session 128.21: doodle-pattern fallback BG per founder ("post card mein
+  // jaha photo hoti hai ye har post mein image ka bg rahega — jab koi user
+  // post card se different ratio wali photo upload karega to blank space ki
+  // jagah ye dikhega"). The cream `--b-surface` shows through warm areas of
+  // the JPEG so the page tone stays consistent. Portrait/contain mode is
+  // where the pattern is most visible (image is centered, letterbox space
+  // around it). Square/landscape use `objectFit: 'cover'` so the image fills
+  // the canvas and the pattern is masked behind — that's the spec
+  // (pattern only shows where the image doesn't reach).
+  const CANVAS_BG_STYLE: React.CSSProperties = {
+    backgroundColor: 'var(--b-surface)',
+    backgroundImage: 'url(/chat-bg-pattern.png)',
+    backgroundSize: '320px auto',
+    backgroundRepeat: 'repeat',
+    backgroundPosition: 'top left',
+  };
   if (!naturalRatio || naturalRatio < 0.9) {
     return {
-      canvasStyle: { aspectRatio: '4/5', background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
+      canvasStyle: { aspectRatio: '4/5', ...CANVAS_BG_STYLE, overflow: 'hidden', position: 'relative' },
       imgStyle: { width: '100%', height: '100%', objectFit: 'contain', display: 'block' },
     };
   }
   if (naturalRatio <= 1.1) {
     return {
-      canvasStyle: { aspectRatio: '1/1', background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
+      canvasStyle: { aspectRatio: '1/1', ...CANVAS_BG_STYLE, overflow: 'hidden', position: 'relative' },
       imgStyle: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
     };
   }
   return {
-    canvasStyle: { aspectRatio: String(naturalRatio), background: CANVAS_BG, overflow: 'hidden', position: 'relative' },
+    canvasStyle: { aspectRatio: String(naturalRatio), ...CANVAS_BG_STYLE, overflow: 'hidden', position: 'relative' },
     imgStyle: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
   };
 }
