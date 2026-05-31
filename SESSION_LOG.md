@@ -18,7 +18,7 @@
 
 **Verification:** `npm run typecheck` ✅ (web/server/worker), `npm test -- --run` ✅ (133/133), `npm run build` ✅. Shipped CSS bundle confirms `@layer base{*{box-sizing:border-box;margin:0;padding:0}}` is present. Pink-purity audit: only `.f-btn-primary` legacy futuristic-skin class still references `#ff2a8c` in a box-shadow rgba, but `f-btn-primary` is dead in source (grep zero matches in `src/**/*.tsx`) — flagged as a separate prune task, not a runtime issue.
 
-**Status:** Pending PR / Fly deploy / native APK rebuild.
+**Status:** ✅ **LIVE.** PR [#142](https://github.com/dukanchiapp/Dukanchi-App/pull/142) squash-merged to main `f320dc3`; **Fly v64** (machine `9080d70da60d18`, region `sin`, healthcheck passing). CSS bundle `index-5GkX_Z3E.css` confirmed on both `dukanchi-app.fly.dev` (Fly origin) AND `dukanchi.com` (Cloudflare) contains the literal `@layer base{*{box-sizing:border-box;margin:0;padding:0}}` — Tailwind utilities now beat the reset for margin/padding on `*`. `/health` 200 application/json on both Fly + Cloudflare. **Native APK rebuild + manual test pending** (Rule D: change affects shared `bright-skin.css` which Capacitor consumes). Founder visual confirm needed for Home/Search/Map centering on phone (yellow brand header should now center within 480px mobile-first cap instead of left-edge).
 
 ---
 
