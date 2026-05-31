@@ -171,6 +171,11 @@ export default function ChatPage() {
   const [receiverName, setReceiverName] = useState(userNameFromState);
   const [receiverInitial, setReceiverInitial] = useState(userNameFromState.charAt(0).toUpperCase());
   const [receiverLogo, setReceiverLogo] = useState('');
+  // Session 128.20: receiver-store meta — surfaced in header per founder ask
+  // ("the header inside the chat should show all the details of store that
+  // are on the message card also it should be clickable opening the store
+  // profile"). null when peer doesn't own a store (customer ↔ customer chat).
+  const [receiverStore, setReceiverStore] = useState<any>(null);
   // Referred post stays visible until first message is sent (then it becomes part of history)
   const [referredPost, setReferredPost] = useState<typeof referredPostFromState>(referredPostFromState);
   const [previewPost, setPreviewPost] = useState<any>(null);
@@ -194,6 +199,7 @@ export default function ChatPage() {
               setReceiverName(storeData.storeName);
               setReceiverInitial(storeData.storeName.charAt(0));
               setReceiverLogo(storeData.logoUrl || '');
+              setReceiverStore(storeData);
               return;
             }
           } catch (err) {
@@ -213,6 +219,11 @@ export default function ChatPage() {
   // Load message history once, then switch to Socket.IO for live updates
   useEffect(() => {
     if (!currentUserId || !userId) return;
+
+    // Session 128.20: write a view-mark so the Messages list can suppress
+    // the unread bubble for this thread on next render. WhatsApp-style
+    // dismiss-on-open. Re-stamped on every Chat mount.
+    try { localStorage.setItem(`dk-chat-viewed:${userId}`, new Date().toISOString()); } catch { /* storage quota / SSR */ }
 
     apiFetch(`/api/messages/${userId}`)
       .then(res => res.ok ? res.json() : { messages: [] })
@@ -438,20 +449,32 @@ export default function ChatPage() {
             ? <img src={receiverLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : (receiverInitial || '?')}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              color: 'var(--b-on-grad)',
-              fontWeight: 700,
-              fontSize: 15,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
+        {/* Session 128.20: name + meta block. When the peer is a store
+            owner, the whole block becomes a Link to /store/{store.id} so
+            tapping the header opens the store profile (founder ask). For
+            customer ↔ customer chats it's a plain div (no nav target). */}
+        {receiverStore?.id ? (
+          <Link
+            to={`/store/${receiverStore.id}`}
+            style={{ flex: 1, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
+            aria-label={`Open ${receiverName} store profile`}
           >
-            {receiverName || 'Loading…'}
+            <div style={{ color: 'var(--b-on-grad)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {receiverName || 'Loading…'}
+            </div>
+            {(receiverStore.category || receiverStore.city) && (
+              <div style={{ fontSize: 11, color: 'var(--b-on-grad-soft)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>
+                {[receiverStore.category, receiverStore.city].filter(Boolean).join(' · ')}
+              </div>
+            )}
+          </Link>
+        ) : (
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: 'var(--b-on-grad)', fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {receiverName || 'Loading…'}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* ── Messages ── */}

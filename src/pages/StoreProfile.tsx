@@ -514,6 +514,22 @@ export default function StoreProfilePage() {
             )}
           </div>
 
+          {/* Session 128.20: stats row (Posts / Followers / Reviews) — for
+              parity with own Profile and to surface the follower count that
+              the founder said was missing. Same 3-tile glass layout. */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            {[
+              { label: 'Posts', value: posts.length },
+              { label: 'Followers', value: store._count?.followers ?? 0 },
+              { label: 'Reviews', value: reviews.length },
+            ].map(stat => (
+              <div key={stat.label} className="f-glass" style={{ flex: 1, padding: '13px 8px', borderRadius: 14, textAlign: 'center', background: 'var(--f-glass-bg)' }}>
+                <div className="f-mono" style={{ fontSize: 21, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.02em' }}>{stat.value}</div>
+                <div style={{ fontSize: 10, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: 0.6, marginTop: 2 }}>{stat.label}</div>
+              </div>
+            ))}
+          </div>
+
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
             {isOwner ? (

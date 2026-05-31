@@ -39,8 +39,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Session 128.20: depend on `user?.id` so the initial fetchNotifications
+  // runs once the AuthContext has resolved the current user (previously the
+  // `[]` deps captured `user === null` at first render and never re-ran —
+  // notifications never loaded for users whose auth hydrated async). Stable
+  // string dep avoids re-running on every Auth re-render.
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     fetchNotifications();
 
@@ -88,7 +93,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       document.removeEventListener('visibilitychange', onVisibility);
       newSocket.disconnect();
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 

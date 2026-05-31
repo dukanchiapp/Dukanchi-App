@@ -830,6 +830,14 @@ export default function SearchPage() {
                                           {distance} away
                                         </span>
                                       )}
+                                      {/* Session 128.20: area + city from
+                                          profile details, per founder ask. */}
+                                      {(store.city || store.postalCode || store.address) && (
+                                        <span className="flex items-center gap-1" style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
+                                          <span style={{ fontSize: 11, lineHeight: 1, flexShrink: 0 }}>🏙️</span>
+                                          {[store.city, store.postalCode].filter(Boolean).join(' · ') || store.address}
+                                        </span>
+                                      )}
                                       {status && (
                                         <span
                                           className="flex items-center gap-1"
@@ -855,10 +863,15 @@ export default function SearchPage() {
                                     <Store size={13} color="var(--f-text-1)" />
                                     View Store
                                   </Link>
+                                  {/* Session 128.20: Navigate → blue gradient,
+                                      matching the Direction-to-Store CTA. */}
                                   <button
                                     onClick={e => { e.stopPropagation(); openDirections(store); }}
                                     className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold"
-                                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
+                                    style={{
+                                      background: 'linear-gradient(135deg, #2E9BFF 0%, #1D4ED8 100%)',
+                                      color: '#fff', boxShadow: '0 6px 18px rgba(37,99,235,0.32)',
+                                    }}
                                   >
                                     <Navigation size={13} color="white" />
                                     Navigate

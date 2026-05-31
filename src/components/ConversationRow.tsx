@@ -34,6 +34,25 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
   const closingSoon = useClosingSoon(status?.minutesUntilClose ?? null);
   const live = store ? getLiveStatus({ closingSoon, status: status?.label ?? null }) : null;
 
+  // Session 128.20: localStorage-based view tracking. When the user enters a
+  // chat, Chat.tsx writes `dk-chat-viewed:{otherId}` to current ISO time. If
+  // the conv's last-message timestamp is newer than that view-mark, treat as
+  // unread; otherwise the badge is suppressed. Combined with the backend
+  // heuristic (`unread: 1` when latest message was sent TO user), this gives
+  // WhatsApp-like dismiss-on-open behaviour without a schema migration.
+  const lastViewedRaw = typeof window !== 'undefined'
+    ? localStorage.getItem(`dk-chat-viewed:${conv.userId}`)
+    : null;
+  const messageTimeMs = (() => {
+    const t = (conv as any).timestamp;
+    if (!t) return 0;
+    if (typeof t === 'number') return t;
+    const parsed = Date.parse(String(t));
+    return Number.isNaN(parsed) ? 0 : parsed;
+  })();
+  const lastViewedMs = lastViewedRaw ? Date.parse(lastViewedRaw) : 0;
+  const isUnread = conv.unread > 0 && messageTimeMs > lastViewedMs;
+
   return (
     <div
       onClick={() => onClick(conv.userId, conv.name)}
@@ -54,7 +73,12 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
         transition: 'transform 200ms var(--f-ease), border-color 200ms, box-shadow 200ms',
       }}
     >
-      <div style={{ position: 'relative', flexShrink: 0 }}>
+      {/* Session 128.20: unread bubble moved off the avatar — founder ask
+          ("unread bubble should be in right side like whatsapp, not on the
+          profile picture"). Avatar is now bubble-free; right-side bubble
+          sits beside the chevron and only renders when isUnread (see
+          lastViewedAt guard at top of component). */}
+      <div style={{ flexShrink: 0 }}>
         <div style={{
           width: 48, height: 48, borderRadius: 14, overflow: 'hidden',
           background: 'var(--b-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -66,16 +90,6 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
             <span style={{ color: 'white', fontWeight: 800, fontSize: 18 }}>{conv.name?.charAt(0)}</span>
           )}
         </div>
-        {conv.unread > 0 && (
-          <div style={{
-            position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, padding: '0 5px',
-            borderRadius: 9999, background: 'var(--f-danger)', border: '2px solid var(--f-bg-deep)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800,
-            color: 'white', boxShadow: 'var(--b-elev-card)',
-          }}>
-            {conv.unread}
-          </div>
-        )}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Name — timestamp sits inline only on plain rows (store rows move it
@@ -137,8 +151,8 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: store ? 4 : 3 }}>
           <p style={{
             fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            color: conv.unread > 0 ? 'var(--f-text-1)' : 'var(--f-text-3)',
-            fontWeight: conv.unread > 0 ? 600 : 400, margin: 0,
+            color: isUnread ? 'var(--f-text-1)' : 'var(--f-text-3)',
+            fontWeight: isUnread ? 600 : 400, margin: 0,
           }}>
             {conv.lastMessage}
           </p>
@@ -149,13 +163,27 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
           )}
         </div>
       </div>
-      <ChevronRight size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+      {/* Right-side bubble (WhatsApp pattern) — only when unread and the
+          chat hasn't been opened since the latest message. */}
+      {isUnread ? (
+        <div style={{
+          minWidth: 20, height: 20, padding: '0 7px', borderRadius: 9999,
+          background: 'var(--f-danger)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0,
+          boxShadow: 'var(--b-elev-card)',
+        }}>
+          {conv.unread > 9 ? '9+' : conv.unread}
+        </div>
+      ) : (
+        <ChevronRight size={16} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+      )}
     </div>
   );
 }, (prev, next) =>
   prev.conversation.userId === next.conversation.userId &&
   prev.conversation.lastMessage === next.conversation.lastMessage &&
   prev.conversation.unread === next.conversation.unread &&
+  prev.conversation.timestamp === next.conversation.timestamp &&
   prev.distance === next.distance
 );
 
