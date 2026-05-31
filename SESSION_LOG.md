@@ -6,6 +6,22 @@
 
 ---
 
+## 2026-05-31 — Session 128.16 — Fix centering bug (universal reset → @layer base)
+
+**Goal:** Founder feedback ("abhi bhi elements design sahi nahi hai") with 3 screenshots showing Home/Search yellow header stuck at the LEFT viewport edge and the Map bottom-sheet positioned wrong. Centering classes (`max-w-md mx-auto`) on the page wrappers were not taking effect.
+
+**Root cause (CSS cascade layers):** `src/bright-skin.css` line 58 had `* { box-sizing: border-box; margin: 0; padding: 0; }` declared **unlayered**. Per the CSS Cascade-and-Inheritance spec, declarations in unlayered styles take precedence over those declared in any `@layer`, regardless of specificity. Tailwind v4's `mx-auto` lives in `@layer utilities` — so the universal `margin: 0` was silently zeroing out the margins on the `max-w-md` wrapper before `mx-auto` got a chance. Hence Home/Search wrapped at the left edge instead of centering at 480px.
+
+**Fix (one-line scope):** Wrapped the universal reset in `@layer base { ... }` so it joins the same Tailwind v4 layer cascade (theme → base → components → utilities). Utilities now beat base for `margin`/`padding` properties on the `*` selector, restoring `mx-auto` behavior. Reset still applies to non-utility elements (status: 100% functional preserve).
+
+**Files:** `src/bright-skin.css` (lines 58 → 61-66, +6/-1 with comment).
+
+**Verification:** `npm run typecheck` ✅ (web/server/worker), `npm test -- --run` ✅ (133/133), `npm run build` ✅. Shipped CSS bundle confirms `@layer base{*{box-sizing:border-box;margin:0;padding:0}}` is present. Pink-purity audit: only `.f-btn-primary` legacy futuristic-skin class still references `#ff2a8c` in a box-shadow rgba, but `f-btn-primary` is dead in source (grep zero matches in `src/**/*.tsx`) — flagged as a separate prune task, not a runtime issue.
+
+**Status:** Pending PR / Fly deploy / native APK rebuild.
+
+---
+
 ## 2026-05-30 — Session 128.2 — Home PostCard header → mockup parity (logo letter fallback, soft ring, red pin, compact distance)
 
 **Goal:** Founder screenshots — target Bright card header ("Nikhil Bhai · Open 24h · 1.6 km · Services · 📍 Bandra · 400050") vs current Home post card ("test store · ... · 📍 Kurla West"). Match the target's clean circular logo + letter fallback + red pin + compact distance.

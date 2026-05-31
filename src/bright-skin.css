@@ -55,7 +55,13 @@
   --b-chip-bg: rgba(255,255,255,0.6);
   --b-chip-line: rgba(0,0,0,0.08);
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* Session 128.16: universal reset moved into @layer base so Tailwind v4's
+   @layer utilities (mx-auto, max-w-md, p-*, etc.) win the cascade. Prior
+   form was unlayered which broke max-w-md mx-auto centering on Home/Search
+   — yellow header was stuck at the left viewport edge. */
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+}
 .b-statusbar { height: 30px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-size: 13px; font-weight: 700; color: var(--b-on-grad); flex-shrink: 0; }
 .b-section { padding: 18px 16px 4px; }
 .b-shead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
