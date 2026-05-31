@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, MapPin } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Conversation } from '../types';
 import { getStoreStatus } from '../lib/storeUtils';
 import { getLiveStatus } from '../lib/liveStatus';
@@ -58,7 +58,7 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
         <div style={{
           width: 48, height: 48, borderRadius: 14, overflow: 'hidden',
           background: 'var(--b-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 0 16px rgba(199,126,0,0.45), inset 0 1px 0 rgba(255,255,255,0.30)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.30)',
         }}>
           {conv.logoUrl ? (
             <img src={conv.logoUrl} alt="logo" loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -71,7 +71,7 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
             position: 'absolute', top: -3, right: -3, minWidth: 18, height: 18, padding: '0 5px',
             borderRadius: 9999, background: 'var(--f-danger)', border: '2px solid var(--f-bg-deep)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800,
-            color: 'white', boxShadow: '0 0 10px rgba(255,77,106,0.6)',
+            color: 'white', boxShadow: 'var(--b-elev-card)',
           }}>
             {conv.unread}
           </div>
@@ -128,7 +128,7 @@ const ConversationRow = React.memo(function ConversationRow({ conversation: conv
             display: 'flex', alignItems: 'center', gap: 4, marginTop: 3,
             fontSize: 10.5, color: 'var(--f-text-3)', whiteSpace: 'nowrap', overflow: 'hidden',
           }}>
-            <MapPin size={10} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: 11, lineHeight: 1, flexShrink: 0 }}>📍</span>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{store.city}</span>
           </div>
         )}

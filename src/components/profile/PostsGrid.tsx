@@ -59,7 +59,7 @@ const sheetPanel: CSSProperties = {
 const sheetPrimaryBtn: CSSProperties = {
   width: '100%', marginTop: 16, padding: 13, borderRadius: 12, border: 'none', cursor: 'pointer',
   fontFamily: 'inherit', background: 'var(--b-grad)', color: 'white', fontSize: 14, fontWeight: 700,
-  boxShadow: '0 0 16px rgba(199,126,0,0.35)',
+  boxShadow: 'var(--b-elev-card)',
 };
 
 export function PostsGrid({
@@ -403,7 +403,7 @@ export function PostsGrid({
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10,
                   background: post.isPinned ? 'var(--b-grad)' : 'rgba(0,0,0,0.5)',
                   opacity: post.isPinned ? 1 : 0,
-                  boxShadow: post.isPinned ? '0 0 10px rgba(199,126,0,0.5)' : 'none',
+                  boxShadow: post.isPinned ? 'var(--b-elev-card)' : 'none',
                 }}
               >
                 <FIcon name="pin" size={12} color="white" fill={post.isPinned ? 'white' : 'none'} />
@@ -428,7 +428,7 @@ export function PostsGrid({
               onClick={() => setShowNewPostModal(true)}
               style={{
                 marginTop: 16, padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                background: 'var(--b-grad)', color: 'white', fontSize: 13, fontWeight: 700, boxShadow: '0 0 16px rgba(199,126,0,0.35)',
+                background: 'var(--b-grad)', color: 'white', fontSize: 13, fontWeight: 700, boxShadow: 'var(--b-elev-card)',
               }}
             >
               Create Post
@@ -586,7 +586,7 @@ export function PostsGrid({
                       position: 'absolute', bottom: 8, left: 8, display: 'flex', alignItems: 'center', gap: 6,
                       padding: '6px 12px', borderRadius: 9999, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       background: 'var(--b-grad)', color: 'white', fontSize: 11, fontWeight: 800,
-                      opacity: aiLoading ? 0.6 : 1, boxShadow: '0 0 14px rgba(199,126,0,0.40)',
+                      opacity: aiLoading ? 0.6 : 1, boxShadow: 'var(--b-elev-card)',
                     }}
                   >
                     <FIcon name="sparkles" size={12} color="white" />
@@ -781,7 +781,7 @@ export function PostsGrid({
                   style={{
                     flex: 1, padding: '11px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                     background: 'var(--f-danger)', color: 'white', fontSize: 13, fontWeight: 700,
-                    boxShadow: '0 0 16px rgba(255,77,106,0.4)',
+                    boxShadow: 'var(--b-elev-card)',
                   }}
                 >
                   Delete

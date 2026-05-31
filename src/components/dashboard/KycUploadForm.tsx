@@ -94,7 +94,7 @@ export function KycUploadForm({
         onClick={handleKycSubmit}
         disabled={!kycDocUrl || !kycSelfieUrl || !kycStoreName || !kycStorePhoto || kycSubmitting || kycUploading}
         className="w-full py-3 text-white rounded-xl font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
-        style={{ background: 'var(--b-grad)', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }}
+        style={{ background: 'var(--b-grad)', boxShadow: 'var(--b-elev-card)' }}
       >
         {kycSubmitting ? <><Loader2 size={16} className="animate-spin" /> Submitting...</> : <><Shield size={16} /> Submit for Verification</>}
       </button>

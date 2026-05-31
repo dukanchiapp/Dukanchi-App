@@ -33,12 +33,15 @@ export default function Header({
       className="b-head"
       style={{
         background: 'var(--b-grad)',
-        // Use safe-area for native + PWA notch; fall back to 52px per the spec
-        // (matches bright.html — status bar floats transparently over the gradient).
-        padding: 'calc(env(safe-area-inset-top, 0px) + 52px) 16px 0',
+        // Session 128.17: founder said the header was too big. Shrink the top
+        // padding from 52→16 (above the safe-area inset) — the status-bar
+        // overlap still works on native via env(safe-area-inset-top), but on
+        // web/Android browser where the inset resolves to 0 we no longer add
+        // 52px of dead space at the top.
+        padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 0',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
           <div
             style={{

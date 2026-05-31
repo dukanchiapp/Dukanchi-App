@@ -240,7 +240,7 @@ export default function ImageCropper({ imageUrl, onComplete, onCancel }: ImageCr
           onClick={handleComplete}
           disabled={!img || loadError}
           className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          style={{ background: 'var(--b-grad)', border: 'none', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }}
+          style={{ background: 'var(--b-grad)', border: 'none', boxShadow: 'var(--b-elev-card)' }}
         >
           Image use karein
         </button>

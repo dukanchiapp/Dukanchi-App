@@ -247,7 +247,7 @@ export default function StoreProfilePage() {
           style={{
             display: 'flex', alignItems: 'center', gap: 8, padding: '12px 22px', borderRadius: 12, border: 'none',
             cursor: 'pointer', background: 'var(--f-grad-primary)', color: 'white', fontSize: 14, fontWeight: 700,
-            fontFamily: 'inherit', boxShadow: '0 0 20px rgba(255,42,140,0.4)',
+            fontFamily: 'inherit', boxShadow: 'var(--b-elev-card)',
           }}
         >
           <ChevronLeft size={16} color="white" /> Go Back
@@ -260,16 +260,24 @@ export default function StoreProfilePage() {
   // v3 live status — 4-tier color (red ≤15 / orange ≤30 / yellow ≤60 / green)
   // via getLiveStatus, ticking through useClosingSoon (declared at top).
   const live = storeStatus ? getLiveStatus({ closingSoon, status: storeStatus.label }) : null;
-  // Distance user → store (mockup: "1.6 km away" pill on the cover). null when
-  // either coordinate is missing or the user hasn't shared location.
+  // Distance user → store (mockup: "1.6 km away" pill on the cover).
+  // Session 128.17: fall back to store.city / store.postalCode when distance
+  // can't be computed (no user location, or no store coords) — founder
+  // screenshots showed the capsule missing entirely on the cover. Pill is
+  // now always shown if the store has any locality info.
   const storeDistance: string | null = (() => {
-    if (!userLoc || !store.latitude || !store.longitude) return null;
-    const R = 6371;
-    const dLat = (store.latitude - userLoc.lat) * Math.PI / 180;
-    const dLon = (store.longitude - userLoc.lng) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLoc.lat * Math.PI / 180) * Math.cos(store.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-    const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
+    if (userLoc && store.latitude && store.longitude) {
+      const R = 6371;
+      const dLat = (store.latitude - userLoc.lat) * Math.PI / 180;
+      const dLon = (store.longitude - userLoc.lng) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(userLoc.lat * Math.PI / 180) * Math.cos(store.latitude * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      const d = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return d < 1 ? `${Math.round(d * 1000)} m away` : `${d.toFixed(1)} km away`;
+    }
+    // Fallback: show area / pincode when distance isn't available.
+    if (store.city) return store.city;
+    if (store.postalCode) return String(store.postalCode);
+    return null;
   })();
   const showReviews = !store.hideRatings;
   const sortedPosts = [...posts].sort((a, b) => (b.isPinned === a.isPinned ? 0 : b.isPinned ? 1 : -1));
@@ -378,7 +386,7 @@ export default function StoreProfilePage() {
               background: '#fff', border: '1px solid var(--b-line)',
               boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
             }}>
-              <MapPin size={13} color="var(--b-magenta-ink)" />
+              <span style={{ fontSize: 13, lineHeight: 1 }}>📍</span>
               <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--f-text-1)' }}>{storeDistance}</span>
             </div>
           )}
@@ -403,7 +411,7 @@ export default function StoreProfilePage() {
               <span style={{
                 padding: '3px 10px', borderRadius: 9999, fontSize: 9, fontWeight: 800, letterSpacing: 0.8,
                 textTransform: 'uppercase', background: 'var(--f-grad-primary)', color: 'white',
-                boxShadow: '0 0 12px rgba(255,42,140,0.45)',
+                boxShadow: 'var(--b-elev-card)',
               }}>
                 {store.owner.role === 'retailer' ? 'Retail' : store.owner.role}
               </span>
@@ -509,7 +517,7 @@ export default function StoreProfilePage() {
                   style={{
                     flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                     padding: '11px 14px', borderRadius: 12, textDecoration: 'none', background: 'var(--f-grad-primary)',
-                    color: 'white', fontSize: 13, fontWeight: 700, boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+                    color: 'white', fontSize: 13, fontWeight: 700, boxShadow: 'var(--b-elev-card)',
                   }}
                 >
                   <Plus size={14} color="white" /> New Post
@@ -535,7 +543,7 @@ export default function StoreProfilePage() {
                     border: isFollowing ? '1px solid var(--f-glass-border)' : 'none',
                     background: isFollowing ? 'var(--f-glass-bg-2)' : 'var(--f-grad-primary)',
                     color: isFollowing ? 'var(--f-text-1)' : 'white', fontSize: 13, fontWeight: 700,
-                    boxShadow: isFollowing ? 'none' : '0 0 16px rgba(255,42,140,0.35)',
+                    boxShadow: isFollowing ? 'none' : 'var(--b-elev-card)',
                   }}
                 >
                   {isFollowing
@@ -594,7 +602,7 @@ export default function StoreProfilePage() {
                 fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
                 background: activeTab === tab.key ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
                 color: activeTab === tab.key ? 'white' : 'var(--f-text-3)',
-                boxShadow: activeTab === tab.key ? '0 0 8px rgba(255,42,140,0.4)' : 'none',
+                boxShadow: activeTab === tab.key ? 'var(--b-elev-card)' : 'none',
               }}>
                 {tab.count}
               </span>
@@ -636,7 +644,7 @@ export default function StoreProfilePage() {
                     <div style={{
                       position: 'absolute', top: 6, right: 6, width: 22, height: 22, borderRadius: '50%',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: 'var(--f-grad-primary)', boxShadow: '0 0 10px rgba(255,42,140,0.5)',
+                      background: 'var(--f-grad-primary)', boxShadow: 'var(--b-elev-card)',
                     }}>
                       <Star size={11} color="white" fill="white" />
                     </div>
@@ -680,7 +688,7 @@ export default function StoreProfilePage() {
                   style={{
                     width: '100%', marginBottom: 14, padding: 12, borderRadius: 12, border: 'none', cursor: 'pointer',
                     background: 'var(--f-grad-primary)', color: 'white', fontSize: 13, fontWeight: 700,
-                    fontFamily: 'inherit', boxShadow: '0 0 18px rgba(255,42,140,0.35)',
+                    fontFamily: 'inherit', boxShadow: 'var(--b-elev-card)',
                   }}
                 >
                   Write a Review

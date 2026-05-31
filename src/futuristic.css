@@ -379,9 +379,12 @@ h1, h2, h3, .f-display { text-shadow: none; }
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* Session 128.17: orange-yellow neon pulse keyframes neutered — replaced
+   with a subtle whisper-soft opacity breathe so any consumer falls back
+   gracefully without a halo. */
 @keyframes f-glow-pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(234,154,0,0.4), 0 0 40px rgba(199,126,0,0.3); }
-  50%      { box-shadow: 0 0 30px rgba(234,154,0,0.6), 0 0 60px rgba(199,126,0,0.5); }
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.85; }
 }
 @keyframes f-spin-slow { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 @keyframes f-tilt-3d {

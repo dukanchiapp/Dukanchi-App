@@ -362,7 +362,7 @@ export default function MessagesPage() {
               <div style={{
                 width: 80, height: 80, borderRadius: 24, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 16, background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
-                boxShadow: '0 0 30px rgba(199,126,0,0.20)',
+                boxShadow: 'var(--b-elev-card)',
               }}>
                 <MessageCircle size={34} color="var(--f-magenta-light)" />
               </div>
@@ -400,7 +400,7 @@ export default function MessagesPage() {
                         style={{
                           flexShrink: 0, padding: '6px 16px', borderRadius: 9999, fontSize: 12, fontWeight: 700,
                           textDecoration: 'none', background: 'var(--b-grad)', color: 'white',
-                          boxShadow: '0 0 14px rgba(199,126,0,0.35)',
+                          boxShadow: 'var(--b-elev-card)',
                         }}
                       >
                         Chat
@@ -422,7 +422,7 @@ export default function MessagesPage() {
             >
               <div style={{
                 width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', background: 'var(--b-grad)', boxShadow: '0 0 16px rgba(199,126,0,0.45)',
+                justifyContent: 'center', background: 'var(--b-grad)', boxShadow: 'var(--b-elev-card)',
               }}>
                 <MessageCircle size={20} color="white" />
               </div>

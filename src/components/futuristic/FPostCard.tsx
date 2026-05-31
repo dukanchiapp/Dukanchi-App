@@ -142,7 +142,7 @@ function FPostCardInner({
               borderRadius: '50%',
               objectFit: 'cover',
               border: '2px solid var(--b-magenta-ink)',
-              boxShadow: '0 0 14px rgba(199,126,0,0.40)',
+              boxShadow: 'var(--b-elev-card)',
             }}
           />
         </Link>
@@ -217,7 +217,7 @@ function FPostCardInner({
                 : 'var(--b-grad)',
               color: isFollowed ? 'var(--f-text-1)' : 'white',
               border: isFollowed ? '1px solid var(--f-glass-border-2)' : 'none',
-              boxShadow: isFollowed ? 'none' : '0 0 14px rgba(199,126,0,0.40)',
+              boxShadow: isFollowed ? 'none' : 'var(--b-elev-card)',
               flexShrink: 0,
               lineHeight: 1,
             }}

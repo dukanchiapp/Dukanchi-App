@@ -197,25 +197,28 @@ export default function MapPage() {
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
           }}
         >
+          {/* Session 128.17: Dukanchi wordmark + tagline switched white → dark
+              ink to match the rest of the yellow-header surfaces (Home/Search
+              already render dark-on-yellow). Bell tile uses the same chip-bg
+              token as the Home header for visual parity. */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <FLogo size={40} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--b-on-grad)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   Dukanchi
                 </span>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.1 }}>apna bazaar, apni dukaan</span>
+                <span style={{ fontSize: 11, color: 'var(--b-on-grad-soft)', lineHeight: 1.1 }}>apna bazaar, apni dukaan</span>
               </div>
             </div>
-            {/* Live NotificationBell — white-on-gradient tile */}
             <div
               style={{
                 width: 42, height: 42, borderRadius: 14,
-                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)',
+                background: 'var(--b-chip-bg)', border: '1px solid var(--b-chip-line)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <NotificationBell color="#fff" />
+              <NotificationBell color="var(--b-on-grad)" />
             </div>
           </div>
 
@@ -398,49 +401,49 @@ export default function MapPage() {
                 WebkitBackdropFilter: 'blur(20px)',
                 borderRadius: 9999,
                 border: '1px solid rgba(199,126,0,0.30)',
-                boxShadow: '0 0 14px rgba(199,126,0,0.25)',
+                boxShadow: 'var(--b-elev-card)',
               }}
             >
-              <span style={{ color: 'var(--b-magenta-ink)', fontSize: 11, textShadow: '0 0 8px rgba(199,126,0,0.45)' }}>●</span>
+              <span style={{ color: 'var(--b-magenta-ink)', fontSize: 11, textShadow: 'none' }}>●</span>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--f-text-1)' }}>
                 <span style={{ color: 'var(--b-magenta-ink)', fontWeight: 800 }}>{validStores.length}</span> stores nearby
               </span>
             </div>
 
-            {/* 3D ↔ Map toggle (top-right) — Session 122 */}
-            {userLocation && (
-              <div
-                className="absolute top-3 right-3 flex"
-                style={{
-                  padding: 3, borderRadius: 9999, gap: 2,
-                  background: 'var(--f-fab-bg)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  border: '1px solid var(--f-glass-border-2)', boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-                }}
-              >
-                {([
-                  { k: '3d' as const, icon: Layers, label: '3D' },
-                  { k: 'map' as const, icon: MapPin, label: 'Map' },
-                ]).map(m => {
-                  const Icon = m.icon;
-                  const active = mapMode === m.k;
-                  return (
-                    <button
-                      key={m.k}
-                      onClick={() => setMapMode(m.k)}
-                      className="flex items-center gap-1"
-                      style={{
-                        padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
-                        background: active ? 'var(--b-grad)' : 'transparent',
-                        color: active ? 'white' : 'var(--f-text-2)', border: 'none',
-                        boxShadow: active ? '0 2px 8px rgba(199,126,0,0.30)' : 'none',
-                      }}
-                    >
-                      <Icon size={12} color={active ? 'white' : 'var(--f-text-2)'} /> {m.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+            {/* 3D ↔ Map toggle (top-right) — Session 128.17: renders
+                unconditionally (was `{userLocation && …}` which made it
+                disappear while location was still resolving, which the
+                founder hit). Whisper-soft elevation, no neon halo. */}
+            <div
+              className="absolute top-3 right-3 flex"
+              style={{
+                padding: 3, borderRadius: 9999, gap: 2,
+                background: '#fff',
+                border: '1px solid var(--b-line)', boxShadow: 'var(--b-elev-card)',
+              }}
+            >
+              {([
+                { k: '3d' as const, icon: Layers, label: '3D' },
+                { k: 'map' as const, icon: MapPin, label: 'Map' },
+              ]).map(m => {
+                const Icon = m.icon;
+                const active = mapMode === m.k;
+                return (
+                  <button
+                    key={m.k}
+                    onClick={() => setMapMode(m.k)}
+                    className="flex items-center gap-1"
+                    style={{
+                      padding: '6px 12px', borderRadius: 9999, fontSize: 11, fontWeight: 700, lineHeight: 1, cursor: 'pointer',
+                      background: active ? 'var(--b-grad)' : 'transparent',
+                      color: active ? 'var(--b-on-grad)' : 'var(--b-gray-2)', border: 'none',
+                    }}
+                  >
+                    <Icon size={12} color={active ? 'var(--b-on-grad)' : 'var(--b-gray-2)'} /> {m.label}
+                  </button>
+                );
+              })}
+            </div>
 
             {/* Recenter FAB (re-center handler preserved; dead no-op settings FAB removed — Session 122) */}
             <div className="absolute bottom-3 right-3 flex flex-col gap-2">
@@ -466,7 +469,7 @@ export default function MapPage() {
                     width: 52, height: 52, borderRadius: 14,
                     background: selectedStore.logoUrl ? '#000' : 'var(--f-glass-bg-2)',
                     border: '2px solid var(--b-magenta-ink)',
-                    boxShadow: '0 0 14px rgba(199,126,0,0.35)',
+                    boxShadow: 'var(--b-elev-card)',
                   }}
                 >
                   {selectedStore.logoUrl ? (
@@ -492,7 +495,7 @@ export default function MapPage() {
                   <div className="mt-2 space-y-1">
                     {selectedStoreDistance && (
                       <div className="flex items-center gap-1.5">
-                        <MapPin size={12} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>📍</span>
                         <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{selectedStoreDistance} away</span>
                       </div>
                     )}
@@ -504,7 +507,7 @@ export default function MapPage() {
                     )}
                     {selectedStore.address && (
                       <div className="flex items-center gap-1.5">
-                        <MapPin size={12} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0, opacity: 0.55 }}>📍</span>
                         <span className="truncate" style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.address}</span>
                       </div>
                     )}
@@ -531,7 +534,7 @@ export default function MapPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
-                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 14px rgba(199,126,0,0.4)' }}
+                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
                 >
                   <Navigation size={14} color="white" />
                   Navigate
@@ -541,22 +544,15 @@ export default function MapPage() {
           </div>
         )}
 
-        {/* ── Bottom sheet: Stores near you (expands UPWARD) ── */}
+        {/* Session 128.17: bottom sheet was previously `position: fixed`,
+            which made the surface land on top of the map AND on top of the
+            BottomNav, leaving the page unscrollable below the map. Re-rooted
+            as an inline block under the map container — the whole page now
+            scrolls naturally, and there is enough vertical room below the
+            map for the card list. */}
         {validStores.length > 0 && (
-          <div
-            className="px-4"
-            style={{
-              position: 'fixed',
-              bottom: 72,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: '100%',
-              maxWidth: 448,
-              zIndex: 30,
-              pointerEvents: 'none',
-            }}
-          >
-            <div style={{ pointerEvents: 'auto' }}>
+          <div className="px-4 mt-3">
+            <div>
               {/* ── Expanded: header on top, scrollable list ── */}
               {listExpanded && (
                 <div
@@ -607,7 +603,7 @@ export default function MapPage() {
                                   <p className="font-bold truncate" style={{ fontSize: 14, color: 'var(--f-text-1)' }}>{store.storeName}</p>
                                   {store.category && <p style={{ fontSize: 11, color: 'var(--b-magenta-ink)', fontWeight: 600, marginTop: 1 }}>{store.category}</p>}
                                   <div className="flex items-center gap-3 mt-1">
-                                    {dist && <div className="flex items-center gap-1"><MapPin size={11} color="var(--b-magenta-ink)" style={{ flexShrink: 0 }} /><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
+                                    {dist && <div className="flex items-center gap-1"><span style={{ fontSize: 12, lineHeight: 1, flexShrink: 0 }}>📍</span><span style={{ fontSize: 11, color: 'var(--f-text-2)' }}>{dist}</span></div>}
                                     {sStatus && <span style={{ fontSize: 11, fontWeight: 600, color: statusColor(sStatus.color) }}>● {sStatus.label}</span>}
                                   </div>
                                 </div>

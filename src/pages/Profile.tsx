@@ -238,7 +238,7 @@ export default function ProfilePage() {
               <div style={{
                 width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 12, background: 'var(--f-grad-primary)', color: 'white', fontWeight: 800, fontSize: 32,
-                boxShadow: '0 0 28px rgba(255,42,140,0.45), inset 0 1px 0 rgba(255,255,255,0.30)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.30)',
               }}>
                 {user?.name?.charAt(0)}
               </div>
@@ -379,7 +379,7 @@ export default function ProfilePage() {
             <div style={{
               width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
               justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
-              boxShadow: '0 0 36px rgba(255,77,106,0.30)',
+              boxShadow: 'var(--b-elev-card)',
             }}>
               <FIcon name="alertTriangle" size={40} color="var(--f-danger)" />
             </div>
@@ -408,7 +408,7 @@ export default function ProfilePage() {
           <div style={{
             width: 96, height: 96, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center',
             justifyContent: 'center', background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)',
-            boxShadow: '0 0 36px rgba(255,42,140,0.30)',
+            boxShadow: 'var(--b-elev-card)',
           }}>
             <FIcon name="storeIc" size={40} color="var(--f-magenta-light)" />
           </div>
@@ -530,7 +530,7 @@ export default function ProfilePage() {
               <span style={{
                 padding: '3px 10px', borderRadius: 9999, fontSize: 9, fontWeight: 800, letterSpacing: 0.8,
                 textTransform: 'uppercase', background: 'var(--f-grad-primary)', color: 'white',
-                boxShadow: '0 0 12px rgba(255,42,140,0.45)',
+                boxShadow: 'var(--b-elev-card)',
               }}>
                 {user.role === 'retailer' ? 'Retail' : user.role}
               </span>
@@ -620,7 +620,7 @@ export default function ProfilePage() {
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px 14px',
                 borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 background: 'var(--f-grad-primary)', color: 'white', fontSize: 13, fontWeight: 700,
-                boxShadow: '0 0 16px rgba(255,42,140,0.35)',
+                boxShadow: 'var(--b-elev-card)',
               }}
             >
               <FIcon name="plus" size={14} color="white" /> New Post
@@ -649,7 +649,7 @@ export default function ProfilePage() {
               fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
               background: activeTab === 'posts' ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
               color: activeTab === 'posts' ? 'white' : 'var(--f-text-3)',
-              boxShadow: activeTab === 'posts' ? '0 0 8px rgba(255,42,140,0.4)' : 'none',
+              boxShadow: activeTab === 'posts' ? 'var(--b-elev-card)' : 'none',
             }}>
               {sortedPosts.length}
             </span>
@@ -670,7 +670,7 @@ export default function ProfilePage() {
                 fontSize: 10, fontWeight: 800, padding: '1px 7px', borderRadius: 9999,
                 background: activeTab === 'reviews' ? 'var(--f-grad-primary)' : 'var(--f-glass-bg-2)',
                 color: activeTab === 'reviews' ? 'white' : 'var(--f-text-3)',
-                boxShadow: activeTab === 'reviews' ? '0 0 8px rgba(255,42,140,0.4)' : 'none',
+                boxShadow: activeTab === 'reviews' ? 'var(--b-elev-card)' : 'none',
               }}>
                 {reviews.length}
               </span>

@@ -160,7 +160,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
               onClick={handleGenerate}
               disabled={loading || isRecording}
               className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
-              style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 16px rgba(199,126,0,0.35)' }}
+              style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
             >
               {loading ? <><Loader2 size={15} className="animate-spin" /> AI soch raha hai...</> : <><Sparkles size={14} /> ✨ Generate karo</>}
             </button>
@@ -175,7 +175,7 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
                   type="button"
                   onClick={() => { onBioApply(result!.bio); handleClose(); }}
                   className="w-full py-2 rounded-xl font-bold text-sm"
-                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: '0 0 14px rgba(199,126,0,0.30)' }}
+                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
                 >
                   Bio use karo
                 </button>

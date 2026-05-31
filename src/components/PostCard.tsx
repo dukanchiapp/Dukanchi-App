@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Bookmark, Share2, MessageSquare, MapPin } from 'lucide-react';
+import { Heart, Bookmark, Share2, MessageSquare } from 'lucide-react';
 import { getStoreStatus } from '../lib/storeUtils';
 import { getLiveStatus, LIVE_STATUS_COLORS } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
@@ -363,7 +363,7 @@ function PostCardInner({
                 overflow: 'hidden',
               }}
             >
-              <MapPin size={11} color="#EA9A00" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 12, lineHeight: 1, flexShrink: 0 }}>📍</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{metaLine}</span>
             </div>
           )}
