@@ -60,6 +60,10 @@ export default function MapPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [listExpanded, setListExpanded] = useState(false);
   const [mapMode, setMapMode] = useState<'map' | '3d'>('map'); // Session 122: 3D↔Map toggle
+  // Session 128.19: smart filter — radius (km) + status. 0 = no cap.
+  const [mapRadius, setMapRadius] = useState(0);
+  const [mapStatusFilter, setMapStatusFilter] = useState<'all' | 'open'>('all');
+  const [mapFilterOpen, setMapFilterOpen] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { location: userLocCtx } = useUserLocation();
@@ -115,16 +119,27 @@ export default function MapPage() {
     }
   };
 
+  // Session 128.19: filter pipeline now applies smart-filter radius +
+  // status alongside the category chip and search query.
   const filteredStores = useMemo(() => stores.filter(s => {
     if (!matchCategory(s.category, selectedCategory)) return false;
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.storeName?.toLowerCase().includes(q) ||
-      s.category?.toLowerCase().includes(q) ||
-      s.address?.toLowerCase().includes(q)
-    );
-  }), [stores, selectedCategory, searchQuery]);
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const hit = s.storeName?.toLowerCase().includes(q)
+        || s.category?.toLowerCase().includes(q)
+        || s.address?.toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    if (mapStatusFilter === 'open') {
+      const st = getStoreStatus(s.openingTime, s.closingTime, s.is24Hours, s.workingDays);
+      if (!st?.isOpen) return false;
+    }
+    if (mapRadius > 0 && userLocation && s.latitude && s.longitude) {
+      const d = getDistanceKm(userLocation.lat, userLocation.lng, s.latitude, s.longitude);
+      if (d > mapRadius) return false;
+    }
+    return true;
+  }), [stores, selectedCategory, searchQuery, mapStatusFilter, mapRadius, userLocation]);
 
   const validStores = useMemo(() => filteredStores
     .filter(s => s.latitude && s.longitude && s.latitude !== 0)
@@ -226,31 +241,101 @@ export default function MapPage() {
             </div>
           </div>
 
-          {/* Search */}
-          <div
-            className="flex items-center gap-2 px-3"
-            style={{
-              background: '#fff',
-              borderRadius: 12,
-              height: 44,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
-            }}
-          >
-            <Search size={16} color="#A8A8A8" style={{ flexShrink: 0 }} />
-            <input
-              type="text"
-              placeholder="Search stores near you..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-sm"
-              style={{ color: 'var(--f-text-1)' }}
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')}>
-                <X size={14} color="var(--f-text-3)" />
-              </button>
-            )}
+          {/* Search + smart-filter button (Session 128.19) */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div
+              className="flex items-center gap-2 px-3"
+              style={{
+                background: '#fff',
+                borderRadius: 12,
+                height: 44,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              <Search size={16} color="#A8A8A8" style={{ flexShrink: 0 }} />
+              <input
+                type="text"
+                placeholder="Search stores near you..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent outline-none text-sm"
+                style={{ color: 'var(--f-text-1)' }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')}>
+                  <X size={14} color="var(--f-text-3)" />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => setMapFilterOpen(v => !v)}
+              className="b-tap"
+              style={{
+                width: 44, height: 44, borderRadius: 12, border: 'none',
+                background: (mapRadius > 0 || mapStatusFilter !== 'all' || mapFilterOpen) ? '#fff' : 'var(--b-chip-bg)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
+              }}
+              aria-label="Filters"
+            >
+              <Layers size={18} color="var(--b-on-grad)" />
+            </button>
           </div>
+
+          {/* Filter drawer — Session 128.19 smart-filter (radius + open-now). */}
+          {mapFilterOpen && (
+            <div
+              style={{
+                marginTop: 12, padding: 14, borderRadius: 14, background: '#fff',
+                border: '1px solid var(--b-line)', boxShadow: 'var(--b-elev-card)',
+              }}
+            >
+              <div className="flex gap-2 mb-3">
+                {([
+                  { key: 'all' as const, label: 'All' },
+                  { key: 'open' as const, label: 'Open now' },
+                ]).map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setMapStatusFilter(opt.key)}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold"
+                    style={
+                      mapStatusFilter === opt.key
+                        ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none' }
+                        : { background: 'var(--b-tint)', color: 'var(--b-gray-1)', border: '1px solid var(--b-line)' }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--b-gray-1)' }}>Radius</span>
+                <span className="text-xs font-bold" style={{ color: 'var(--b-magenta-ink)' }}>
+                  {mapRadius === 0 ? 'No limit' : `${mapRadius} km`}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={20}
+                step={1}
+                value={mapRadius}
+                onChange={e => setMapRadius(Number(e.target.value))}
+                className="w-full"
+                style={{ accentColor: 'var(--b-magenta-ink)' }}
+                disabled={!userLocation}
+              />
+              {!userLocation && (
+                <p style={{ fontSize: 11, color: 'var(--b-orange)', marginTop: 4 }}>
+                  Location grant karein to radius use ho
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Session 128.15 — Map category chips: explicit 8px gap +
               guaranteed horizontal scroll (no wrap). Inactive uses dark ink
@@ -332,11 +417,17 @@ export default function MapPage() {
             ) : mapMode === '3d' && userLocation ? (
               /* Session 122: 3D isometric view — real stores projected onto the grid. */
               <IsoMap stores={isoStores} focused={selectedStore?.id} onSelect={handleIsoSelect} accent="var(--b-magenta-ink)" />
-            ) : isLoaded && userLocation ? (
+            ) : isLoaded ? (
+              /* Session 128.19: drop the `&& userLocation` gate so the map
+                 renders even before the user grants location. Falls back to
+                 India centroid (20.5, 78.96) at zoom 5 — a useful default
+                 that beats an infinite "Loading map…" spinner when the user
+                 declined or hasn't been asked yet. The user-dot Marker only
+                 renders when userLocation arrives. */
               <GoogleMap
                 mapContainerStyle={MAP_CONTAINER_STYLE}
-                center={userLocation}
-                zoom={13}
+                center={userLocation ?? { lat: 20.5937, lng: 78.9629 }}
+                zoom={userLocation ? 13 : 5}
                 onLoad={onLoad}
                 onUnmount={onUnmount}
                 onClick={() => setSelectedStore(null)}
@@ -347,19 +438,21 @@ export default function MapPage() {
                   clickableIcons: false,
                 }}
               >
-                {/* User dot */}
-                <Marker
-                  position={userLocation}
-                  icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: 'var(--b-orange)',
-                    fillOpacity: 1,
-                    strokeWeight: 3,
-                    strokeColor: '#ffffff',
-                  }}
-                  zIndex={100}
-                />
+                {/* User dot — only when location is available */}
+                {userLocation && (
+                  <Marker
+                    position={userLocation}
+                    icon={{
+                      path: google.maps.SymbolPath.CIRCLE,
+                      scale: 10,
+                      fillColor: 'var(--b-orange)',
+                      fillOpacity: 1,
+                      strokeWeight: 3,
+                      strokeColor: '#ffffff',
+                    }}
+                    zIndex={100}
+                  />
+                )}
 
                 {/* Store markers */}
                 {validStores.map(store => {

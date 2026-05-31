@@ -113,9 +113,27 @@ export class StoreService {
         await prisma.follow.delete({ where: { userId_storeId: { userId, storeId } } });
         return { following: false };
       } else {
-        const store = await prisma.store.findUnique({ where: { id: storeId } });
+        const store = await prisma.store.findUnique({ where: { id: storeId }, include: { owner: { select: { id: true, name: true } } } });
         if (!store) throw new Error('Store not found');
         await prisma.follow.create({ data: { userId, storeId } });
+
+        // Session 128.19: notify store owner of new follower so the bell
+        // surfaces others' activity. Only when the follower != the owner
+        // (no self-notifications). Fire-and-forget — failures must not
+        // block the follow itself.
+        if (store.owner && store.owner.id !== userId) {
+          const follower = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+          const followerName = follower?.name || 'Someone';
+          prisma.notification.create({
+            data: {
+              userId: store.owner.id,
+              type: 'NEW_FOLLOWER',
+              content: `${followerName} started following ${store.storeName}`,
+              referenceId: storeId,
+            },
+          }).catch(() => { /* notification persistence is best-effort */ });
+        }
+
         return { following: true };
       }
     } catch (error: any) {

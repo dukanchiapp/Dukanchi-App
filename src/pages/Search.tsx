@@ -26,6 +26,13 @@ export default function SearchPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState('relevance');
+  // Session 128.19: founder asked for radius + area selector inside the
+  // Search filter panel. Filter is applied client-side over the AI search
+  // results — backend semantics unchanged. `searchRadius` = 0 means "all"
+  // (no radius cap). `searchAreaMode` = 'my' uses userLocation; 'custom'
+  // future-extends to geocoding a typed area (placeholder for now).
+  const [searchRadius, setSearchRadius] = useState(0); // 0 = all, 1-20 km
+  const [searchAreaMode, setSearchAreaMode] = useState<'my' | 'all'>('all');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -161,18 +168,47 @@ export default function SearchPage() {
 
   const hasResults = results.stores.length > 0;
 
-  const filteredStores = useMemo(() => results.stores
-    .filter(s => matchCategory(s.category, selectedCategory))
-    .sort((a, b) => {
-      const aOpen = getStoreStatus(a.openingTime, a.closingTime, a.is24Hours, a.workingDays)?.isOpen ? 0 : 1;
-      const bOpen = getStoreStatus(b.openingTime, b.closingTime, b.is24Hours, b.workingDays)?.isOpen ? 0 : 1;
-      return aOpen - bOpen;
-    }),
-    [results.stores, selectedCategory]
-  );
+  // Session 128.19: extended client-side filter pipeline.
+  //   1. Category (chip select) — unchanged.
+  //   2. Radius (slider) — drop stores beyond `searchRadius` km when set.
+  //      Only applies when areaMode is 'my' and userLocation is known.
+  //   3. Sort: relevance (insert order) or name A-Z; opens-first still wins.
+  const filteredStores = useMemo(() => {
+    const haversine = (lat: number, lng: number): number | null => {
+      if (!userLocation || !lat || !lng) return null;
+      const R = 6371;
+      const dLat = (lat - userLocation.lat) * Math.PI / 180;
+      const dLon = (lng - userLocation.lng) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(userLocation.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180)
+        * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+    return results.stores
+      .filter(s => matchCategory(s.category, selectedCategory))
+      .filter(s => {
+        if (searchAreaMode !== 'my' || searchRadius <= 0) return true;
+        const d = haversine(s.latitude, s.longitude);
+        return d == null ? true : d <= searchRadius;
+      })
+      .sort((a, b) => {
+        const aOpen = getStoreStatus(a.openingTime, a.closingTime, a.is24Hours, a.workingDays)?.isOpen ? 0 : 1;
+        const bOpen = getStoreStatus(b.openingTime, b.closingTime, b.is24Hours, b.workingDays)?.isOpen ? 0 : 1;
+        if (aOpen !== bOpen) return aOpen - bOpen;
+        if (sortBy === 'name') {
+          return (a.storeName || '').localeCompare(b.storeName || '');
+        }
+        return 0;
+      });
+  }, [results.stores, selectedCategory, searchRadius, searchAreaMode, sortBy, userLocation]);
 
-  const hasFilters = selectedCategory || sortBy !== 'relevance';
-  const clearFilters = () => { setSelectedCategory(''); setSortBy('relevance'); };
+  const hasFilters = !!selectedCategory || sortBy !== 'relevance' || searchRadius > 0 || searchAreaMode !== 'all';
+  const clearFilters = () => {
+    setSelectedCategory('');
+    setSortBy('relevance');
+    setSearchRadius(0);
+    setSearchAreaMode('all');
+  };
 
   const getDistance = (storeLat: number, storeLng: number): string | null => {
     if (!userLocation || !storeLat || !storeLng) return null;
@@ -469,6 +505,59 @@ export default function SearchPage() {
                   </button>
                 ))}
               </div>
+              {/* Session 128.19: founder asked filter to expose radius +
+                  area + category. Category is the chips block above. Area
+                  toggles between 'all' (no location cap) and 'my' (use
+                  userLocation + radius). Radius slider only enables when
+                  'my' is selected. */}
+              <p style={{ ...eyebrow, marginBottom: 8 }}>Area</p>
+              <div className="flex gap-2 mb-4">
+                {([
+                  { key: 'all' as const, label: '🌐 All India' },
+                  { key: 'my' as const, label: '📍 Meri location' },
+                ]).map(opt => (
+                  <button
+                    key={opt.key}
+                    onClick={() => setSearchAreaMode(opt.key)}
+                    className="flex-1 py-2 rounded-xl text-xs font-bold"
+                    style={
+                      searchAreaMode === opt.key
+                        ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none', boxShadow: 'var(--b-elev-2)' }
+                        : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {searchAreaMode === 'my' && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p style={eyebrow}>Radius</p>
+                    <span className="text-xs font-bold" style={{ color: 'var(--b-magenta-ink)' }}>
+                      {searchRadius === 0 ? 'No limit' : `${searchRadius} km`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={20}
+                    step={1}
+                    value={searchRadius}
+                    onChange={e => setSearchRadius(Number(e.target.value))}
+                    className="w-full"
+                    style={{ accentColor: 'var(--b-magenta-ink)' }}
+                    disabled={!userLocation}
+                  />
+                  {!userLocation && (
+                    <p style={{ fontSize: 11, color: 'var(--b-orange)', marginTop: 4 }}>
+                      Location grant karein to radius filter use ho sake
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Sort */}
               <p style={{ ...eyebrow, marginBottom: 8 }}>Sort by</p>
               <div className="flex gap-2 flex-wrap">
@@ -651,13 +740,18 @@ export default function SearchPage() {
                         </p>
                       </div>
                     </div>
+                    {/* Session 128.19: Ask Nearby CTA → green gradient per
+                        founder ("ask near by green radient sab jagah jahan
+                        bhi ye feature hain"). All 4 entry points (discovery
+                        tile + in-search tile + modal Send + Messages-mein-
+                        jaao) switched to var(--c-action / --b-green). */}
                     <button
                       onClick={openAskModal}
                       className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
-                      style={{ background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none' }}
+                      style={{ background: 'var(--c-action, var(--b-green))', color: '#fff', border: 'none' }}
                     >
                       Nearby shops se poocho
-                      <ChevronRight size={15} color="var(--b-on-grad)" />
+                      <ChevronRight size={15} color="#fff" />
                     </button>
                   </div>
                 </div>
@@ -832,13 +926,13 @@ export default function SearchPage() {
                       onClick={openAskModal}
                       className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
                       style={{
-                        background: 'var(--b-grad)',
-                        color: 'white',
+                        background: 'var(--c-action, var(--b-green))',
+                        color: '#fff',
                         boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25)',
                       }}
                     >
                       Nearby shops se poocho
-                      <ChevronRight size={15} color="white" />
+                      <ChevronRight size={15} color="#fff" />
                     </button>
                   </div>
                 </div>
@@ -933,7 +1027,7 @@ export default function SearchPage() {
                   <button
                     onClick={() => { setAskModalOpen(false); setAskResult(null); navigate('/messages'); }}
                     className="mt-5 w-full py-3 rounded-xl font-bold text-sm"
-                    style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
+                    style={{ background: 'var(--c-action, var(--b-green))', color: '#fff', boxShadow: 'var(--b-elev-card)' }}
                   >
                     Messages mein jaao
                   </button>
@@ -1026,8 +1120,8 @@ export default function SearchPage() {
                     disabled={askSending || askGeocodingArea}
                     className="w-full py-3.5 rounded-xl font-bold text-sm"
                     style={{
-                      background: 'var(--b-grad)',
-                      color: 'white',
+                      background: 'var(--c-action, var(--b-green))',
+                      color: '#fff',
                       boxShadow: 'var(--b-elev-card)',
                       opacity: askSending || askGeocodingArea ? 0.7 : 1,
                     }}

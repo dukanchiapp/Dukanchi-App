@@ -46,6 +46,16 @@ COPY . .
 # targets are already declared in prisma/schema.prisma's generator block).
 RUN node_modules/.bin/prisma generate
 
+# Session 128.19: VITE_* build args. `.env` is gitignored + dockerignored,
+# so Vite would otherwise inline an empty string for these keys at build
+# time. They're declared as ARG here and re-exported as ENV right before
+# `npm run build:web` so Vite picks them up. The Google Maps key is the
+# important one — without it, the Map page sits on "Loading map…" forever.
+# Keys are HTTP-referrer-restricted, so checking the value into fly.toml's
+# [build.args] is acceptable (they ship in the public JS bundle anyway).
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ENV VITE_GOOGLE_MAPS_API_KEY=$VITE_GOOGLE_MAPS_API_KEY
+
 # Build the customer frontend (Vite → dist/).
 RUN npm run build:web
 

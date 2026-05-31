@@ -328,6 +328,28 @@ export class PostService {
       return { liked: false };
     } else {
       await prisma.like.create({ data: { userId, postId } });
+
+      // Session 128.19: notify post author of new like so the bell surfaces
+      // others' activity. Only when the liker != the author (no self-
+      // notifications). Fire-and-forget — failures must not block the like.
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { store: { select: { owner: { select: { id: true } }, storeName: true } } },
+      });
+      const authorId = post?.store?.owner?.id;
+      if (authorId && authorId !== userId) {
+        const liker = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+        const likerName = liker?.name || 'Someone';
+        prisma.notification.create({
+          data: {
+            userId: authorId,
+            type: 'NEW_LIKE',
+            content: `${likerName} liked your post`,
+            referenceId: postId,
+          },
+        }).catch(() => { /* notification persistence is best-effort */ });
+      }
+
       return { liked: true };
     }
   }
