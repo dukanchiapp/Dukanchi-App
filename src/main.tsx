@@ -37,10 +37,28 @@ if ('serviceWorker' in navigator) {
   // Register SW in production OR when accessed via ngrok (HTTPS)
   // Skip in localhost dev to avoid cache issues
   if (isProduction || isNgrok) {
+    // Session 128.25 — autoUpdate flow. Snapshot whether a controller exists
+    // BEFORE registering. If yes, a subsequent controllerchange means a NEW
+    // SW activated (returning visitor + new deploy) — reload to pick up the
+    // fresh bundle. If no controller at load (first install ever), the page
+    // is already on the latest bundle — no reload needed. Pairs with sw.ts's
+    // self.skipWaiting() + clientsClaim() so new SW activates promptly
+    // without devtools/manual cache clear.
+    const hadControllerOnLoad = !!navigator.serviceWorker.controller;
+
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
         .then(reg => console.log('SW registered:', reg.scope))
         .catch(err => console.log('SW registration failed:', err));
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      // First install (no prior controller) — page already on latest bundle.
+      if (!hadControllerOnLoad) return;
+      refreshing = true;
+      window.location.reload();
     });
   } else {
     // localhost dev — unregister any existing SW and clear caches
