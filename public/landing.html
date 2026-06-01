@@ -1,1022 +1,593 @@
 <!DOCTYPE html>
-<html lang="hi">
-<head>
-<meta charset="UTF-8">
-<script>
-  (function() {
-    var matchStandalone =
-      window.matchMedia('(display-mode: standalone)').matches ||
-      window.navigator.standalone === true ||
-      document.referrer.indexOf('android-app://') === 0;
-
-    var stickyFlag = false;
-    try { stickyFlag = sessionStorage.getItem('dk-pwa') === '1'; } catch(e) {}
-
-    if (matchStandalone) {
-      try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
-    }
-
-    // Session 128.12 hotfix: this page is now served at BOTH "/" and "/landing".
-    // The PWA / browser-mode "bounce to app root" redirects below MUST guard
-    // against self-redirect — when an unauthed PWA user lands on "/", the
-    // server has already served us this landing.html (no dk_token cookie), and
-    // replacing to "/" would re-hit the same server response → tight loop.
-    // Solution: only redirect to "/" when NOT already there. Unauthed PWA users
-    // at "/" stay on the landing page; they can tap a CTA to reach /login.
-    var alreadyAtRoot = window.location.pathname === '/';
-
-    if (matchStandalone || stickyFlag) {
-      if (!alreadyAtRoot) window.location.replace('/');
-      return;
-    }
-
-    // Browser-mode user revisiting /landing — skip back to app
-    var browserMode = false;
-    try { browserMode = localStorage.getItem('dk-browser-mode') === '1'; } catch(e) {}
-    if (browserMode && !alreadyAtRoot) {
-      window.location.replace('/');
-    }
-  })();
-</script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dukanchi — Ab Aapki Local Market Aapke Phone Par</title>
-<!-- Session 128.12 — Self-canonical to the bare root. This page is served at
-     BOTH "/" (Session 128.12 root short-circuit for logged-out visitors) AND
-     "/landing" (existing direct route). The canonical URL is "/" so Google
-     understands they're the same page and indexes the bare domain. -->
-<link rel="canonical" href="https://dukanchi.com/">
-<link rel="manifest" href="/manifest.json">
+<html lang="en" data-theme="yellow"><head>
+<meta charset="utf-8">
+<title>Dukanchi — apna bazaar, apni dukaan</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FFB300">
+<!-- Session 128.22 — favicon set. SVG primary (scales infinitely on modern
+     browsers), PNG fallbacks for older browsers + iOS home-screen icon.
+     Files already exist at public/icons/ — generated per landing-page's
+     own ICONS.md spec (yellow #FFD63B→#FFB300 gradient tile, dark "द"
+     glyph in Sora 600, rounded ~22% corners). -->
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="icon" type="image/png" sizes="96x96" href="/icons/icon-96x96.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
+<link rel="mask-icon" href="/icons/icon.svg" color="#FFB300">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --orange:#FF6B35;
-  --orange-dark:#E85520;
-  --orange-light:#FFF3EE;
-  --black:#0D0D0D;
-  --gray:#6B7280;
-  --light:#F9F6F2;
-  --white:#FFFFFF;
-  --green:#16A34A;
-  --red:#DC2626;
+  --grad:linear-gradient(135deg,#FFD63B 0%,#FFB300 100%);
+  --grad-warm:linear-gradient(135deg,#FFE16B 0%,#FFC01E 100%);
+  --yellow:#FFB300; --yellow-lt:#FFD63B; --brand-ink:#C77E00;
+  --blue:#2563EB; --blue-bg:#E8F0FE;
+  --green:#0C831F; --green-bg:#E8F5E9;
+  --red:#E53935; --red-bg:#FDECEA;
+  --ink:#1C1A18; --g1:#3A3633; --g2:#7E7873; --g3:#A8A29C;
+  --line:#ECE7DF; --bg:#FFFFFF; --surface:#FAFAF7; --tint:#FFF6DD;
+  --font:'Inter',-apple-system,system-ui,sans-serif;
+  --display:'Sora','Inter',sans-serif;
+  --doodle:'Caveat',cursive;
+  --ease:cubic-bezier(0.16,1,0.3,1);
+  --elev-1:0 1px 2px rgba(28,20,12,0.04);
+  --elev-2:0 8px 28px -8px rgba(28,20,12,0.16),0 2px 6px rgba(28,20,12,0.05);
+  --elev-3:0 24px 60px -18px rgba(202,130,0,0.28),0 6px 14px rgba(28,20,12,0.06);
 }
+*{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:'Sora',sans-serif;background:var(--white);color:var(--black);overflow-x:hidden}
+body{font-family:var(--font);color:var(--ink);background:var(--surface);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+section{position:relative}
 
-/* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,0,0,0.06)}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-icon{width:38px;height:38px;background:var(--orange);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Kalam',cursive;font-size:22px;color:white;font-weight:700}
-.logo-text{font-size:18px;font-weight:700;letter-spacing:-0.5px}
-.logo-sub{font-size:10px;color:var(--gray);font-weight:400;margin-top:-2px}
-.nav-cta{background:var(--orange);color:white;padding:10px 22px;border-radius:50px;font-size:13px;font-weight:600;text-decoration:none;transition:all 0.2s}
-.nav-cta:hover{background:var(--orange-dark);transform:translateY(-1px)}
+/* ── doodle accents ── */
+.doodle{position:absolute;pointer-events:none;z-index:1}
+.scribble-word{font-family:var(--doodle);color:var(--brand-ink);font-weight:700}
 
-/* PWA BANNER */
-#pwa-banner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--black);color:white;padding:14px 20px;flex-direction:column;gap:6px;box-shadow:0 -4px 24px rgba(0,0,0,0.3)}
-#pwa-banner.visible{display:flex}
-#pwa-banner-title{font-size:14px;font-weight:700}
-#pwa-banner-subtitle{font-size:12px;color:#9CA3AF}
-#pwa-banner-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-#pwa-banner-btn{background:var(--orange);color:white;border:none;padding:10px 18px;border-radius:50px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;white-space:nowrap}
-#pwa-banner-close{background:transparent;border:none;color:#6B7280;font-size:20px;cursor:pointer;line-height:1;padding:0 4px}
+/* ── nav ── */
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(12px);background:rgba(250,247,243,0.82);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:68px}
+.logo{display:flex;align-items:center;gap:11px}
+.logo-tile{width:42px;height:42px;border-radius:13px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:600;font-size:23px;color:var(--ink);box-shadow:var(--elev-1)}
+.logo-txt{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-0.03em}
+.logo-tag{font-size:11px;color:var(--g2);margin-top:-2px}
+.nav-links{display:flex;align-items:center;gap:30px}
+.nav-links a{font-size:14px;font-weight:600;color:var(--g1);transition:color 0.2s}
+.nav-links a:hover{color:var(--brand-ink)}
+.btn{font-family:inherit;font-weight:800;cursor:pointer;border:none;transition:transform 0.16s var(--ease),box-shadow 0.2s var(--ease);display:inline-flex;align-items:center;justify-content:center;gap:9px}
+.btn:active{transform:scale(0.96)}
+.btn-grad{background:var(--grad);color:var(--ink);border-radius:13px;padding:11px 20px;font-size:14px;box-shadow:0 6px 16px -4px rgba(202,130,0,0.4)}
+.btn-grad:hover{box-shadow:0 10px 24px -6px rgba(202,130,0,0.5);transform:translateY(-1px)}
+.nav-cta{display:none}
+@media(min-width:760px){.nav-cta{display:inline-flex}}
 
-/* HERO */
-.hero{min-height:100vh;padding:100px 24px 60px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;background:var(--white);overflow:hidden}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;background:var(--orange-light);border:1px solid rgba(255,107,53,0.2);padding:8px 18px;border-radius:50px;font-size:12px;font-weight:600;color:var(--orange);margin-bottom:28px;animation:fadeUp 0.6s ease both}
-.hero-badge-dot{width:7px;height:7px;background:var(--orange);border-radius:50%;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
-h1{font-size:clamp(32px,6vw,62px);font-weight:800;line-height:1.1;letter-spacing:-2px;margin-bottom:10px;animation:fadeUp 0.7s 0.1s ease both}
-h1 .accent{color:var(--orange);display:inline-block}
-.hero-sub{font-size:clamp(16px,2.5vw,20px);color:var(--gray);font-weight:400;max-width:560px;margin:0 auto 16px;line-height:1.6;animation:fadeUp 0.7s 0.2s ease both}
-.hero-hook{font-size:clamp(13px,2vw,15px);color:var(--black);background:var(--light);padding:10px 20px;border-radius:12px;margin-bottom:36px;display:inline-block;animation:fadeUp 0.7s 0.25s ease both}
-.hero-hook span{color:var(--orange);font-weight:700}
-.hero-btns{display:flex;flex-direction:column;align-items:center;gap:10px;animation:fadeUp 0.7s 0.3s ease both;margin-bottom:48px;width:100%}
-.btn-primary{background:var(--orange);color:white;padding:16px 32px;border-radius:50px;font-size:15px;font-weight:700;text-decoration:none;transition:all 0.25s;display:flex;align-items:center;gap:8px;box-shadow:0 8px 24px rgba(255,107,53,0.35)}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(255,107,53,0.45)}
-.btn-secondary{background:var(--black);color:white;padding:16px 32px;border-radius:50px;font-size:15px;font-weight:600;text-decoration:none;transition:all 0.25s}
-.btn-secondary:hover{transform:translateY(-2px);background:#222}
+/* ── hero ── */
+.hero{padding:64px 0 90px;overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1fr;gap:50px;align-items:center}
+@media(min-width:920px){.hero-grid{grid-template-columns:1.05fr 0.95fr;gap:40px;padding-top:30px}}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--tint);border:1px solid #F2E4B8;color:var(--brand-ink);font-weight:700;font-size:13px;padding:7px 15px;border-radius:9999px;margin-bottom:22px}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+h1.hero-h{font-family:var(--display);font-weight:800;font-size:clamp(38px,6.4vw,62px);line-height:1.04;letter-spacing:-0.035em}
+h1.hero-h .hl{position:relative;white-space:nowrap;color:var(--brand-ink)}
+.hero-sub{font-size:clamp(16px,2vw,18.5px);color:var(--g1);line-height:1.6;margin:24px 0 8px;max-width:520px}
+.hero-sub b{color:var(--ink);font-weight:700}
+.store-cta{display:flex;flex-wrap:wrap;gap:14px;margin-top:30px}
+.store-btn{display:inline-flex;align-items:center;gap:12px;background:var(--ink);color:#fff;border-radius:15px;padding:12px 22px 12px 18px;transition:transform 0.18s var(--ease),box-shadow 0.2s}
+.store-btn:hover{transform:translateY(-2px);box-shadow:var(--elev-2)}
+.store-btn svg{flex-shrink:0}
+.store-btn .st-sm{font-size:10.5px;opacity:0.8;line-height:1;margin-right:5px}
+.store-btn .st-lg{font-size:17px;font-weight:700;font-family:var(--display);line-height:1.1;margin-top:2px}
+.hero-trust{display:flex;align-items:center;gap:14px;margin-top:24px;font-size:13px;color:var(--g2)}
+.use-now{display:inline-flex;align-items:center;gap:10px;margin-top:16px;padding:11px 18px;border-radius:13px;background:#fff;border:1.5px solid var(--line);font-size:14px;font-weight:600;color:var(--g1);transition:transform 0.18s var(--ease),box-shadow 0.2s var(--ease),border-color 0.2s}
+.use-now b{color:var(--brand-ink);font-weight:800}
+.use-now:hover{transform:translateY(-2px);box-shadow:var(--elev-2);border-color:#F2E4B8}
+.use-now .un-ic{width:26px;height:26px;border-radius:50%;background:var(--grad);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;box-shadow:0 4px 10px -3px rgba(202,130,0,0.5)}
+.use-now svg{color:var(--brand-ink);transition:transform 0.2s var(--ease)}
+.use-now:hover svg{transform:translateX(3px)}
+.avatars{display:flex}
+.avatars span{width:30px;height:30px;border-radius:50%;border:2px solid var(--surface);margin-left:-9px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.avatars span:first-child{margin-left:0}
 
-/* SMART INSTALL BUTTON */
-.btn-install{background:var(--orange);color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:800;cursor:pointer;font-family:'Sora',sans-serif;width:100%;max-width:380px;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 10px 30px rgba(255,107,53,0.45);transition:transform 0.2s,box-shadow 0.2s,background 0.3s;letter-spacing:-0.3px}
-.btn-install:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 14px 36px rgba(255,107,53,0.55)}
-.btn-install:active{transform:scale(0.97)}
-.btn-install.state-loading{animation:pulse-install 0.9s ease-in-out infinite;pointer-events:none;opacity:0.9}
-.btn-install.state-success{background:#16A34A;animation:success-flash 0.55s ease forwards;box-shadow:0 10px 32px rgba(22,163,74,0.5)}
-.btn-install.state-open{background:var(--orange)}
-.btn-install.state-open:hover{box-shadow:0 14px 36px rgba(255,107,53,0.6)}
-.btn-install-wrap{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:380px}
-.desktop-hint{font-size:12px;color:rgba(255,255,255,0.45);margin:0;opacity:0;transition:opacity 0.3s;text-align:center}
-.desktop-hint.visible{opacity:1}
-.final-cta .desktop-hint{color:rgba(255,255,255,0.45)}
-.hero .desktop-hint{color:var(--gray)}
-@keyframes pulse-install{0%,100%{box-shadow:0 10px 30px rgba(255,107,53,0.45)}50%{box-shadow:0 10px 40px rgba(255,107,53,0.85),0 0 0 10px rgba(255,107,53,0.12)}}
-@keyframes success-flash{0%{transform:scale(1)}25%{transform:scale(1.07);box-shadow:0 0 0 14px rgba(22,163,74,0.18)}65%{transform:scale(0.98)}100%{transform:scale(1)}}
+/* hero abstract illustration */
+.hero-art{position:relative;height:480px;display:flex;align-items:center;justify-content:center}
+.art-mesh{position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#FFE16B,#FFB300 60%,transparent 72%);filter:blur(8px);animation:meshpulse 7s ease-in-out infinite alternate}
+@keyframes meshpulse{0%{transform:scale(1) translate(0,0)}100%{transform:scale(1.08) translate(2%,-2%)}}
+.art-orbit{position:absolute;width:360px;height:360px;border-radius:50%;border:1.5px dashed rgba(202,130,0,0.25);animation:spin 38s linear infinite}
+.art-orbit2{width:288px;height:288px;border-style:dotted;border-color:rgba(202,130,0,0.18);animation:spin 28s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.art-discwrap{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;animation:discfloat 5s ease-in-out infinite}
+@keyframes discfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+.art-disc{position:relative;width:230px;height:230px;border-radius:42px;background:var(--grad);box-shadow:var(--elev-3);display:flex;align-items:center;justify-content:center;transform:rotate(-6deg)}
+.art-disc .glyph{font-family:var(--display);font-weight:700;font-size:130px;color:var(--ink);filter:drop-shadow(0 6px 10px rgba(28,20,12,0.14))}
+.art-disc::after{content:"";position:absolute;inset:8px 8px 52% 8px;border-radius:36px 36px 50% 50%;background:linear-gradient(180deg,rgba(255,255,255,0.45),transparent);pointer-events:none}
+.art-shadow{width:160px;height:22px;margin-top:26px;border-radius:50%;background:radial-gradient(ellipse,rgba(202,130,0,0.28),transparent 70%);filter:blur(4px);animation:shadowpulse 5s ease-in-out infinite}
+@keyframes shadowpulse{0%,100%{transform:scaleX(1);opacity:0.8}50%{transform:scaleX(0.82);opacity:0.5}}
+.float-tile{position:absolute;width:78px;height:78px;border-radius:22px;background:#fff;border:1px solid rgba(255,255,255,0.7);box-shadow:0 14px 28px -10px rgba(28,20,12,0.28),inset 0 2px 3px rgba(255,255,255,0.9),inset 0 -4px 7px rgba(28,20,12,0.06);display:flex;align-items:center;justify-content:center;font-size:36px;z-index:3}
+.float-tile::after{content:"";position:absolute;inset:3px 3px 46% 3px;border-radius:18px 18px 40% 40%;background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent);pointer-events:none}
+.ft-emoji{position:relative;z-index:1;filter:drop-shadow(0 3px 4px rgba(28,20,12,0.2))}
+.ft1{top:26px;left:8%;animation:floaty 4.2s ease-in-out infinite}
+.ft2{top:70px;right:4%;animation:floaty 5s ease-in-out infinite 0.4s}
+.ft3{bottom:84px;left:0;animation:floaty 4.6s ease-in-out infinite 0.8s}
+.ft4{bottom:36px;right:10%;animation:floaty 5.4s ease-in-out infinite 0.2s}
+@keyframes floaty{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-14px) rotate(4deg)}}
+.pill-float{position:absolute;background:#fff;border-radius:14px;box-shadow:var(--elev-2);padding:9px 13px;display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;z-index:4}
+.pill-float .sdot{width:8px;height:8px;border-radius:50%}
+.pf-open{top:8px;right:16%;animation:floaty 6s ease-in-out infinite}
+.pf-near{bottom:8px;left:14%;animation:floaty 5.6s ease-in-out infinite 0.5s}
 
-/* PRE-INSTALL OVERLAY */
-#install-overlay{position:fixed;inset:0;z-index:10000;background:#FF6B35;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;opacity:0;pointer-events:none;transition:opacity 0.3s ease}
-#install-overlay.visible{opacity:1;pointer-events:all}
-#install-overlay.success{background:#16A34A;transition:background 0.4s ease}
-.overlay-logo-icon{width:80px;height:80px;background:rgba(255,255,255,0.2);border-radius:22px;display:flex;align-items:center;justify-content:center;font-family:'Kalam',cursive;font-size:48px;color:white;font-weight:700;margin-bottom:20px;animation:overlayPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
-.overlay-app-name{font-size:32px;font-weight:800;color:white;letter-spacing:-1px;margin-bottom:6px}
-.overlay-app-sub{font-size:16px;color:rgba(255,255,255,0.8);font-weight:300;margin-bottom:32px}
-.overlay-divider{width:48px;height:2px;background:rgba(255,255,255,0.3);border-radius:1px;margin-bottom:24px}
-.overlay-tagline{font-size:14px;color:rgba(255,255,255,0.9);margin-bottom:36px;text-align:center;line-height:1.5}
-.overlay-dots{display:flex;gap:8px}
-.overlay-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.6)}
-.overlay-dots span:nth-child(1){animation:dotBounce 1.2s 0s ease-in-out infinite}
-.overlay-dots span:nth-child(2){animation:dotBounce 1.2s 0.2s ease-in-out infinite}
-.overlay-dots span:nth-child(3){animation:dotBounce 1.2s 0.4s ease-in-out infinite}
-.overlay-success-icon{font-size:72px;display:none;animation:overlayPop 0.4s cubic-bezier(0.34,1.56,0.64,1) both}
-#install-overlay.success .overlay-dots{display:none}
-#install-overlay.success .overlay-tagline{display:none}
-#install-overlay.success .overlay-divider{display:none}
-#install-overlay.success .overlay-success-icon{display:block}
-#install-overlay.success .overlay-app-sub{content:'Install ho gaya!'}
-@keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:0.6}40%{transform:translateY(-10px);opacity:1}}
-@keyframes overlayPop{from{opacity:0;transform:scale(0.7)}to{opacity:1;transform:scale(1)}}
+/* ── AI search showcase strip ── */
+.ai-strip{padding:18px 0 14px}
+.ai-panel{position:relative;overflow:hidden;border-radius:30px;padding:46px 28px;background:
+  radial-gradient(120% 100% at 50% -10%, #FFF6DD 0%, transparent 55%),
+  linear-gradient(160deg,#FBF7FF 0%,#F3F8FF 45%,#FFFDF6 100%);
+  border:1px solid #EFE7F5;box-shadow:0 24px 60px -28px rgba(124,58,237,0.22),var(--elev-1)}
+.ai-panel::after{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(124,58,237,0.06) 1px,transparent 1px);background-size:22px 22px;pointer-events:none;mask:radial-gradient(80% 80% at 50% 40%,#000,transparent)}
+.ai-blob{position:absolute;border-radius:50%;filter:blur(38px);opacity:0.55;pointer-events:none}
+.ai-blob1{width:240px;height:240px;background:#FFD63B;top:-90px;left:-40px;animation:blobf 9s ease-in-out infinite}
+.ai-blob2{width:220px;height:220px;background:#C4B5FD;bottom:-100px;right:-30px;animation:blobf 11s ease-in-out infinite 0.6s}
+.ai-blob3{width:160px;height:160px;background:#A5E8F5;top:30%;right:18%;opacity:0.4;animation:blobf 8s ease-in-out infinite 0.3s}
+@keyframes blobf{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(14px,-12px) scale(1.12)}}
+.ai-strip-in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:16px}
+.ais-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:0.5px;color:#7C3AED;background:rgba(255,255,255,0.8);border:1px solid #E4D8FF;padding:6px 14px;border-radius:9999px;backdrop-filter:blur(6px)}
+.ais-wrap{position:relative;width:100%;max-width:440px;display:flex;justify-content:center}
+.ais-doodle{animation:floaty 5s ease-in-out infinite}
+.ais-spark3d{position:absolute;top:-26px;right:2%;font-size:30px;z-index:3;filter:drop-shadow(0 6px 8px rgba(124,58,237,0.3));animation:floaty 3.4s ease-in-out infinite}
+.ai-search{position:relative;display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:9999px;padding:14px 16px 14px 20px;box-shadow:0 14px 34px -12px rgba(124,58,237,0.28),var(--elev-2);width:100%}
+.ai-search::before{content:"";position:absolute;inset:-2px;border-radius:9999px;padding:2px;background:linear-gradient(135deg,#FFD63B,#7C3AED 50%,#0EA5C4);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0.55;pointer-events:none}
+.ais-ic{font-size:18px;opacity:0.7}
+.ais-q{flex:1;font-size:16px;font-weight:600;color:var(--ink);font-family:var(--font);white-space:nowrap;overflow:hidden}
+.ais-caret{display:inline-block;width:2px;height:18px;background:#7C3AED;margin-left:2px;vertical-align:-3px;animation:blink 1s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+.ais-ai{background:linear-gradient(135deg,#FFD63B,#A855F7);color:var(--ink);font-size:11px;font-weight:800;padding:5px 12px;border-radius:9999px;flex-shrink:0;box-shadow:0 4px 12px -3px rgba(124,58,237,0.5)}
+.ai-results{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;max-width:620px}
+.ais-hint{font-size:13px;font-weight:700;color:#7C3AED}
+.ais-chip{display:inline-flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:9999px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--g1);box-shadow:var(--elev-1);animation:chipin 0.5s var(--ease) both}
+.ais-chip:nth-child(2){animation-delay:0.1s}.ais-chip:nth-child(3){animation-delay:0.25s}.ais-chip:nth-child(4){animation-delay:0.4s}
+.ais-chip .sdot{width:7px;height:7px;border-radius:50%}
+@keyframes chipin{from{transform:translateY(8px) scale(0.96)}to{transform:none}}
 
-/* PHONE MOCKUP */
-.phone-wrap{animation:fadeUp 0.8s 0.4s ease both;position:relative;display:flex;justify-content:center}
-.phone{width:260px;background:#0D0D0D;border-radius:36px;padding:12px;box-shadow:0 40px 80px rgba(0,0,0,0.25),0 0 0 1px rgba(255,255,255,0.1);position:relative}
-.phone-screen{background:var(--white);border-radius:28px;overflow:hidden;min-height:460px}
-.phone-notch{width:90px;height:26px;background:#0D0D0D;border-radius:0 0 18px 18px;margin:0 auto;position:relative;z-index:2}
-.app-header{padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F3F3F3}
-.app-logo-wrap{display:flex;align-items:center;gap:8px}
-.app-logo-icon{width:30px;height:30px;background:var(--orange);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Kalam',cursive;font-size:16px;color:white;font-weight:700}
-.app-name{font-size:14px;font-weight:700;letter-spacing:-0.3px}
-.app-sub-text{font-size:9px;color:var(--gray);display:block;margin-top:-1px}
-.location-bar{padding:8px 14px;background:#FFF3EE;display:flex;align-items:center;justify-content:space-between;font-size:10px}
-.location-bar span:first-child{color:var(--gray)}
-.location-bar strong{font-weight:600;color:var(--black)}
-.location-bar .change{color:var(--orange);font-weight:700}
-.store-card{margin:10px 10px 0;border-radius:14px;overflow:hidden;border:1px solid #F0F0F0}
-.store-card-header{padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
-.store-avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);display:flex;align-items:center;justify-content:center;font-size:14px;color:white;font-weight:700}
-.store-info{flex:1;margin-left:10px}
-.store-name{font-size:11px;font-weight:700;color:var(--black)}
-.store-meta{font-size:9px;color:var(--gray);margin-top:1px;display:flex;align-items:center;gap:4px}
-.status-dot{width:5px;height:5px;border-radius:50%;display:inline-block}
-.status-open{background:var(--green)}
-.follow-btn{background:var(--orange);color:white;border:none;padding:5px 12px;border-radius:20px;font-size:9px;font-weight:700;font-family:'Sora',sans-serif;cursor:pointer}
-.store-image{width:100%;height:120px;background:linear-gradient(135deg,#1a1a2e,#16213e,#0f3460);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-.action-bar{padding:10px 12px;display:flex;gap:14px;align-items:center;border-top:1px solid #F5F5F5}
-.action-btn{font-size:9px;color:var(--gray);display:flex;align-items:center;gap:4px}
-.ask-bar{margin:10px 10px 10px;background:#0D0D0D;border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between}
-.ask-bar-text{color:white}
-.ask-bar-title{font-size:10px;font-weight:700}
-.ask-bar-sub{font-size:8px;color:#aaa;margin-top:1px}
-.ask-btn{background:var(--orange);color:white;border:none;padding:6px 12px;border-radius:8px;font-size:9px;font-weight:700;font-family:'Sora',sans-serif;cursor:pointer;white-space:nowrap}
-.phone-bottom-nav{display:flex;justify-content:space-around;padding:10px 0 6px;border-top:1px solid #F0F0F0}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;color:var(--gray)}
-.nav-item.active{color:var(--orange)}
-.nav-icon{font-size:14px}
-.phone-glow{position:absolute;width:200px;height:200px;background:rgba(255,107,53,0.15);border-radius:50%;filter:blur(40px);top:50%;left:50%;transform:translate(-50%,-50%);z-index:-1}
+/* ── section heading ── */
+.sec{padding:80px 0}
+.sec-head{text-align:center;max-width:640px;margin:0 auto 56px}
+.sec-eyebrow{font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--brand-ink)}
+h2.sec-h{font-family:var(--display);font-weight:800;font-size:clamp(28px,4vw,42px);line-height:1.1;letter-spacing:-0.03em;margin:12px 0 14px}
+.sec-sub{font-size:16.5px;color:var(--g1);line-height:1.6}
 
-/* BG SHAPES */
-.bg-circle-1{position:absolute;width:500px;height:500px;border-radius:50%;background:rgba(255,107,53,0.05);top:-100px;right:-150px;z-index:-1}
-.bg-circle-2{position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,107,53,0.05);bottom:-50px;left:-100px;z-index:-1}
+/* ── how it works ── */
+.steps{display:grid;grid-template-columns:1fr;gap:24px}
+@media(min-width:760px){.steps{grid-template-columns:repeat(3,1fr);gap:22px}}
+.step{position:relative;background:var(--bg);border:1px solid var(--line);border-radius:24px;padding:34px 26px 30px;box-shadow:var(--elev-1);transition:transform 0.3s var(--ease),box-shadow 0.3s var(--ease);overflow:hidden}
+.step:hover{transform:translateY(-6px);box-shadow:var(--elev-2)}
+.step-n{font-family:var(--doodle);font-size:64px;font-weight:700;color:var(--yellow);line-height:0.7;position:absolute;top:18px;right:24px;opacity:0.55}
+.step-ico{width:72px;height:72px;border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:20px;box-shadow:0 10px 18px -8px rgba(28,20,12,0.25),inset 0 2px 3px rgba(255,255,255,0.9),inset 0 -4px 7px rgba(28,20,12,0.06);position:relative}
+.step-ico::after{content:"";position:absolute;inset:3px 3px 48% 3px;border-radius:18px 18px 42% 42%;background:linear-gradient(180deg,rgba(255,255,255,0.6),transparent)}
+.step-ico .e{position:relative;z-index:1;filter:drop-shadow(0 3px 4px rgba(28,20,12,0.18))}
+.ai-badge{position:absolute;bottom:-8px;right:-12px;z-index:2;background:var(--grad);color:var(--ink);font-size:10px;font-weight:800;font-family:var(--font);line-height:1.5;padding:2px 9px;border-radius:9999px;border:2px solid #fff;box-shadow:0 4px 10px -3px rgba(202,130,0,0.5);letter-spacing:0.3px;white-space:nowrap}
+.step h3{font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-0.02em;margin-bottom:8px}
+.step p{font-size:14.5px;color:var(--g1);line-height:1.55}
 
-/* SCROLL INDICATOR */
-.scroll-hint{animation:bounce 2s infinite;font-size:12px;color:var(--gray);display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:20px}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(8px)}}
+/* ── online vs offline ── */
+.versus{background:var(--ink);border-radius:32px;overflow:hidden;position:relative;color:#fff}
+.versus-grid{display:grid;grid-template-columns:1fr;position:relative}
+@media(min-width:820px){.versus-grid{grid-template-columns:1fr 1fr}}
+.vs-side{padding:48px 38px}
+.vs-off{background:linear-gradient(160deg,rgba(255,179,0,0.16),transparent)}
+.vs-tag{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;padding:6px 13px;border-radius:9999px;margin-bottom:20px}
+.vs-on .vs-tag{background:rgba(255,255,255,0.1);color:#C9C4BD}
+.vs-off .vs-tag{background:var(--grad);color:var(--ink)}
+.vs-h{font-family:var(--display);font-weight:800;font-size:25px;line-height:1.18;letter-spacing:-0.02em;margin-bottom:10px}
+.vs-on .vs-h{color:#C9C4BD}
+.vs-off .vs-h{color:#fff}
+.vs-desc{font-size:14.5px;line-height:1.6;color:#A8A29C;margin-bottom:24px}
+.vs-list{display:flex;flex-direction:column;gap:13px}
+.vs-item{display:flex;align-items:center;gap:11px;font-size:14.5px}
+.vs-ic{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vs-on .vs-ic{background:rgba(255,255,255,0.08);color:#7E7873}
+.vs-off .vs-ic{background:var(--yellow);color:var(--ink)}
+.vs-on .vs-item{color:#8A857F}
+.vs-off .vs-item{color:#fff;font-weight:600}
+.vs-divider{position:absolute;left:50%;top:14%;bottom:14%;width:1px;background:linear-gradient(180deg,transparent,rgba(255,255,255,0.18),transparent);display:none}
+@media(min-width:820px){.vs-divider{display:block}}
+.vs-badge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:var(--grad);color:var(--ink);display:none;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:14px;box-shadow:0 8px 20px rgba(0,0,0,0.3);z-index:3}
+@media(min-width:820px){.vs-badge{display:flex}}
 
-/* PROBLEM SECTION */
-.problem{padding:80px 24px;background:var(--black);color:white;text-align:center;position:relative;overflow:hidden}
-.problem::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--orange),transparent)}
-.section-tag{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:16px}
-.problem h2{font-size:clamp(28px,5vw,48px);font-weight:800;letter-spacing:-1.5px;line-height:1.15;margin-bottom:16px}
-.problem h2 .strike{text-decoration:line-through;opacity:0.4;color:#aaa}
-.problem-sub{color:#9CA3AF;font-size:16px;max-width:480px;margin:0 auto 56px;line-height:1.6}
-.comparison{display:grid;grid-template-columns:1fr 1fr;gap:2px;max-width:680px;margin:0 auto;border-radius:20px;overflow:hidden}
-.comp-col{padding:32px 24px}
-.comp-col.bad{background:#1A0A0A;border:1px solid #3F1A1A}
-.comp-col.good{background:#0A1A0A;border:1px solid #1A3F1A}
-.comp-title{font-size:11px;font-weight:700;letter-spacing:1.5px;margin-bottom:24px;display:flex;align-items:center;gap:8px}
-.comp-title.bad{color:#EF4444}
-.comp-title.good{color:#22C55E}
-.comp-item{display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;text-align:left}
-.comp-icon{font-size:14px;flex-shrink:0;margin-top:1px}
-.comp-text{font-size:13px;line-height:1.5}
-.comp-text.bad{color:#9CA3AF}
-.comp-text.good{color:#D1FAE5}
-.comp-price{font-size:24px;font-weight:800;margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.07)}
-.comp-price.bad{color:#EF4444}
-.comp-price.good{color:#22C55E}
-.comp-price span{font-size:12px;font-weight:400;color:#9CA3AF;display:block;margin-top:2px}
+/* ── ask nearby spotlight ── */
+.spotlight{background:var(--tint);border-radius:32px;padding:60px 40px;overflow:hidden;position:relative}
+.spot-grid{display:grid;grid-template-columns:1fr;gap:44px;align-items:center}
+@media(min-width:860px){.spot-grid{grid-template-columns:0.92fr 1.08fr}}
+.spot-copy .sec-eyebrow{color:var(--brand-ink)}
+.spot-copy h2{font-family:var(--display);font-weight:800;font-size:clamp(28px,3.6vw,40px);line-height:1.08;letter-spacing:-0.03em;margin:12px 0 16px}
+.spot-copy p{font-size:16px;color:var(--g1);line-height:1.6;margin-bottom:14px;max-width:460px}
+.spot-steps{display:flex;flex-direction:column;gap:14px;margin:24px 0 30px}
+.spot-step{display:flex;align-items:center;gap:14px}
+.spot-step .ss-n{width:30px;height:30px;border-radius:50%;background:#fff;border:1.5px solid #F2E4B8;color:var(--brand-ink);font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.spot-step .ss-t{font-size:14.5px;color:var(--g1)}
+.spot-step .ss-t b{color:var(--ink)}
+/* radar */
+.radar-stage{position:relative;height:380px;display:flex;align-items:center;justify-content:center}
+.radar{position:relative;width:300px;height:300px;display:flex;align-items:center;justify-content:center}
+.radar-ring{position:absolute;border-radius:50%;border:1.5px dashed rgba(202,130,0,0.35)}
+.rr1{width:100%;height:100%}.rr2{width:66%;height:66%}.rr3{width:33%;height:33%}
+.radar-pulse{position:absolute;width:80px;height:80px;border-radius:50%;border:2px solid var(--yellow);animation:radar 2.4s ease-out infinite}
+.radar-pulse.d2{animation-delay:0.8s}.radar-pulse.d3{animation-delay:1.6s}
+@keyframes radar{0%{transform:scale(0.4);opacity:0.9}100%{transform:scale(3.2);opacity:0}}
+.radar-core{position:relative;width:84px;height:84px;border-radius:26px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:38px;box-shadow:var(--elev-3);z-index:3;animation:floaty 3.6s ease-in-out infinite}
+.ai-pill{background:var(--ink);color:#FFD63B;background-image:none;font-size:10.5px;font-weight:800;font-family:var(--font);padding:3px 10px;border-radius:9999px;letter-spacing:0.3px;text-transform:none;box-shadow:0 4px 10px -3px rgba(28,20,12,0.4)}
+.ai-pill .ai-pill-grad{background:linear-gradient(135deg,#FFE16B,#FFB300);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.radar-shop{position:absolute;width:50px;height:50px;border-radius:15px;background:#fff;box-shadow:var(--elev-2);display:flex;align-items:center;justify-content:center;font-size:23px;z-index:2;animation:pop 0.5s var(--ease) both}
+.rs1{top:6%;left:18%;animation-delay:0.3s}.rs2{top:24%;right:6%;animation-delay:0.7s}
+.rs3{bottom:10%;right:22%;animation-delay:1.1s}.rs4{bottom:18%;left:8%;animation-delay:1.5s}
+@keyframes pop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+.spot-bubble{position:absolute;background:#fff;border-radius:14px;box-shadow:var(--elev-2);padding:10px 14px;font-size:13px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px;z-index:4;bottom:20px;left:50%;transform:translateX(-50%);white-space:nowrap}
 
-/* HOOKS */
-.hooks{padding:80px 24px;background:var(--light)}
-.hooks-inner{max-width:700px;margin:0 auto}
-.hook-card{background:white;border-radius:24px;padding:36px 32px;margin-bottom:20px;position:relative;overflow:hidden;border:1px solid rgba(0,0,0,0.06);transition:transform 0.3s}
-.hook-card:hover{transform:translateY(-3px)}
-.hook-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px}
-.hook-card.emergency::before{background:var(--red)}
-.hook-card.ps5::before{background:#5B21B6}
-.hook-card.chat::before{background:var(--orange)}
-.hook-emoji{font-size:32px;margin-bottom:16px;display:block}
-.hook-card h3{font-size:22px;font-weight:800;letter-spacing:-0.5px;margin-bottom:10px;line-height:1.25}
-.hook-card p{font-size:15px;color:var(--gray);line-height:1.7;margin-bottom:16px}
-.hook-card .highlight{font-weight:700;color:var(--black)}
-.hook-stat{display:inline-flex;align-items:center;gap:8px;background:var(--orange-light);padding:8px 16px;border-radius:50px;font-size:13px;font-weight:700;color:var(--orange)}
+/* ── threat (news proof) section ── */
+.threat-grid{display:grid;grid-template-columns:1fr;gap:44px;align-items:center}
+@media(min-width:880px){.threat-grid{grid-template-columns:1fr 1.05fr;gap:54px}}
+.threat-stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:26px}
+.tstat{flex:1;min-width:140px;background:var(--red-bg);border:1px solid #F8D4D0;border-radius:18px;padding:18px 20px}
+.tstat-n{font-family:var(--display);font-weight:800;font-size:26px;color:var(--red);letter-spacing:-0.02em;line-height:1}
+.tstat-l{font-size:12.5px;color:var(--g1);margin-top:8px;line-height:1.4;font-weight:600}
+.threat-bridge{display:flex;align-items:center;gap:14px;background:var(--tint);border:1px solid #F2E4B8;border-radius:18px;padding:18px 20px;font-size:14.5px;line-height:1.55;color:var(--g1)}
+.threat-bridge b{color:var(--brand-ink);font-weight:800}
+.threat-bridge .tb-ic{width:42px;height:42px;border-radius:13px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:600;font-size:22px;color:var(--ink);flex-shrink:0;box-shadow:0 5px 12px -3px rgba(202,130,0,0.5)}
+.threat-art{position:relative;transform:rotate(-1.6deg)}
+.threat-art img{width:100%;border-radius:14px;border:1px solid var(--line);box-shadow:0 24px 50px -18px rgba(28,20,12,0.32),0 6px 16px rgba(28,20,12,0.08);display:block;background:#fff}
+.clip-tape{position:absolute;top:-16px;left:50%;transform:translateX(-50%) rotate(-3deg);width:120px;height:30px;background:rgba(255,179,0,0.55);border:1px dashed rgba(202,130,0,0.4);border-radius:3px;z-index:2;box-shadow:0 2px 6px rgba(28,20,12,0.08)}
+.clip-src{position:absolute;bottom:-12px;right:14px;background:var(--ink);color:#fff;font-size:11px;font-weight:700;padding:6px 13px;border-radius:9999px;box-shadow:var(--elev-2);z-index:2}
 
-/* FEATURES */
-.features{padding:80px 24px;background:white}
-.section-header{text-align:center;margin-bottom:56px}
-.section-header h2{font-size:clamp(26px,4vw,42px);font-weight:800;letter-spacing:-1px;line-height:1.2;margin-bottom:12px}
-.section-header p{color:var(--gray);font-size:16px;max-width:440px;margin:0 auto;line-height:1.6}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;max-width:800px;margin:0 auto}
-.feat-card{padding:28px 24px;border-radius:20px;border:1px solid rgba(0,0,0,0.08);transition:all 0.3s;position:relative;overflow:hidden}
-.feat-card:hover{transform:translateY(-4px);border-color:var(--orange);box-shadow:0 20px 40px rgba(255,107,53,0.1)}
-.feat-icon{width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;font-size:22px}
-.feat-icon.orange{background:var(--orange-light)}
-.feat-icon.purple{background:#EDE9FE}
-.feat-icon.green{background:#DCFCE7}
-.feat-icon.blue{background:#DBEAFE}
-.feat-card h3{font-size:17px;font-weight:700;margin-bottom:8px;letter-spacing:-0.3px}
-.feat-card p{font-size:14px;color:var(--gray);line-height:1.65}
+/* ── reveal animation — transform-only; opacity never gated so content can't blank ── */
+.reveal{transform:translateY(26px);transition:transform 0.7s var(--ease)}
+.reveal.in{transform:none}
 
-/* HOW IT WORKS */
-.how{padding:80px 24px;background:var(--black);color:white}
-.steps{display:flex;flex-direction:column;gap:0;max-width:560px;margin:40px auto 0;position:relative}
-.steps::before{content:'';position:absolute;left:28px;top:40px;bottom:40px;width:2px;background:linear-gradient(to bottom,var(--orange),rgba(255,107,53,0.1));z-index:0}
-.step{display:flex;gap:24px;align-items:flex-start;position:relative;z-index:1;padding:0 0 36px}
-.step:last-child{padding-bottom:0}
-.step-num{width:56px;height:56px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:white;flex-shrink:0;border:3px solid var(--black)}
-.step-content h3{font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.3px}
-.step-content p{font-size:14px;color:#9CA3AF;line-height:1.6}
-.step-content .tag{display:inline-block;background:rgba(255,107,53,0.15);color:var(--orange);padding:3px 12px;border-radius:50px;font-size:11px;font-weight:600;margin-top:10px}
+/* ── footer ── */
+footer{background:var(--ink);color:#C9C4BD;padding:64px 0 32px;margin-top:90px}
+.foot-grid{display:grid;grid-template-columns:1fr;gap:38px;margin-bottom:44px}
+@media(min-width:760px){.foot-grid{grid-template-columns:1.4fr 1fr 1fr 1fr}}
+.foot-brand .logo-txt{color:#fff}
+.foot-brand p{font-size:14px;line-height:1.6;color:#8A857F;margin-top:14px;max-width:280px}
+.foot-col h4{font-family:var(--display);font-weight:700;font-size:14px;color:#fff;margin-bottom:16px;letter-spacing:0.3px}
+.foot-col a{display:block;font-size:14px;color:#8A857F;margin-bottom:11px;transition:color 0.2s}
+.foot-col a:hover{color:var(--yellow)}
+.foot-bottom{border-top:1px solid rgba(255,255,255,0.08);padding-top:26px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px}
+.foot-bottom .cc{font-size:13px;color:#6E6862}
+.made{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:9999px;padding:8px 16px;font-size:13px;font-weight:700;color:#E8E4DE}
+.foot-store{display:flex;gap:12px;flex-wrap:wrap}
+.foot-store .store-btn{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)}
 
-/* ILLUSTRATION SECTION */
-.illustration-band{padding:60px 24px;background:var(--orange-light);text-align:center;overflow:hidden}
-.sketch-wrap{display:flex;justify-content:center;gap:40px;flex-wrap:wrap;margin-top:32px;max-width:700px;margin-inline:auto}
-.sketch-figure{display:flex;flex-direction:column;align-items:center;gap:12px}
-.sketch-label{font-size:12px;font-weight:600;color:var(--orange)}
-
-/* CAMPAIGNS */
-.campaigns{padding:80px 24px;background:white}
-.campaign-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;max-width:700px;margin:40px auto 0}
-.campaign-card{padding:32px 28px;border-radius:20px;text-align:center;border:2px solid}
-.campaign-card.vocal{border-color:#FF9933;background:linear-gradient(135deg,#FFF5E6,#FFFAF0)}
-.campaign-card.digital{border-color:#138808;background:linear-gradient(135deg,#E6FFF0,#F0FFEE)}
-.campaign-flag{font-size:40px;margin-bottom:16px}
-.campaign-card h3{font-size:18px;font-weight:800;margin-bottom:8px;letter-spacing:-0.3px}
-.campaign-card p{font-size:13px;color:var(--gray);line-height:1.6}
-.campaign-card.vocal h3{color:#CC6600}
-.campaign-card.digital h3{color:#0A6B08}
-
-/* FINAL CTA */
-.final-cta{padding:100px 24px;background:var(--black);text-align:center;position:relative;overflow:hidden}
-.final-cta::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(255,107,53,0.15),transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-.final-cta h2{font-size:clamp(28px,5vw,52px);font-weight:800;color:white;letter-spacing:-1.5px;line-height:1.15;margin-bottom:16px}
-.final-cta h2 span{color:var(--orange)}
-.final-cta p{color:#9CA3AF;font-size:17px;max-width:420px;margin:0 auto 40px;line-height:1.6}
-.cta-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
-.cta-note{margin-top:24px;font-size:12px;color:#6B7280}
-.cta-note span{color:var(--orange)}
-
-/* FOOTER */
-footer{background:#080808;padding:32px 24px;text-align:center;border-top:1px solid #1F1F1F}
-footer p{color:#4B5563;font-size:12px}
-footer strong{color:#9CA3AF}
-
-@keyframes fadeUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-.illustration-band svg{animation:float 4s ease-in-out infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-
-@media(max-width:600px){
-  .comparison{grid-template-columns:1fr}
-  .comp-col.bad{border-radius:16px 16px 0 0}
-  .comp-col.good{border-radius:0 0 16px 16px}
-  h1{letter-spacing:-1px}
-  .hook-card{padding:24px 20px}
+@media(max-width:560px){
+  .nav-links{display:none}
+  .hero-art{height:380px}
+  .art-disc{width:180px;height:180px}.art-disc .glyph{font-size:100px}
+  .vs-side{padding:36px 26px}
+  .spotlight{padding:40px 22px}
 }
-
-.reveal{opacity:0;transform:translateY(40px);transition:all 0.7s cubic-bezier(0.16,1,0.3,1)}
-.reveal.visible{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  .reveal{transform:none;transition:none}
+}
 </style>
 </head>
 <body>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#FFB300"/><text x="50" y="68" font-family="sans-serif" font-size="52" font-weight="700" fill="#1C1A18" text-anchor="middle">द</text></svg></template>
 
 <!-- NAV -->
 <nav>
-  <div class="logo">
-    <div class="logo-icon">द</div>
-    <div>
-      <div class="logo-text">Dukanchi</div>
-      <div class="logo-sub" data-content="nav.logoSub">apna bazaar, apni dukaan</div>
+  <div class="wrap nav-in">
+    <a class="logo" href="#top">
+      <div class="logo-tile">द</div>
+      <div><div class="logo-txt">Dukanchi</div><div class="logo-tag">Offline market ka online app</div></div>
+    </a>
+    <div class="nav-links">
+      <a href="#how">Kaise chalta hai</a>
+      <a href="#versus">Online vs Offline</a>
+      <a href="#ask">Ask Nearby</a>
     </div>
+    <a href="#download" class="btn btn-grad nav-cta">Download App</a>
   </div>
 </nav>
 
-<!-- PWA INSTALLED BANNER — shown when user already installed the app but opened landing in browser -->
-<div id="pwa-installed-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#FF6B35;padding:12px 20px;align-items:center;justify-content:space-between;gap:12px;">
-  <div style="color:white;">
-    <div style="font-weight:700;font-size:14px;">✨ Dukanchi aapke phone pe installed hai!</div>
-    <div style="font-size:11px;opacity:0.85;margin-top:2px;">PWA mein better experience milega</div>
-  </div>
-  <button onclick="window.location.href='/'" style="background:white;color:#FF6B35;border:none;padding:10px 18px;border-radius:50px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;">
-    PWA mein Kholiye →
-  </button>
-  <span onclick="resetInstall()" style="font-size:11px;color:white;opacity:0.7;cursor:pointer;text-decoration:underline;margin-left:8px;">Dobara download?</span>
-</div>
-
 <!-- HERO -->
-<section class="hero">
-  <div class="bg-circle-1"></div>
-  <div class="bg-circle-2"></div>
-
-  <div class="hero-badge">
-    <span class="hero-badge-dot"></span>
-    <span data-content="hero.badge">India ka apna Local Discovery App</span>
-  </div>
-
-  <h1>
-    <span data-content="hero.h1Line1">Ab Aapki</span>
-    <span class="accent" data-content="hero.h1Accent"> Local Market</span><br>
-    <span data-content="hero.h1Line2">Aapke Phone Par</span>
-  </h1>
-
-  <p class="hero-sub" data-content="hero.subtitle">Na 4 din ka wait. Na expensive delivery fees. Seedha apne ghar ke paas ki real dukaan se connect karo.</p>
-
-  <div class="hero-hook">
-    <span data-content="hero.hookAccent1">Quick Commerce se sasta.</span>
-    Delivery se fast.
-    <span data-content="hero.hookAccent2">Trust se better.</span>
-  </div>
-
-  <div class="hero-btns">
-    <div class="btn-install-wrap">
-      <button class="btn-install install-btn" id="install-btn">
-        <span class="install-btn-text">&#11015; Dukanchi Download Karo — Free</span>
-      </button>
-      <p class="desktop-hint hero-hint">Browser mein install icon dhundho &#8599;</p>
-      <div id="desktop-install-hint" style="display:none;margin-top:16px;background:#FFF3EE;border:1.5px solid #FF6B35;border-radius:14px;padding:14px 18px;max-width:380px;text-align:left;">
-        <p style="font-weight:700;font-size:14px;color:#FF6B35;margin:0 0 6px;">💻 Desktop pe install kaise karein?</p>
-        <p style="font-size:13px;color:#444;margin:0 0 4px;">Chrome address bar ke right mein <strong>⊕</strong> ya computer icon dhundho</p>
-        <p style="font-size:13px;color:#444;margin:0;">"Install Dukanchi" pe click karo → Done! ✅</p>
-      </div>
-      <a href="#" onclick="continueInBrowser(); return false;" style="display:block;text-align:center;margin-top:16px;color:#888;font-size:13px;text-decoration:underline;padding:8px;">
-        Browser mein continue karein →
-      </a>
-    </div>
-    <div class="open-app-wrap" style="display:none; text-align:center;">
-      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(255,107,53,0.4);display:inline-flex;align-items:center;justify-content:center;gap:10px;">
-        🚀 Dukanchi App Kholiye
-      </button>
-      <p style="margin-top:14px;font-size:13px;color:#666;line-height:1.5;">
-        App already installed hai aapke device pe ✅<br>
-        <span style="font-size:11px;color:#999;">
-          Button kaam nahi kiya? Home screen se app icon click karein
-        </span>
-      </p>
-      <p style="margin-top:8px;">
-        <a href="#" id="pwa-download-again" style="color:#FF6B35;font-size:11px;text-decoration:underline;">
-          App delete kar diya? Dobara download karein
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <div class="eyebrow reveal"><span class="dot"></span> Aapke aas-paas ki dukaanein, ab phone mein</div>
+      <h1 class="hero-h reveal">Sab milega jo<br><span class="hl">aas-paas hai<svg class="doodle" style="left:0;bottom:-14px;width:100%;height:18px" viewBox="0 0 220 18" fill="none"><path d="M4 11C40 4 100 3 150 7c25 2 50 5 66 2" stroke="#FFB300" stroke-width="5" stroke-linecap="round"/></svg></span> 🛍️</h1>
+      <p class="hero-sub reveal">Apne local market mein product search karo, interested stores ko <b>follow karo, aur seedha baat karo</b> — aapki offline market ka online platform.</p>
+      <div class="store-cta reveal" id="download">
+        <a href="#" class="store-btn" data-link="appstore">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.81 0-2.07-.92-3.4-.89-1.75.03-3.36 1.02-4.26 2.58-1.82 3.16-.47 7.84 1.3 10.41.86 1.26 1.89 2.67 3.24 2.62 1.3-.05 1.79-.84 3.36-.84 1.57 0 2.01.84 3.39.81 1.4-.02 2.29-1.28 3.15-2.55.99-1.46 1.4-2.87 1.42-2.94-.03-.01-2.73-1.05-2.76-4.16zM14.6 4.42c.72-.87 1.2-2.08 1.07-3.29-1.03.04-2.28.69-3.02 1.56-.66.77-1.24 2-1.09 3.18 1.15.09 2.32-.58 3.04-1.45z"/></svg>
+          <span><span class="st-sm">Download on the</span><span class="st-lg">App Store</span></span>
         </a>
-      </p>
-    </div>
-    <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
-  </div>
-
-  <div class="phone-wrap">
-    <div class="phone">
-      <div class="phone-screen">
-        <div class="phone-notch"></div>
-        <div class="app-header">
-          <div class="app-logo-wrap">
-            <div class="app-logo-icon">द</div>
-            <div>
-              <div class="app-name">Dukanchi</div>
-              <span class="app-sub-text">apna bazaar, apni dukaan</span>
-            </div>
-          </div>
-          <div style="font-size:16px">&#128276;</div>
-        </div>
-        <div class="location-bar">
-          <span>&#128205; Showing stores near <strong>Kurla West</strong></span>
-          <span class="change">Change</span>
-        </div>
-        <div class="store-card">
-          <div class="store-card-header">
-            <div class="store-avatar" style="background:linear-gradient(135deg,#FF6B35,#E85520)">R</div>
-            <div class="store-info">
-              <div class="store-name">Royal Mobile Hub Kurla</div>
-              <div class="store-meta">
-                <span class="status-dot status-open"></span>
-                <span style="color:#16A34A">Open</span> &bull; 1.6 km &bull; Electronics
-              </div>
-            </div>
-            <button class="follow-btn">Follow</button>
-          </div>
-          <div class="store-image">
-            <svg width="100%" height="120" viewBox="0 0 240 120">
-              <rect width="240" height="120" fill="#1a1a2e"/>
-              <rect x="20" y="40" width="200" height="50" rx="4" fill="#16213e"/>
-              <text x="120" y="62" text-anchor="middle" fill="#667eea" font-size="11" font-family="sans-serif" font-weight="700">ROYAL MOBILE HUB</text>
-              <text x="120" y="80" text-anchor="middle" fill="#aaa" font-size="8" font-family="sans-serif">Samsung • Apple • Oppo • Realme</text>
-              <circle cx="30" cy="20" r="8" fill="#FF6B35" opacity="0.8"/>
-              <circle cx="210" cy="20" r="8" fill="#667eea" opacity="0.8"/>
-            </svg>
-          </div>
-          <div class="action-bar">
-            <div class="action-btn">&#10084; 0</div>
-            <div class="action-btn">&#128172; Chat</div>
-            <div class="action-btn">&#128279; Share</div>
-          </div>
-        </div>
-        <div class="ask-bar">
-          <div class="ask-bar-text">
-            <div class="ask-bar-title">&#128269; Nearby Shops se Poocho</div>
-            <div class="ask-bar-sub">Ek message, saari shops ko — sirf yes wale dikhenge</div>
-          </div>
-          <button class="ask-btn">Poocho &rsaquo;</button>
-        </div>
-        <div class="phone-bottom-nav">
-          <div class="nav-item active"><span class="nav-icon">&#127968;</span>Home</div>
-          <div class="nav-item"><span class="nav-icon">&#128269;</span>Search</div>
-          <div class="nav-item"><span class="nav-icon">&#128205;</span>Map</div>
-          <div class="nav-item"><span class="nav-icon">&#128172;</span>Chat</div>
-          <div class="nav-item"><span class="nav-icon">&#128100;</span>Profile</div>
-        </div>
+        <a href="#" class="store-btn" data-link="playstore">
+          <svg width="24" height="24" viewBox="0 0 24 24"><path d="M3.6 2.3c-.3.3-.5.8-.5 1.4v16.6c0 .6.2 1.1.5 1.4l.1.1L13 12.1v-.2L3.7 2.2l-.1.1z" fill="#FFD63B"/><path d="M16.1 15.2l-3.1-3.1v-.2l3.1-3.1.1.1 3.7 2.1c1.1.6 1.1 1.6 0 2.2l-3.7 2.1-.1-.1z" fill="#FFB300"/><path d="M16.2 15.1L13 11.9 3.6 21.3c.4.4 1 .4 1.7.1l10.9-6.3z" fill="#EA9A00"/><path d="M16.2 8.8L5.3 2.6c-.7-.4-1.3-.3-1.7.1L13 12.1l3.2-3.3z" fill="#FFE16B"/></svg>
+          <span><span class="st-sm">GET IT ON</span><span class="st-lg">Google Play</span></span>
+        </a>
+      </div>
+      <a href="#" class="use-now reveal" data-link="webapp">
+        <span class="un-ic">▶</span>
+        <span>Ya abhi browser mein hi use karo <b>— no download</b></span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </a>
+      <div class="hero-trust reveal">
+        <div class="avatars"><span style="background:var(--green-bg)">🛒</span><span style="background:var(--blue-bg)">📱</span><span style="background:var(--red-bg)">💊</span><span style="background:var(--tint)">👕</span></div>
+        <span>Ab aap jahan bhi travel karenge, wahan <b style="color:var(--ink)">Dukanchi</b> aapko local market se connect karega</span>
       </div>
     </div>
-    <div class="phone-glow"></div>
-  </div>
 
-  <div class="scroll-hint">
-    <span>Neeche dekho</span>
-    <span>&#8595;</span>
-  </div>
-</section>
-
-<!-- PROBLEM -->
-<section class="problem reveal">
-  <div class="section-tag" data-content="problem.tag">Sachchi Baat</div>
-  <h2>
-    "<span class="strike" data-content="problem.h2Normal">10 minute delivery</span>" ne<br>
-    <span data-content="problem.h2Bold">aapko loot liya</span>
-  </h2>
-  <p class="problem-sub" data-content="problem.subtitle">Wahi product. Double price. Aur aapke gali ki dukaan band ho gayi. Yeh nahi chalega.</p>
-
-  <div class="comparison">
-    <div class="comp-col bad">
-      <div class="comp-title bad">&#10005; <span data-content="problem.badCol.title">Quick Commerce</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128184;</span><span class="comp-text bad" data-content="problem.badCol.items.0">Dark store se aata hai — koi human nahi, koi trust nahi</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128184;</span><span class="comp-text bad" data-content="problem.badCol.items.1">Delivery charge + surge pricing + packaging fee</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128184;</span><span class="comp-text bad" data-content="problem.badCol.items.2">Ganda product mila? Return ka drama</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128184;</span><span class="comp-text bad" data-content="problem.badCol.items.3">Aapki gali ka shopkeeper band ho gaya</span></div>
-      <div class="comp-price bad"><span id="badPrice" data-content="problem.badCol.price">₹65</span><span data-content="problem.badCol.priceSub">Lays packet — delivery + fees ke saath</span></div>
-    </div>
-    <div class="comp-col good">
-      <div class="comp-title good">&#10003; <span data-content="problem.goodCol.title">Dukanchi</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128994;</span><span class="comp-text good" data-content="problem.goodCol.items.0">Real dukaan, real insaan — jo aapko jaanta hai</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128994;</span><span class="comp-text good" data-content="problem.goodCol.items.1">MRP hi price — koi hidden charges nahi</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128994;</span><span class="comp-text good" data-content="problem.goodCol.items.2">Chat karo, confirm karo, trust ke saath khareedo</span></div>
-      <div class="comp-item"><span class="comp-icon">&#128994;</span><span class="comp-text good" data-content="problem.goodCol.items.3">Aapka paisa aapke padosi ke ghar jaata hai</span></div>
-      <div class="comp-price good"><span data-content="problem.goodCol.price">₹20</span><span data-content="problem.goodCol.priceSub">Wahi Lays — seedha dukaan se</span></div>
+    <!-- abstract illustrated art -->
+    <div class="hero-art reveal">
+      <div class="art-mesh"></div>
+      <div class="art-orbit"></div>
+      <div class="art-orbit art-orbit2"></div>
+      <svg class="doodle" style="top:0;right:8%;width:46px;height:46px" viewBox="0 0 40 40" fill="none"><path d="M20 3v9M20 28v9M3 20h9M28 20h9" stroke="#EA9A00" stroke-width="4" stroke-linecap="round"/></svg>
+      <svg class="doodle" style="bottom:54px;right:0;width:34px;height:34px" viewBox="0 0 30 30" fill="none"><path d="M15 2l3 9 9 1-7 6 2 9-7-5-7 5 2-9-7-6 9-1z" stroke="#FFB300" stroke-width="2.5" stroke-linejoin="round"/></svg>
+      <svg class="doodle" style="top:42%;left:-2%;width:26px;height:26px;opacity:0.8" viewBox="0 0 24 24" fill="none"><path d="M12 2v6M12 16v6M2 12h6M16 12h6" stroke="#FFB300" stroke-width="3" stroke-linecap="round"/></svg>
+      <div class="art-discwrap">
+        <div class="art-disc"><span class="glyph">द</span></div>
+        <div class="art-shadow"></div>
+      </div>
+      <div class="float-tile ft1"><span class="ft-emoji">🛒</span></div>
+      <div class="float-tile ft2"><span class="ft-emoji">📱</span></div>
+      <div class="float-tile ft3"><span class="ft-emoji">💊</span></div>
+      <div class="float-tile ft4"><span class="ft-emoji">👕</span></div>
+      <div class="pill-float pf-open"><span class="sdot" style="background:var(--green)"></span>Sharma Electronics · Open</div>
+      <div class="pill-float pf-near">📍 1.6 km · abhi khula hai</div>
     </div>
   </div>
-</section>
+</header>
 
-<!-- HOOKS -->
-<section class="hooks reveal">
-  <div style="max-width:700px;margin:0 auto 40px;text-align:center">
-    <div class="section-tag" style="color:var(--orange)">Real Situations</div>
-    <h2 style="font-size:clamp(26px,4vw,40px);font-weight:800;letter-spacing:-1px">Aapki problem.<br>Dukanchi ka solution.</h2>
-  </div>
-  <div class="hooks-inner">
-
-    <div class="hook-card emergency reveal">
-      <span class="hook-emoji" data-content="hooks.0.emoji">🚨</span>
-      <h3 data-content="hooks.0.title">Raat 2 baje medicine ki zarurat hai.</h3>
-      <p data-content="hooks.0.para1">Amazon? Kal aayega. Blinkit? Stock nahi. Apna pata nahi kaunsa medical store khula hai.</p>
-      <p data-content="hooks.0.para2">Dukanchi pe search karo — 500m mein kaunsa store open hai, exact location, phone number — sab ek jagah. Seedha wahan jao.</p>
-      <div class="hook-stat">&#128205; <span data-content="hooks.0.stat">Location + timings + phone — sab mil jaata hai</span></div>
-    </div>
-
-    <div class="hook-card ps5 reveal">
-      <span class="hook-emoji" data-content="hooks.1.emoji">🎮</span>
-      <h3 data-content="hooks.1.title">PS5 online 3 hafte se sold out hai.</h3>
-      <p data-content="hooks.1.para1">Waiting list. "Out of stock." Fake listings. Frustrating.</p>
-      <p data-content="hooks.1.para2">Jo online nahi milta, woh offline milta hai. Aapke 1 km ke andar kisi retailer ke paas ho sakta hai PS5. Dukanchi pe search karo — woh store mil jaayega.</p>
-      <div class="hook-stat" style="background:#EDE9FE;color:#7C3AED">&#128270; <span data-content="hooks.1.stat">Product search → nearby store → confirm → jao</span></div>
-    </div>
-
-    <div class="hook-card chat reveal">
-      <span class="hook-emoji" data-content="hooks.2.emoji">💬</span>
-      <h3 data-content="hooks.2.title">Mann mein koi product aaye — seedha Dukanchi.</h3>
-      <p data-content="hooks.2.para1">Pehle call karo. Engaged. Phir jao. Band hai. Time waste.</p>
-      <p data-content="hooks.2.para2">Ab seedha chat karo. Stock confirm karo. Tab jao. Ghar se nikal ke pachtao nahi.</p>
-      <div class="hook-stat">&#128172; <span data-content="hooks.2.stat">Chat karo → Confirm karo → Jao</span></div>
-    </div>
-
-  </div>
-</section>
-
-<!-- FEATURES -->
-<section class="features reveal">
-  <div class="section-header">
-    <div class="section-tag" style="color:var(--orange)" data-content="features.tag">Kyun Dukanchi</div>
-    <h2 data-content="features.h2">Jo aur koi nahi deta</h2>
-    <p data-content="features.subtitle">Ek app mein sab — local market ka poora experience digitally</p>
-  </div>
-  <div class="features-grid">
-    <div class="feat-card reveal">
-      <div class="feat-icon orange" data-content="features.items.0.icon">⚡</div>
-      <h3 data-content="features.items.0.title">Instant Connection</h3>
-      <p data-content="features.items.0.desc">Chat karo directly dukaan se — koi waiting nahi, koi IVR nahi. Real shopkeeper, real time mein.</p>
-    </div>
-    <div class="feat-card reveal">
-      <div class="feat-icon green" data-content="features.items.1.icon">📍</div>
-      <h3 data-content="features.items.1.title">Real Availability</h3>
-      <p data-content="features.items.1.desc">Jo nearby available hai wahi dikhega. Dukanchi pe jo stores hain unke paas real products hain — koi fake listing nahi.</p>
-    </div>
-    <div class="feat-card reveal">
-      <div class="feat-icon purple" data-content="features.items.2.icon">💰</div>
-      <h3 data-content="features.items.2.title">Better Prices</h3>
-      <p data-content="features.items.2.desc">10-min delivery se better pricing — kyunki beech mein koi dark store, koi surge pricing, koi nahi. MRP hi rate.</p>
-    </div>
-    <div class="feat-card reveal">
-      <div class="feat-icon blue" data-content="features.items.3.icon">📞</div>
-      <h3 data-content="features.items.3.title">Full Store Details</h3>
-      <p data-content="features.items.3.desc">Open/close timings, working days, exact location, phone number — sab ek jagah. Ghar se nikal ke pachtao nahi.</p>
+<!-- AI SEARCH SHOWCASE (compact strip) -->
+<section class="ai-strip">
+  <div class="wrap">
+    <div class="ai-panel reveal">
+      <div class="ai-blob ai-blob1"></div>
+      <div class="ai-blob ai-blob2"></div>
+      <div class="ai-blob ai-blob3"></div>
+      <div class="ai-strip-in">
+        <span class="ais-eyebrow">✨ AI-powered search</span>
+        <div class="ais-wrap">
+          <span class="ais-spark3d">✨</span>
+          <div class="ai-search">
+            <span class="ais-ic">🔍</span>
+            <span class="ais-q"><span class="ais-text">kaala kurta size M</span><span class="ais-caret"></span></span>
+            <span class="ais-ai">✨ AI</span>
+          </div>
+        </div>
+        <div class="ai-results">
+          <span class="ais-hint">AI ne samjha →</span>
+          <span class="ais-chip"><span class="sdot" style="background:var(--green)"></span>Sharma Garments · 0.4 km</span>
+          <span class="ais-chip"><span class="sdot" style="background:var(--green)"></span>Bhavna Boutique · 1.1 km</span>
+          <span class="ais-chip"><span class="sdot" style="background:var(--amber)"></span>Ethnic Junction · 1.6 km</span>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
 <!-- HOW IT WORKS -->
-<section class="how reveal">
-  <div style="text-align:center;max-width:500px;margin:0 auto">
-    <div class="section-tag" data-content="howItWorks.tag">Itna Simple</div>
-    <h2 style="font-size:clamp(26px,4vw,42px);font-weight:800;color:white;letter-spacing:-1px;margin-bottom:12px" data-content="howItWorks.h2">3 steps. 30 seconds.</h2>
-    <p style="color:#9CA3AF;font-size:16px;line-height:1.6" data-content="howItWorks.subtitle">Koi tutorial nahi. Koi training nahi. Bas karo.</p>
-  </div>
-  <div class="steps">
-    <div class="step reveal">
-      <div class="step-num" data-content="howItWorks.steps.0.num">1</div>
-      <div class="step-content">
-        <h3 data-content="howItWorks.steps.0.title">Search karo</h3>
-        <p data-content="howItWorks.steps.0.desc">Jo chahiye — product, category, store name — kuch bhi type karo. AI samjhega.</p>
-        <span class="tag" data-content="howItWorks.steps.0.tag">&#128269; Smart search powered by AI</span>
-      </div>
+<section class="sec" id="how">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-eyebrow">Bas teen step</div>
+      <h2 class="sec-h">Kaise chalta hai Dukanchi?</h2>
+      <p class="sec-sub">Dukanchi app par local market ki posts dekho, stores follow karo, rare products search karo aur apne local market se puri tarah connected raho.</p>
     </div>
-    <div class="step reveal">
-      <div class="step-num" data-content="howItWorks.steps.1.num">2</div>
-      <div class="step-content">
-        <h3 data-content="howItWorks.steps.1.title">Nearby store dhundho</h3>
-        <p data-content="howItWorks.steps.1.desc">Map pe dekho, distance dekho, open/closed status dekho — sab real-time.</p>
-        <span class="tag" data-content="howItWorks.steps.1.tag">&#128205; Live store status</span>
+    <div class="steps">
+      <div class="step reveal">
+        <span class="step-n">1</span>
+        <div class="step-ico" style="background:#E8F0FE"><span class="e">🔍</span><span class="ai-badge">✨ AI</span></div>
+        <h3>AI-powered search</h3>
+        <p>"Kya dhoondh rahe ho?" — <b style="color:var(--ink)">AI-powered search</b> se exactly wahi dukaanein milengi jo aapko chahiye. Aas-paas ki shops turant, live open/closed status ke saath.</p>
       </div>
-    </div>
-    <div class="step reveal">
-      <div class="step-num" data-content="howItWorks.steps.2.num">3</div>
-      <div class="step-content">
-        <h3 data-content="howItWorks.steps.2.title">Chat karo, jao</h3>
-        <p data-content="howItWorks.steps.2.desc">Stock confirm karo. Deal pakki karo. Tab ghar se niklo. Zero time waste.</p>
-        <span class="tag" data-content="howItWorks.steps.2.tag">&#128172; Direct chat with shopkeeper</span>
+      <div class="step reveal">
+        <span class="step-n">2</span>
+        <div class="step-ico" style="background:#FFF6DD"><span class="e">❤️</span></div>
+        <h3>Follow karo</h3>
+        <p>Pasand aayi dukaan? Follow kar lo. Aapke interested stores ki saari offers aur updates seedha aapki feed mein — jaise apne favourite shop ka WhatsApp status.</p>
+      </div>
+      <div class="step reveal">
+        <span class="step-n">3</span>
+        <div class="step-ico" style="background:#E8F5E9"><span class="e">💬</span></div>
+        <h3>Chat karo</h3>
+        <p>Seedha dukaandaar se chat karo. Price poocho, stock confirm karo, order lagao — bina dukaan jaaye, bina number share kiye.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ILLUSTRATION BAND -->
-<section class="illustration-band reveal">
-  <div class="section-tag" style="color:var(--orange)">Dukanchi Ki Duniya</div>
-  <h2 style="font-size:clamp(22px,3.5vw,34px);font-weight:800;letter-spacing:-0.5px;margin-top:8px" data-content="illustration.h2">Aapka mohalla, aapki dukaan,<br>aapke phone pe.</h2>
-
-  <div class="sketch-wrap">
-    <!-- Customer sketch -->
-    <div class="sketch-figure">
-      <svg width="120" height="160" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation-delay:0s">
-        <circle cx="60" cy="45" r="24" fill="#FFD4B8" stroke="#FF6B35" stroke-width="2.5"/>
-        <path d="M36 38 Q60 20 84 38" stroke="#3D1F0D" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <circle cx="50" cy="43" r="3.5" fill="#3D1F0D"/>
-        <circle cx="70" cy="43" r="3.5" fill="#3D1F0D"/>
-        <circle cx="51.5" cy="41.5" r="1.2" fill="white"/>
-        <circle cx="71.5" cy="41.5" r="1.2" fill="white"/>
-        <path d="M50 54 Q60 62 70 54" stroke="#3D1F0D" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <rect x="35" y="70" width="50" height="58" rx="12" fill="#FF6B35"/>
-        <rect x="72" y="90" width="22" height="36" rx="5" fill="#1A1A1A" stroke="#FF6B35" stroke-width="1.5"/>
-        <rect x="75" y="94" width="16" height="25" rx="2" fill="#5B21B6"/>
-        <circle cx="83" cy="122" r="2" fill="#888"/>
-        <line x1="35" y1="82" x2="20" y2="105" stroke="#FFD4B8" stroke-width="8" stroke-linecap="round"/>
-        <line x1="85" y1="82" x2="83" y2="95" stroke="#FFD4B8" stroke-width="8" stroke-linecap="round"/>
-        <rect x="40" y="126" width="16" height="32" rx="8" fill="#1A1A2E"/>
-        <rect x="64" y="126" width="16" height="32" rx="8" fill="#1A1A2E"/>
-      </svg>
-      <div class="sketch-label">Customer</div>
-    </div>
-
-    <!-- Arrow + chat bubbles -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px">
-      <svg width="80" height="50" viewBox="0 0 80 50">
-        <path d="M5 25 Q40 5 75 25" stroke="#FF6B35" stroke-width="2.5" fill="none" stroke-dasharray="5,3" marker-end="url(#ah)"/>
-        <defs><marker id="ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/></marker></defs>
-        <text x="40" y="44" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#FF6B35" font-weight="700">Chat</text>
-      </svg>
-      <div style="background:white;border:2px dashed #FF6B35;border-radius:12px;padding:8px 14px;font-size:11px;font-weight:700;color:var(--black);text-align:center;max-width:100px" data-content="illustration.chatBubble1">
-        "PS5 hai kya?"
+<!-- THE THREAT (news proof) -->
+<section class="sec" id="threat" style="padding-bottom:30px">
+  <div class="wrap">
+    <div class="threat-grid">
+      <div class="threat-copy reveal">
+        <div class="sec-eyebrow" style="color:var(--red)">Khatre ki ghanti</div>
+        <h2 class="sec-h">Har saal lakhon dukaanein<br>band ho rahi hain</h2>
+        <p class="sec-sub" style="margin-bottom:22px">Quick-commerce aur badi e-commerce apps ke chalte aapke mohalle ki kirana aur local dukaanein tezi se band ho rahi hain. Ye sirf ek dukaan nahi — ek parivaar ka rozgar hai.</p>
+        <div class="threat-stats">
+          <div class="tstat"><div class="tstat-n" data-count="200000">2,00,000+</div><div class="tstat-l">dukaanein 2024 mein band hui</div></div>
+          <div class="tstat"><div class="tstat-n">10–30 min</div><div class="tstat-l">delivery apps ka asar</div></div>
+        </div>
+        <div class="threat-bridge">
+          <span class="tb-ic">द</span>
+          <span>Isi liye humne <b>Dukanchi</b> banaya — local market ko in monopoly giants se compete karne mein support karta hai Dukanchi.</span>
+        </div>
       </div>
-      <svg width="80" height="50" viewBox="0 0 80 50">
-        <path d="M75 25 Q40 5 5 25" stroke="#16A34A" stroke-width="2.5" fill="none" stroke-dasharray="5,3" marker-end="url(#ah2)"/>
-        <defs><marker id="ah2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#16A34A" stroke-width="1.5" stroke-linecap="round"/></marker></defs>
-        <text x="40" y="44" text-anchor="middle" font-family="Sora,sans-serif" font-size="10" fill="#16A34A" font-weight="700">Reply</text>
-      </svg>
-      <div style="background:white;border:2px dashed #16A34A;border-radius:12px;padding:8px 14px;font-size:11px;font-weight:700;color:#16A34A;text-align:center;max-width:100px" data-content="illustration.chatBubble2">
-        "Haan! Aao ☑️"
+      <div class="threat-art reveal">
+        <svg class="doodle" style="top:-14px;left:-10px;width:40px;height:40px;z-index:3" viewBox="0 0 40 40" fill="none"><path d="M20 3v9M20 28v9M3 20h9M28 20h9" stroke="#E53935" stroke-width="4" stroke-linecap="round"/></svg>
+        <div class="clip-tape"></div>
+        <img src="assets/news-kirana.png" alt="The New Indian Express — Kirana stores' association demands govt-backed quick commerce platform" loading="lazy">
+        <div class="clip-src">The New Indian Express · Business</div>
       </div>
-    </div>
-
-    <!-- Shopkeeper sketch -->
-    <div class="sketch-figure">
-      <svg width="120" height="160" viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation-delay:0.5s">
-        <circle cx="60" cy="45" r="24" fill="#D4A574" stroke="#8B5E2F" stroke-width="2.5"/>
-        <path d="M48 53 Q54 50 60 52 Q66 50 72 53" stroke="#3D1F0D" stroke-width="2" fill="none" stroke-linecap="round"/>
-        <circle cx="50" cy="42" r="3.5" fill="#3D1F0D"/>
-        <circle cx="70" cy="42" r="3.5" fill="#3D1F0D"/>
-        <circle cx="51.5" cy="40.5" r="1.2" fill="white"/>
-        <circle cx="71.5" cy="40.5" r="1.2" fill="white"/>
-        <rect x="35" y="70" width="50" height="58" rx="12" fill="#1A3A5C"/>
-        <rect x="42" y="82" width="36" height="16" rx="4" fill="white"/>
-        <text x="60" y="93" text-anchor="middle" font-family="Sora,sans-serif" font-size="7" fill="#1A3A5C" font-weight="700">SHOPKEEPER</text>
-        <line x1="35" y1="82" x2="22" y2="105" stroke="#D4A574" stroke-width="8" stroke-linecap="round"/>
-        <line x1="85" y1="82" x2="98" y2="105" stroke="#D4A574" stroke-width="8" stroke-linecap="round"/>
-        <circle cx="101" cy="108" r="8" fill="#FFD4B8"/>
-        <path d="M97 110 L97 104 L101 100 L105 104 L105 110" stroke="#3D1F0D" stroke-width="1.5" fill="#FFD4B8"/>
-        <rect x="40" y="126" width="16" height="32" rx="8" fill="#0D1B2A"/>
-        <rect x="64" y="126" width="16" height="32" rx="8" fill="#0D1B2A"/>
-      </svg>
-      <div class="sketch-label">Retailer</div>
     </div>
   </div>
 </section>
 
-<!-- CAMPAIGNS -->
-<section class="campaigns reveal">
-  <div class="section-header">
-    <div class="section-tag" style="color:var(--orange)" data-content="campaigns.tag">Humara Mission</div>
-    <h2 data-content="campaigns.h2">Movement ka hissa bano</h2>
-    <p data-content="campaigns.subtitle">Har purchase ek choice hai — local economy ko support karo</p>
-  </div>
-  <div class="campaign-grid">
-    <div class="campaign-card vocal reveal">
-      <div class="campaign-flag" data-content="campaigns.cards.0.flag">🇮🇳</div>
-      <h3 data-content="campaigns.cards.0.title">Vocal for Local</h3>
-      <p data-content="campaigns.cards.0.desc">Aapka har rupaya aapke padosi ke ghar jaata hai. Local shopkeeper ka business badhta hai. Community strong hoti hai.</p>
+<!-- ONLINE VS OFFLINE -->
+<section class="sec" id="versus" style="padding-top:30px">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-eyebrow">Soch badlo</div>
+      <h2 class="sec-h">Online vs aapka mohalla</h2>
     </div>
-    <div class="campaign-card digital reveal">
-      <div class="campaign-flag" data-content="campaigns.cards.1.flag">💻</div>
-      <h3 data-content="campaigns.cards.1.title">Digital Bharat</h3>
-      <p data-content="campaigns.cards.1.desc">India ke 63 million kirana stores ko digital banao. Technology har gali tak pahunche — yeh hai Dukanchi ka sapna.</p>
+    <div class="versus reveal">
+      <div class="versus-grid">
+        <div class="vs-side vs-on">
+          <span class="vs-tag">🌐 Online apps</span>
+          <div class="vs-h">Online bas vo milega<br>jo store ke paas hai</div>
+          <p class="vs-desc">Quick-commerce ho ya e-commerce — stock wahi dikhega jo unke warehouse mein hai. Indian swadeshi buyers ki asli zaroorat ye bade Babu log match nahi kar paate.</p>
+          <div class="vs-list">
+            <div class="vs-item"><span class="vs-ic">✕</span> Limited warehouse stock</div>
+            <div class="vs-item"><span class="vs-ic">✕</span> "Unavailable" ya e-commerce wali 2–7 din ki delivery — wahi product 5 km door dukaan mein mil sakta hai</div>
+            <div class="vs-item"><span class="vs-ic">✕</span> Fixed service timing — emergency mein trust karna mushkil</div>
+          </div>
+        </div>
+        <div class="vs-side vs-off">
+          <span class="vs-tag">📍 Dukanchi</span>
+          <div class="vs-h">Offline sab milega<br>jo aapke 🫵 aas-paas hai</div>
+          <p class="vs-desc">Ab dukaan-dukaan jaakar dhoondhna nahi padega. Dukanchi app par local retailer se chat karo aur seedhe store se buy karo.</p>
+          <div class="vs-list">
+            <div class="vs-item"><span class="vs-ic">✓</span> Pura local bazaar ek jagah</div>
+            <div class="vs-item"><span class="vs-ic">✓</span> Product search karo, nearby stores map par dekho, retailer se seedhe chat karo</div>
+            <div class="vs-item"><span class="vs-ic">✓</span> Diabetes ki dawai khatam? Raat mein konsa store open hai — dekho. Emergency ka saathi</div>
+          </div>
+        </div>
+        <div class="vs-divider"></div>
+        <div class="vs-badge">VS</div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- FINAL CTA -->
-<section class="final-cta" id="signup">
-  <h2>
-    <span data-content="finalCta.h2Normal">Jo chahiye, jab chahiye —</span><br>
-    bas <span id="finalCta-h2Accent" data-content="finalCta.h2Accent">chat karo.</span>
-  </h2>
-  <p data-content="finalCta.subtitle">Na 4 din ka wait. Na expensive delivery. Seedha apne aas-paas ki dukaan se connect karo — free mein.</p>
-  <div class="cta-btns" style="flex-direction:column;align-items:center">
-    <div class="btn-install-wrap">
-      <button class="btn-install install-btn" id="install-btn-cta">
-        <span class="install-btn-text">&#11015; Dukanchi Download Karo — Free</span>
-      </button>
-      <p class="desktop-hint cta-hint">Browser mein install icon dhundho &#8599;</p>
-      <a href="#" onclick="continueInBrowser(); return false;" style="display:block;text-align:center;margin-top:16px;color:#888;font-size:13px;text-decoration:underline;padding:8px;">
-        Browser mein continue karein →
-      </a>
+<!-- ASK NEARBY SPOTLIGHT -->
+<section class="sec" id="ask">
+  <div class="wrap">
+    <div class="spotlight reveal">
+      <svg class="doodle" style="top:24px;right:30px;width:60px;height:30px" viewBox="0 0 60 30" fill="none"><path d="M3 20c14-12 30-12 44-3M47 17l1-9M47 17l8 2" stroke="#EA9A00" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="spot-grid">
+        <div class="spot-copy">
+          <div class="sec-eyebrow" style="display:inline-flex;align-items:center;gap:7px">Signature feature <span class="ai-pill"><span class="ai-pill-grad">✨ AI-powered</span></span></div>
+          <h2>Ek baar mein sabhi<br>nearby stores se poocho 📡</h2>
+          <p>Jo product chahiye vo na online mila, na offline kahin? Dukanchi ka <b>"Ask Nearby"</b> AI-powered feature aapke aas-paas ke saare stores se ek hi baar mein poochta hai — <b>"Ye product hai kya?"</b></p>
+          <div class="spot-steps">
+            <div class="spot-step"><span class="ss-n">1</span><span class="ss-t"><b>Likho</b> kya chahiye + radius set karo</span></div>
+            <div class="spot-step"><span class="ss-n">2</span><span class="ss-t"><b>AI broadcast</b> — sahi nearby shops ko ek saath</span></div>
+            <div class="spot-step"><span class="ss-n">3</span><span class="ss-t"><b>Reply aayega</b> — stores directly chat mein availability confirm karenge</span></div>
+          </div>
+          <a href="#download" class="btn btn-grad" style="padding:13px 24px;font-size:15px">Download Dukanchi App to try</a>
+        </div>
+        <div class="radar-stage">
+          <div class="radar">
+            <div class="radar-ring rr1"></div><div class="radar-ring rr2"></div><div class="radar-ring rr3"></div>
+            <div class="radar-pulse"></div><div class="radar-pulse d2"></div><div class="radar-pulse d3"></div>
+            <div class="radar-shop rs1">🛒</div><div class="radar-shop rs2">📱</div>
+            <div class="radar-shop rs3">💊</div><div class="radar-shop rs4">👕</div>
+            <div class="radar-core">📡<span class="ai-badge" style="bottom:-9px;right:-14px">✨ AI</span></div>
+          </div>
+          <div class="spot-bubble"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block"></span>8 shops ko message gaya</div>
+        </div>
+      </div>
     </div>
-    <div class="open-app-wrap" style="display:none; text-align:center;">
-      <button onclick="openApp()" style="background:#FF6B35;color:white;border:none;padding:18px 40px;border-radius:50px;font-size:17px;font-weight:700;cursor:pointer;width:100%;max-width:360px;box-shadow:0 4px 24px rgba(255,107,53,0.4);display:inline-flex;align-items:center;justify-content:center;gap:10px;">
-        🚀 Dukanchi App Kholiye
-      </button>
-      <p style="margin-top:14px;font-size:13px;color:#666;line-height:1.5;">
-        App already installed hai aapke device pe ✅<br>
-        <span style="font-size:11px;color:#999;">
-          Button kaam nahi kiya? Home screen se app icon click karein
-        </span>
-      </p>
-      <p style="margin-top:8px;">
-        <a href="#" id="pwa-download-again-cta" style="color:#FF6B35;font-size:11px;text-decoration:underline;">
-          App delete kar diya? Dobara download karein
-        </a>
-      </p>
-    </div>
-    <p class="install-success-msg" style="display:none;color:white;font-size:15px;font-weight:700;background:rgba(22,163,74,0.25);border:1px solid rgba(22,163,74,0.5);padding:14px 24px;border-radius:50px;text-align:center">&#9989; Dukanchi install ho gayi! App khul rahi hai...</p>
   </div>
-  <p class="cta-note" data-content="finalCta.note">Free hai. Hamesha rahega. Proudly Made in India 🇮🇳</p>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div style="margin-bottom:12px">
-    <div style="display:inline-flex;align-items:center;gap:10px">
-      <div style="width:32px;height:32px;background:var(--orange);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Kalam',cursive;font-size:18px;color:white;font-weight:700">द</div>
-      <strong style="font-size:16px;color:#E5E7EB">Dukanchi</strong>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <div class="logo"><div class="logo-tile">द</div><div class="logo-txt">Dukanchi</div></div>
+        <p>Offline market ka online app. Support local — kyunki hum hain Vocal for Local 🇮🇳</p>
+        <div class="foot-store" style="margin-top:20px">
+          <a href="#" class="store-btn" style="padding:10px 18px" data-link="appstore">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M17.05 12.04c-.03-2.6 2.12-3.85 2.22-3.91-1.21-1.77-3.1-2.01-3.77-2.04-1.6-.16-3.13.94-3.94.94-.81 0-2.07-.92-3.4-.89-1.75.03-3.36 1.02-4.26 2.58-1.82 3.16-.47 7.84 1.3 10.41.86 1.26 1.89 2.67 3.24 2.62 1.3-.05 1.79-.84 3.36-.84 1.57 0 2.01.84 3.39.81 1.4-.02 2.29-1.28 3.15-2.55.99-1.46 1.4-2.87 1.42-2.94-.03-.01-2.73-1.05-2.76-4.16z"/></svg>
+            <span><span class="st-sm">Download on the</span><span class="st-lg" style="font-size:14px">App Store</span></span>
+          </a>
+          <a href="#" class="store-btn" style="padding:10px 18px" data-link="playstore">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path d="M3.6 2.3c-.3.3-.5.8-.5 1.4v16.6c0 .6.2 1.1.5 1.4l.1.1L13 12.1v-.2L3.7 2.2z" fill="#FFD63B"/><path d="M16.1 15.2l-3.1-3.1v-.2l3.1-3.1 3.8 2.2c1.1.6 1.1 1.6 0 2.2l-3.8 2z" fill="#FFB300"/><path d="M16.2 15.1L13 11.9 3.6 21.3c.4.4 1 .4 1.7.1z" fill="#EA9A00"/><path d="M16.2 8.8L5.3 2.6c-.7-.4-1.3-.3-1.7.1L13 12.1z" fill="#FFE16B"/></svg>
+            <span><span class="st-sm">GET IT ON</span><span class="st-lg" style="font-size:14px">Google Play</span></span>
+          </a>
+        </div>
+      </div>
+      <div class="foot-col">
+        <h4>Product</h4>
+        <a href="#how">Kaise chalta hai</a><a href="#ask">Ask Nearby</a><a href="#versus">Online vs Offline</a><a href="#download">Download</a>
+      </div>
+      <div class="foot-col">
+        <h4>Company</h4>
+        <a href="#">About Us</a><a href="#">Retailers ke liye</a><a href="#">Careers</a><a href="#">Contact</a>
+      </div>
+      <div class="foot-col">
+        <h4>Legal</h4>
+        <a href="#">Privacy Policy</a><a href="#">Terms of Use</a><a href="#">Help &amp; Support</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span class="cc">© 2026 Dukanchi. Sabhi adhikar surakshit.</span>
+      <span class="made">Made in Bharat 🇮🇳, Made for Bharat 🇮🇳</span>
     </div>
   </div>
-  <p><span data-content="footer.sub">apna bazaar, apni dukaan</span> &nbsp;|&nbsp; <span data-content="footer.tagline">Vocal for Local | Digital Bharat</span></p>
-  <nav aria-label="Legal" style="margin-top:14px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px">
-    <a href="/legal/privacy" style="color:#6B7280;font-size:11px;text-decoration:none">Privacy Policy</a>
-    <a href="/legal/terms" style="color:#6B7280;font-size:11px;text-decoration:none">Terms of Service</a>
-    <a href="/legal/account-deletion" style="color:#6B7280;font-size:11px;text-decoration:none">Account Deletion</a>
-    <a href="/legal/grievance" style="color:#6B7280;font-size:11px;text-decoration:none">Grievance Redressal</a>
-    <a href="/legal/cookies" style="color:#6B7280;font-size:11px;text-decoration:none">Cookie Policy</a>
-  </nav>
-  <p style="margin-top:14px;font-size:11px;color:#374151" data-content="footer.copyright">© 2026 Dukanchi. Proudly Supporting Local Retail India.</p>
 </footer>
 
-<!-- PWA INSTALLED BANNER -->
-<div id="pwa-banner">
-  <div id="pwa-banner-row">
-    <div style="flex:1;min-width:0">
-      <div id="pwa-banner-title" data-content="pwaBanner.title">✨ Dukanchi installed hai aapke phone pe!</div>
-      <div id="pwa-banner-subtitle" data-content="pwaBanner.subtitle">Browser se better experience PWA mein milega</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-      <button id="pwa-banner-btn" data-content="pwaBanner.buttonText">PWA mein Kholiye →</button>
-      <button id="pwa-banner-close" aria-label="Close">×</button>
-    </div>
-  </div>
-</div>
-
 <script>
-// PWA installed banner — show if user installed app but is in browser
-(function() {
-  var wasInstalled = localStorage.getItem('dukanchi-pwa-installed') === '1';
-  var banner = document.getElementById('pwa-installed-banner');
-  if (wasInstalled && banner) {
-    banner.style.display = 'flex';
-    document.body.style.paddingTop = '60px';
+  // scroll reveal — robust: never leave content hidden
+  const reveals = [...document.querySelectorAll('.reveal')];
+  reveals.forEach((el, i) => { el.style.transitionDelay = (Math.min(i % 4, 3) * 0.07) + 's'; });
+  function revealInView(){
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    reveals.forEach(el => {
+      const r = el.getBoundingClientRect();
+      if (r.top < vh * 0.92) el.classList.add('in');
+    });
   }
-})();
-
-// Resolve dot-path from object (supports array indices: "hooks.0.emoji")
-function resolvePath(obj, path) {
-  return path.split('.').reduce(function(cur, key) {
-    return cur != null ? cur[key] : undefined;
-  }, obj);
-}
-
-// Apply CMS content to all [data-content] elements
-function applyContent(content) {
-  if (!content || typeof content !== 'object') return;
-  document.querySelectorAll('[data-content]').forEach(function(el) {
-    var val = resolvePath(content, el.getAttribute('data-content'));
-    if (val !== undefined && val !== null && String(val) !== '') {
-      el.textContent = String(val);
-    }
-  });
-}
-
-// Fetch from API; fall back to hardcoded defaults already in HTML
-fetch('/api/landing-content')
-  .then(function(r) { return r.ok ? r.json() : null; })
-  .then(function(data) {
-    if (data && data.content) {
-      applyContent(data.content);
-      // PWA Banner special handling
-      var b = data.content.pwaBanner;
-      if (b) {
-        var btn = document.getElementById('pwa-banner-btn');
-        if (btn && b.buttonUrl) {
-          btn.onclick = function() { window.location.href = b.buttonUrl || '/'; };
-        }
-        if (!b.visible) {
-          // Admin turned it off — never show
-          document.getElementById('pwa-banner')._forcedHidden = true;
-        }
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    reveals.forEach(el => io.observe(el));
+    revealInView();
+    requestAnimationFrame(revealInView);
+    window.addEventListener('load', revealInView);
+    window.addEventListener('scroll', revealInView, { passive: true });
+    setTimeout(() => reveals.forEach(el => el.classList.add('in')), 400);
+  } else {
+    reveals.forEach(el => el.classList.add('in'));
+  }
+  // hero parallax-ish tilt on float tiles
+  const art = document.querySelector('.hero-art');
+  if (art && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    art.addEventListener('pointermove', e => {
+      const r = art.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width - 0.5;
+      const py = (e.clientY - r.top) / r.height - 0.5;
+      art.querySelectorAll('.float-tile').forEach((t, i) => {
+        const d = (i + 1) * 6;
+        t.style.transform = `translate(${px * d}px, ${py * d}px)`;
+      });
+    });
+    art.addEventListener('pointerleave', () => {
+      art.querySelectorAll('.float-tile').forEach(t => { t.style.transform = ''; });
+    });
+  }
+  // AI search typewriter
+  (function(){
+    const el = document.querySelector('.ais-text');
+    if (!el || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const queries = ['kaala kurta size M', 'iPhone 15 charger', 'diabetes ki dawai', 'birthday gift 500 ke andar'];
+    let qi = 0, ci = 0, deleting = false;
+    function tick(){
+      const q = queries[qi];
+      el.textContent = q.slice(0, ci);
+      if (!deleting){
+        if (ci < q.length){ ci++; setTimeout(tick, 70); }
+        else { deleting = true; setTimeout(tick, 1600); }
+      } else {
+        if (ci > 0){ ci--; setTimeout(tick, 35); }
+        else { deleting = false; qi = (qi + 1) % queries.length; setTimeout(tick, 350); }
       }
     }
-  })
-  .catch(function() { /* defaults already rendered */ });
-
-// Scroll reveal
-var observer = new IntersectionObserver(function(entries) {
-  entries.forEach(function(entry, i) {
-    if (entry.isIntersecting) {
-      setTimeout(function() { entry.target.classList.add('visible'); }, i * 80);
-    }
-  });
-}, { threshold: 0.1 });
-document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
-
-
+    setTimeout(tick, 1200);
+  })();
 </script>
-
-<script>
-// ── Dukanchi PWA — Single Source of Truth ──────────────────
-
-var INSTALLED_KEY = 'dukanchi-pwa-v1';
-var deferredPrompt = null;
-var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-// If already running as PWA — go straight to app
-var isStandalone = window.matchMedia('(display-mode: standalone)').matches
-  || navigator.standalone === true;
-if (isStandalone) {
-  window.location.replace('/');
-}
-
-// ── 3 States ──────────────────────────────────────────────
-
-// STATE A: Already installed (localStorage flag exists)
-function showInstalledState() {
-  document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
-    el.style.display = 'none';
-  });
-  document.querySelectorAll('.open-app-wrap').forEach(function(el) {
-    el.style.display = 'block';
-  });
-  var banner = document.getElementById('pwa-installed-banner');
-  if (banner) banner.style.display = 'flex';
-}
-
-// STATE B: Ready to install (deferredPrompt available / iOS)
-function showInstallReadyState() {
-  document.querySelectorAll('.install-btn').forEach(function(btn) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    var t = btn.querySelector('.install-btn-text');
-    if (t) t.textContent = '⬇ Dukanchi Download Karo — Free';
-  });
-}
-
-// STATE C: Waiting (browser hasn't offered install yet)
-function showWaitingState() {
-  document.querySelectorAll('.install-btn').forEach(function(btn) {
-    btn.disabled = false;
-  });
-}
-
-// ── On page load — check which state ─────────────────────
-
-window.addEventListener('DOMContentLoaded', function() {
-  if (localStorage.getItem(INSTALLED_KEY) === '1') {
-    showInstalledState();
-  } else {
-    showWaitingState();
-  }
-});
-
-// ── Browser signals app is installable ───────────────────
-
-window.addEventListener('beforeinstallprompt', function(e) {
-  e.preventDefault();
-  deferredPrompt = e;
-  showInstallReadyState();
-});
-
-// ── App was installed ─────────────────────────────────────
-
-window.addEventListener('appinstalled', function() {
-  deferredPrompt = null;
-  localStorage.setItem(INSTALLED_KEY, '1');
-  // Clear browser-mode flag — user now has the actual PWA
-  try { localStorage.removeItem('dk-browser-mode'); } catch(e) {}
-  document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
-    el.innerHTML = '<div style="text-align:center;padding:16px 0;color:#FF6B35;font-weight:700;font-size:16px;">✅ App install ho gayi! Khul rahi hai...</div>';
-  });
-  setTimeout(function() {
-    window.location.replace('/');
-  }, 1500);
-});
-
-// ── Main button click ─────────────────────────────────────
-
-async function handleInstallClick() {
-  if (isIOS) {
-    var modal = document.getElementById('ios-modal');
-    if (modal) modal.style.display = 'flex';
-    return;
-  }
-
-  if (deferredPrompt) {
-    try {
-      deferredPrompt.prompt();
-      var result = await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      if (result.outcome !== 'accepted') {
-        var hint = document.getElementById('desktop-install-hint');
-        if (hint) { hint.style.display = 'block'; }
-      }
-    } catch(err) {
-      console.warn('Install prompt error:', err);
-    }
-    return;
-  }
-
-  var hint = document.getElementById('desktop-install-hint');
-  if (hint) {
-    hint.style.display = 'block';
-    hint.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}
-
-// ── "Open App" button (installed state) ──────────────────
-
-function openApp() {
-  window.location.href = '/';
-}
-
-// ── "Download Again" link (user may have deleted app) ────
-
-function resetInstall() {
-  localStorage.removeItem(INSTALLED_KEY);
-  document.querySelectorAll('.open-app-wrap').forEach(function(el) {
-    el.style.display = 'none';
-  });
-  document.querySelectorAll('.btn-install-wrap').forEach(function(el) {
-    el.style.display = 'block';
-  });
-  var banner = document.getElementById('pwa-installed-banner');
-  if (banner) banner.style.display = 'none';
-  if (deferredPrompt) {
-    showInstallReadyState();
-  } else {
-    showWaitingState();
-  }
-}
-
-// iOS modal close
-function closeIOSModal() {
-  var modal = document.getElementById('ios-modal');
-  if (modal) modal.style.display = 'none';
-  localStorage.setItem(INSTALLED_KEY, '1');
-  showInstalledState();
-}
-
-// Wire up install buttons
-document.querySelectorAll('.install-btn').forEach(function(btn) {
-  btn.addEventListener('click', handleInstallClick);
-});
-
-// PWA installed banner — "Download again" link
-var downloadAgainBtn = document.getElementById('pwa-download-again');
-if (downloadAgainBtn) downloadAgainBtn.onclick = resetInstall;
-var downloadAgainBtnCta = document.getElementById('pwa-download-again-cta');
-if (downloadAgainBtnCta) downloadAgainBtnCta.onclick = resetInstall;
-
-// ── Continue in Browser ───────────────────────────────────
-
-function continueInBrowser() {
-  try { localStorage.setItem('dk-browser-mode', '1'); } catch(e) {}
-  window.location.replace('/');
-}
-</script>
-
-<!-- Pre-install branding overlay -->
-<div id="install-overlay">
-  <div class="overlay-logo-icon">द</div>
-  <p class="overlay-app-name">Dukanchi</p>
-  <p class="overlay-app-sub">apna bazaar, apni dukaan</p>
-  <div class="overlay-divider"></div>
-  <p class="overlay-tagline">Free install — phone pe hamesha available</p>
-  <div class="overlay-dots">
-    <span></span><span></span><span></span>
-  </div>
-  <div class="overlay-success-icon">✅</div>
-</div>
-
-<!-- iOS Install Bottom Sheet -->
-<div id="ios-modal" onclick="if(event.target===this)closeIOSModal()" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.65);align-items:flex-end;justify-content:center;padding:0 12px 24px">
-  <div style="background:white;border-radius:24px 24px 20px 20px;padding:28px 24px 24px;text-align:center;max-width:380px;width:100%;box-shadow:0 -4px 40px rgba(0,0,0,0.2);animation:slideUp 0.3s ease">
-    <div style="width:36px;height:4px;background:#E5E7EB;border-radius:2px;margin:0 auto 20px"></div>
-    <p style="font-size:40px;margin-bottom:10px">📱</p>
-    <h3 style="font-size:18px;font-weight:800;margin-bottom:6px;color:#0D0D0D;letter-spacing:-0.3px">iOS pe install karo</h3>
-    <p style="font-size:13px;color:#6B7280;margin-bottom:16px">Safari mein yeh steps follow karo:</p>
-    <div style="background:#F9F6F2;border-radius:14px;padding:16px;margin-bottom:20px;text-align:left">
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">
-        <div style="min-width:28px;height:28px;background:#FF6B35;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white">1</div>
-        <div style="padding-top:4px">
-          <p style="font-size:14px;color:#0D0D0D;font-weight:600;margin:0 0 2px">Neeche Share button tap karo</p>
-          <p style="font-size:12px;color:#9CA3AF;margin:0">Screen ke bottom mein &#11014; icon</p>
-        </div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px">
-        <div style="min-width:28px;height:28px;background:#FF6B35;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white">2</div>
-        <div style="padding-top:4px">
-          <p style="font-size:14px;color:#0D0D0D;font-weight:600;margin:0 0 2px">"Add to Home Screen" select karo</p>
-          <p style="font-size:12px;color:#9CA3AF;margin:0">Menu mein neeche scroll karo</p>
-        </div>
-      </div>
-      <div style="display:flex;align-items:flex-start;gap:10px">
-        <div style="min-width:28px;height:28px;background:#16A34A;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:white">3</div>
-        <div style="padding-top:4px">
-          <p style="font-size:14px;color:#0D0D0D;font-weight:600;margin:0 0 2px">"Add" tap karo — ho gaya!</p>
-          <p style="font-size:12px;color:#9CA3AF;margin:0">Home screen pe Dukanchi icon aayega</p>
-        </div>
-      </div>
-    </div>
-    <button onclick="closeIOSModal()" style="width:100%;background:#FF6B35;color:white;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;box-shadow:0 4px 16px rgba(255,107,53,0.4)">
-      Samajh gaya ✓
-    </button>
-  </div>
-</div>
-</body>
-</html>
+</body></html>
