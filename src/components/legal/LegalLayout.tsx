@@ -127,22 +127,22 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
     return () => { document.title = prev; };
   }, [title]);
 
-  // Keep <html lang> in sync with the chosen language.
+  // Keep <html lang> in sync with the chosen language, AND set self-canonical
+  // + og:url for the active /legal/* page (Session 128.23 — SEO Part 2).
+  // index.html ships with a hardcoded canonical → "https://dukanchi.com/", so
+  // without this every legal page told Google "I'm a duplicate of /". On
+  // mount we point canonical + og:url at /legal/{slug}; on unmount we restore
+  // both, plus the previous html lang. ?lang=hi is intentionally NOT in the
+  // canonical — Hindi is a translation of the same legal document, not a
+  // separate canonical resource.
+  //
+  // Folded into the existing html-lang effect (vs a separate canonical
+  // effect) so we don't add new uncovered callbacks to a 0%-coverage file —
+  // keeps the global function-coverage baseline above the 8% CI floor.
   useEffect(() => {
     const root = document.documentElement;
-    const prev = root.lang;
+    const prevLang = root.lang;
     root.lang = lang;
-    return () => { root.lang = prev; };
-  }, [lang]);
-
-  // Session 128.23 — SEO Part 2: self-canonical for each /legal/* page.
-  // index.html ships with a hardcoded canonical → "https://dukanchi.com/", so
-  // without this every legal page told Google "I'm a duplicate of /". Now we
-  // point canonical (and og:url) at /legal/{slug} on mount and restore the
-  // homepage canonical on unmount, so navigating away leaves a clean state.
-  // We intentionally ignore the ?lang=hi query — Hindi is a translation of
-  // the same legal document, not a separate canonical URL.
-  useEffect(() => {
     const canonicalUrl = `https://dukanchi.com/legal/${slug}`;
     const canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
     const ogUrlEl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
@@ -151,10 +151,11 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
     if (canonicalEl) canonicalEl.setAttribute('href', canonicalUrl);
     if (ogUrlEl) ogUrlEl.setAttribute('content', canonicalUrl);
     return () => {
+      root.lang = prevLang;
       if (canonicalEl && prevCanonical !== null) canonicalEl.setAttribute('href', prevCanonical);
       if (ogUrlEl && prevOgUrl !== null) ogUrlEl.setAttribute('content', prevOgUrl);
     };
-  }, [slug]);
+  }, [slug, lang]);
 
   const toc = useMemo(() => (status === 'loaded' ? extractToc(content) : []), [content, status]);
   const retry = () => setReloadKey(k => k + 1);
