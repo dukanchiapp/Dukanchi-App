@@ -21,7 +21,7 @@
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
-import { CacheFirst } from 'workbox-strategies';
+import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { clientsClaim } from 'workbox-core';
 
@@ -44,17 +44,44 @@ cleanupOutdatedCaches();
 // at build time with the actual content-hash-revisioned asset list.
 precacheAndRoute(self.__WB_MANIFEST);
 
-// SPA navigation fallback — denylist mirrors the prior
-// vite.config.ts `workbox.navigateFallbackDenylist` block. Paths that
-// must never be served from the SPA's cached index.html:
-//   - /admin-panel/* — separate Express-served admin SPA
-//   - /api/*         — JSON API; never an HTML fallback
-//   - /uploads/*     — static uploads served directly by Express
+// ── Navigation strategy — NETWORK-FIRST (Session 128.25) ────────────────
+//
+// Previously this was CACHE-FIRST: every navigation returned a cached
+// /index.html, so the server's `app.get('/')` (which routes expired-cookie
+// visitors to landing.html per v76) was NEVER consulted on returning visits.
+// That defeated the entire expired-cookie→landing fix for any user whose
+// browser already had this SW installed.
+//
+// Now: try the network first (3s timeout) so the server's routing wins
+// while the user is online. Cache successful navigations in `dk-navigation`
+// (7-day expiration, 20 entries) for offline fallback. If both the network
+// AND the runtime cache miss, fall back to the precached SPA shell
+// `/index.html` so a fully-offline visit still renders something — that's
+// the SAME shell the pre-fix cache-first path served, so offline UX is
+// unchanged.
+//
+// Denylist preserves the pre-fix list: admin panel, JSON API, uploads.
+const navHandler = new NetworkFirst({
+  cacheName: 'dk-navigation',
+  networkTimeoutSeconds: 3,
+  plugins: [
+    new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 7 }),
+  ],
+});
+
 registerRoute(
   new NavigationRoute(
-    async () => {
-      const cached = await caches.match('/index.html');
-      return cached ?? fetch('/index.html');
+    async (params) => {
+      try {
+        return await navHandler.handle(params);
+      } catch (err) {
+        // Network down AND no runtime cache hit. Fall back to the precached
+        // SPA shell so the offline experience still renders.
+        const cached = await caches.match('/index.html');
+        if (cached) return cached;
+        // Last resort: re-throw → browser shows native offline error.
+        throw err;
+      }
     },
     {
       denylist: [/^\/admin-panel(\/|$)/, /^\/api\//, /^\/uploads\//],
