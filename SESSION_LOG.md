@@ -1,5 +1,72 @@
 # G-AI — Session Change Log
 
+## 2026-06-01 — Session 128.25 — Service Worker: network-first navigation + auto-update flow (closes the stale-cache loophole that bypassed v76)
+
+**Goal:** Returning users could be served a stale SW-cached page that **bypassed server routing entirely** — including the v76 expired-cookie→landing fix (Session 128.24, PR #167). Recon found the SW's NavigationRoute was **cache-first** (`caches.match('/index.html')` → network fallback), so every navigation returned the cached SPA shell and `app.get('/')` was never consulted on returning visits. Also: new SW deploys didn't auto-reload existing tabs — the SW would activate (skipWaiting was already in place) but the page stayed on the OLD JS/CSS bundle until a manual refresh. Goal: make navigation network-first (server routing always honored) AND make new SW versions activate + reload tabs promptly, without devtools / manual cache clear. Sensitive: web push lives in this SW + offline + CSP — preserve all three.
+
+**Status:** ✅ LIVE. Fly **v77** complete. Production `/sw.js` carries NetworkFirst markers + push + notificationclick + `dk-navigation` cache. SEO from #164/#165 + v76 routing from #167 all preserved.
+
+| Metric | Value |
+|---|---|
+| PR | [#169](https://github.com/dukanchiapp/Dukanchi-App/pull/169) squash `14f15aa` |
+| Production HEAD | `3278892` → `14f15aa` (approx; see git log for actual squash hash) |
+| Fly release | **v77** complete |
+| Files changed | 2 (`src/sw.ts` + `src/main.tsx`) |
+| Tests | 133/133 · E2E 2/2 |
+
+### Recon — why stale was possible
+
+- **`src/sw.ts:53-63` (pre-fix)** — NavigationRoute handler did `caches.match('/index.html')` then `fetch('/index.html')` only on cache miss. Every nav on a returning visitor (SW already installed) returned the cached SPA shell. The server's `app.get('/')` — the v76 expired-cookie→landing route — was **silently skipped** for every returning user.
+- **`src/main.tsx:39-44` (pre-fix)** — manual `navigator.serviceWorker.register('/sw.js')` only. No `controllerchange` reload listener; even when a new SW activated (via `skipWaiting()` + `clientsClaim()` already in `sw.ts`), the existing tab stayed on the OLD bundle until manual refresh.
+- VitePWA `registerType: 'autoUpdate'` was set in vite.config.ts but **had no effect** — the code uses manual registration, not `virtual:pwa-register`, so the auto-reload bridge was never wired client-side.
+
+### Changes
+
+- **`src/sw.ts`** — NavigationRoute swapped from cache-first to Workbox `NetworkFirst` (3s timeout, new `dk-navigation` cache, 7-day expiration, 20 entries). On both network AND runtime-cache miss, falls back to the precached `/index.html` so fully-offline visits still render — same shell the pre-fix cache-first path served, so offline UX is unchanged. Added `NetworkFirst` to the `workbox-strategies` import. **Preserved verbatim**: push + notificationclick (lines 95-116), denylist (`/admin-panel`, `/api/`, `/uploads/`), Google Fonts CacheFirst (365d), `precacheAndRoute(__WB_MANIFEST)`, `cleanupOutdatedCaches()`, `self.skipWaiting()` + `clientsClaim()`.
+- **`src/main.tsx`** — added `controllerchange` listener that reloads the page when a NEW SW takes over. `hadControllerOnLoad = !!navigator.serviceWorker.controller` snapshot taken BEFORE registration: if a controller already existed and a new one takes over → reload (returning visitor + new deploy); if no controller at load → skip reload (first install, page already on latest bundle). Pairs with the SW's `self.skipWaiting()` + `clientsClaim()`.
+
+### autoUpdate vs prompt — choice
+
+**Chose autoUpdate** (auto-reload, no prompt). Rationale:
+- VitePWA was already configured `registerType: 'autoUpdate'`.
+- App writes (messages / posts / follows / KYC submit) are server-backed, not local-state — a reload mid-session won't lose in-flight work because the writes are committed on submit, not buffered locally.
+- Network-first nav also means every subsequent navigation re-fetches HTML from the server, so the v76 expired-cookie→landing routing is honored on every visit independently of the auto-reload.
+- A prompt would be safer for forms in mid-typing but adds UX friction; given the low risk surface, auto-reload is the cleaner default.
+
+### Verification — production curl battery (post-v77)
+
+- ✅ `/health` → 200 `application/json`
+- ✅ `/` cookieless → 46080 B landing.html (unchanged baseline)
+- ✅ `/` with junk `dk_token` → 46080 B landing.html (PR #167 v76 fix still in effect)
+- ✅ live `/sw.js` (29 KB): `networkTimeoutSeconds` ×5 (NetworkFirst bundled), `showNotification` ×1 (push), `notificationclick` ×1, `dk-navigation` cache name ×1
+- ✅ `/sw.js` headers: `Cache-Control: public, max-age=0` + ETag — browser revalidates on every request so new SW versions are detected promptly
+- ✅ SEO from PR #164/#165 intact (`/` canonical + JSON-LD; `/legal/terms` self-canonical)
+
+### Phase 3 gates
+
+- ✅ `npm run typecheck` 0 (web + server + worker)
+- ✅ vitest 133/133
+- ✅ build green; `dist/sw.js` verified to contain both NetworkFirst markers AND push/notificationclick
+- ✅ Playwright E2E 2/2
+- ✅ Rules A–G observed (no new apiFetch paths / route mounts; no silent catches on user-initiated; Rule E production curl verified post-deploy)
+
+### Out of scope
+
+- CSP (untouched per task)
+- SEO (#164/#165), v76 / handler (#167), auth middleware, legal route handler, API endpoints — all unchanged
+- Manual local-browser SW auto-update demo (Phase 3 step 12) — not run; would require a multi-deploy local cycle in a non-incognito browser. Verified by code correctness + production smoke. Founder device test is the definitive check.
+
+### Awaiting
+
+- **Founder device test:**
+  1. Open app in normal browser (PWA installed if available) → SW installs
+  2. Wait for next deploy (or trigger a visible change → flyctl deploy)
+  3. Reload (or navigate) in the same browser session → confirm NEW version appears **WITHOUT** clearing cache / devtools intervention
+  4. Toggle offline (devtools / airplane mode) → confirm app shell still renders from cache
+  5. Confirm web push still arrives (notification delivered + `notificationclick` opens correct URL)
+
+---
+
 ## 2026-06-01 — Session 128.24 — JWT validation at /: expired sessions now see the landing (was: SPA bounce to /login)
 
 **Goal:** PR #134 (Session 128.21) added a server `app.get('/')` that served `landing.html` only when the `dk_token` cookie was **ABSENT**. Founder use case: a returning visitor with an EXPIRED/invalid `dk_token` was passed through to the SPA → ProtectedRoute bounced them to `/login` → **landing was skipped entirely**. We want the landing to appear for any unauthenticated session (absent OR invalid/expired), and only a VALID session should pass to the SPA.
