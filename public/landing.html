@@ -2,6 +2,40 @@
 <html lang="en" data-theme="yellow"><head>
 <meta charset="utf-8">
 <title>Dukanchi — apna bazaar, apni dukaan</title>
+
+<!-- Session 128.23 — SEO Part 2: canonical + OG + Twitter + JSON-LD restored
+     on the cookieless landing page. These were present on v56/v57 but were
+     dropped when #161 ("dukanchi-bright-skin" landing) replaced public/landing.html.
+     Without them Google had no brand-anchor signal for dukanchi.com/ and was
+     ranking /legal/* pages over the homepage for "Dukanchi" search. -->
+<meta name="description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo.">
+<link rel="canonical" href="https://dukanchi.com/">
+
+<!-- Open Graph (Facebook, WhatsApp, LinkedIn previews) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Dukanchi">
+<meta property="og:url" content="https://dukanchi.com/">
+<meta property="og:title" content="Dukanchi — apna bazaar, apni dukaan">
+<meta property="og:description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo.">
+<meta property="og:image" content="https://dukanchi.com/icons/icon-512x512.png">
+<meta property="og:image:width" content="512">
+<meta property="og:image:height" content="512">
+<meta property="og:locale" content="hi_IN">
+
+<!-- Twitter / X large-image card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Dukanchi — apna bazaar, apni dukaan">
+<meta name="twitter:description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo.">
+<meta name="twitter:image" content="https://dukanchi.com/icons/icon-512x512.png">
+
+<!-- Structured data — Organization + WebSite. Together these are the brand
+     anchor Google uses to assemble the knowledge panel / sitelinks for a
+     "Dukanchi" search. Linked via @id so the WebSite ↔ Organization
+     relationship is unambiguous to the crawler. -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://dukanchi.com/#org","name":"Dukanchi","url":"https://dukanchi.com/","logo":"https://dukanchi.com/icons/icon-512x512.png","description":"Dukanchi — India's local retail discovery platform. Connect with neighbourhood stores directly via chat.","areaServed":"IN"},{"@type":"WebSite","@id":"https://dukanchi.com/#website","name":"Dukanchi","url":"https://dukanchi.com/","publisher":{"@id":"https://dukanchi.com/#org"}}]}
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#FFB300">
 <!-- Session 128.22 — favicon set. SVG primary (scales infinitely on modern
