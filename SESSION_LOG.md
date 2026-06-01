@@ -1,5 +1,56 @@
 # G-AI — Session Change Log
 
+## 2026-06-01 — Session 128.24 — JWT validation at /: expired sessions now see the landing (was: SPA bounce to /login)
+
+**Goal:** PR #134 (Session 128.21) added a server `app.get('/')` that served `landing.html` only when the `dk_token` cookie was **ABSENT**. Founder use case: a returning visitor with an EXPIRED/invalid `dk_token` was passed through to the SPA → ProtectedRoute bounced them to `/login` → **landing was skipped entirely**. We want the landing to appear for any unauthenticated session (absent OR invalid/expired), and only a VALID session should pass to the SPA.
+
+**Status:** ✅ LIVE — production curl confirms invalid `dk_token` now serves landing (was SPA shell pre-fix).
+
+| Metric | Value |
+|---|---|
+| PR | [#167](https://github.com/dukanchiapp/Dukanchi-App/pull/167) squash `5a7d085` |
+| Production HEAD | `9399a5e` → `5a7d085` |
+| Fly release | **v76** complete |
+| Files changed | 1 (`src/app.ts`) |
+| Tests | 133/133 · E2E 2/2 |
+
+### Change
+
+**`src/app.ts`** — `app.get('/')` now JWT-validates the `dk_token` cookie instead of checking only its existence. Parallel construction with `src/middlewares/auth.middleware.ts:56` (Day 3 hardening): `jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] })`. Wrapped in try/catch — any failure (absent / expired / invalid signature / tampered / wrong-algo) routes to `landing.html`. Catch is intentionally silent: an invalid/expired token at `/` is normal logged-out flow, not an error to surface. Added `import jwt from "jsonwebtoken"` at top; `env` was already imported.
+
+### Verification — production curl battery (Fly v76)
+
+- ✅ `/` no cookie → **46080 B** `text/html` landing.html (unchanged baseline)
+- ✅ `/` with junk `dk_token=invalidXYZ.thisIs.notAValidJwt` → **46080 B** landing.html (was the bug; SPA shell ~5KB before fix)
+- ✅ `/` with structurally-valid but bogus-signature JWT (`eyJ...bogus`) → **46080 B** landing.html
+- ✅ `/health` → 200 `application/json`
+- ✅ SEO intact: `/` canonical + JSON-LD + OG (PR #164) and `/legal/terms` self-canonical (PR #165) preserved
+- ⚠️ Scenario 3 (`/` with a freshly-signed valid JWT → SPA pass-through) not curl-tested — requires real credentials to mint a token. Verified by **parallel construction** with `auth.middleware.ts` which is in active production use across every authed endpoint; if `jwt.verify` broke for valid tokens, every authed route would fail. Server health (200) and clean smoke confirm route handlers still work.
+
+### Phase 3 gates
+
+- ✅ `npm run typecheck` 0 (web + server + worker; Rule G)
+- ✅ vitest 133/133
+- ✅ build green
+- ✅ Playwright E2E 2/2
+- ✅ Rule A — no new `apiFetch` paths / route mounts
+- ✅ Rule B — silent catch documented with intent comment (invalid token at `/` is normal flow, not silenced backend error)
+- ✅ Rule E — production curl verified post-deploy on v76
+- ✅ Rule G — full `npm run typecheck`
+
+### Out of scope
+
+- robots.txt, sitemap.xml, canonical / OG / JSON-LD, legal route handler (PR #164 + #165) — all unchanged. Auth middleware untouched. No new endpoints. Visual/app behavior untouched.
+
+### Awaiting
+
+- Founder device test:
+  1. Incognito → `/` should show landing ✅ (curl-confirmed unchanged)
+  2. Expired-cookie test: log in, wait 15min (access-token TTL) OR delete only the dk_token cookie in devtools, navigate to `/` — should NOW show landing (was bouncing to `/login`)
+  3. Valid-cookie test: fresh login + immediately navigate to `/` — should pass through to home SPA
+
+---
+
 ## 2026-06-01 — Session 128.23 — SEO Part 2: homepage canonical+OG restored, legal pages self-canonical, Organization+WebSite JSON-LD
 
 **Goal:** Homepage (`dukanchi.com/`) lost canonical + OG tags when PR #161 swapped in the "dukanchi-bright-skin" `public/landing.html` — production curl confirmed 0 canonical / 0 og:* / 0 twitter:* / 0 JSON-LD on `/`. Google had no brand-anchor signal for `dukanchi.com/` and was ranking `/legal/*` pages above the homepage for the "Dukanchi" brand query. Also: every `/legal/*` inherited `index.html`'s hardcoded `canonical=https://dukanchi.com/`, telling Google "I'm a duplicate of /".
