@@ -305,7 +305,8 @@ footer{background:var(--ink);color:#C9C4BD;padding:64px 0 32px;margin-top:90px}
           <span><span class="st-sm">GET IT ON</span><span class="st-lg">Google Play</span></span>
         </a>
       </div>
-      <a href="/login" class="use-now reveal" data-link="webapp">
+      <a href="/login" class="use-now reveal" data-link="webapp"
+         onclick="try{localStorage.setItem('dk-browser-mode','1')}catch(e){}">
         <span class="un-ic">▶</span>
         <span>Ya abhi browser mein hi use karo <b>— no download</b></span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
