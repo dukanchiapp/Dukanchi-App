@@ -135,6 +135,27 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
     return () => { root.lang = prev; };
   }, [lang]);
 
+  // Session 128.23 — SEO Part 2: self-canonical for each /legal/* page.
+  // index.html ships with a hardcoded canonical → "https://dukanchi.com/", so
+  // without this every legal page told Google "I'm a duplicate of /". Now we
+  // point canonical (and og:url) at /legal/{slug} on mount and restore the
+  // homepage canonical on unmount, so navigating away leaves a clean state.
+  // We intentionally ignore the ?lang=hi query — Hindi is a translation of
+  // the same legal document, not a separate canonical URL.
+  useEffect(() => {
+    const canonicalUrl = `https://dukanchi.com/legal/${slug}`;
+    const canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const ogUrlEl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
+    const prevCanonical = canonicalEl?.getAttribute('href') ?? null;
+    const prevOgUrl = ogUrlEl?.getAttribute('content') ?? null;
+    if (canonicalEl) canonicalEl.setAttribute('href', canonicalUrl);
+    if (ogUrlEl) ogUrlEl.setAttribute('content', canonicalUrl);
+    return () => {
+      if (canonicalEl && prevCanonical !== null) canonicalEl.setAttribute('href', prevCanonical);
+      if (ogUrlEl && prevOgUrl !== null) ogUrlEl.setAttribute('content', prevOgUrl);
+    };
+  }, [slug]);
+
   const toc = useMemo(() => (status === 'loaded' ? extractToc(content) : []), [content, status]);
   const retry = () => setReloadKey(k => k + 1);
 
