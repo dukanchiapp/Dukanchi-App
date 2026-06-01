@@ -1,6 +1,7 @@
 import path from "path";
 import fs from "fs";
 import express from "express";
+import jwt from "jsonwebtoken";
 import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
@@ -391,12 +392,26 @@ app.get('/landing', (_req, res) => {
 // Mounted BEFORE server.ts's `express.static(distPath)` + `app.get('*')`
 // catch-all (both registered after app.ts handlers).
 app.get('/', (req, res, next) => {
-  // Presence-only check (no signature verification). An expired/invalid token
-  // still falls through to the SPA, which then resolves to /login as today —
-  // the goal here is purely to remove the unauthenticated-redirect that broke
-  // Google indexing, not to gate auth.
-  const hasAccessToken = !!(req.cookies && req.cookies.dk_token);
-  if (hasAccessToken) return next();
+  // Session 128.24: JWT validation (was cookie-existence). The old presence-
+  // only check let a returning visitor with an EXPIRED/invalid dk_token fall
+  // through to the SPA → bounced to /login by ProtectedRoute → landing was
+  // skipped entirely (the founder use case). Now we verify the JWT with the
+  // same secret + algorithm whitelist (HS256) as src/middlewares/auth.middleware.ts:
+  //   - Verify succeeds (valid, unexpired session) → next() → SPA → <HomePage />
+  //   - Verify throws (expired / invalid / tampered / wrong-algo) → landing.html
+  //   - No cookie at all (Googlebot, fresh visitor) → landing.html (unchanged)
+  // The catch is intentional and silent — an invalid/expired token at "/" is
+  // normal logged-out flow, not an error to log. The decision is purely
+  // auth-gate; we don't surface the JWT-error type to the client either way.
+  const token = req.cookies?.dk_token;
+  if (token) {
+    try {
+      jwt.verify(token, env.JWT_SECRET, { algorithms: ['HS256'] });
+      return next(); // valid session → SPA passes through to authed home
+    } catch {
+      // Expired / invalid / tampered — fall through to landing.html below.
+    }
+  }
   return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
 });
 
