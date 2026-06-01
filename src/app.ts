@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs";
 import express from "express";
 import helmet from "helmet";
 import compression from "compression";
@@ -414,6 +415,45 @@ app.get('/robots.txt', (_req, res) => {
 });
 app.get('/sitemap.xml', (_req, res) => {
   res.type('application/xml').sendFile(path.resolve(process.cwd(), 'public', 'sitemap.xml'));
+});
+
+// ── 9a.5. SEO — server-side per-route canonical for /legal/* (Session 128.23)
+// All /legal/* paths share dist/index.html (the SPA shell), which carries a
+// hardcoded <link rel="canonical" href="https://dukanchi.com/" /> for the
+// "/" canonical case. Without server-side rewriting, every legal page tells
+// crawlers "I'm a duplicate of /" — exactly the bug that caused Google to
+// rank /legal/terms above dukanchi.com/ for the brand query.
+//
+// LegalLayout.tsx ALSO updates canonical + og:url client-side on mount
+// (covers in-app SPA navigation from / → /legal/terms). Server-side is what
+// curl + non-JS social unfurlers see — we need both.
+//
+// Mounted BEFORE server.ts's express.static(distPath) + app.get('*')
+// catch-all, so this handler wins for the 5 known legal slugs.
+const LEGAL_SLUGS = new Set(['terms', 'privacy', 'account-deletion', 'grievance', 'cookies']);
+let cachedSpaShell: string | null = null;
+const loadSpaShell = (): string => {
+  if (cachedSpaShell != null) return cachedSpaShell;
+  try {
+    cachedSpaShell = fs.readFileSync(path.resolve(process.cwd(), 'dist', 'index.html'), 'utf8');
+  } catch {
+    // Dev mode or missing build — fall through to the SPA catch-all and let
+    // LegalLayout's client-side effect handle canonical. Cache empty so we
+    // don't re-attempt the read every request.
+    cachedSpaShell = '';
+  }
+  return cachedSpaShell;
+};
+app.get('/legal/:slug', (req, res, next) => {
+  const slug = req.params.slug;
+  if (!LEGAL_SLUGS.has(slug)) return next();
+  const shell = loadSpaShell();
+  if (!shell) return next();
+  const url = `https://dukanchi.com/legal/${slug}`;
+  const html = shell
+    .replace(/<link rel="canonical" href="https:\/\/dukanchi\.com\/"\s*\/>/, `<link rel="canonical" href="${url}" />`)
+    .replace(/<meta property="og:url" content="https:\/\/dukanchi\.com\/"\s*\/>/, `<meta property="og:url" content="${url}" />`);
+  res.type('html').send(html);
 });
 
 // ── 9b. Admin panel — static files + SPA fallback ────────────────────────────
