@@ -9,6 +9,7 @@ import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { Sentry } from '../lib/sentry-frontend';
 import { useToast } from '../context/ToastContext';
+import { playNotificationSound } from '../utils/audio';
 
 /* ── Futuristic v2 skin · Phase 6 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Socket.IO connection,
@@ -274,7 +275,12 @@ export default function ChatPage() {
         (msg.senderId === currentUserId && msg.receiverId === userId) ||
         (msg.senderId === userId && msg.receiverId === currentUserId);
       if (!belongs) return;
+      
       setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+      
+      if (msg.senderId !== currentUserId) {
+        playNotificationSound();
+      }
     });
 
     // Mobile foreground wakeup: ensure socket reconnects when tab becomes visible
@@ -496,22 +502,6 @@ export default function ChatPage() {
           backgroundAttachment: 'local',
         }}
       >
-        <div style={{ textAlign: 'center', margin: '4px 0 8px' }}>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: 'var(--b-gray-3)',
-              background: '#fff',
-              border: '1px solid var(--b-line)',
-              padding: '3px 12px',
-              borderRadius: 9999,
-            }}
-          >
-            {new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-          </span>
-        </div>
-
         {messages.length === 0 && !referredPost && (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--f-text-3)', fontSize: 13 }}>
             <p style={{ margin: 0 }}>No messages yet. Say hi! 👋</p>
@@ -521,16 +511,53 @@ export default function ChatPage() {
         {messages.map((msg, idx) => {
           const isMe = msg.senderId === currentUserId;
           const isPostRef = typeof msg.message === 'string' && msg.message.startsWith(POST_REF_PREFIX);
+          
+          let showDate = false;
+          let dateStr = '';
+          if (msg.createdAt) {
+            const date = new Date(msg.createdAt);
+            dateStr = date.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+            if (idx === 0) {
+              showDate = true;
+            } else {
+              const prevDate = new Date(messages[idx - 1].createdAt || Date.now());
+              const prevDateStr = prevDate.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+              if (dateStr !== prevDateStr) {
+                showDate = true;
+              }
+            }
+          } else if (idx === 0 || !messages[idx - 1].createdAt) {
+            // fallback if no createdAt
+            showDate = true;
+            dateStr = new Date().toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+          }
 
           return (
-            <div
-              key={msg.id || idx}
-              style={{
-                display: 'flex', flexDirection: 'column', maxWidth: '85%',
-                alignItems: isMe ? 'flex-end' : 'flex-start',
-                alignSelf: isMe ? 'flex-end' : 'flex-start',
-              }}
-            >
+            <React.Fragment key={msg.id || idx}>
+              {showDate && (
+                <div style={{ textAlign: 'center', margin: '16px 0 8px' }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: 'var(--b-gray-3)',
+                      background: '#fff',
+                      border: '1px solid var(--b-line)',
+                      padding: '3px 12px',
+                      borderRadius: 9999,
+                    }}
+                  >
+                    {dateStr}
+                  </span>
+                </div>
+              )}
+              <div
+                style={{
+                  display: 'flex', flexDirection: 'column', maxWidth: '85%',
+                  alignItems: isMe ? 'flex-end' : 'flex-start',
+                  alignSelf: isMe ? 'flex-end' : 'flex-start',
+                }}
+              >
               <div style={{
                 padding: isPostRef ? 6 : '11px 15px', fontSize: 14, lineHeight: 1.45, fontWeight: 500,
                 // Session 128.13 — Bright Skin chat bubble:
@@ -559,6 +586,7 @@ export default function ChatPage() {
                 {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
               </span>
             </div>
+            </React.Fragment>
           );
         })}
         <div ref={messagesEndRef} />

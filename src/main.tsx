@@ -60,6 +60,22 @@ if ('serviceWorker' in navigator) {
       refreshing = true;
       window.location.reload();
     });
+
+    // Session 128.26 — Auto-update on resume.
+    // The browser doesn't automatically check for new SW versions if the app
+    // stays alive in the background (unless a navigation occurs). By explicitly
+    // calling update() when the app comes back to the foreground, the browser
+    // fetches sw.js. If it changed, skipWaiting() takes over and the
+    // controllerchange event (above) fires to instantly reload the page.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          for (const reg of regs) {
+            reg.update().catch(err => console.log('SW update check failed:', err));
+          }
+        });
+      }
+    });
   } else {
     // localhost dev — unregister any existing SW and clear caches
     navigator.serviceWorker.getRegistrations().then(regs => {

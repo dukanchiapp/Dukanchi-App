@@ -10,7 +10,8 @@ import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerCompon
 import { Link } from 'react-router-dom';
 import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation } from '../context/LocationContext';
-import { CATEGORIES, CATEGORY_CHIPS, matchCategory } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
+import { matchCategory } from '../constants/categories';
 import { Search, X, Crosshair, MapPin, Clock, Phone, Store, Navigation, ChevronDown, ArrowUp, Layers } from 'lucide-react';
 import { FLogo } from '../components/futuristic/FLogo';
 import { IsoMap, type IsoMapStore } from '../components/futuristic/IsoMap';
@@ -61,13 +62,14 @@ export default function MapPage() {
   const [listExpanded, setListExpanded] = useState(false);
   const [mapMode, setMapMode] = useState<'map' | '3d'>('map'); // Session 122: 3D↔Map toggle
   // Session 128.19: smart filter — radius (km) + status. 0 = no cap.
-  const [mapRadius, setMapRadius] = useState(0);
+  const [mapRadius, setMapRadius] = useState(5);
   const [mapStatusFilter, setMapStatusFilter] = useState<'all' | 'open'>('all');
   const [mapFilterOpen, setMapFilterOpen] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
 
   const { location: userLocCtx } = useUserLocation();
   const userLocation = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
+  const { categories: dynamicCategories } = useCategories();
 
   const getDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371;
@@ -83,9 +85,11 @@ export default function MapPage() {
   };
 
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const [libraries] = useState<("places" | "drawing" | "geometry" | "localContext" | "visualization")[]>(['places']);
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: mapsKey,
     id: 'google-map-script',
+    libraries,
   });
 
   // Session 128.20: log map-loader state once on mount + whenever it flips,
@@ -124,6 +128,7 @@ export default function MapPage() {
       mapRef.current.setZoom(16);
     }
     setSelectedStore(store);
+    setListExpanded(true);
   };
 
   const recenterMap = () => {
@@ -136,7 +141,11 @@ export default function MapPage() {
   // Session 128.19: filter pipeline now applies smart-filter radius +
   // status alongside the category chip and search query.
   const filteredStores = useMemo(() => stores.filter(s => {
-    if (!matchCategory(s.category, selectedCategory)) return false;
+    const matchesCat = !selectedCategory || (
+      s.category?.toLowerCase() === selectedCategory.toLowerCase() ||
+      (dynamicCategories.find(c => c.value === selectedCategory)?.aliases?.some(alias => s.category?.toLowerCase().includes(alias)))
+    );
+    if (!matchesCat) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const hit = s.storeName?.toLowerCase().includes(q)
@@ -180,7 +189,7 @@ export default function MapPage() {
       ]),
     );
     return shown.map((s, i) => {
-      const catDef = CATEGORIES.find(c => matchCategory(s.category, c.value));
+      const catDef = dynamicCategories.find(c => matchCategory(s.category, c.value));
       const x = 50 + ((s.longitude - userLocation.lng) / maxAbs) * 32;
       const y = 50 - ((s.latitude - userLocation.lat) / maxAbs) * 32; // invert lat for screen
       return {
@@ -209,24 +218,23 @@ export default function MapPage() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100dvh', // Fixed viewport height
+        overflow: 'hidden', // Prevent page scrolling
+        display: 'flex',
+        flexDirection: 'column',
         backgroundColor: 'var(--f-bg-deep)',
         backgroundImage: 'var(--f-page-bg)',
-        // Session 128.18: extra 200px on top of the 80px BottomNav buffer so
-        // the sticky bottom sheet (`position: sticky; bottom: 80`) never
-        // covers the empty-state copy below the map. The sheet collapses to
-        // ~180px tall when not expanded; 200 leaves a clean gap.
-        paddingBottom: 280,
+        paddingBottom: 62, // Clear the BottomNav
         fontFamily: 'var(--f-font)',
       }}
     >
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto w-full h-full flex flex-col relative">
 
         {/* ── Gradient header ── */}
         <div
-          className="sticky top-0 z-20 px-4 pb-3"
+          className="z-20 px-4 pb-3 flex-shrink-0"
           style={{
-            background: 'var(--b-grad)',
+            background: '#fff',
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
           }}
         >
@@ -238,20 +246,20 @@ export default function MapPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
               <FLogo size={40} />
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--b-on-grad)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--b-ink)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                   Dukanchi
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--b-on-grad-soft)', lineHeight: 1.1 }}>apna bazaar, apni dukaan</span>
+                <span style={{ fontSize: 11, color: 'var(--b-gray-2)', lineHeight: 1.1 }}>apna bazaar, apni dukaan</span>
               </div>
             </div>
             <div
               style={{
                 width: 42, height: 42, borderRadius: 14,
-                background: 'var(--b-chip-bg)', border: '1px solid var(--b-chip-line)',
+                background: 'var(--b-surface)', border: '1px solid var(--b-line)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <NotificationBell color="var(--b-on-grad)" />
+              <NotificationBell color="var(--b-ink)" />
             </div>
           </div>
 
@@ -287,15 +295,15 @@ export default function MapPage() {
               onClick={() => setMapFilterOpen(v => !v)}
               className="b-tap"
               style={{
-                width: 44, height: 44, borderRadius: 12, border: 'none',
-                background: (mapRadius > 0 || mapStatusFilter !== 'all' || mapFilterOpen) ? '#fff' : 'var(--b-chip-bg)',
+                width: 44, height: 44, borderRadius: 12, border: '1px solid var(--b-line)',
+                background: (mapRadius > 0 || mapStatusFilter !== 'all' || mapFilterOpen) ? 'var(--b-surface)' : '#fff',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
               }}
               aria-label="Filters"
             >
-              <Layers size={18} color="var(--b-on-grad)" />
+              <Layers size={18} color="var(--b-ink)" />
             </button>
           </div>
 
@@ -348,69 +356,35 @@ export default function MapPage() {
                   Location grant karein to radius use ho
                 </p>
               )}
+               {/* Session 128.15 — Map category dropdown (converted from chips) */}
+          <div style={{ marginTop: 12, paddingBottom: 2 }}>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full p-3 rounded-xl outline-none text-sm font-medium"
+              style={{
+                background: '#fff',
+                border: '1px solid var(--b-line)',
+                color: 'var(--b-ink)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+              }}
+            >
+              <option value="">All Categories</option>
+              {dynamicCategories.map(cat => (
+                <option key={cat.value} value={cat.value}>{cat.fullLabel}</option>
+              ))}
+            </select>
+          </div>
             </div>
           )}
-
-          {/* Session 128.15 — Map category chips: explicit 8px gap +
-              guaranteed horizontal scroll (no wrap). Inactive uses dark ink
-              on a soft chip surface (was translucent-white on gradient which
-              made the dark-text on yellow gradient unreadable). */}
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              marginTop: 12,
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              flexWrap: 'nowrap',
-              scrollbarWidth: 'none',
-              paddingBottom: 2,
-              paddingRight: 16,
-              marginRight: -16,
-              WebkitOverflowScrolling: 'touch',
-            }}
-          >
-            {CATEGORY_CHIPS.map(chip => {
-              const active = selectedCategory === chip.value;
-              return (
-                <button
-                  key={chip.value}
-                  // Session 128.20: clicking the already-selected category
-                  // resets selection to '' (All), per founder ask.
-                  onClick={() => setSelectedCategory(prev => prev === chip.value ? '' : chip.value)}
-                  className="b-tap"
-                  style={{
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    padding: '6px 12px',
-                    borderRadius: 9999,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    background: active ? '#fff' : 'var(--b-chip-bg)',
-                    color: active ? 'var(--b-ink)' : 'var(--b-on-grad)',
-                    border: active ? 'none' : '1px solid var(--b-chip-line)',
-                  }}
-                >
-                  {chip.emoji && <span>{chip.emoji}</span>}
-                  {chip.label}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         {/* ── Map container ── */}
-        <div className="px-4 pt-3">
+        <div className="px-4 pt-3 pb-3 flex-1 flex flex-col min-h-0">
           <div
-            className="relative overflow-hidden"
+            className="relative overflow-hidden w-full h-full"
             style={{
               borderRadius: 20,
-              height: 380,
               border: '1px solid var(--f-glass-border-2)',
               boxShadow: '0 6px 18px rgba(24,16,8,0.08)',
             }}
@@ -472,7 +446,7 @@ export default function MapPage() {
 
                 {/* Store markers */}
                 {validStores.map(store => {
-                  const catDef = CATEGORIES.find(c => matchCategory(store.category, c.value));
+                  const catDef = dynamicCategories.find(c => matchCategory(store.category, c.value));
                   const pinColor = catDef?.color || 'var(--b-orange)';
                   const emoji = catDef?.emoji || '🏪';
                   return (
@@ -590,91 +564,7 @@ export default function MapPage() {
           </div>
         </div>
 
-        {/* ── Selected store card ── */}
-        {selectedStore && (
-          <div className="px-4 mt-3">
-            <div className="f-glass" style={{ borderRadius: 18, padding: 16 }}>
-              <div className="flex items-start gap-3">
-                <div
-                  className="flex-shrink-0 overflow-hidden"
-                  style={{
-                    width: 52, height: 52, borderRadius: 14,
-                    background: selectedStore.logoUrl ? '#000' : 'var(--f-glass-bg-2)',
-                    border: '2px solid var(--b-magenta-ink)',
-                    boxShadow: 'var(--b-elev-card)',
-                  }}
-                >
-                  {selectedStore.logoUrl ? (
-                    <img src={selectedStore.logoUrl} className="w-full h-full object-cover" alt="logo" loading="lazy" decoding="async" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-lg" style={{ color: 'var(--b-magenta-ink)' }}>
-                      {selectedStore.storeName?.charAt(0)}
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-bold truncate" style={{ fontSize: 15, color: 'var(--f-text-1)' }}>{selectedStore.storeName}</p>
-                      {selectedStore.category && (
-                        <p style={{ fontSize: 12, color: 'var(--b-magenta-ink)', fontWeight: 600, marginTop: 1 }}>{selectedStore.category}</p>
-                      )}
-                    </div>
-                    <button onClick={() => setSelectedStore(null)}>
-                      <X size={16} color="var(--f-text-3)" />
-                    </button>
-                  </div>
-                  <div className="mt-2 space-y-1">
-                    {selectedStoreDistance && (
-                      <div className="flex items-center gap-1.5">
-                        <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>📍</span>
-                        <span style={{ fontSize: 12, color: 'var(--f-text-2)' }}>{selectedStoreDistance} away</span>
-                      </div>
-                    )}
-                    {storeStatus && (
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={12} color={statusColor(storeStatus.color)} style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: statusColor(storeStatus.color), fontWeight: 600 }}>{storeStatus.label}</span>
-                      </div>
-                    )}
-                    {selectedStore.address && (
-                      <div className="flex items-center gap-1.5">
-                        <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0, opacity: 0.55 }}>📍</span>
-                        <span className="truncate" style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.address}</span>
-                      </div>
-                    )}
-                    {selectedStore.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone size={12} color="var(--f-text-3)" style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: 12, color: 'var(--f-text-3)' }}>{selectedStore.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Link
-                  to={`/store/${selectedStore.id}`}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
-                  style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}
-                >
-                  <Store size={14} color="var(--f-text-1)" />
-                  View Store
-                </Link>
-                <a
-                  href={selectedStore.latitude && selectedStore.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${selectedStore.latitude},${selectedStore.longitude}` : '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold"
-                  style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
-                >
-                  <Navigation size={14} color="white" />
-                  Navigate
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Removed selected store floating card as per UX updates */}
 
         {/* Session 128.18: bottom sheet refactored AGAIN — Session 128.17
             shipped this as an inline block under the map, but the founder
@@ -691,12 +581,9 @@ export default function MapPage() {
             (Rule: app-wide neon strip from 128.17). */}
         {validStores.length > 0 && (
           <div
-            className="px-4"
+            className="px-4 pb-4 flex-shrink-0"
             style={{
-              position: 'sticky',
-              bottom: 80, // sits just above the 72px BottomNav + a 8px gap
               zIndex: 25,
-              marginTop: 12,
             }}
           >
             <div>
@@ -756,7 +643,7 @@ export default function MapPage() {
                             </button>
                             <div className="flex gap-2 px-3 pb-3">
                               <Link to={`/store/${store.id}`} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', border: '1px solid var(--f-glass-border)' }}><Store size={12} color="var(--f-text-1)" /> View Store</Link>
-                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'var(--b-grad)', color: 'white' }}><Navigation size={12} color="white" /> Navigate</a>
+                              <a href={store.latitude && store.longitude ? `https://www.google.com/maps/dir/?api=1&destination=${store.latitude},${store.longitude}` : '#'} target="_blank" rel="noopener noreferrer" className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-xs font-bold" style={{ background: 'linear-gradient(to right, #3B82F6, #2563EB)', color: 'white' }}><Navigation size={12} color="white" /> Navigate</a>
                             </div>
                           </div>
                         );
@@ -800,7 +687,7 @@ export default function MapPage() {
                     ) : validStores.slice(0, 8).map(store => {
                       const dist = userLocation ? getDistance(userLocation.lat, userLocation.lng, store.latitude, store.longitude) : null;
                       const sStatus = getStoreStatus(store.openingTime, store.closingTime, store.is24Hours, store.workingDays);
-                      const catDef2 = CATEGORIES.find(c => matchCategory(store.category, c.value));
+                      const catDef2 = dynamicCategories.find(c => matchCategory(store.category, c.value));
                       return (
                         <button
                           key={store.id}

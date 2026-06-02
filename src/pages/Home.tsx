@@ -8,7 +8,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
-import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck, ChevronDown } from 'lucide-react';
 import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
 import { haptic } from '../lib/haptics';
 import Header from '../components/bright/Header';
@@ -16,6 +16,7 @@ import Button from '../components/bright/Button';
 import NotificationsDrawer from '../components/NotificationsDrawer';
 import { useNotifications } from '../context/NotificationContext';
 import { PostCard } from '../components/PostCard';
+import { CATEGORY_CHIPS } from '../constants/categories';
 
 // Futuristic (v2) carousel chevron — glass circle. Shared L/R style.
 const fChevBtn: CSSProperties = {
@@ -39,6 +40,7 @@ export default function HomePage() {
   usePageMeta({ title: 'Home' });
   const [feedType, setFeedType] = useState('global');
   const [locationRange, setLocationRange] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   // Session 128.15 — notifications drawer state (Header's bell triggers this).
@@ -73,6 +75,7 @@ export default function HomePage() {
   const { posts: feedPosts, loading: feedLoading, loadingMore, hasMore, loadMore, refresh } = useFeed({
     feedType,
     locationRange,
+    category: categoryFilter,
     lat: userLocCtx?.lat,
     lng: userLocCtx?.lng,
     enabled: !!token && feedType !== 'saved',
@@ -640,6 +643,50 @@ export default function HomePage() {
                     )}
                   </button>
                 ))}
+
+                <div
+                  style={{
+                    padding: '12px 14px 6px',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.8,
+                    color: 'var(--f-text-3)',
+                    borderTop: '1px solid var(--f-glass-border-2)',
+                    marginTop: 4,
+                  }}
+                >
+                  Category
+                </div>
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {CATEGORY_CHIPS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setCategoryFilter(opt.value); setShowFilters(false); }}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '8px 16px',
+                        fontSize: 13,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--f-text-1)',
+                      }}
+                    >
+                      <span className="flex items-center gap-2">
+                        {opt.emoji && <span>{opt.emoji}</span>}
+                        {opt.label}
+                      </span>
+                      {categoryFilter === opt.value && (
+                        <Check size={14} color="var(--b-magenta-ink)" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

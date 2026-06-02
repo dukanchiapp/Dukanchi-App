@@ -18,6 +18,7 @@
     "src/pages/**/*",
     "src/hooks/**/*",
     "src/context/**/*",
+    "src/utils/**/*",
     "src/types/**/*",
     "src/constants/**/*",
     "src/lib/api.ts",

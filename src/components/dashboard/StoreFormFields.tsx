@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Camera, MapPin, Navigation, Clock, Check, Sparkles } from 'lucide-react';
 import StarRating from '../StarRating';
-import { CATEGORIES } from '../../constants/categories';
+import { useCategories } from '../../hooks/useCategories';
 import { apiFetch } from '../../lib/api';
 import { Sentry } from '../../lib/sentry-frontend';
 import { UploadingOverlay } from '../ui/UploadingOverlay';
@@ -58,6 +58,7 @@ export function StoreFormFields({
   is24Hours, setIs24Hours, selectedDays, toggleDay, allDays,
   saving,
 }: StoreFormFieldsProps) {
+  const { categories: dynamicCategories } = useCategories();
   // Session 125: shared --f-* input surface (replaces the legacy dk-input class).
   const fInput: React.CSSProperties = {
     background: 'var(--f-bg-elev)',
@@ -114,9 +115,29 @@ export function StoreFormFields({
       {/* Category */}
       <div>
         <label className="block text-[11px] font-bold uppercase tracking-wider mb-1.5" style={{ color: 'var(--f-text-3)' }}>Store Category</label>
-        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full p-3 rounded-xl outline-none text-sm font-medium" style={fInput}>
-          {CATEGORIES.map(cat => <option key={cat.value} value={cat.value}>{cat.fullLabel}</option>)}
+        <select 
+          value={dynamicCategories.some(c => c.value === selectedCategory) ? selectedCategory : (selectedCategory ? 'Other' : dynamicCategories[0]?.value)} 
+          onChange={(e) => setSelectedCategory(e.target.value === 'Other' ? '' : e.target.value)} 
+          className="w-full p-3 rounded-xl outline-none text-sm font-medium" 
+          style={fInput}
+        >
+          {dynamicCategories.map(cat => <option key={cat.value} value={cat.value}>{cat.fullLabel}</option>)}
+          <option value="Other">Add New +</option>
         </select>
+        
+        {(!dynamicCategories.some(c => c.value === selectedCategory) && selectedCategory !== (dynamicCategories[0]?.value || '')) && (
+          <div className="mt-2" style={{ animation: 'fadeIn 0.2s ease-out' }}>
+            <input 
+              type="text" 
+              placeholder="E.g., Astrology Services" 
+              className="w-full p-3 rounded-xl outline-none text-sm font-medium" 
+              style={fInput} 
+              value={selectedCategory === 'Other' ? '' : selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)} 
+              required
+            />
+          </div>
+        )}
       </div>
 
       {/* Store Bio */}

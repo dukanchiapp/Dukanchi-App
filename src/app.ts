@@ -30,6 +30,7 @@ import { landingPublicRoutes, landingAdminRoutes } from './modules/landing/landi
 import pushRoutes from './modules/push/push.routes';
 import { accountRoutes } from './modules/account/account.routes';
 import cspReportRoutes from './modules/security/csp-report.routes';
+import { seoRoutes } from './modules/seo/seo.routes';
 
 import { upload, getUploadedFileUrl, verifyAndPersistUpload, FILE_SIZE_LIMIT_BYTES } from "./middlewares/upload.middleware";
 import { authenticateToken } from "./middlewares/auth.middleware";
@@ -355,6 +356,9 @@ app.use('/api/complaints', complaintRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/app-settings', settingsRoutes);
+
+// Dynamic Sitemap Generator
+app.use('/sitemap.xml', seoRoutes);
 
 // ── 8. Misc endpoints ─────────────────────────────────────────────────────────
 // NOTE: /api/auth/me is the correct endpoint (auth.routes.ts, uses authenticateAny for both app + admin cookies)

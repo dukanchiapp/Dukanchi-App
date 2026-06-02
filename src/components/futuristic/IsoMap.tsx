@@ -38,7 +38,7 @@ export function IsoMap({
         perspective: 1400,
         perspectiveOrigin: '50% 30%',
         background:
-          'radial-gradient(ellipse at 50% 65%, rgba(199,126,0,0.16) 0%, transparent 55%), radial-gradient(ellipse at 30% 30%, rgba(234,154,0,0.14) 0%, transparent 50%), linear-gradient(160deg, #FFF7F0 0%, #FFEEE5 100%)',
+          'radial-gradient(ellipse at 50% 65%, rgba(66, 133, 244, 0.12) 0%, transparent 55%), radial-gradient(ellipse at 30% 30%, rgba(162, 89, 255, 0.1) 0%, transparent 50%), linear-gradient(160deg, #1f2227 0%, #15171a 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}
@@ -60,7 +60,7 @@ export function IsoMap({
             top: '-20%',
             bottom: '-20%',
             backgroundImage:
-              'linear-gradient(rgba(234,154,0,0.20) 1px, transparent 1px), linear-gradient(90deg, rgba(234,154,0,0.20) 1px, transparent 1px)',
+              'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
             maskImage:
               'radial-gradient(ellipse at center, black 35%, transparent 70%)',

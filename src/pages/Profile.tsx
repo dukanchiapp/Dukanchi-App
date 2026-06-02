@@ -493,7 +493,7 @@ export default function ProfilePage() {
                 meets the page surface with a hard edge. */}
           </div>
           <div style={{
-            position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, zIndex: 3,
+            position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, zIndex: 50,
             padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 0',
           }}>
             <NotificationBell color="#fff" />

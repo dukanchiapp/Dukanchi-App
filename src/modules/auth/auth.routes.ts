@@ -6,6 +6,7 @@ import { signupSchema, loginSchema } from "../../../validators/schemas";
 
 const router = Router();
 
+router.post("/check-phone", authLimiter, AuthController.checkPhone);
 router.post("/users", authLimiter, validate(signupSchema), AuthController.signup);
 router.post("/login", authLimiter, validate(loginSchema), AuthController.login);
 router.post("/logout", AuthController.logout);

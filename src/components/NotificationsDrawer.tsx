@@ -44,7 +44,7 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
           top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
           width: 320,
           maxWidth: 'calc(100vw - 32px)',
-          zIndex: 50,
+          zIndex: 100,
           overflow: 'hidden',
           borderRadius: 18,
           background: '#fff',
@@ -64,25 +64,6 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
           <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--b-ink)', margin: 0 }}>
             Notifications
           </h3>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--b-magenta-ink)',
-                fontFamily: 'inherit',
-              }}
-            >
-              <FIcon name="check" size={13} color="var(--b-magenta-ink)" /> Mark all read
-            </button>
-          )}
         </div>
 
         <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>

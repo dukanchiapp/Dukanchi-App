@@ -4,6 +4,8 @@ import { bullRedisConnection } from "../config/bullmq";
 import { getIO } from "../config/socket";
 import { logger } from "../lib/logger";
 import { isUserUnavailable } from "../middlewares/user-status";
+import { sendPushToUser } from "../services/push.service";
+import { v4 as uuidv4 } from "uuid";
 
 export function startNotificationWorker() {
   const notificationWorker = new Worker('Notifications', async job => {
@@ -43,24 +45,45 @@ export function startNotificationWorker() {
             const activeChunk = chunk.filter(f => activeIds.has(f.userId));
             if (activeChunk.length === 0) continue;
 
+            const notifsToInsert = activeChunk.map(f => ({
+              id: uuidv4(),
+              userId: f.userId,
+              type: 'NEW_POST',
+              content: `${storeName} just published a new post!`,
+              referenceId: postId,
+              createdAt: new Date(),
+              isRead: false,
+            }));
+
             await prisma.notification.createMany({
-              data: activeChunk.map(f => ({
-                userId: f.userId,
-                type: 'NEW_POST',
-                content: `${storeName} just published a new post!`,
-                referenceId: postId,
+              data: notifsToInsert.map(n => ({
+                id: n.id,
+                userId: n.userId,
+                type: n.type,
+                content: n.content,
+                referenceId: n.referenceId,
+                createdAt: n.createdAt,
               })),
               skipDuplicates: true,
             });
 
-            // Emit inline from chunk data — no extra findMany round-trip
-            for (const f of activeChunk) {
-              io.to(f.userId).emit('newNotification', {
-                type: 'NEW_POST',
-                content: `${storeName} just published a new post!`,
-                referenceId: postId,
-                isRead: false,
+            // Emit inline from chunk data — now with id and createdAt
+            for (const n of notifsToInsert) {
+              io.to(n.userId).emit('newNotification', {
+                id: n.id,
+                type: n.type,
+                content: n.content,
+                referenceId: n.referenceId,
+                isRead: n.isRead,
+                createdAt: n.createdAt.toISOString(),
               });
+              
+              // Also send push notification to followers (Point 8)
+              sendPushToUser(n.userId, {
+                title: storeName,
+                body: "just published a new post!",
+                url: `/store/${storeId}`
+              }).catch(err => logger.warn({ err, userId: n.userId }, "Push failed for new post"));
             }
           }
         } catch (e) {

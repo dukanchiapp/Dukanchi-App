@@ -6,7 +6,7 @@
     <meta charset="UTF-8" />
     <meta name="google" content="notranslate" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Dukanchi — Apna Bazaar, Apni Dukaan</title>
+    <title>Dukanchi - Apki local market ab aapke phone par.</title>
 
     <!-- Bright skin fonts — Inter (UI) + JetBrains Mono (prices). CSP allows
          fonts.googleapis.com (style-src) + fonts.gstatic.com (font-src). -->
@@ -41,17 +41,23 @@
     <meta name="mobile-web-app-capable" content="yes" />
 
     <!-- SEO / social -->
-    <meta name="description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo." />
+    <meta name="description" content="Apne local market me koi bhi product search karein. Hum local retailers ko customers se connect kar rahe hain. Aap jahan bhi jayein, uss area ki local market ab aapke phone par hogi. Local products shop karein, local stores search karein aur chat ke through directly connect karein." />
+    <meta name="keywords" content="Dukanchi, local market, local stores, shop local, apna bazaar, apni dukaan, online local shopping, stores near me" />
     <link rel="canonical" href="https://dukanchi.com/" />
-
+    
+    <!-- Geo Meta Tags for Hyperlocal SEO (God Tier) -->
+    <meta name="geo.region" content="IN" />
+    <meta name="geo.placename" content="India" />
+    <meta name="geo.position" content="20.593684;78.96288" />
+    <meta name="ICBM" content="20.593684, 78.96288" />
     <!-- Session 128.11 — Open Graph (Facebook, WhatsApp, LinkedIn link previews).
          WhatsApp + Instagram are the big retailer-onboarding channels for the
          founder; nice-looking previews lift the share→install funnel. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Dukanchi" />
     <meta property="og:url" content="https://dukanchi.com/" />
-    <meta property="og:title" content="Dukanchi — Apna Bazaar, Apni Dukaan" />
-    <meta property="og:description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo." />
+    <meta property="og:title" content="Dukanchi - Apki local market ab aapke phone par." />
+    <meta property="og:description" content="Apne local market me koi bhi product search karein. Hum local retailers ko customers se connect kar rahe hain. Aap jahan bhi jayein, uss area ki local market ab aapke phone par hogi. Local products shop karein, local stores search karein aur chat ke through directly connect karein." />
     <meta property="og:image" content="https://dukanchi.com/icons/icon-512x512.png" />
     <meta property="og:image:width" content="512" />
     <meta property="og:image:height" content="512" />
@@ -59,9 +65,24 @@
 
     <!-- Twitter / X large-image card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Dukanchi — Apna Bazaar, Apni Dukaan" />
-    <meta name="twitter:description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo." />
+    <meta name="twitter:title" content="Dukanchi - Apki local market ab aapke phone par." />
+    <meta name="twitter:description" content="Apne local market me koi bhi product search karein. Hum local retailers ko customers se connect kar rahe hain. Aap jahan bhi jayein, uss area ki local market ab aapke phone par hogi. Local products shop karein, local stores search karein aur chat ke through directly connect karein." />
     <meta name="twitter:image" content="https://dukanchi.com/icons/icon-512x512.png" />
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Dukanchi",
+      "url": "https://dukanchi.com/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://dukanchi.com/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
 
     <!-- Pre-React browser guard: redirect to /landing before React loads — zero flash -->
     <script>

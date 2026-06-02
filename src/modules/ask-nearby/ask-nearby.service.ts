@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma';
 import { getIO } from '../../config/socket';
 import { logger } from '../../lib/logger';
+import { sendPushToUser } from '../../services/push.service';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -106,9 +107,19 @@ export async function sendAskNearby(
       responseId: r.id,
       query,
       customerName: customer?.name || 'Customer',
+      customerId,
+      latitude,
+      longitude,
       areaLabel: areaLabel || null,
       radiusKm,
     });
+
+    sendPushToUser(r.ownerId, {
+      title: 'Customer looking for stock! 📦',
+      body: `${customer?.name || 'A customer'} is asking: "${query}". Tap to respond.`,
+      url: '/messages', // Opens the Messages tab directly
+      topic: 'ask_nearby',
+    }).catch(err => logger.error({ err, ownerId: r.ownerId }, 'Failed to send ask-nearby push'));
   }
 
   logger.info({ requestId: request.id, sentTo: matched.length }, '[ASK_NEARBY] sent');
@@ -185,5 +196,26 @@ export async function getMyRequests(customerId: string) {
         },
       },
     },
+  });
+}
+
+export async function getPendingRequests(ownerId: string) {
+  return prisma.askNearbyResponse.findMany({
+    where: { ownerId, status: 'pending' },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    include: {
+      request: {
+        select: {
+          query: true,
+          radiusKm: true,
+          areaLabel: true,
+          latitude: true,
+          longitude: true,
+          customerId: true,
+          customer: { select: { name: true } }
+        }
+      }
+    }
   });
 }

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode } fro
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
+import { playNotificationSound } from '../utils/audio';
 
 export interface Notification {
   id: string;
@@ -75,6 +76,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     newSocket.on('newNotification', (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
+      playNotificationSound();
     });
 
     // Mobile foreground wakeup

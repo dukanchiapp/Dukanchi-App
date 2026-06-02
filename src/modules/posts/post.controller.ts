@@ -30,14 +30,17 @@ export class PostController {
     try {
       const userRole = (req as any).user.role;
       const userId = (req as any).user.userId;
-      const { feedType, locationRange, lat, lng } = req.query;
-
-      const page = parseInt(String(req.query.page || '1'));
-      const limit = Math.min(parseInt(String(req.query.limit || '20')), 50);
+      const feedType = (req.query.feedType as string) || 'global';
+      const locationRange = (req.query.locationRange as string) || 'all';
+      const category = (req.query.category as string) || '';
+      const lat = req.query.lat ? parseFloat(req.query.lat as string) : null;
+      const lng = req.query.lng ? parseFloat(req.query.lng as string) : null;
+      const page = parseInt((req.query.page as string) || '1', 10);
+      const limit = parseInt((req.query.limit as string) || '15', 10);
 
       // Only cache the plain global feed — following/location feeds are user-specific
       // Cache key includes userId: feed contains per-user liked state and isOwnPost flags
-      const isCacheable = !feedType && (!locationRange || locationRange === 'all');
+      const isCacheable = !req.query.feedType && (!locationRange || locationRange === 'all') && !category;
       const cacheKey = `feed:${userId}:p${page}:l${limit}`;
 
       if (isCacheable) {
@@ -48,7 +51,7 @@ export class PostController {
       }
 
       const result = await PostService.getFeed(userId, userRole, {
-        feedType, locationRange, lat, lng, page, limit
+        feedType, locationRange, category, lat, lng, page, limit
       });
 
       if (isCacheable) {

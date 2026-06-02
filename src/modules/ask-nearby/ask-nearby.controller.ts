@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { sendAskNearby, respondToAskNearby, getMyRequests, checkHourlyLimit } from './ask-nearby.service';
+import { sendAskNearby, respondToAskNearby, getMyRequests, checkHourlyLimit, getPendingRequests } from './ask-nearby.service';
 
 export class AskNearbyController {
   static async send(req: Request, res: Response) {
@@ -55,6 +55,16 @@ export class AskNearbyController {
     const userId = (req as any).user.userId;
     try {
       const data = await getMyRequests(userId);
+      return res.json(data);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Server error' });
+    }
+  }
+
+  static async getPending(req: Request, res: Response) {
+    const ownerId = (req as any).user.userId;
+    try {
+      const data = await getPendingRequests(ownerId);
       return res.json(data);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Server error' });

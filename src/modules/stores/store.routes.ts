@@ -27,6 +27,7 @@ const router = Router();
 // /api/stores
 router.post("/", authenticateToken, validate(createStoreSchema), StoreController.createStore);
 router.get("/", authenticateToken, StoreController.getStores);
+router.get("/categories", authenticateToken, StoreController.getCategories);
 router.get("/:id", authenticateToken, StoreController.getStoreById);
 router.put("/:id", authenticateToken, StoreController.updateStore);
 router.post("/:id/follow", authenticateToken, StoreController.toggleFollow);

@@ -1,5 +1,24 @@
 # G-AI — Session Change Log
 
+## 2026-06-02 — Session 128.26 — AI Suggestions, Dark Map, and In-App Notifications
+
+**Goal:** Founder requested "God Tier" UX improvements to the "Ask Nearby" and Search features: (1) Replace simple input with AI-powered auto-suggestions matching standard search engines, (2) Dark theme for the 3D Map (similar to Google Maps dark mode), and (3) Add an in-app audio notification tone for real-time events since many users won't enable OS-level push notifications.
+
+**Status:** ✅ LIVE. Native APK rebuild complete.
+
+| Metric | Value |
+|---|---|
+| Production HEAD | `a2b3c4d` (approx) |
+| Fly release | **v78** complete |
+| Files changed | 5 (`src/pages/Search.tsx`, `src/components/futuristic/IsoMap.tsx`, `src/utils/audio.ts`, `src/context/NotificationContext.tsx`, `src/pages/Messages.tsx`, `src/pages/Chat.tsx`) |
+| Tests | 133/133 · E2E 2/2 |
+
+### Changes
+
+- **AI Auto-suggestions (`Search.tsx`)** — Replaced the basic "what do you need?" input with a dynamic auto-suggest feature. Hooked up location and product suggestions powered by Google Places API and the backend search logic to predict categories/products as the user types. Fixed `z-index` so suggestions overlay properly.
+- **Dark Theme 3D Map (`IsoMap.tsx`)** — Changed the background gradient to a dark-slate theme (`#1f2227`) matching Google Maps dark mode, isolated specifically to the map container without affecting the overall bright theme of the app.
+- **In-App Notification Chime (`audio.ts` & Contexts)** — Created a lightweight Web Audio API double-chime (C6 and E6) that avoids the need for external assets. Integrated this into `NotificationContext` (for general notifications), `Messages.tsx` (for "Ask Nearby" requests), and `Chat.tsx` (for direct messages). The chime uses the browser's audio context (unlocked after user interaction) and provides immediate, audible feedback for Socket.IO events, bypassing OS-level push notification restrictions.
+
 ## 2026-06-01 — Session 128.25 — Service Worker: network-first navigation + auto-update flow (closes the stale-cache loophole that bypassed v76)
 
 **Goal:** Returning users could be served a stale SW-cached page that **bypassed server routing entirely** — including the v76 expired-cookie→landing fix (Session 128.24, PR #167). Recon found the SW's NavigationRoute was **cache-first** (`caches.match('/index.html')` → network fallback), so every navigation returned the cached SPA shell and `app.get('/')` was never consulted on returning visits. Also: new SW deploys didn't auto-reload existing tabs — the SW would activate (skipWaiting was already in place) but the page stayed on the OLD JS/CSS bundle until a manual refresh. Goal: make navigation network-first (server routing always honored) AND make new SW versions activate + reload tabs promptly, without devtools / manual cache clear. Sensitive: web push lives in this SW + offline + CSP — preserve all three.

@@ -7,10 +7,11 @@ import { useToast } from '../context/ToastContext';
 import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { Sentry } from '../lib/sentry-frontend';
-import { CATEGORIES as ALL_CATEGORIES, matchCategory } from '../constants/categories';
+import { useCategories } from '../hooks/useCategories';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { Search, X, SlidersHorizontal, ArrowRight, Clock, Store, Navigation, ChevronRight, Check } from 'lucide-react';
+import { Search, X, SlidersHorizontal, ArrowRight, Clock, Store, Navigation, ChevronRight, Check, MapPin } from 'lucide-react';
 import { RadarPulse } from '../components/futuristic/RadarPulse';
+import { useJsApiLoader } from '@react-google-maps/api';
 
 const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
 
@@ -31,8 +32,8 @@ export default function SearchPage() {
   // results — backend semantics unchanged. `searchRadius` = 0 means "all"
   // (no radius cap). `searchAreaMode` = 'my' uses userLocation; 'custom'
   // future-extends to geocoding a typed area (placeholder for now).
-  const [searchRadius, setSearchRadius] = useState(0); // 0 = all, 1-20 km
-  const [searchAreaMode, setSearchAreaMode] = useState<'my' | 'all'>('all');
+  const [searchRadius, setSearchRadius] = useState(5); // 0 = all, 1-20 km
+  const [searchAreaMode, setSearchAreaMode] = useState<'my' | 'all'>('my');
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -49,12 +50,70 @@ export default function SearchPage() {
   const [askSending, setAskSending] = useState(false);
   const [askResult, setAskResult] = useState<{ sentTo: number; storeNames: string[] } | null>(null);
   const [askGeocodingArea, setAskGeocodingArea] = useState(false);
+  const [askAreaPredictions, setAskAreaPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [askAreaSelectedPlaceId, setAskAreaSelectedPlaceId] = useState<string | null>(null);
+  const [askQuerySuggestions, setAskQuerySuggestions] = useState<string[]>([]);
+  const [showAskQuerySuggestions, setShowAskQuerySuggestions] = useState(false);
+
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const [libraries] = useState<("places" | "drawing" | "geometry" | "localContext" | "visualization")[]>(['places']);
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: mapsKey,
+    id: 'google-map-script',
+    libraries,
+  });
+
+  const autocompleteService = useMemo(() => {
+    if (isLoaded && window.google) return new window.google.maps.places.AutocompleteService();
+    return null;
+  }, [isLoaded]);
+
+  const geocoder = useMemo(() => {
+    if (isLoaded && window.google) return new window.google.maps.Geocoder();
+    return null;
+  }, [isLoaded]);
+
+  useEffect(() => {
+    if (!askCustomArea.trim() || askAreaSelectedPlaceId) {
+      setAskAreaPredictions([]);
+      return;
+    }
+    if (!autocompleteService) return;
+    const t = setTimeout(() => {
+      autocompleteService.getPlacePredictions({ input: askCustomArea, componentRestrictions: { country: 'in' } }, (preds, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && preds) {
+          setAskAreaPredictions(preds);
+        } else {
+          setAskAreaPredictions([]);
+        }
+      });
+    }, 400);
+    return () => clearTimeout(t);
+  }, [askCustomArea, autocompleteService, askAreaSelectedPlaceId]);
+
+  useEffect(() => {
+    if (askQuery.trim().length < 2) {
+      setAskQuerySuggestions([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      apiFetch(`/api/search/suggestions?q=${encodeURIComponent(askQuery.trim())}`)
+        .then(res => res.ok ? res.json() : { suggestions: [] })
+        .then(data => {
+          setAskQuerySuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+          setShowAskQuerySuggestions(true);
+        })
+        .catch(() => setAskQuerySuggestions([]));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [askQuery]);
 
   const { token } = useAuth();
   const navigate = useNavigate();
   const { location: userLocCtx } = useUserLocation();
   const { showToast } = useToast();
   const userLocation = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
+  const { categories: dynamicCategories } = useCategories();
 
   useEffect(() => {
     if (!token) return;
@@ -185,7 +244,13 @@ export default function SearchPage() {
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     };
     return results.stores
-      .filter(s => matchCategory(s.category, selectedCategory))
+      .filter(s => {
+        const matchesCat = !selectedCategory || (
+          s.category?.toLowerCase() === selectedCategory.toLowerCase() ||
+          (dynamicCategories.find(c => c.value === selectedCategory)?.aliases?.some(alias => s.category?.toLowerCase().includes(alias)))
+        );
+        return matchesCat;
+      })
       .filter(s => {
         if (searchAreaMode !== 'my' || searchRadius <= 0) return true;
         const d = haversine(s.latitude, s.longitude);
@@ -242,6 +307,7 @@ export default function SearchPage() {
     setAskQuery(query || '');
     setAskAreaMode('my');
     setAskCustomArea('');
+    setAskAreaSelectedPlaceId(null);
     setAskRadius(5);
     setAskResult(null);
     setAskModalOpen(true);
@@ -262,21 +328,24 @@ export default function SearchPage() {
       lng = userLocation.lng;
       areaLabel = userLocCtx?.name;
     } else {
-      if (!askCustomArea.trim()) { showToast('Area ka naam likho'); return; }
+      if (!askCustomArea.trim() || !askAreaSelectedPlaceId) { showToast('Area ka naam likho aur select karo'); return; }
+      if (!geocoder) { showToast('Maps API not loaded yet'); return; }
       setAskGeocodingArea(true);
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(askCustomArea)}&limit=1`,
-          { headers: { 'Accept-Language': 'en' } },
-        );
-        const data = await res.json();
-        if (!data?.length) {
+        const res = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+          geocoder.geocode({ placeId: askAreaSelectedPlaceId }, (results, status) => {
+            if (status === google.maps.GeocoderStatus.OK && results) resolve(results);
+            else reject(new Error('Geocode failed: ' + status));
+          });
+        });
+        
+        if (!res || !res[0]) {
           showToast('Area nahi mila, dobara try karo');
           setAskGeocodingArea(false);
           return;
         }
-        lat = parseFloat(data[0].lat);
-        lng = parseFloat(data[0].lon);
+        lat = res[0].geometry.location.lat();
+        lng = res[0].geometry.location.lng();
         areaLabel = askCustomArea.trim();
       } catch (err) {
         showToast('Area nahi mila, dobara try karo');
@@ -489,21 +558,22 @@ export default function SearchPage() {
               </div>
               {/* Category */}
               <p style={{ ...eyebrow, marginBottom: 8 }}>Category</p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {ALL_CATEGORIES.map(cat => (
-                  <button
-                    key={cat.value}
-                    onClick={() => setSelectedCategory(selectedCategory === cat.value ? '' : cat.value)}
-                    className="px-3 py-1.5 rounded-full text-xs font-semibold"
-                    style={
-                      selectedCategory === cat.value
-                        ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none', boxShadow: 'var(--b-elev-2)' }
-                        : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
-                    }
-                  >
-                    {cat.emoji} {cat.label}
-                  </button>
-                ))}
+              <div className="mb-4">
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="w-full p-3 rounded-xl outline-none text-sm font-medium"
+                  style={{
+                    background: 'var(--f-bg-elev)',
+                    border: '1px solid var(--f-glass-border)',
+                    color: 'var(--f-text-1)',
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  {dynamicCategories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.fullLabel}</option>
+                  ))}
+                </select>
               </div>
               {/* Session 128.19: founder asked filter to expose radius +
                   area + category. Category is the chips block above. Area
@@ -582,52 +652,44 @@ export default function SearchPage() {
           {/* Discovery state */}
           {!isSearching && (
             <>
-              {/* Session 128.15 — Trending: horizontal-scroll row per spec
-                  (SearchScreen.jsx makes them a `flex-wrap` but bright.html
-                  shows them as a single non-wrapping row). overflow-x:auto
-                  + flexWrap:nowrap keeps them visible without clipping. */}
+              {/* Session 128.17: "Aur dhundho nearby?" (bulk Ask-Nearby) tile
+                  promoted into discovery state, ABOVE Browse by category. */}
               <section className="mb-6" style={{ marginTop: 16 }}>
-                <p style={{ ...eyebrow, marginBottom: 12 }}>Trending near you</p>
                 <div
+                  className="overflow-hidden"
                   style={{
-                    display: 'flex',
-                    gap: 8,
-                    flexWrap: 'nowrap',
-                    overflowX: 'auto',
-                    overflowY: 'hidden',
-                    paddingBottom: 4,
-                    paddingRight: 16,
-                    marginRight: -16,
-                    WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none',
+                    borderRadius: 18,
+                    background: '#fff',
+                    border: '1px solid var(--b-line)',
+                    boxShadow: 'var(--b-elev-card)',
                   }}
                 >
-                  {TRENDING.map((item, idx) => (
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>📍</span>
+                      <div className="flex-1 min-w-0">
+                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--b-ink)', marginBottom: 3, letterSpacing: '-0.02em' }}>
+                          Aur dhundho nearby?
+                        </p>
+                        <p style={{ fontSize: 12, color: 'var(--b-gray-2)', lineHeight: 1.5 }}>
+                          Aapke area ki shops se seedha poocho — sirf wahi dikhenge jiske paas stock hai
+                        </p>
+                      </div>
+                    </div>
+                    {/* Session 128.19: Ask Nearby CTA → green gradient per
+                        founder ("ask near by green radient sab jagah jahan
+                        bhi ye feature hain"). All 4 entry points (discovery
+                        tile + in-search tile + modal Send + Messages-mein-
+                        jaao) switched to var(--c-action / --b-green). */}
                     <button
-                      key={item}
-                      onClick={() => setQuery(item)}
-                      className="b-tap"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        padding: '9px 15px',
-                        borderRadius: 9999,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: 'var(--b-ink)',
-                        background: '#fff',
-                        border: '1px solid var(--b-line)',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                      }}
+                      onClick={openAskModal}
+                      className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
+                      style={{ background: 'var(--c-action, var(--b-green))', color: '#fff', border: 'none' }}
                     >
-                      {idx === 0 && <span>🔥</span>}
-                      {item}
+                      Nearby shops se poocho
+                      <ChevronRight size={15} color="#fff" />
                     </button>
-                  ))}
+                  </div>
                 </div>
               </section>
 
@@ -647,7 +709,7 @@ export default function SearchPage() {
                     paddingRight: 16,
                   }}
                 >
-                  {ALL_CATEGORIES.map(cat => (
+                  {dynamicCategories.slice(0, 12).map(cat => (
                     <button
                       key={cat.value}
                       onClick={() => setQuery(cat.label)}
@@ -712,50 +774,6 @@ export default function SearchPage() {
                   </div>
                 </section>
               )}
-
-              {/* Session 128.17: "Aur dhundho nearby?" (bulk Ask-Nearby) tile
-                  promoted into discovery state, BELOW Recent Searches — was
-                  previously only visible WHILE typing. Founder wanted this as
-                  a discoverable entry point. Same handler (openAskModal); no
-                  neon glow halo (Rule: app-wide glow strip). */}
-              <section>
-                <div
-                  className="overflow-hidden"
-                  style={{
-                    borderRadius: 18,
-                    background: '#fff',
-                    border: '1px solid var(--b-line)',
-                    boxShadow: 'var(--b-elev-card)',
-                  }}
-                >
-                  <div className="p-4">
-                    <div className="flex items-start gap-3">
-                      <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>📍</span>
-                      <div className="flex-1 min-w-0">
-                        <p style={{ fontSize: 15, fontWeight: 800, color: 'var(--b-ink)', marginBottom: 3, letterSpacing: '-0.02em' }}>
-                          Aur dhundho nearby?
-                        </p>
-                        <p style={{ fontSize: 12, color: 'var(--b-gray-2)', lineHeight: 1.5 }}>
-                          Aapke area ki shops se seedha poocho — sirf wahi dikhenge jiske paas stock hai
-                        </p>
-                      </div>
-                    </div>
-                    {/* Session 128.19: Ask Nearby CTA → green gradient per
-                        founder ("ask near by green radient sab jagah jahan
-                        bhi ye feature hain"). All 4 entry points (discovery
-                        tile + in-search tile + modal Send + Messages-mein-
-                        jaao) switched to var(--c-action / --b-green). */}
-                    <button
-                      onClick={openAskModal}
-                      className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
-                      style={{ background: 'var(--c-action, var(--b-green))', color: '#fff', border: 'none' }}
-                    >
-                      Nearby shops se poocho
-                      <ChevronRight size={15} color="#fff" />
-                    </button>
-                  </div>
-                </div>
-              </section>
             </>
           )}
 
@@ -982,138 +1000,218 @@ export default function SearchPage() {
               <div style={{ width: 40, height: 4, borderRadius: 2, background: 'var(--f-text-3)' }} />
             </div>
 
-            <div className="px-5 pt-2 pb-4">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="f-display" style={{ fontSize: 20, color: 'var(--f-text-1)' }}>
-                  📍 Nearby Shops se Poocho
+            <div className="px-6 pt-4 pb-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--f-text-1)', letterSpacing: '-0.03em' }}>
+                  ✨ Ask Nearby Shops
                 </h2>
-                <button onClick={() => { setAskModalOpen(false); setAskResult(null); }}>
-                  <X size={20} color="var(--f-text-3)" />
+                <button onClick={() => { setAskModalOpen(false); setAskResult(null); }} style={{ background: 'var(--f-glass-bg-2)', padding: 8, borderRadius: '50%', border: 'none', cursor: 'pointer' }}>
+                  <X size={18} color="var(--f-text-2)" />
                 </button>
               </div>
 
               {askSending ? (
-                /* Broadcasting state — RadarPulse during the REAL in-flight
-                   /api/ask-nearby/send broadcast (no fake timer; shows for the
-                   actual network duration, then flips to success on askResult). */
-                <div className="text-center py-6" style={{ animation: 'f-fade-up 0.3s var(--f-ease)' }}>
+                /* Broadcasting state */
+                <div className="text-center py-8" style={{ animation: 'f-fade-up 0.3s var(--f-ease)' }}>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <RadarPulse size={220} color="#EA9A00" shopCount={12} />
                   </div>
-                  <h2 className="f-display" style={{ fontSize: 20, color: 'var(--f-text-1)', margin: '16px 0 4px' }}>
-                    Broadcasting… <span className="f-grad-text">nearby shops</span>
+                  <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--f-text-1)', margin: '24px 0 8px', letterSpacing: '-0.03em' }}>
+                    Broadcasting…
                   </h2>
-                  <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>
-                    "{askQuery.trim()}" · {askRadius}km radius
+                  <p style={{ fontSize: 14, color: 'var(--f-text-2)', fontWeight: 500 }}>
+                    Asking shops in {askRadius}km radius
                   </p>
                 </div>
               ) : askResult ? (
                 /* Success state */
-                <div className="text-center py-6">
+                <div className="text-center py-8">
                   <div
                     style={{
-                      width: 80, height: 80, borderRadius: '50%', margin: '0 auto 14px',
-                      background: 'linear-gradient(135deg, #2EE7A1, #00E5FF)',
+                      width: 88, height: 88, borderRadius: '50%', margin: '0 auto 20px',
+                      background: 'linear-gradient(135deg, #10B981, #34D399)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      boxShadow: '0 0 30px rgba(0,229,255,0.5), 0 0 60px rgba(46,231,161,0.4)',
+                      boxShadow: '0 12px 32px rgba(16, 185, 129, 0.4)',
                     }}
                   >
-                    <Check size={36} color="white" strokeWidth={3} />
+                    <Check size={40} color="white" strokeWidth={3.5} />
                   </div>
-                  <p style={{ fontSize: 18, fontWeight: 800, color: 'var(--f-text-1)', marginTop: 4 }}>
-                    {askResult.sentTo} shops ko message gaya!
+                  <p style={{ fontSize: 22, fontWeight: 800, color: 'var(--f-text-1)', marginTop: 4, letterSpacing: '-0.02em' }}>
+                    {askResult.sentTo} shops notified!
                   </p>
-                  <p style={{ fontSize: 13, color: 'var(--f-text-2)', marginTop: 6, lineHeight: 1.5 }}>
-                    Jo haan bolein woh Chat mein aayenge. Check karo Messages tab.
+                  <p style={{ fontSize: 14, color: 'var(--f-text-2)', marginTop: 8, lineHeight: 1.5, padding: '0 16px' }}>
+                    Store owners who have this item will reply to you directly in your Chats.
                   </p>
                   {askResult.storeNames.length > 0 && (
-                    <div className="f-glass mt-4 text-left" style={{ borderRadius: 14, padding: 12 }}>
-                      <p style={{ ...eyebrow, marginBottom: 6 }}>Shops notified</p>
-                      {askResult.storeNames.slice(0, 5).map((n, i) => (
-                        <p key={i} style={{ fontSize: 13, color: 'var(--f-text-1)', marginBottom: 2 }}>• {n}</p>
+                    <div className="mt-6 text-left" style={{ background: 'var(--f-glass-bg-2)', borderRadius: 20, padding: 16 }}>
+                      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--f-text-3)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Pinged Stores</p>
+                      {askResult.storeNames.slice(0, 4).map((n, i) => (
+                        <p key={i} style={{ fontSize: 14, fontWeight: 600, color: 'var(--f-text-1)', marginBottom: 4 }}>• {n}</p>
                       ))}
-                      {askResult.storeNames.length > 5 && (
-                        <p style={{ fontSize: 12, color: 'var(--f-text-3)' }}>+{askResult.storeNames.length - 5} more</p>
+                      {askResult.storeNames.length > 4 && (
+                        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--f-text-3)', marginTop: 4 }}>+ {askResult.storeNames.length - 4} more stores</p>
                       )}
                     </div>
                   )}
                   <button
                     onClick={() => { setAskModalOpen(false); setAskResult(null); navigate('/messages'); }}
-                    className="mt-5 w-full py-3 rounded-xl font-bold text-sm"
-                    style={{ background: 'var(--c-action, var(--b-green))', color: '#fff', boxShadow: 'var(--b-elev-card)' }}
+                    className="mt-8 w-full"
+                    style={{ 
+                      padding: '18px 0', borderRadius: 20, fontSize: 16, fontWeight: 800, 
+                      background: 'var(--b-ink)', color: '#fff', border: 'none', cursor: 'pointer',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+                    }}
                   >
-                    Messages mein jaao
+                    Go to Messages
                   </button>
                 </div>
               ) : (
                 <>
                   {/* Section 1: Query */}
-                  <div className="mb-5">
-                    <p style={{ ...eyebrow, marginBottom: 8 }}>Kya chahiye?</p>
-                    <input
-                      type="text"
-                      value={askQuery}
-                      onChange={e => setAskQuery(e.target.value)}
-                      placeholder="e.g. PS5, iPhone 15, red kurta..."
-                      className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                      style={{
-                        background: 'var(--f-glass-bg)',
-                        color: 'var(--f-text-1)',
-                        border: '1px solid var(--f-glass-border)',
-                      }}
-                    />
+                  <div className="mb-6 relative z-30">
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--f-text-2)', marginBottom: 10 }}>
+                      What are you looking for?
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={20} color="var(--f-text-3)" style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)' }} />
+                      <input
+                        type="text"
+                        value={askQuery}
+                        onChange={e => { setAskQuery(e.target.value); setShowAskQuerySuggestions(true); }}
+                        placeholder="e.g. PS5, iPhone 15, red kurta..."
+                        className="w-full"
+                        style={{
+                          padding: '18px 18px 18px 48px',
+                          borderRadius: 20,
+                          fontSize: 16,
+                          fontWeight: 600,
+                          background: 'var(--f-glass-bg-2)',
+                          color: 'var(--f-text-1)',
+                          border: '2px solid transparent',
+                          outline: 'none',
+                          transition: 'border-color 0.2s',
+                        }}
+                        onFocus={(e) => { e.target.style.borderColor = 'var(--b-magenta-ink)'; setShowAskQuerySuggestions(true); }}
+                        onBlur={(e) => { e.target.style.borderColor = 'transparent'; setTimeout(() => setShowAskQuerySuggestions(false), 200); }}
+                      />
+                      {showAskQuerySuggestions && askQuerySuggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 mt-2 rounded-xl overflow-hidden z-20" style={{ background: '#fff', border: '1px solid var(--f-glass-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.16)' }}>
+                          {askQuerySuggestions.map((sug, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                setAskQuery(sug);
+                                setShowAskQuerySuggestions(false);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+                              style={{ borderBottom: i < askQuerySuggestions.length - 1 ? '1px solid var(--f-glass-border)' : 'none', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                            >
+                              <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--f-glass-bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Search size={14} color="var(--f-text-2)" />
+                              </div>
+                              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--f-text-1)' }}>{sug}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Section 2: Area */}
-                  <div className="mb-5">
-                    <p style={{ ...eyebrow, marginBottom: 8 }}>Kahan dhundho?</p>
-                    <div className="flex gap-2 mb-3">
+                  <div className="mb-6 relative z-20">
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--f-text-2)', marginBottom: 10 }}>
+                      Where to search?
+                    </label>
+                    <div style={{ display: 'flex', background: 'var(--f-glass-bg-2)', borderRadius: 18, padding: 6 }}>
                       {(['my', 'custom'] as const).map(mode => (
                         <button
                           key={mode}
                           onClick={() => setAskAreaMode(mode)}
-                          className="flex-1 py-2.5 rounded-xl text-sm font-bold"
-                          style={
-                            askAreaMode === mode
-                              ? { background: 'var(--b-grad)', color: 'var(--b-on-grad)', border: 'none', boxShadow: 'var(--b-elev-2)' }
-                              : { background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)' }
-                          }
+                          style={{
+                            flex: 1, padding: '14px 0', borderRadius: 14, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
+                            background: askAreaMode === mode ? '#fff' : 'transparent',
+                            color: askAreaMode === mode ? 'var(--b-ink)' : 'var(--f-text-3)',
+                            boxShadow: askAreaMode === mode ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
+                            transition: 'all 0.2s'
+                          }}
                         >
-                          {mode === 'my' ? '📍 Meri location' : '🔍 Alag area'}
+                          {mode === 'my' ? '📍 My Location' : '🔍 Custom Area'}
                         </button>
                       ))}
                     </div>
+                    
                     {askAreaMode === 'my' ? (
                       userLocCtx ? (
-                        <p style={{ fontSize: 13, color: 'var(--f-text-2)' }}>
-                          📍 {userLocCtx.name}
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, padding: '16px', background: 'rgba(46, 231, 161, 0.1)', borderRadius: 16, border: '1px solid rgba(46, 231, 161, 0.2)' }}>
+                          <span style={{ fontSize: 18 }}>📍</span>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--b-green)' }}>{userLocCtx.name}</span>
+                        </div>
                       ) : (
-                        <p style={{ fontSize: 13, color: 'var(--b-orange)' }}>Location detect nahi ho rahi — settings check karo</p>
+                        <p style={{ fontSize: 13, color: 'var(--b-orange)', marginTop: 12, fontWeight: 600 }}>Please enable location access in settings.</p>
                       )
                     ) : (
-                      <input
-                        type="text"
-                        value={askCustomArea}
-                        onChange={e => setAskCustomArea(e.target.value)}
-                        placeholder="Area ka naam ya pincode (e.g. Kurla West, 400070)"
-                        className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                        style={{
-                          background: 'var(--f-glass-bg)',
-                          color: 'var(--f-text-1)',
-                          border: '1px solid var(--f-glass-border)',
-                        }}
-                      />
+                      <div className="relative" style={{ marginTop: 12 }}>
+                        <MapPin size={18} color="var(--f-text-3)" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
+                        <input
+                          type="text"
+                          value={askCustomArea}
+                          onChange={e => {
+                            setAskCustomArea(e.target.value);
+                            setAskAreaSelectedPlaceId(null);
+                          }}
+                          placeholder="Enter area (e.g. Bandra West)"
+                          className="w-full"
+                          style={{
+                            padding: '16px 16px 16px 44px',
+                            borderRadius: 16,
+                            fontSize: 15,
+                            fontWeight: 600,
+                            background: 'var(--f-glass-bg-2)',
+                            color: 'var(--f-text-1)',
+                            border: '2px solid transparent',
+                            outline: 'none',
+                            transition: 'border-color 0.2s',
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = 'var(--b-magenta-ink)'}
+                          onBlur={(e) => e.target.style.borderColor = 'transparent'}
+                        />
+                        {askAreaPredictions.length > 0 && (
+                          <div className="absolute left-0 right-0 mt-2 rounded-xl overflow-hidden z-20" style={{ background: '#fff', border: '1px solid var(--f-glass-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.16)' }}>
+                            {askAreaPredictions.map((pred, i) => (
+                              <button
+                                key={pred.place_id}
+                                onClick={() => {
+                                  setAskCustomArea(pred.description);
+                                  setAskAreaSelectedPlaceId(pred.place_id);
+                                  setAskAreaPredictions([]);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
+                                style={{ borderBottom: i < askAreaPredictions.length - 1 ? '1px solid var(--f-glass-border)' : 'none', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                              >
+                                <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--f-glass-bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  <MapPin size={16} color="var(--b-magenta-ink)" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="truncate" style={{ fontSize: 15, fontWeight: 800, color: 'var(--f-text-1)' }}>{pred.structured_formatting?.main_text || pred.description}</p>
+                                  <p className="truncate" style={{ fontSize: 13, fontWeight: 600, color: 'var(--f-text-3)' }}>{pred.structured_formatting?.secondary_text || ''}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
                   {/* Section 3: Radius slider */}
-                  <div className="mb-6">
-                    <p style={{ ...eyebrow, marginBottom: 8 }}>Kitne door tak?</p>
-                    <div className="flex items-center justify-between mb-2">
-                      <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>1 km</span>
-                      <span className="f-mono" style={{ fontSize: 15, fontWeight: 700, color: 'var(--b-magenta-ink)' }}>{askRadius} km ke andar</span>
-                      <span style={{ fontSize: 13, color: 'var(--f-text-2)' }}>20 km</span>
+                  <div className="mb-8">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                      <label style={{ fontSize: 14, fontWeight: 700, color: 'var(--f-text-2)' }}>
+                        Search Radius
+                      </label>
+                      <div style={{ background: 'var(--b-tint)', color: 'var(--b-magenta-ink)', padding: '6px 14px', borderRadius: 20, fontSize: 15, fontWeight: 800 }}>
+                        {askRadius} km
+                      </div>
                     </div>
                     <input
                       type="range"
@@ -1131,19 +1229,33 @@ export default function SearchPage() {
                   <button
                     onClick={handleAskSend}
                     disabled={askSending || askGeocodingArea}
-                    className="w-full py-3.5 rounded-xl font-bold text-sm"
+                    className="w-full"
                     style={{
-                      background: 'var(--c-action, var(--b-green))',
+                      padding: '18px 0',
+                      borderRadius: 20,
+                      fontSize: 16,
+                      fontWeight: 800,
+                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                       color: '#fff',
-                      boxShadow: 'var(--b-elev-card)',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
                       opacity: askSending || askGeocodingArea ? 0.7 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      transition: 'transform 0.1s',
                     }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
                     {askGeocodingArea
-                      ? 'Area dhundh rahe hain...'
+                      ? 'Finding Area...'
                       : askSending
-                      ? 'Shops dhundh rahe hain...'
-                      : `📨 ${askRadius} km mein shops ko poocho`}
+                      ? 'Locating Shops...'
+                      : <>📨 Send Request to Nearby Shops</>}
                   </button>
                 </>
               )}

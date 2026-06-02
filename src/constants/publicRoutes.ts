@@ -16,7 +16,7 @@
  */
 
 /** Exact paths that are always public. */
-export const PUBLIC_EXACT_PATHS: readonly string[] = ['/login', '/signup'];
+export const PUBLIC_EXACT_PATHS: readonly string[] = ['/login', '/signup', '/landing'];
 
 /** Path prefixes that are always public (prefix match). */
 export const PUBLIC_PATH_PREFIXES: readonly string[] = ['/legal/'];

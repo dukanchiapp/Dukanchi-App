@@ -104,6 +104,24 @@ export class StoreController {
     }
   }
 
+  static async getCategories(req: Request, res: Response) {
+    try {
+      const stores = await prisma.store.findMany({
+        where: { category: { not: null, not: '' } },
+        select: { category: true },
+        distinct: ['category'],
+      });
+      const dbCategories = stores.map(s => s.category).filter(Boolean) as string[];
+      const defaultCategories = ['Clothing', 'Electronics', 'Jewelry', 'Cosmetics', 'Footwear', 'Groceries', 'Furniture'];
+      const uniqueCategories = Array.from(new Set([...defaultCategories, ...dbCategories]));
+      
+      return res.json(uniqueCategories);
+    } catch (error) {
+      logger.error({ err: error }, "Failed to fetch categories");
+      return res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  }
+
   static async getPincodeInfo(req: Request, res: Response) {
     try {
       const code = req.params.code;
