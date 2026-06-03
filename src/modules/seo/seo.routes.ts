@@ -5,7 +5,7 @@ import { logger } from "../../lib/logger";
 
 export const seoRoutes = Router();
 
-seoRoutes.get("/", async (_req, res) => {
+seoRoutes.get('/', async (_req, res): Promise<any> => {
   try {
     const CACHE_KEY = "sitemap_xml";
     const cached = await pubClient.get(CACHE_KEY);

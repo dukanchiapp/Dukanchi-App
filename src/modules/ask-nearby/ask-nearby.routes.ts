@@ -8,3 +8,4 @@ askNearbyRoutes.post('/send', authenticateToken, AskNearbyController.send);
 askNearbyRoutes.post('/respond', authenticateToken, AskNearbyController.respond);
 askNearbyRoutes.get('/my-requests', authenticateToken, AskNearbyController.myRequests);
 askNearbyRoutes.get('/pending', authenticateToken, AskNearbyController.getPending);
+askNearbyRoutes.get('/limit-status', authenticateToken, AskNearbyController.getLimitStatus);

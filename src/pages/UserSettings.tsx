@@ -20,6 +20,13 @@ export default function UserSettings() {
 
   const isBusinessOwner = ['retailer', 'supplier', 'brand', 'manufacturer'].includes(user?.role || '') && !isTeamMember;
   const isRetailer = ['retailer', 'supplier', 'brand', 'manufacturer'].includes(user?.role || '');
+
+  useEffect(() => {
+    if (!isRetailer && user?.role === 'customer') {
+      navigate('/profile', { replace: true });
+    }
+  }, [isRetailer, user, navigate]);
+
   const [activeTab, setActiveTab] = useState<string | null>(null);
 
   const [store, setStore] = useState<any>(null);

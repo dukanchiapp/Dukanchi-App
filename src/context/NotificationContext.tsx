@@ -76,7 +76,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     newSocket.on('newNotification', (notif: Notification) => {
       setNotifications(prev => [notif, ...prev]);
-      playNotificationSound();
+      if (notif.type === 'NEW_MESSAGE') {
+        playNotificationSound();
+      }
     });
 
     // Mobile foreground wakeup

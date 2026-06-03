@@ -24,13 +24,50 @@ const STORAGE_KEY = 'dk_user_location';
 
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (key && key !== 'YOUR_GOOGLE_MAPS_API_KEY') {
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}`);
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        let sublocality = '';
+        let locality = '';
+        const comps = data.results[0].address_components;
+        for (const comp of comps) {
+          if (comp.types.includes('sublocality') || comp.types.includes('neighborhood') || comp.types.includes('sublocality_level_1') || comp.types.includes('sublocality_level_2')) {
+            sublocality = sublocality || comp.short_name;
+          }
+          if (comp.types.includes('locality')) {
+            locality = comp.long_name;
+          }
+        }
+        if (sublocality && locality && sublocality !== locality) return `${sublocality}, ${locality}`;
+        if (sublocality) return sublocality;
+        if (locality) return locality;
+        
+        // Fallback to the first part of the formatted address
+        return data.results[0].formatted_address.split(',')[0];
+      }
+    }
+  } catch (err) {
+    console.error('Google Maps reverse geocode failed', err);
+  }
+
+  // Fallback to Nominatim OSM
+  try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
       { headers: { 'Accept-Language': 'en' } }
     );
     const data = await res.json();
     const a = data.address || {};
-    return a.neighbourhood || a.suburb || a.city_district || a.county || a.city || a.town || a.village || 'your area';
+    const specific = a.residential || a.neighbourhood || a.suburb || a.road || a.city_district || a.village;
+    const city = a.city || a.town || a.county;
+    
+    if (specific && city && specific !== city) {
+      const combined = `${specific}, ${city}`;
+      return combined.length > 35 ? specific : combined;
+    }
+    return specific || city || 'your area';
   } catch {
     return 'your area';
   }

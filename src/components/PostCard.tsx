@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Bookmark, Share2, MessageSquare, Star } from 'lucide-react';
+import { Heart, Bookmark, Share2, MessageSquare } from 'lucide-react';
 import { getStoreStatus } from '../lib/storeUtils';
 import { getLiveStatus, LIVE_STATUS_COLORS } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
@@ -185,12 +185,8 @@ function PostCardInner({
 
   // Row 1 (inline next to name): "⭐ 4.6 (124)" — only when the store has at
   // least one review. Hidden for brand-new stores (a "(0)" reads like a fail).
-  const ratingText = (() => {
-    const r = post.store?.averageRating;
-    const c = post.store?.reviewCount ?? 0;
-    if (!r || c < 1 || post.store?.hideRatings) return null;
-    return { value: r.toFixed(1), count: c };
-  })();
+  
+
 
   const timeStr = post.createdAt ? timeAgo(post.createdAt) : '';
   const followersCount = post.store?._count?.followers ?? 0;

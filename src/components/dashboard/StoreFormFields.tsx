@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Camera, MapPin, Navigation, Clock, Check, Sparkles } from 'lucide-react';
 import StarRating from '../StarRating';
 import { useCategories } from '../../hooks/useCategories';

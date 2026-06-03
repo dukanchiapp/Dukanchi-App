@@ -8,7 +8,7 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
-import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, SlidersHorizontal, Check, Store, Bookmark, UserCheck } from 'lucide-react';
 import { PostCardSkeleton } from '../components/feed/PostCardSkeleton';
 import { haptic } from '../lib/haptics';
 import Header from '../components/bright/Header';

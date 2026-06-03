@@ -104,10 +104,10 @@ export class StoreController {
     }
   }
 
-  static async getCategories(req: Request, res: Response) {
+  static async getCategories(_req: Request, res: Response) {
     try {
       const stores = await prisma.store.findMany({
-        where: { category: { not: null, not: '' } },
+        where: { category: { not: '' } },
         select: { category: true },
         distinct: ['category'],
       });

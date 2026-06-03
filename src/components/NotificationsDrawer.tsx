@@ -1,4 +1,5 @@
 import { useNotifications, type Notification } from '../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
 import { FIcon } from './futuristic';
 
 /* ── Session 128.15 — Bright Skin NotificationsDrawer ────────────────────────
@@ -16,12 +17,18 @@ interface NotificationsDrawerProps {
 }
 
 export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProps) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, markAsRead } = useNotifications();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
   const handleNotificationClick = (notif: Notification) => {
     if (!notif.isRead) markAsRead(notif.id);
+    if (notif.type === 'NEW_MESSAGE' && notif.referenceId) {
+      navigate(`/chat/${notif.referenceId}`);
+    } else if (notif.type === 'NEW_POST' && notif.referenceId) {
+      navigate(`/post/${notif.referenceId}`);
+    }
     onClose();
   };
 
@@ -100,7 +107,7 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
                       }}
                     >
                       <FIcon
-                        name={notif.type === 'NEW_POST' ? 'image' : 'bell'}
+                        name={notif.type === 'NEW_POST' ? 'image' : notif.type === 'NEW_MESSAGE' ? 'msg' : 'bell'}
                         size={15}
                         color={notif.type === 'NEW_POST' ? 'var(--b-magenta-ink)' : 'var(--b-gray-2)'}
                       />

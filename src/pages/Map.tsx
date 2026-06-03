@@ -12,7 +12,7 @@ import { getStoreStatus, statusColor } from '../lib/storeUtils';
 import { useUserLocation } from '../context/LocationContext';
 import { useCategories } from '../hooks/useCategories';
 import { matchCategory } from '../constants/categories';
-import { Search, X, Crosshair, MapPin, Clock, Phone, Store, Navigation, ChevronDown, ArrowUp, Layers } from 'lucide-react';
+import { Search, X, Crosshair, MapPin, Store, Navigation, ChevronDown, ArrowUp, Layers } from 'lucide-react';
 import { FLogo } from '../components/futuristic/FLogo';
 import { IsoMap, type IsoMapStore } from '../components/futuristic/IsoMap';
 import NotificationBell from '../components/NotificationBell';
@@ -85,7 +85,7 @@ export default function MapPage() {
   };
 
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const [libraries] = useState<("places" | "drawing" | "geometry" | "localContext" | "visualization")[]>(['places']);
+  const [libraries] = useState<("places" | "drawing" | "geometry" | "visualization")[]>(['places']);
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: mapsKey,
     id: 'google-map-script',
@@ -208,12 +208,8 @@ export default function MapPage() {
     if (real) flyToStore(real);
   };
 
-  const selectedStoreDistance = selectedStore && userLocation
-    ? getDistance(userLocation.lat, userLocation.lng, selectedStore.latitude, selectedStore.longitude)
-    : null;
-  const storeStatus = selectedStore
-    ? getStoreStatus(selectedStore.openingTime, selectedStore.closingTime, selectedStore.is24Hours, selectedStore.workingDays)
-    : null;
+  
+  
 
   return (
     <div

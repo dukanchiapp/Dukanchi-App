@@ -16,16 +16,28 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
 // In-memory rate limit: userId → { count, resetAt }
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
-export function checkHourlyLimit(userId: string, max: number): boolean {
+export function checkHourlyLimit(userId: string, max: number = 10): { allowed: boolean; remainingMs: number; count: number; resetAt: number } {
   const now = Date.now();
   const entry = rateLimitMap.get(userId);
   if (!entry || entry.resetAt < now) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + 3_600_000 });
-    return true;
+    const resetAt = now + 3_600_000;
+    rateLimitMap.set(userId, { count: 1, resetAt });
+    return { allowed: true, remainingMs: resetAt - now, count: 1, resetAt };
   }
-  if (entry.count >= max) return false;
+  if (entry.count >= max) {
+    return { allowed: false, remainingMs: entry.resetAt - now, count: entry.count, resetAt: entry.resetAt };
+  }
   entry.count++;
-  return true;
+  return { allowed: true, remainingMs: entry.resetAt - now, count: entry.count, resetAt: entry.resetAt };
+}
+
+export function getHourlyLimitStatus(userId: string, max: number = 10): { count: number; max: number; resetAt: number; remainingMs: number } {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || entry.resetAt < now) {
+    return { count: 0, max, resetAt: now + 3_600_000, remainingMs: 3_600_000 };
+  }
+  return { count: entry.count, max, resetAt: entry.resetAt, remainingMs: Math.max(0, entry.resetAt - now) };
 }
 
 export async function sendAskNearby(
@@ -35,6 +47,7 @@ export async function sendAskNearby(
   latitude: number,
   longitude: number,
   areaLabel?: string,
+  images: string[] = [],
 ) {
   // Bounding box pre-filter — reduces full-table scan to small geographic slice
   const latDelta = radiusKm / 111;
@@ -64,7 +77,6 @@ export async function sendAskNearby(
 
   const nearbyIds = nearby.map(s => s.id);
 
-  // Filter by product match (ILIKE)
   const matchingProducts = await prisma.product.findMany({
     where: {
       storeId: { in: nearbyIds },
@@ -73,6 +85,39 @@ export async function sendAskNearby(
     select: { storeId: true },
     distinct: ['storeId'],
   });
+
+  // If no direct product matches, use AI Category Routing
+  if (matchingProducts.length === 0 && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
+    try {
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `Categorize this product query: "${query}". Return ONLY the category name from this list: Clothing, Electronics, Jewelry, Cosmetics, Footwear, Groceries, Furniture, Pharmacy, Stationery, Automotive, Books, Toys. If none match, return "Other".` }] }]
+          })
+        }
+      );
+      if (geminiRes.ok) {
+        const geminiData = await geminiRes.json() as any;
+        const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+        const detectedCategory = text.replace(/[^a-zA-Z]/g, '');
+        if (detectedCategory && detectedCategory !== 'Other') {
+          const categoryStores = await prisma.store.findMany({
+            where: {
+              id: { in: nearbyIds },
+              category: { equals: detectedCategory, mode: 'insensitive' }
+            },
+            select: { id: true }
+          });
+          matchingProducts.push(...categoryStores.map(s => ({ storeId: s.id })));
+          logger.info({ query, detectedCategory, storeCount: categoryStores.length }, '[ASK_NEARBY] AI Category Routing matched');
+        }
+      }
+    } catch (err) {
+      logger.error({ err }, '[ASK_NEARBY] AI Category recognition failed');
+    }
+  }
 
   const matchingStoreIds = new Set(matchingProducts.map(p => p.storeId));
   const matched = nearby.filter(s => matchingStoreIds.has(s.id)).slice(0, 15);
@@ -83,7 +128,7 @@ export async function sendAskNearby(
 
   // Create request record
   const request = await prisma.askNearbyRequest.create({
-    data: { customerId, query, radiusKm, latitude, longitude, areaLabel },
+    data: { customerId, query, radiusKm, latitude, longitude, areaLabel, images: images || [] },
   });
 
   // Batch-insert all response records in a single query
@@ -117,8 +162,7 @@ export async function sendAskNearby(
     sendPushToUser(r.ownerId, {
       title: 'Customer looking for stock! 📦',
       body: `${customer?.name || 'A customer'} is asking: "${query}". Tap to respond.`,
-      url: '/messages', // Opens the Messages tab directly
-      topic: 'ask_nearby',
+      url: '/messages',
     }).catch(err => logger.error({ err, ownerId: r.ownerId }, 'Failed to send ask-nearby push'));
   }
 
@@ -200,9 +244,16 @@ export async function getMyRequests(customerId: string) {
 }
 
 export async function getPendingRequests(ownerId: string) {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
   return prisma.askNearbyResponse.findMany({
-    where: { ownerId, status: 'pending' },
-    orderBy: { createdAt: 'desc' },
+    where: { 
+      ownerId,
+      OR: [
+        { status: 'pending' },
+        { status: 'no', respondedAt: { gte: yesterday } }
+      ]
+    },
+    orderBy: { request: { createdAt: 'desc' } },
     take: 10,
     include: {
       request: {

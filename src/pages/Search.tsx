@@ -13,9 +13,8 @@ import { Search, X, SlidersHorizontal, ArrowRight, Clock, Store, Navigation, Che
 import { RadarPulse } from '../components/futuristic/RadarPulse';
 import { useJsApiLoader } from '@react-google-maps/api';
 
-const TRENDING = ['PS5', 'iPhone 15', 'perfumes', 'earbuds'];
-
 export default function SearchPage() {
+  const { token } = useAuth();
   usePageMeta({ title: 'Search' });
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -44,6 +43,7 @@ export default function SearchPage() {
   // Ask Nearby modal state
   const [askModalOpen, setAskModalOpen] = useState(false);
   const [askQuery, setAskQuery] = useState('');
+  const [askImages, setAskImages] = useState<File[]>([]);
   const [askAreaMode, setAskAreaMode] = useState<'my' | 'custom'>('my');
   const [askCustomArea, setAskCustomArea] = useState('');
   const [askRadius, setAskRadius] = useState(5);
@@ -55,8 +55,47 @@ export default function SearchPage() {
   const [askQuerySuggestions, setAskQuerySuggestions] = useState<string[]>([]);
   const [showAskQuerySuggestions, setShowAskQuerySuggestions] = useState(false);
 
+  // Ask Limit state
+  const [askLimitStatus, setAskLimitStatus] = useState<{count: number; max: number; resetAt: number; remainingMs: number} | null>(null);
+  const [askCountdown, setAskCountdown] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+    apiFetch('/api/ask-nearby/limit-status')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          setAskLimitStatus(data);
+          setAskCountdown(data.remainingMs);
+        }
+      })
+      .catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    if (!askLimitStatus || askLimitStatus.count < askLimitStatus.max) return;
+    if (askCountdown <= 0) return;
+    const t = setInterval(() => {
+      setAskCountdown(prev => {
+        if (prev <= 1000) {
+          clearInterval(t);
+          setAskLimitStatus(s => s ? { ...s, count: 0 } : null);
+          return 0;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [askLimitStatus, askCountdown]);
+
+  const formatCountdown = (ms: number) => {
+    const mins = Math.floor(ms / 60000);
+    const secs = Math.floor((ms % 60000) / 1000);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const [libraries] = useState<("places" | "drawing" | "geometry" | "localContext" | "visualization")[]>(['places']);
+  const [libraries] = useState<("places" | "drawing" | "geometry" | "visualization")[]>(['places']);
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: mapsKey,
     id: 'google-map-script',
@@ -80,7 +119,7 @@ export default function SearchPage() {
     }
     if (!autocompleteService) return;
     const t = setTimeout(() => {
-      autocompleteService.getPlacePredictions({ input: askCustomArea, componentRestrictions: { country: 'in' } }, (preds, status) => {
+      autocompleteService.getPlacePredictions({ input: askCustomArea, componentRestrictions: { country: 'in' }, types: ['(regions)'] }, (preds, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && preds) {
           setAskAreaPredictions(preds);
         } else {
@@ -108,7 +147,6 @@ export default function SearchPage() {
     return () => clearTimeout(t);
   }, [askQuery]);
 
-  const { token } = useAuth();
   const navigate = useNavigate();
   const { location: userLocCtx } = useUserLocation();
   const { showToast } = useToast();
@@ -304,7 +342,12 @@ export default function SearchPage() {
   };
 
   const openAskModal = () => {
+    if (askLimitStatus && askLimitStatus.count >= askLimitStatus.max && askCountdown > 0) {
+      showToast(`Limit reached. Please wait ${formatCountdown(askCountdown)}`);
+      return;
+    }
     setAskQuery(query || '');
+    setAskImages([]);
     setAskAreaMode('my');
     setAskCustomArea('');
     setAskAreaSelectedPlaceId(null);
@@ -359,15 +402,41 @@ export default function SearchPage() {
 
     setAskSending(true);
     try {
+      let uploadedImageUrls: string[] = [];
+      if (askImages.length > 0) {
+        const uploadPromises = askImages.map(async (file) => {
+          const formData = new FormData();
+          formData.append('image', file);
+          const res = await apiFetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+          if (!res.ok) throw new Error('Upload failed');
+          const data = await res.json();
+          return data.url;
+        });
+        uploadedImageUrls = await Promise.all(uploadPromises);
+      }
+
       const res = await apiFetch('/api/ask-nearby/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: askQuery.trim(), radiusKm: askRadius, latitude: lat, longitude: lng, areaLabel }),
+        body: JSON.stringify({ query: askQuery.trim(), radiusKm: askRadius, latitude: lat, longitude: lng, areaLabel, images: uploadedImageUrls }),
       });
       const data = await res.json();
-      if (!res.ok) { showToast(data.error || 'Kuch problem aayi, dobara try karo'); return; }
+      if (!res.ok) { 
+        if (res.status === 429 && data.resetAt) {
+          showToast(data.error || 'Limit exceed ho gayi');
+          setAskLimitStatus({ count: 10, max: 10, resetAt: data.resetAt, remainingMs: data.remainingMs });
+          setAskCountdown(data.remainingMs);
+        } else {
+          showToast(data.error || 'Kuch problem aayi, dobara try karo'); 
+        }
+        return; 
+      }
       if (data.found === 0) { showToast(data.message || 'Koi matching store nahi mila'); return; }
       setAskResult({ sentTo: data.sentTo, storeNames: data.storeNames });
+      setAskLimitStatus(prev => prev ? { ...prev, count: prev.count + 1 } : null);
     } catch (err) {
       showToast('Network error, dobara try karo');
       Sentry.captureException(err, { extra: { context: 'search.askNearbySend' } });
@@ -683,11 +752,14 @@ export default function SearchPage() {
                         jaao) switched to var(--c-action / --b-green). */}
                     <button
                       onClick={openAskModal}
-                      className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm"
+                      disabled={askLimitStatus ? askLimitStatus.count >= askLimitStatus.max && askCountdown > 0 : false}
+                      className="w-full mt-3 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm disabled:opacity-50"
                       style={{ background: 'var(--c-action, var(--b-green))', color: '#fff', border: 'none' }}
                     >
-                      Nearby shops se poocho
-                      <ChevronRight size={15} color="#fff" />
+                      {askLimitStatus && askLimitStatus.count >= askLimitStatus.max && askCountdown > 0 
+                        ? `Wait ${formatCountdown(askCountdown)}...`
+                        : 'Nearby shops se poocho'}
+                      {!(askLimitStatus && askLimitStatus.count >= askLimitStatus.max && askCountdown > 0) && <ChevronRight size={15} color="#fff" />}
                     </button>
                   </div>
                 </div>
@@ -1073,27 +1145,58 @@ export default function SearchPage() {
                       What are you looking for?
                     </label>
                     <div style={{ position: 'relative' }}>
-                      <Search size={20} color="var(--f-text-3)" style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)' }} />
-                      <input
-                        type="text"
+                      <textarea
+                        placeholder="e.g. Paracetamol 500mg ya Ashirvad Atta 5kg"
                         value={askQuery}
-                        onChange={e => { setAskQuery(e.target.value); setShowAskQuerySuggestions(true); }}
-                        placeholder="e.g. PS5, iPhone 15, red kurta..."
-                        className="w-full"
+                        onChange={(e) => { setAskQuery(e.target.value); setShowAskQuerySuggestions(true); }}
+                        maxLength={60}
+                        rows={3}
+                        className="w-full p-4 rounded-2xl mb-4"
                         style={{
-                          padding: '18px 18px 18px 48px',
-                          borderRadius: 20,
-                          fontSize: 16,
-                          fontWeight: 600,
                           background: 'var(--f-glass-bg-2)',
                           color: 'var(--f-text-1)',
                           border: '2px solid transparent',
                           outline: 'none',
                           transition: 'border-color 0.2s',
+                          fontSize: 16,
+                          fontWeight: 600,
+                          resize: 'none',
                         }}
-                        onFocus={(e) => { e.target.style.borderColor = 'var(--b-magenta-ink)'; setShowAskQuerySuggestions(true); }}
-                        onBlur={(e) => { e.target.style.borderColor = 'transparent'; setTimeout(() => setShowAskQuerySuggestions(false), 200); }}
                       />
+                      
+                      {/* Session 128: 3 Image Upload Support */}
+                      <div style={{ position: 'absolute', bottom: 28, left: 16, right: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <label style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10,
+                          background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)', cursor: 'pointer', color: 'var(--b-gray-2)'
+                        }}>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              if (e.target.files) {
+                                const newFiles = Array.from(e.target.files);
+                                setAskImages(prev => [...prev, ...newFiles].slice(0, 3));
+                              }
+                            }}
+                          />
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                        </label>
+                        {askImages.map((file, idx) => (
+                          <div key={idx} style={{ position: 'relative', width: 36, height: 36, borderRadius: 8, overflow: 'hidden' }}>
+                            <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button
+                              onClick={() => setAskImages(prev => prev.filter((_, i) => i !== idx))}
+                              style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: 'pointer' }}
+                            >
+                              <X size={10} color="#fff" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+
                       {showAskQuerySuggestions && askQuerySuggestions.length > 0 && (
                         <div className="absolute left-0 right-0 mt-2 rounded-xl overflow-hidden z-20" style={{ background: '#fff', border: '1px solid var(--f-glass-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.16)' }}>
                           {askQuerySuggestions.map((sug, i) => (

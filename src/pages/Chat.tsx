@@ -165,8 +165,8 @@ export default function ChatPage() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [receiverName, setReceiverName] = useState(userNameFromState);
@@ -305,24 +305,38 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const file = e.target.files[0];
-      setImageFile(file);
-      if (imagePreview) URL.revokeObjectURL(imagePreview);
-      setImagePreview(URL.createObjectURL(file));
+    if (e.target.files?.length) {
+      const newFiles = Array.from(e.target.files);
+      const combined = [...imageFiles, ...newFiles].slice(0, 4);
+      setImageFiles(combined);
+      
+      imagePreviews.forEach(url => URL.revokeObjectURL(url));
+      setImagePreviews(combined.map(f => URL.createObjectURL(f)));
       setUploadError('');
     }
   };
 
+  const removeImage = (index: number) => {
+    const updatedFiles = [...imageFiles];
+    updatedFiles.splice(index, 1);
+    const updatedPreviews = [...imagePreviews];
+    URL.revokeObjectURL(updatedPreviews[index]);
+    updatedPreviews.splice(index, 1);
+    
+    setImageFiles(updatedFiles);
+    setImagePreviews(updatedPreviews);
+    if (fileInputRef.current && updatedFiles.length === 0) fileInputRef.current.value = '';
+  };
+
   const clearImagePreview = () => {
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImagePreview('');
-    setImageFile(null);
+    imagePreviews.forEach(url => URL.revokeObjectURL(url));
+    setImagePreviews([]);
+    setImageFiles([]);
     setUploadError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const sendRaw = async (body: { receiverId?: string; message?: string; imageUrl?: string }) => {
+  const sendRaw = async (body: { receiverId?: string; message?: string; imageUrl?: string; imageUrls?: string[] }) => {
     const res = await apiFetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -335,7 +349,7 @@ export default function ChatPage() {
       // PostHog: chat_message_sent — metrics only (no message text), with
       // boolean flags for the two non-text fields callers can populate.
       captureEvent('chat_message_sent', {
-        has_image: !!body.imageUrl,
+        has_image: !!body.imageUrl || !!body.imageUrls?.length,
         has_text: !!(body.message && body.message.trim()),
       });
     } else {
@@ -346,26 +360,29 @@ export default function ChatPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if ((!newMessage.trim() && !imageFile) || isSending) return;
+    if ((!newMessage.trim() && imageFiles.length === 0) || isSending) return;
 
     setIsSending(true);
-    let uploadedImageUrl: string | undefined;
+    let uploadedImageUrls: string[] = [];
 
-    if (imageFile) {
-      const formData = new FormData();
-      formData.append('file', imageFile);
+    if (imageFiles.length > 0) {
       try {
-        const res = await apiFetch('/api/upload', {
-          method: 'POST',
-          body: formData
+        const uploadPromises = imageFiles.map(async (file) => {
+          const formData = new FormData();
+          formData.append('file', file);
+          const res = await apiFetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+          if (res.ok) {
+            return (await res.json()).url as string;
+          }
+          throw new Error('Upload failed');
         });
-        if (res.ok) {
-          uploadedImageUrl = (await res.json()).url;
-        } else {
-          setUploadError('Image upload failed. Message sent without image.');
-        }
+        
+        uploadedImageUrls = await Promise.all(uploadPromises);
       } catch (err) {
-        setUploadError('Image upload failed. Message sent without image.');
+        setUploadError('Image upload failed. Message sent without images.');
         Sentry.captureException(err, { extra: { context: 'chat.imageUpload' } });
       }
     }
@@ -380,7 +397,8 @@ export default function ChatPage() {
     await sendRaw({
       receiverId: userId,
       message: newMessage || undefined,
-      imageUrl: uploadedImageUrl || undefined,
+      imageUrl: uploadedImageUrls[0] || undefined,
+      imageUrls: uploadedImageUrls.length > 1 ? uploadedImageUrls : [],
     });
 
     setNewMessage('');
@@ -388,7 +406,7 @@ export default function ChatPage() {
     setIsSending(false);
   };
 
-  const sendDisabled = (!newMessage.trim() && !imageFile) || isSending;
+  const sendDisabled = (!newMessage.trim() && imageFiles.length === 0) || isSending;
 
   return (
     <div style={{
@@ -573,9 +591,13 @@ export default function ChatPage() {
                   <PostRefCard text={msg.message!} onTap={setPreviewPost} />
                 ) : (
                   <>
-                    {msg.imageUrl && (
-                      <div style={{ marginBottom: 6, borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
-                        <img src={msg.imageUrl} alt="attachment" loading="lazy" style={{ width: '100%', maxHeight: 192, objectFit: 'cover', display: 'block' }} />
+                    {(((msg as any).imageUrls && (msg as any).imageUrls.length > 0) ? (msg as any).imageUrls : (msg.imageUrl ? [msg.imageUrl] : [])).length > 0 && (
+                      <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {(((msg as any).imageUrls && (msg as any).imageUrls.length > 0) ? (msg as any).imageUrls : (msg.imageUrl ? [msg.imageUrl] : [])).map((url: string, i: number) => (
+                          <div key={i} style={{ flex: '1 1 45%', borderRadius: 10, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+                            <img src={url} alt="attachment" loading="lazy" style={{ width: '100%', maxHeight: 192, objectFit: 'cover', display: 'block' }} />
+                          </div>
+                        ))}
                       </div>
                     )}
                     {msg.message && <p style={{ margin: 0 }}>{msg.message}</p>}
@@ -620,28 +642,27 @@ export default function ChatPage() {
           </div>
         )}
 
-        {imagePreview && (
+        {imagePreviews.length > 0 && (
           <div style={{
-            position: 'absolute', bottom: '100%', left: 0, right: 0, padding: 12, display: 'flex', alignItems: 'center',
+            position: 'absolute', bottom: '100%', left: 0, right: 0, padding: 12, display: 'flex', alignItems: 'center', gap: 8,
             background: 'var(--f-modal-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
             borderTop: '1px solid var(--f-glass-border)', borderBottom: '1px solid var(--f-glass-border)',
-            borderRadius: '14px 14px 0 0', zIndex: 20,
+            borderRadius: '14px 14px 0 0', zIndex: 20, overflowX: 'auto',
           }}>
-            <div style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--f-glass-border-2)' }}>
-              <img src={imagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              {/* Session 128.10: show an overlay on the 64×64 thumb while
-                  /api/upload is in flight — the Send button has its own spinner
-                  but this thumbnail was silent. */}
-              {isSending && imageFile && <UploadingOverlay label="" size={20} radius={10} />}
-              <button
-                type="button"
-                onClick={clearImagePreview}
-                disabled={isSending}
-                style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: isSending ? 'not-allowed' : 'pointer', display: 'flex', opacity: isSending ? 0.4 : 1, zIndex: 6 }}
-              >
-                <X size={12} color="#fff" />
-              </button>
-            </div>
+            {imagePreviews.map((preview, i) => (
+              <div key={i} style={{ position: 'relative', width: 64, height: 64, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--f-glass-border-2)', flexShrink: 0 }}>
+                <img src={preview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {isSending && <UploadingOverlay label="" size={20} radius={10} />}
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  disabled={isSending}
+                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: isSending ? 'not-allowed' : 'pointer', display: 'flex', opacity: isSending ? 0.4 : 1, zIndex: 6 }}
+                >
+                  <X size={12} color="#fff" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -675,7 +696,7 @@ export default function ChatPage() {
             }}
           >
             <Paperclip size={20} color="var(--b-gray-1)" />
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
+            <input ref={fileInputRef} type="file" accept="image/*,application/pdf" multiple onChange={handleImageChange} style={{ display: 'none' }} />
           </label>
           <input
             type="text"

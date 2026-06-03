@@ -46,9 +46,9 @@ export class MessageController {
   static async sendMessage(req: Request, res: Response) {
     try {
       const senderId = (req as any).user.userId;
-      const { receiverId, message, imageUrl } = req.body;
+      const { receiverId, message, imageUrl, imageUrls } = req.body;
 
-      const savedMessage = await MessageService.sendMessage(senderId, receiverId, message, imageUrl);
+      const savedMessage = await MessageService.sendMessage(senderId, receiverId, message, imageUrl, imageUrls);
       return res.json(savedMessage);
     } catch (error: any) {
       // Day 2.5 cascade: one or both parties unavailable.

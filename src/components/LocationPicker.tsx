@@ -27,7 +27,7 @@ export default function LocationPicker({ onClose }: Props) {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const [libraries] = useState<("places" | "drawing" | "geometry" | "localContext" | "visualization")[]>(['places']);
+  const [libraries] = useState<("places" | "drawing" | "geometry" | "visualization")[]>(['places', 'geometry']);
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: mapsKey,
     id: 'google-map-script',

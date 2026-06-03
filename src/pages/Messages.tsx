@@ -84,6 +84,8 @@ export default function MessagesPage() {
           longitude: item.request.longitude,
           areaLabel: item.request.areaLabel,
           radiusKm: item.request.radiusKm,
+          images: item.request.images || [],
+          status: item.status,
           accepted: false,
         }));
         setAskNearbyCards(formatted);
@@ -202,7 +204,7 @@ export default function MessagesPage() {
         showToast('Chat shuru ho gayi! Customer ab aapko message kar sakta hai.');
         refreshConversations();
       } else {
-        setAskNearbyCards(prev => prev.filter(c => c.responseId !== responseId));
+        setAskNearbyCards(prev => prev.map(c => c.responseId === responseId ? { ...c, status: 'no' } : c));
       }
     } catch (err) {
       showToast('Network error');
@@ -288,20 +290,22 @@ export default function MessagesPage() {
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', marginTop: 12 }}>
-            <button 
-              onClick={() => setActiveTab('chats')}
-              style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'chats' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
-              Chats
-              {activeTab === 'chats' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
-            </button>
-            <button 
-              onClick={() => setActiveTab('queries')}
-              style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'queries' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
-              Queries {askNearbyCards.filter(c => !c.accepted).length > 0 && <span style={{ marginLeft: 6, background: 'var(--f-orange)', color: 'white', fontSize: 11, padding: '2px 6px', borderRadius: 10 }}>{askNearbyCards.filter(c => !c.accepted).length}</span>}
-              {activeTab === 'queries' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
-            </button>
-          </div>
+          {user?.role !== 'customer' && (
+            <div style={{ display: 'flex', marginTop: 12 }}>
+              <button 
+                onClick={() => setActiveTab('chats')}
+                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'chats' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
+                Chats
+                {activeTab === 'chats' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
+              </button>
+              <button 
+                onClick={() => setActiveTab('queries')}
+                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'queries' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
+                Queries {askNearbyCards.filter(c => !c.accepted).length > 0 && <span style={{ marginLeft: 6, background: 'var(--f-orange)', color: 'white', fontSize: 11, padding: '2px 6px', borderRadius: 10 }}>{askNearbyCards.filter(c => !c.accepted).length}</span>}
+                {activeTab === 'queries' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Loading skeletons ── */}
@@ -351,6 +355,19 @@ export default function MessagesPage() {
                     Customer: {card.customerName} {card.accepted ? '' : '• Reply karo — wait kar raha hai'}
                   </p>
                   
+                  {card.images && card.images.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                      {card.images.map((imgUrl: string, idx: number) => (
+                        <img
+                          key={idx}
+                          src={imgUrl}
+                          alt=""
+                          style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   {card.accepted ? (
                     <button
                       onClick={() => handleOpenChat(card.customerId, card.customerName)}
@@ -362,6 +379,10 @@ export default function MessagesPage() {
                     >
                       💬 Move to chat
                     </button>
+                  ) : card.status === 'no' ? (
+                    <div style={{ padding: 12, background: 'var(--f-glass-bg)', color: 'var(--f-text-3)', borderRadius: 10, textAlign: 'center', fontSize: 13, fontWeight: 600, border: '1px solid var(--f-glass-border)' }}>
+                      ❌ Nahi hai (Removed in 24h)
+                    </div>
                   ) : (
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button

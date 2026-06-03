@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import type { CSSProperties } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
+import { Eye, EyeOff } from 'lucide-react';
 import { FIcon, FLogo } from '../components/futuristic';
 import { ConsentCheckbox } from '../components/legal/ConsentCheckbox';
 
@@ -247,7 +248,7 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--f-text-3)' }}
                   >
-                    <FIcon name={showPassword ? "eyeOff" : "eye"} size={18} color="currentColor" />
+                    {showPassword ? <EyeOff size={18} color="currentColor" /> : <Eye size={18} color="currentColor" />}
                   </button>
                 </div>
               </div>
@@ -345,7 +346,7 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--f-text-3)' }}
                   >
-                    <FIcon name={showPassword ? "eyeOff" : "eye"} size={18} color="currentColor" />
+                    {showPassword ? <EyeOff size={18} color="currentColor" /> : <Eye size={18} color="currentColor" />}
                   </button>
                 </div>
 
