@@ -5,6 +5,7 @@ import { getStoreStatus } from '../lib/storeUtils';
 import { getLiveStatus, LIVE_STATUS_COLORS } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
 import { haptic } from '../lib/haptics';
+import StarRating from './StarRating';
 import StatusPill, { type BrightStatus } from './bright/StatusPill';
 import { Post } from '../types';
 
@@ -65,6 +66,19 @@ function renderCaption(caption: string) {
       {m[2]}
     </>
   );
+}
+
+function timeAgo(dateStr: string) {
+  if (!dateStr) return '';
+  const diffMs = Date.now() - new Date(dateStr).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${Math.max(1, diffMins)}m`;
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) return `${diffHrs}h`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) return `${diffDays}d`;
+  const diffWeeks = Math.floor(diffDays / 7);
+  return `${diffWeeks}w`;
 }
 
 function getImageStyles(naturalRatio: number | undefined): {
@@ -171,12 +185,10 @@ function PostCardInner({
 
   // Row 1 (inline next to name): "⭐ 4.6 (124)" — only when the store has at
   // least one review. Hidden for brand-new stores (a "(0)" reads like a fail).
-  const ratingText = (() => {
-    const r = post.store?.averageRating;
-    const c = post.store?.reviewCount ?? 0;
-    if (!r || c < 1 || post.store?.hideRatings) return null;
-    return { value: r.toFixed(1), count: c };
-  })();
+  
+
+
+  const timeStr = post.createdAt ? timeAgo(post.createdAt) : '';
   const followersCount = post.store?._count?.followers ?? 0;
   const metaLine = [
     areaText || null,
@@ -283,25 +295,15 @@ function PostCardInner({
               </span>
             </Link>
             {post.store?.isVerified && <VerifiedTick size={14} />}
-            {ratingText && (
-              <span
-                aria-label={`Rating ${ratingText.value} of 5 from ${ratingText.count} reviews`}
-                style={{
-                  background: 'var(--b-green)',
-                  color: '#fff',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '1px 6px',
-                  borderRadius: 5,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  flexShrink: 0,
-                  lineHeight: 1,
-                }}
-              >
-                {ratingText.value} <span aria-hidden="true">★</span>
-                <span style={{ opacity: 0.75, fontWeight: 600, marginLeft: 2 }}>({ratingText.count})</span>
+            {post.store?.averageRating != null && post.store.averageRating > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <StarRating rating={post.store.averageRating} size={11} />
+                <span style={{ fontSize: 13, color: 'var(--b-gray-2)', fontWeight: 600 }}>{post.store.averageRating.toFixed(1)}</span>
+              </div>
+            )}
+            {timeStr && (
+              <span style={{ fontSize: 13, color: 'var(--b-gray-2)', fontWeight: 600, flexShrink: 0 }}>
+                · {timeStr}
               </span>
             )}
             <span style={{ flex: 1 }} />
@@ -318,9 +320,9 @@ function PostCardInner({
                   fontFamily: 'inherit',
                   flexShrink: 0,
                   lineHeight: 1,
-                  background: isFollowed ? 'var(--b-green-bg)' : 'var(--b-green)',
-                  color: isFollowed ? 'var(--b-green)' : '#fff',
-                  border: isFollowed ? '1.5px solid var(--b-green)' : 'none',
+                  background: isFollowed ? 'var(--f-glass-bg-2)' : 'var(--b-green)',
+                  color: isFollowed ? 'var(--f-text-2)' : '#fff',
+                  border: isFollowed ? '1.5px solid var(--f-glass-border)' : 'none',
                   transition: 'transform 0.16s var(--b-ease)',
                 }}
               >

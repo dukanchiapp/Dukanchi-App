@@ -114,6 +114,7 @@
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@types/supertest": "^7.2.0",
+    "@types/uuid": "^10.0.0",
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.1.7",
     "@vitest/ui": "^4.1.6",

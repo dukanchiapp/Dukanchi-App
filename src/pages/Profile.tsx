@@ -12,6 +12,9 @@ import { usePageMeta } from '../hooks/usePageMeta';
 import { StoreInfoCard } from '../components/profile/StoreInfoCard';
 import { PostsGrid } from '../components/profile/PostsGrid';
 import { ReviewsTab } from '../components/profile/ReviewsTab';
+import { CustomerDataTabs } from '../components/settings/CustomerDataTabs';
+import { AccountDetailsTab } from '../components/settings/AccountDetailsTab';
+import { ArrowLeft } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
 import { FIcon } from '../components/futuristic';
@@ -61,6 +64,46 @@ export default function ProfilePage() {
   const [interactions, setInteractions] = useState<{ likedPostIds: string[]; savedPostIds: string[]; followedStoreIds: string[] }>({
     likedPostIds: [], savedPostIds: [], followedStoreIds: [],
   });
+
+  const [customerActiveTab, setCustomerActiveTab] = useState<string | null>(null);
+  const [followedStores, setFollowedStores] = useState<any[]>([]);
+  const [savedItems, setSavedItems] = useState<{saved: any[], posts: any[]}>({ saved: [], posts: [] });
+  const [searchHistory, setSearchHistory] = useState<any[]>([]);
+  const [savedLocations, setSavedLocations] = useState<any[]>([]);
+  const [userReviews, setUserReviews] = useState<any[]>([]);
+  const [customerLoading, setCustomerLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id || !token || user?.role !== 'customer') return;
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    if (customerActiveTab === 'following') {
+      setCustomerLoading(true);
+      apiFetch(`/api/users/${user.id}/following`, { headers })
+        .then(r => r.json()).then(setFollowedStores).catch(console.error).finally(() => setCustomerLoading(false));
+    }
+    if (customerActiveTab === 'locations') {
+      setCustomerLoading(true);
+      apiFetch(`/api/users/${user.id}/locations`, { headers })
+        .then(r => r.json()).then(setSavedLocations).catch(console.error).finally(() => setCustomerLoading(false));
+    }
+    if (customerActiveTab === 'history') {
+      setCustomerLoading(true);
+      apiFetch(`/api/users/${user.id}/search-history`, { headers })
+        .then(r => r.json()).then(setSearchHistory).catch(console.error).finally(() => setCustomerLoading(false));
+    }
+    if (customerActiveTab === 'reviews') {
+      setCustomerLoading(true);
+      apiFetch(`/api/users/${user.id}/reviews`, { headers })
+        .then(r => r.json()).then(setUserReviews).catch(console.error).finally(() => setCustomerLoading(false));
+    }
+    // Always fetch saved posts for the grid
+    if (!customerActiveTab) {
+      setCustomerLoading(true);
+      apiFetch(`/api/users/${user.id}/saved`, { headers })
+        .then(r => r.json()).then(setSavedItems).catch(console.error).finally(() => setCustomerLoading(false));
+    }
+  }, [customerActiveTab, user, token]);
 
   // Session 128: line-based bio read-more for the retailer profile.
   const [bioExpanded, setBioExpanded] = useState(false);
@@ -208,8 +251,61 @@ export default function ProfilePage() {
   const handleLogout = () => { logout(); navigate('/login'); };
   const isBusinessAccount = user?.role !== 'customer';
 
-  // ── CUSTOMER PROFILE VIEW ──────────────────────────────────────────────────
   if (!isBusinessAccount) {
+    if (customerActiveTab) {
+      return (
+        <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', zIndex: 1, maxWidth: 480, margin: '0 auto' }}>
+            <header className="px-4 py-3.5 sticky top-0 z-20 flex items-center justify-between" style={{ background: 'var(--f-sticky-bg)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderBottom: '1px solid var(--f-glass-border)' }}>
+              <div className="flex items-center" style={{ gap: 12 }}>
+                <button onClick={() => setCustomerActiveTab(null)} style={{ width: 42, height: 42, borderRadius: 12, border: '1px solid var(--f-glass-border-2)', background: 'var(--f-bg-elev)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
+                  <ArrowLeft size={20} color="var(--f-text-1)" />
+                </button>
+                <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--f-text-1)', margin: 0, textTransform: 'capitalize' }}>
+                  {customerActiveTab === 'details' ? 'Account Details' : customerActiveTab}
+                </h1>
+              </div>
+              <div style={{ width: 44, height: 44, borderRadius: 14, background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <NotificationBell />
+              </div>
+            </header>
+            <main className="p-4 space-y-4">
+              {customerActiveTab === 'details' ? (
+                <AccountDetailsTab isRetailer={false} />
+              ) : (
+                <CustomerDataTabs
+                  activeTab={customerActiveTab}
+                  followedStores={followedStores}
+                  savedItems={savedItems}
+                  savedLocations={savedLocations}
+                  searchHistory={searchHistory}
+                  userReviews={userReviews}
+                  loading={customerLoading}
+                  onUnfollow={async (storeId) => {
+                    await apiFetch(`/api/stores/${storeId}/follow`, { method: 'POST' });
+                    setFollowedStores(prev => prev.filter(s => s.id !== storeId));
+                  }}
+                  onUnsave={async (postId) => {
+                    await apiFetch(`/api/posts/${postId}/save`, { method: 'POST' });
+                    setSavedItems(prev => ({
+                      ...prev,
+                      posts: prev.posts.filter(p => p.id !== postId),
+                      saved: prev.saved.filter(s => s.postId !== postId),
+                    }));
+                  }}
+                  onClearHistory={async () => {
+                    await apiFetch('/api/search/history', { method: 'DELETE' });
+                    setSearchHistory([]);
+                  }}
+                />
+              )}
+            </main>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
@@ -226,26 +322,69 @@ export default function ProfilePage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <RefreshButton />
               <NotificationBell color="#fff" />
-              <Link to="/settings" style={coverFab} aria-label="Settings">
+              <button onClick={() => setCustomerActiveTab('details')} style={coverFab} aria-label="Settings">
                 <FIcon name="settings" size={18} color="#fff" />
-              </Link>
+              </button>
             </div>
           </div>
 
           <div style={{ padding: '0 16px' }}>
             {/* Identity */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 0' }}>
-              <div style={{
-                width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              <label style={{
+                position: 'relative', width: 80, height: 80, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 12, background: 'var(--f-grad-primary)', color: 'white', fontWeight: 800, fontSize: 32,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.30)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.30)', cursor: 'pointer', overflow: 'hidden'
               }}>
-                {user?.name?.charAt(0)}
-              </div>
+                {(user as any)?.avatarUrl ? (
+                  <img src={(user as any).avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  user?.name?.charAt(0)
+                )}
+                {loading && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 24, height: 24, border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                </div>}
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                  disabled={loading}
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setLoading(true);
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    try {
+                      const res = await apiFetch('/api/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        body: fd
+                      });
+                      const data = await res.json();
+                      if (res.ok && data.url) {
+                        await apiFetch(`/api/users/${user?.id}`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                          body: JSON.stringify({ avatarUrl: data.url }),
+                        });
+                        // Update local user object via reload or optimistic update
+                        window.location.reload();
+                      } else {
+                        showToast(data.error || 'Upload failed', { type: 'error' });
+                        setLoading(false);
+                      }
+                    } catch (err) {
+                      showToast('Network error during upload', { type: 'error' });
+                      setLoading(false);
+                    }
+                  }}
+                />
+              </label>
               <h2 className="f-display" style={{ fontSize: 21, color: 'var(--f-text-1)', margin: '0 0 2px' }}>{user?.name}</h2>
               {user?.email && <p style={{ fontSize: 13, color: 'var(--f-text-3)', margin: 0 }}>{user.email}</p>}
               <button
-                onClick={() => navigate('/settings')}
+                onClick={() => setCustomerActiveTab('details')}
                 className="f-glass"
                 style={{ marginTop: 16, padding: '8px 22px', borderRadius: 9999, background: 'var(--f-glass-bg-2)', color: 'var(--f-text-1)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
               >
@@ -253,18 +392,20 @@ export default function ProfilePage() {
               </button>
             </div>
 
+
+
             {/* Menu — account */}
             <div className="f-glass" style={{ borderRadius: 18, marginBottom: 12, background: 'var(--f-glass-bg)', overflow: 'hidden' }}>
               {([
-                { icon: 'userCheck', label: 'Following Stores' },
-                { icon: 'bookmark', label: 'Saved Posts & Stores' },
-                { icon: 'mapPin', label: 'Saved Locations' },
-                { icon: 'history', label: 'Search History' },
-                { icon: 'star', label: 'My Reviews' },
+                { icon: 'bookmark', label: 'Saved Posts', id: 'saved' },
+                { icon: 'userCheck', label: 'Following Stores', id: 'following' },
+                { icon: 'mapPin', label: 'Saved Locations', id: 'locations' },
+                { icon: 'history', label: 'Search History', id: 'history' },
+                { icon: 'star', label: 'My Reviews', id: 'reviews' },
               ] as const).map((item, i, arr) => (
                 <div
-                  key={item.label}
-                  onClick={() => navigate('/settings')}
+                  key={item.id}
+                  onClick={() => setCustomerActiveTab(item.id)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', cursor: 'pointer',
                     borderBottom: i < arr.length - 1 ? '1px solid var(--f-glass-border)' : 'none',
@@ -493,7 +634,7 @@ export default function ProfilePage() {
                 meets the page surface with a hard edge. */}
           </div>
           <div style={{
-            position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, zIndex: 3,
+            position: 'absolute', top: 0, right: 0, display: 'flex', alignItems: 'center', gap: 8, zIndex: 50,
             padding: 'calc(env(safe-area-inset-top, 0px) + 14px) 14px 0',
           }}>
             <NotificationBell color="#fff" />

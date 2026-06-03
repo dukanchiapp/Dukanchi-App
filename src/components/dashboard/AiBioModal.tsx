@@ -1,8 +1,7 @@
-import { useState, useRef } from 'react';
-import { Sparkles, X, Loader2, Mic, MicOff } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, X, Loader2 } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { apiFetch } from '../../lib/api';
-import { captureEvent } from '../../lib/posthog';
 import { Sentry } from '../../lib/sentry-frontend';
 
 interface AiBioModalProps {
@@ -19,15 +18,9 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
   const [userContext, setUserContext] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ bio: string; tagline: string } | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleClose = () => {
     setStep('input'); setResult(null); setUserContext('');
-    setIsRecording(false); setRecordingSeconds(0);
     onClose();
   };
 
@@ -54,58 +47,6 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
     }
   };
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        if (timerRef.current) clearInterval(timerRef.current);
-        setRecordingSeconds(0); setIsRecording(false);
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setLoading(true);
-        try {
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
-          const res = await apiFetch('/api/ai/transcribe-voice', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ audioBase64: base64, mimeType: 'audio/webm' }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const transcript = [data.productName, data.caption].filter(Boolean).join(' — ');
-            if (transcript) setUserContext(prev => prev ? `${prev} ${transcript}` : transcript);
-            // PostHog: ai_feature_used (store bio voice transcription).
-            captureEvent('ai_feature_used', { feature: 'store_bio_voice', has_transcript: !!transcript });
-          } else {
-            showToast('Voice transcription failed, manually likho', { type: 'error' });
-          }
-        } catch (err) {
-          showToast('AI abhi available nahi, manually bharo', { type: 'error' });
-          Sentry.captureException(err, { extra: { context: 'aiBioModal.voiceTranscribe' } });
-        } finally {
-          setLoading(false);
-        }
-      };
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setIsRecording(true); setRecordingSeconds(0);
-      timerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch (err) {
-      showToast('Microphone access nahi mila', { type: 'error' });
-      Sentry.captureException(err, { extra: { context: 'aiBioModal.micAccess' } });
-    }
-  };
-
-  const stopRecording = () => { mediaRecorderRef.current?.stop(); };
-
   if (!open) return null;
 
   return (
@@ -125,40 +66,25 @@ export function AiBioModal({ open, onClose, storeName, selectedCategory, onBioAp
           </button>
         </div>
         <p className="mb-4 text-xs" style={{ color: 'var(--f-text-3)', lineHeight: 1.5 }}>
-          Apni dukaan ke baare mein kuch bolo ya likho — AI perfect bio banayega
+          Apni dukaan ke baare mein likho — AI perfect bio banayega
         </p>
 
         {step === 'input' ? (
           <div className="space-y-3">
             <div className="relative">
               <textarea
-                className="w-full p-3 pb-10 rounded-xl outline-none text-sm"
+                className="w-full p-3 rounded-xl outline-none text-sm"
                 style={{ background: 'var(--f-bg-elev)', border: '1px solid var(--f-glass-border-2)', color: 'var(--f-text-1)' }}
                 rows={4}
                 placeholder="e.g. meri electronics shop hai, mobiles aur accessories bechta hu, 10 saal ka experience hai..."
                 value={userContext}
                 onChange={(e) => setUserContext(e.target.value)}
               />
-              <button
-                type="button"
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={loading}
-                className="absolute bottom-2 right-2 flex items-center justify-center rounded-full disabled:opacity-50"
-                style={{ width: 32, height: 32, background: isRecording ? 'var(--f-danger)' : 'var(--b-grad)' }}
-              >
-                {isRecording ? <MicOff size={14} color="white" /> : <Mic size={14} color="white" />}
-              </button>
             </div>
-            {isRecording && (
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--f-danger)', flexShrink: 0 }} />
-                <p className="text-xs" style={{ color: 'var(--f-text-3)' }}>Recording... {recordingSeconds}s — ruk ne ke liye mic dabao</p>
-              </div>
-            )}
             <button
               type="button"
               onClick={handleGenerate}
-              disabled={loading || isRecording}
+              disabled={loading}
               className="w-full py-3 rounded-xl font-bold text-sm disabled:opacity-60 flex items-center justify-center gap-2"
               style={{ background: 'var(--b-grad)', color: 'white', boxShadow: 'var(--b-elev-card)' }}
             >

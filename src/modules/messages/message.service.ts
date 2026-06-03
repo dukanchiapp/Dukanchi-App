@@ -122,7 +122,7 @@ export class MessageService {
     return Array.from(seen.values());
   }
 
-  static async sendMessage(senderId: string, receiverId: string, messageText: string, imageUrl?: string) {
+  static async sendMessage(senderId: string, receiverId: string, messageText: string, imageUrl?: string, imageUrls: string[] = []) {
     const sender = await prisma.user.findUnique({ where: { id: senderId } });
     const receiver = await prisma.user.findUnique({ where: { id: receiverId } });
 
@@ -145,13 +145,24 @@ export class MessageService {
     if (!canChat(sender.role, receiver.role)) throw new Error("Chat not permitted between these roles");
 
     const savedMessage = await prisma.message.create({
-      data: { senderId, receiverId, message: messageText || '', imageUrl: imageUrl || null }
+      data: { senderId, receiverId, message: messageText || '', imageUrl: imageUrl || null, imageUrls }
     });
 
     try {
       const io = getIO();
       io.to(receiverId).emit("newMessage", savedMessage);
       io.to(senderId).emit("newMessage", savedMessage);
+
+      // Create in-app notification for the bell icon
+      const notification = await prisma.notification.create({
+        data: {
+          userId: receiverId,
+          type: 'NEW_MESSAGE',
+          content: `${sender.name || 'User'} sent you a message`,
+          referenceId: senderId,
+        }
+      });
+      io.to(receiverId).emit("newNotification", notification);
     } catch (err) {
       console.warn("Socket.io emit failed (might not be initialized in this context)", err);
     }

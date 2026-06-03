@@ -1,6 +1,7 @@
 import { prisma } from "../../config/prisma";
 import { notificationQueue } from "../../config/bullmq";
 import { pubClient } from "../../config/redis";
+import { v4 as uuidv4 } from "uuid";
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -81,7 +82,7 @@ export class PostService {
        SADD posts to seen set     fire-and-forget, 7-day TTL on key
   ───────────────────────────────────────────────────────────────────────── */
   static async getFeed(userId: string, userRole: string, options: any) {
-    const { feedType, locationRange, lat, lng, page, limit } = options;
+    const { feedType, locationRange, lat, lng, page, limit, category } = options;
     const skip = (page - 1) * limit;
     const userLat = lat ? parseFloat(lat) : null;
     const userLng = lng ? parseFloat(lng) : null;
@@ -97,6 +98,10 @@ export class PostService {
     // deleted users entirely"). Distinct from saved-posts view, which
     // anonymizes rather than hides (preserves historical engagement).
     let storeFilter: any = { owner: { role: { in: allowedRoles }, isBlocked: false, deletedAt: null } };
+    
+    if (category) {
+      storeFilter.category = category;
+    }
 
     if (locationRange && locationRange !== 'all' && userLat && userLng) {
       const rangeKm = parseFloat(locationRange);
@@ -340,18 +345,27 @@ export class PostService {
         const liker = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
         const likerName = liker?.name || 'Someone';
         const content = `${likerName} liked your post`;
+        const notifId = uuidv4();
+        const now = new Date();
         prisma.notification.create({
           data: {
+            id: notifId,
             userId: authorId,
             type: 'NEW_LIKE',
             content,
             referenceId: postId,
+            createdAt: now,
           },
         }).catch(() => { /* notification persistence is best-effort */ });
         try {
           const { getIO } = await import('../../config/socket');
           getIO().to(authorId).emit('newNotification', {
-            type: 'NEW_LIKE', content, referenceId: postId, isRead: false,
+            id: notifId,
+            type: 'NEW_LIKE', 
+            content, 
+            referenceId: postId, 
+            isRead: false,
+            createdAt: now.toISOString(),
           });
         } catch { /* socket emit best-effort */ }
       }

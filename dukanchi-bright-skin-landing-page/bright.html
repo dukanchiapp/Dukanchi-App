@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="yellow"><head>
+<meta charset="utf-8">
+<title>Dukanchi · Bright Skin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="bright-skin.css">
+<style>
+  html, body { font-family: var(--b-font); background: #15151c; min-height: 100vh; }
+  .wrap { display: flex; flex-direction: column; align-items: center; padding: 26px 16px 60px; gap: 14px; }
+  .note { color: rgba(255,255,255,0.6); font-size: 12px; max-width: 392px; text-align: center; line-height: 1.5; }
+  .note b { color: #fff; }
+  .crumbs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; max-width: 392px; }
+  .crumb { padding: 7px 14px; border-radius: 9999px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); font-family: inherit; }
+  .crumb.active { background: linear-gradient(135deg,#FFD63B,#FFB300); color: #1C1A18; border-color: transparent; }
+
+  .phone { width: 392px; height: 808px; border-radius: 44px; padding: 8px; background: linear-gradient(135deg,#2a2a32,#15151a); box-shadow: 0 40px 100px rgba(0,0,0,0.45), 0 0 0 1.5px rgba(255,255,255,0.08); flex-shrink: 0; }
+  .screen { width: 100%; height: 100%; border-radius: 36px; overflow: hidden; background: var(--b-bg); display: flex; flex-direction: column; position: relative; }
+  /* status bar floats transparently over each screen's gradient header so it merges with the theme */
+  .b-statusbar { position: absolute; top: 0; left: 0; right: 0; z-index: 20; background: transparent; pointer-events: none; }
+  .b-scroll { flex: 1; overflow-y: auto; background: var(--b-surface); }
+  .b-scroll::-webkit-scrollbar { width: 0; }
+  .bs-store { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--b-line); align-items: center; }
+
+  /* status bar handled in bright-skin.css (absolute, transparent) */
+
+  /* bottom nav */
+  .bnav { height: 62px; background: #fff; border-top: 1px solid var(--b-line); display: flex; align-items: center; justify-content: space-around; flex-shrink: 0; }
+  .bnav .item { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; cursor: pointer; background: none; border: none; font-family: inherit; }
+  .bnav .item .lbl { font-size: 10px; font-weight: 700; color: var(--b-gray-3); }
+  .bnav .item.active .lbl { color: var(--b-magenta-ink); }
+  .gesture { height: 6px; display: flex; justify-content: center; align-items: center; background: #fff; }
+  .gesture i { width: 110px; height: 4px; border-radius: 2px; background: rgba(0,0,0,0.3); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="note"><b>Dukanchi · Bright Skin</b> — Blinkit-style flat layout. Tap the tabs to explore all 5 screens.</div>
+  <div class="crumbs" id="crumbs"></div>
+  <div class="phone">
+    <div class="screen">
+      <div class="b-statusbar" id="statusbar">
+        <span>9:41</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          <svg width="15" height="11" viewBox="0 0 16 11"><path d="M0 8h2v2H0zm3-2h2v4H3zm3-2h2v6H6zm3-2h2v8H9zm3-2h2v10h-2z" fill="currentColor"/></svg>
+          <svg width="15" height="11" viewBox="0 0 16 11"><path d="M8 0a10.5 10.5 0 0 1 7 2.7l-7 7-7-7A10.5 10.5 0 0 1 8 0z" fill="currentColor"/></svg>
+          <span style="display:inline-block;width:22px;height:11px;border:1.2px solid currentColor;border-radius:3px;position:relative"><span style="display:block;width:75%;height:100%;background:currentColor;border-radius:1px"></span></span>
+        </div>
+      </div>
+      <div id="screen-mount" style="flex:1;display:flex;flex-direction:column;overflow:hidden"></div>
+      <div class="bnav" id="bnav"></div>
+      <div class="gesture"><i></i></div>
+    </div>
+  </div>
+</div>
+
+<script src="bright-screens.js"></script>
+<script>
+  const ICONS = {
+    home: '<path d="M3 9.5L12 2l9 7.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V9.5z"/>',
+    search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+    map: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+    chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    profile: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  };
+  const TABS = [['home','Home'],['search','Search'],['map','Map'],['chat','Chat'],['profile','Profile']];
+  const ORDER = ['home','search','map','chat','profile'];
+  let active = 'home';
+  let prev = 'home';
+
+  function renderNav() {
+    document.getElementById('bnav').innerHTML = TABS.map(([k,l]) => {
+      const on = k === active;
+      const col = on ? (getComputedStyle(document.documentElement).getPropertyValue('--b-magenta-ink').trim() || '#D11F75') : '#A8A8A8';
+      const fill = (k === 'home' && on) ? col : 'none';
+      const sw = (k === 'home' && on) ? 0 : 2;
+      return `<button class="item ${on?'active':''}" data-tab="${k}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="${fill}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${ICONS[k]}</svg>
+        <span class="lbl">${l}</span></button>`;
+    }).join('');
+    document.querySelectorAll('.bnav .item').forEach(b => b.onclick = () => go(b.dataset.tab));
+  }
+  function renderCrumbs() {
+    document.getElementById('crumbs').innerHTML = TABS.map(([k,l]) =>
+      `<button class="crumb ${k===active?'active':''}" data-tab="${k}">${l}</button>`).join('');
+    document.querySelectorAll('#crumbs .crumb').forEach(b => b.onclick = () => go(b.dataset.tab));
+  }
+  function go(tab) { prev = active; active = tab; render(); }
+  function render() {
+    const mount = document.getElementById('screen-mount');
+    mount.innerHTML = window.BS_SCREENS[active]();
+    // directional slide based on tab order (profile counts as far-right)
+    const scr = mount.querySelector('.b-scroll');
+    if (scr) {
+      const ai = ORDER.indexOf(active), pi = ORDER.indexOf(prev);
+      scr.classList.add(ai >= pi ? 'b-page-right' : 'b-page-left');
+    }
+    renderNav(); renderCrumbs();
+    document.querySelectorAll('[data-store]').forEach(el => el.onclick = () => go('profile'));
+    enhance();
+  }
+
+  // ── Premium motion layer ──
+  function enhance() {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 3D pointer tilt
+    if (!reduce) document.querySelectorAll('.b-tilt').forEach(el => {
+      el.onpointermove = e => {
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.transform = `rotateY(${px * 7}deg) rotateX(${-py * 7}deg) translateZ(6px)`;
+      };
+      el.onpointerleave = () => { el.style.transform = ''; };
+    });
+    // Tactile ripple on tappables
+    document.querySelectorAll('.b-tap, .b-btn-grad, .bnav .item').forEach(el => {
+      if (el.dataset.rp) return; el.dataset.rp = '1'; el.classList.add('b-ripple');
+      el.addEventListener('pointerdown', e => {
+        const r = el.getBoundingClientRect(), d = Math.max(r.width, r.height);
+        const s = document.createElement('span'); s.className = 'rp';
+        s.style.width = s.style.height = d + 'px';
+        s.style.left = (e.clientX - r.left - d / 2) + 'px';
+        s.style.top = (e.clientY - r.top - d / 2) + 'px';
+        el.appendChild(s); setTimeout(() => s.remove(), 600);
+      });
+    });
+    // Count-up numbers
+    if (!reduce) document.querySelectorAll('[data-count]').forEach(el => {
+      const end = parseInt(el.dataset.count, 10); if (isNaN(end)) return;
+      let t0 = null; const dur = 900;
+      function tick(t) { if (!t0) t0 = t; const k = Math.min((t - t0) / dur, 1);
+        el.textContent = Math.round(end * (1 - Math.pow(1 - k, 3))).toLocaleString('en-IN');
+        if (k < 1) requestAnimationFrame(tick); }
+      requestAnimationFrame(tick);
+    });
+  }
+  render();
+</script>
+</body></html>

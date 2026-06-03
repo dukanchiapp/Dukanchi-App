@@ -16,7 +16,7 @@ primary_region = "sin"
   # restricted in the GCP console (dukanchi.com, *.fly.dev, localhost), so
   # committing the value is safe — it would otherwise ship in the public JS.
   [build.args]
-    VITE_GOOGLE_MAPS_API_KEY = "AIzaSyADeyki3lGmZwnz1yaRCbPFq57vG6SCWkc"
+    VITE_GOOGLE_MAPS_API_KEY = "AIzaSyD2O2M-yE-PmOMZcOo_flnaSFXMzsp2qVk"
 
 [env]
   NODE_ENV = "production"

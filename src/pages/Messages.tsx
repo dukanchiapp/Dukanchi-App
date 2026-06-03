@@ -11,6 +11,7 @@ import ConversationRow from '../components/ConversationRow';
 import { Conversation } from '../types';
 import { apiFetch, getSocketUrl, getSocketAuthOptions } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
+import { playNotificationSound } from '../utils/audio';
 
 /* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. Conversation fetch,
@@ -25,6 +26,7 @@ const shimmer: CSSProperties = {
 
 export default function MessagesPage() {
   usePageMeta({ title: 'Messages' });
+  const [activeTab, setActiveTab] = useState<'chats'|'queries'>('chats');
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +69,30 @@ export default function MessagesPage() {
       });
   }, []);
 
+  const fetchPendingAskNearby = useCallback(() => {
+    if (user?.role !== 'retailer') return;
+    apiFetch('/api/ask-nearby/pending')
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const formatted = data.map((item: any) => ({
+          responseId: item.id,
+          requestId: item.requestId,
+          query: item.request.query,
+          customerName: item.request.customer?.name || 'Customer',
+          customerId: item.request.customerId,
+          latitude: item.request.latitude,
+          longitude: item.request.longitude,
+          areaLabel: item.request.areaLabel,
+          radiusKm: item.request.radiusKm,
+          images: item.request.images || [],
+          status: item.status,
+          accepted: false,
+        }));
+        setAskNearbyCards(formatted);
+      })
+      .catch(err => Sentry.captureException(err, { extra: { context: 'messages.fetchPendingAskNearby' } }));
+  }, [user?.role]);
+
   useEffect(() => {
     if (!token) { setLoading(false); return; }
     apiFetch('/api/messages/conversations')
@@ -77,7 +103,9 @@ export default function MessagesPage() {
         Sentry.captureException(err, { extra: { context: 'messages.initialFetch' } });
       })
       .finally(() => setLoading(false));
-  }, [token]);
+
+    fetchPendingAskNearby();
+  }, [token, fetchPendingAskNearby]);
 
   const handleOpenChat = useCallback((userId: string, name: string) => {
     navigate(`/chat/${userId}`, { state: { userName: name } });
@@ -122,6 +150,7 @@ export default function MessagesPage() {
       reopenCountRef.current += 1;
       if (reopenCountRef.current > 1) {
         refreshConversations();
+        fetchPendingAskNearby();
       }
     };
     socket.io.on('reconnect', handleReopen);
@@ -138,13 +167,15 @@ export default function MessagesPage() {
     socket.on('ask_nearby_request', (data: any) => {
       setAskNearbyCards(prev => {
         if (prev.find(c => c.responseId === data.responseId)) return prev;
-        return [data, ...prev];
+        return [{ ...data, accepted: false }, ...prev];
       });
+      playNotificationSound();
     });
 
     socket.on('ask_nearby_confirmed', (data: { storeName: string }) => {
       showToast(`🎉 '${data.storeName}' ke paas stock hai! Chat mein jaao`);
       refreshConversations();
+      playNotificationSound();
     });
 
     return () => {
@@ -167,11 +198,13 @@ export default function MessagesPage() {
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error || 'Kuch problem aayi'); return; }
-      // Remove card
-      setAskNearbyCards(prev => prev.filter(c => c.responseId !== responseId));
+      
       if (answer === 'yes') {
+        setAskNearbyCards(prev => prev.map(c => c.responseId === responseId ? { ...c, accepted: true } : c));
         showToast('Chat shuru ho gayi! Customer ab aapko message kar sakta hai.');
         refreshConversations();
+      } else {
+        setAskNearbyCards(prev => prev.map(c => c.responseId === responseId ? { ...c, status: 'no' } : c));
       }
     } catch (err) {
       showToast('Network error');
@@ -208,7 +241,7 @@ export default function MessagesPage() {
             position: 'sticky',
             top: 0,
             zIndex: 20,
-            padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 0',
             background: 'var(--b-grad)',
           }}
         >
@@ -255,6 +288,24 @@ export default function MessagesPage() {
               </button>
             )}
           </div>
+
+          {/* Tabs */}
+          {user?.role !== 'customer' && (
+            <div style={{ display: 'flex', marginTop: 12 }}>
+              <button 
+                onClick={() => setActiveTab('chats')}
+                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'chats' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
+                Chats
+                {activeTab === 'chats' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
+              </button>
+              <button 
+                onClick={() => setActiveTab('queries')}
+                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'queries' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
+                Queries {askNearbyCards.filter(c => !c.accepted).length > 0 && <span style={{ marginLeft: 6, background: 'var(--f-orange)', color: 'white', fontSize: 11, padding: '2px 6px', borderRadius: 10 }}>{askNearbyCards.filter(c => !c.accepted).length}</span>}
+                {activeTab === 'queries' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ── Loading skeletons ── */}
@@ -276,8 +327,13 @@ export default function MessagesPage() {
         )}
 
         {/* ── Ask Nearby request cards (retailer side) ── */}
-        {askNearbyCards.length > 0 && (
-          <div style={{ padding: '4px 16px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {activeTab === 'queries' && (
+          <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {askNearbyCards.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '40px 16px' }}>
+                <p style={{ fontSize: 14, color: 'var(--f-text-3)' }}>Koi naya request nahi aaya abhi.</p>
+              </div>
+            )}
             {askNearbyCards.map(card => (
               <div
                 key={card.responseId}
@@ -286,44 +342,74 @@ export default function MessagesPage() {
               >
                 <div style={{ padding: 16 }}>
                   <span style={{
-                    display: 'inline-block', padding: '3px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 800,
-                    letterSpacing: 0.4, background: 'var(--b-tint)', color: 'var(--f-orange-light)', marginBottom: 8,
+                    display: 'inline-block', padding: '4px 10px', borderRadius: 9999, fontSize: 10, fontWeight: 800,
+                    letterSpacing: 0.4, background: 'var(--f-orange)', color: 'white', marginBottom: 8,
                   }}>
                     STOCK REQUEST 📦
                   </span>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--f-text-1)', margin: '0 0 2px' }}>{card.query}</p>
-                  {(card.areaLabel || card.radiusKm) && (
-                    <p style={{ fontSize: 12, color: 'var(--f-text-3)', margin: '0 0 2px' }}>
-                      📍 {card.radiusKm}km{card.areaLabel ? ` near ${card.areaLabel}` : ''}
-                    </p>
-                  )}
-                  <p style={{ fontSize: 11, color: 'var(--f-text-3)', margin: '0 0 12px' }}>
-                    Customer: {card.customerName} • Reply karo — wait kar raha hai
+                  <p style={{ fontSize: 12, color: 'var(--f-text-3)', margin: '0 0 2px' }}>
+                    📍 {convDistance(card.latitude, card.longitude) || `${card.radiusKm}km`} {card.areaLabel ? `near ${card.areaLabel}` : ''}
                   </p>
-                  <div style={{ display: 'flex', gap: 8 }}>
+                  <p style={{ fontSize: 11, color: 'var(--f-text-3)', margin: '0 0 12px' }}>
+                    Customer: {card.customerName} {card.accepted ? '' : '• Reply karo — wait kar raha hai'}
+                  </p>
+                  
+                  {card.images && card.images.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                      {card.images.map((imgUrl: string, idx: number) => (
+                        <img
+                          key={idx}
+                          src={imgUrl}
+                          alt=""
+                          style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {card.accepted ? (
                     <button
-                      onClick={() => handleAskNearbyRespond(card.responseId, 'yes')}
-                      disabled={respondingIds.has(card.responseId)}
+                      onClick={() => handleOpenChat(card.customerId, card.customerName)}
                       style={{
-                        flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                        background: 'var(--f-success)', color: '#fff', fontSize: 13, fontWeight: 800,
-                        opacity: respondingIds.has(card.responseId) ? 0.6 : 1, boxShadow: '0 3px 10px rgba(12,131,31,0.30)',
+                        width: '100%', padding: 12, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                        background: 'var(--f-magenta)', color: '#fff', fontSize: 14, fontWeight: 800,
+                        boxShadow: '0 3px 10px rgba(220,13,115,0.30)',
                       }}
                     >
-                      ✅ Haan, hai stock!
+                      💬 Move to chat
                     </button>
-                    <button
-                      onClick={() => handleAskNearbyRespond(card.responseId, 'no')}
-                      disabled={respondingIds.has(card.responseId)}
-                      style={{
-                        flex: 1, padding: 10, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
-                        background: 'var(--f-glass-bg-2)', color: 'var(--f-text-2)', border: '1px solid var(--f-glass-border)',
-                        fontSize: 13, fontWeight: 700, opacity: respondingIds.has(card.responseId) ? 0.6 : 1,
-                      }}
-                    >
-                      ❌ Nahi hai
-                    </button>
-                  </div>
+                  ) : card.status === 'no' ? (
+                    <div style={{ padding: 12, background: 'var(--f-glass-bg)', color: 'var(--f-text-3)', borderRadius: 10, textAlign: 'center', fontSize: 13, fontWeight: 600, border: '1px solid var(--f-glass-border)' }}>
+                      ❌ Nahi hai (Removed in 24h)
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => handleAskNearbyRespond(card.responseId, 'yes')}
+                        disabled={respondingIds.has(card.responseId)}
+                        style={{
+                          flex: 1, padding: 10, borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                          background: 'var(--f-success)', color: '#fff', fontSize: 13, fontWeight: 800,
+                          opacity: respondingIds.has(card.responseId) ? 0.6 : 1, boxShadow: '0 3px 10px rgba(12,131,31,0.30)',
+                        }}
+                      >
+                        ✅ Haan, hai stock!
+                      </button>
+                      <button
+                        onClick={() => handleAskNearbyRespond(card.responseId, 'no')}
+                        disabled={respondingIds.has(card.responseId)}
+                        style={{
+                          flex: 1, padding: 10, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+                          background: '#FF3B30', color: 'white', border: 'none',
+                          fontSize: 13, fontWeight: 700, opacity: respondingIds.has(card.responseId) ? 0.6 : 1,
+                          boxShadow: '0 3px 10px rgba(255,59,48,0.30)',
+                        }}
+                      >
+                        ❌ Nahi hai
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -331,7 +417,7 @@ export default function MessagesPage() {
         )}
 
         {/* ── Conversation list ── */}
-        {!loading && filtered.length > 0 && (
+        {activeTab === 'chats' && !loading && filtered.length > 0 && (
           <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtered.map(conv => (
               <ConversationRow
@@ -345,7 +431,7 @@ export default function MessagesPage() {
         )}
 
         {/* ── No search results ── */}
-        {!loading && searchQuery && filtered.length === 0 && (
+        {activeTab === 'chats' && !loading && searchQuery && filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '56px 16px' }}>
             <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>
               <Search size={38} color="var(--f-text-4)" />
@@ -355,7 +441,7 @@ export default function MessagesPage() {
         )}
 
         {/* ── Empty state ── */}
-        {showEmpty && (
+        {activeTab === 'chats' && showEmpty && (
           <div style={{ padding: '0 16px' }}>
             {/* Hero */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 32, paddingBottom: 24 }}>

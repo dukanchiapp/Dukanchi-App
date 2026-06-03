@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications, Notification } from '../context/NotificationContext';
 import { FIcon } from './futuristic';
 
@@ -15,11 +16,17 @@ export default function NotificationBell({ color = 'var(--f-text-1)' }: Notifica
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
 
+  const navigate = useNavigate();
+
   const handleNotificationClick = (notif: Notification) => {
     if (!notif.isRead) {
       markAsRead(notif.id);
     }
-    // Theoretically handle navigation via notif.referenceId here later
+    if (notif.type === 'NEW_MESSAGE' && notif.referenceId) {
+      navigate(`/chat/${notif.referenceId}`);
+    } else if (notif.type === 'NEW_POST' && notif.referenceId) {
+      navigate(`/post/${notif.referenceId}`);
+    }
     setIsOpen(false);
   };
 
@@ -96,7 +103,7 @@ export default function NotificationBell({ color = 'var(--f-text-1)' }: Notifica
                         background: notif.type === 'NEW_POST' ? 'rgba(199,126,0,0.15)' : 'var(--f-glass-bg-2)',
                       }}>
                         <FIcon
-                          name={notif.type === 'NEW_POST' ? 'image' : 'bell'}
+                          name={notif.type === 'NEW_POST' ? 'image' : notif.type === 'NEW_MESSAGE' ? 'msg' : 'bell'}
                           size={15}
                           color={notif.type === 'NEW_POST' ? 'var(--f-magenta-light)' : 'var(--f-text-3)'}
                         />

@@ -7,10 +7,11 @@ interface UseFeedOptions {
   locationRange: string;
   lat?: number | null;
   lng?: number | null;
+  category?: string;
   enabled?: boolean;
 }
 
-export function useFeed({ feedType, locationRange, lat, lng, enabled = true }: UseFeedOptions) {
+export function useFeed({ feedType, locationRange, lat, lng, category, enabled = true }: UseFeedOptions) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(enabled);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -25,7 +26,8 @@ export function useFeed({ feedType, locationRange, lat, lng, enabled = true }: U
     try {
       const useLat = locationRange !== 'all' && lat ? lat : 0;
       const useLng = locationRange !== 'all' && lng ? lng : 0;
-      const url = `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${useLat}&lng=${useLng}&page=${pageNum}&limit=15`;
+      let url = `/api/posts?feedType=${feedType}&locationRange=${locationRange}&lat=${useLat}&lng=${useLng}&page=${pageNum}&limit=15`;
+      if (category) url += `&category=${encodeURIComponent(category)}`;
       const res = await apiFetch(url);
       if (!res.ok) throw new Error(`Feed ${res.status}`);
       const data: FeedResponse = await res.json();
@@ -47,7 +49,7 @@ export function useFeed({ feedType, locationRange, lat, lng, enabled = true }: U
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [feedType, locationRange, lat, lng, enabled]);
+  }, [feedType, locationRange, lat, lng, category, enabled]);
 
   // Reset and fetch on any option change
   useEffect(() => {
@@ -57,7 +59,7 @@ export function useFeed({ feedType, locationRange, lat, lng, enabled = true }: U
     if (enabled) setLoading(true);
     fetchPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedType, locationRange, lat, lng, enabled]);
+  }, [feedType, locationRange, lat, lng, category, enabled]);
 
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore || loading) return;

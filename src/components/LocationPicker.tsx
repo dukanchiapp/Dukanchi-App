@@ -1,23 +1,16 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { X, MapPin, LocateFixed, Search, ChevronRight } from 'lucide-react';
 import { useUserLocation, UserLocation } from '../context/LocationContext';
+import { useJsApiLoader } from '@react-google-maps/api';
 
-interface NominatimResult {
-  place_id: number;
-  display_name: string;
-  lat: string;
-  lon: string;
-  address?: Record<string, string>;
+type PlacePrediction = google.maps.places.AutocompletePrediction;
+
+function getShortName(result: PlacePrediction): string {
+  return result.structured_formatting?.main_text || result.description.split(',')[0];
 }
 
-function getShortName(result: NominatimResult): string {
-  const a = result.address || {};
-  return a.neighbourhood || a.suburb || a.city_district || a.county || a.city || a.town || a.village || result.display_name.split(',')[0];
-}
-
-function getSubtitle(result: NominatimResult): string {
-  const parts = result.display_name.split(', ');
-  return parts.slice(1, 4).join(', ');
+function getSubtitle(result: PlacePrediction): string {
+  return result.structured_formatting?.secondary_text || result.description;
 }
 
 interface Props {
@@ -27,32 +20,62 @@ interface Props {
 export default function LocationPicker({ onClose }: Props) {
   const { location, setLocation, isDetecting, detectCurrentLocation } = useUserLocation();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<NominatimResult[]>([]);
+  const [results, setResults] = useState<PlacePrediction[]>([]);
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const [libraries] = useState<("places" | "drawing" | "geometry" | "visualization")[]>(['places', 'geometry']);
+  const { isLoaded } = useJsApiLoader({
+    googleMapsApiKey: mapsKey,
+    id: 'google-map-script',
+    libraries,
+  });
+
+  const autocompleteService = useMemo(() => {
+    if (isLoaded && window.google) return new window.google.maps.places.AutocompleteService();
+    return null;
+  }, [isLoaded]);
+
+  const geocoder = useMemo(() => {
+    if (isLoaded && window.google) return new window.google.maps.Geocoder();
+    return null;
+  }, [isLoaded]);
+
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100);
+    
+    // Automatically prompt for location permission if not determined yet
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        if (result.state === 'prompt') {
+          detectCurrentLocation();
+        }
+      });
+    } else {
+      detectCurrentLocation();
+    }
   }, []);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
+    if (!autocompleteService) return;
+    
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
+    debounceRef.current = setTimeout(() => {
       setSearching(true);
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=7`,
-          { headers: { 'Accept-Language': 'en' } }
-        );
-        const data: NominatimResult[] = await res.json();
-        setResults(data);
-      } catch { setResults([]); }
-      finally { setSearching(false); }
+      autocompleteService.getPlacePredictions({ input: query, componentRestrictions: { country: 'in' } }, (preds, status) => {
+        setSearching(false);
+        if (status === google.maps.places.PlacesServiceStatus.OK && preds) {
+          setResults(preds);
+        } else {
+          setResults([]);
+        }
+      });
     }, 400);
-  }, [query]);
+  }, [query, autocompleteService]);
 
   const handleUseCurrentLocation = async () => {
     setLocating(true);
@@ -61,14 +84,19 @@ export default function LocationPicker({ onClose }: Props) {
     onClose();
   };
 
-  const handleSelect = (result: NominatimResult) => {
-    const loc: UserLocation = {
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
-      name: getShortName(result),
-    };
-    setLocation(loc);
-    onClose();
+  const handleSelect = (result: PlacePrediction) => {
+    if (!geocoder) return;
+    geocoder.geocode({ placeId: result.place_id }, (results, status) => {
+      if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+        const loc: UserLocation = {
+          lat: results[0].geometry.location.lat(),
+          lng: results[0].geometry.location.lng(),
+          name: getShortName(result),
+        };
+        setLocation(loc);
+        onClose();
+      }
+    });
   };
 
   return (
@@ -80,25 +108,21 @@ export default function LocationPicker({ onClose }: Props) {
         onClick={onClose}
       />
 
-      {/* Sheet */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-50 max-w-md mx-auto"
-        style={{
-          background: 'var(--dk-bg)',
-          borderRadius: '20px 20px 0 0',
-          paddingBottom: 'env(safe-area-inset-bottom, 16px)',
-          maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--dk-border-strong)' }} />
-        </div>
-
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div
+          className="w-full max-w-md pointer-events-auto"
+          style={{
+            background: 'var(--dk-bg)',
+            borderRadius: 20,
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+          }}
+        >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pb-3 pt-1">
+        <div className="flex items-center justify-between px-4 pb-3 pt-4">
           <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--dk-text-primary)' }}>
             Choose location
           </span>
@@ -122,7 +146,7 @@ export default function LocationPicker({ onClose }: Props) {
               value={query}
               onChange={e => setQuery(e.target.value)}
               placeholder="Search city, area or locality…"
-              style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: 'var(--dk-text-primary)' }}
+              style={{ flex: 1, background: 'none', border: 'none', outline: 'none', fontSize: 14, color: 'var(--dk-text-primary)', textAlign: 'left' }}
             />
             {query.length > 0 && (
               <button onClick={() => setQuery('')}>
@@ -187,11 +211,11 @@ export default function LocationPicker({ onClose }: Props) {
                 Results
               </p>
               <div style={{ borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--dk-border)' }}>
-                {results.map((r: NominatimResult, i: number) => (
+                {results.map((r, i) => (
                   <button
                     key={r.place_id}
                     onClick={() => handleSelect(r)}
-                    className="w-full flex items-center gap-3 px-3 py-3 text-left"
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
                     style={{ background: 'white', borderBottom: i < results.length - 1 ? '0.5px solid var(--dk-border)' : 'none' }}
                   >
                     <div style={{ width: 32, height: 32, borderRadius: 10, background: 'var(--dk-surface)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -217,6 +241,7 @@ export default function LocationPicker({ onClose }: Props) {
               <p style={{ fontSize: 13, color: 'var(--dk-text-tertiary)' }}>No results for "{query}"</p>
             </div>
           )}
+        </div>
         </div>
       </div>
     </>

@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useKeyboardOpen } from '../hooks/useKeyboardOpen';
 
 /* ── Session 128.13 — Bright Skin BottomNav ─────────────────────────────────
    Replaces the previous BottomNav (Session 128.10 Blinkit-Phase-2 yellow-pill
@@ -32,13 +33,15 @@ const TABS: { key: keyof typeof ICONS; label: string; path: string }[] = [
 
 export default function BottomNav() {
   const location = useLocation();
+  const isKeyboardOpen = useKeyboardOpen();
 
   // Hide-on-route rules preserved from prior BottomNav.
   if (
     location.pathname.startsWith('/chat/') ||
     location.pathname === '/signup' ||
     location.pathname === '/login' ||
-    location.pathname === '/landing'
+    location.pathname === '/landing' ||
+    isKeyboardOpen
   ) {
     return null;
   }

@@ -10,6 +10,7 @@ import LoginPage from './pages/Login';
 import NotFoundPage from './pages/NotFound';
 
 const HomePage = lazy(() => import('./pages/Home'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const SearchPage = lazy(() => import('./pages/Search'));
 const MapPage = lazy(() => import('./pages/Map'));
 const MessagesPage = lazy(() => import('./pages/Messages'));
@@ -95,10 +96,10 @@ function FlowController() {
     if (!!user) return;
 
     // Standalone + not logged in → go to /signup, unless on a public route
-    // (auth pages + /legal/* — DPDP docs must be readable pre-signup;
+    // auth pages + /legal/* — DPDP docs must be readable pre-signup;
     // see src/constants/publicRoutes.ts)
     if (!isPublicPath(location.pathname)) {
-      navigate('/signup', { replace: true });
+      navigate('/landing', { replace: true });
     }
   }, [user, isLoading, location.pathname, navigate, isStandalone]);
 
@@ -205,6 +206,7 @@ export default function App() {
               }>
               <Routes>
                 <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/store/:id" element={<StoreProfilePage />} />

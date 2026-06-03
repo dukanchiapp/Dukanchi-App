@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import ImageCropper from '../ImageCropper';
 import { useToast } from '../../context/ToastContext';
@@ -88,11 +88,6 @@ export function PostsGrid({
   // ── AI / voice state ────────────────────────────────────────────────────────
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState<{ productName: string; category: string } | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
   // ── Edit post state ─────────────────────────────────────────────────────────
   const [editingPost, setEditingPost] = useState<any>(null);
@@ -281,61 +276,6 @@ export function PostsGrid({
       setAiLoading(false);
     }
   };
-
-  const processVoice = async (blob: Blob) => {
-    setAiLoading(true);
-    try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-      const res = await apiFetch('/api/ai/transcribe-voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audioBase64: base64, mimeType: 'audio/webm' }),
-      });
-      if (res.status === 429) { showToast('Thodi der baad try karo — AI abhi busy hai', { type: 'warning' }); return; }
-      if (!res.ok) { showToast('AI abhi available nahi, manually bharo', { type: 'error' }); return; }
-      const data = await res.json();
-      if (data.caption) setNewPostCaption(data.caption);
-      if (data.price) setNewPostPrice(String(data.price));
-      if (data.productName || data.category) setAiSuggestion({ productName: data.productName || '', category: data.category || '' });
-      // PostHog: ai_feature_used (voice→post). Only success path.
-      captureEvent('ai_feature_used', { feature: 'voice_to_post', has_caption: !!data.caption });
-      showToast('Voice se capture hua — check karo', { type: 'success' });
-    } catch (err) {
-      showToast('AI abhi available nahi, manually bharo', { type: 'error' });
-      Sentry.captureException(err, { extra: { context: 'postsGrid.aiVoiceToPost' } });
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      audioChunksRef.current = [];
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
-      recorder.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
-        if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-        setRecordingSeconds(0); setIsRecording(false);
-        await processVoice(new Blob(audioChunksRef.current, { type: 'audio/webm' }));
-      };
-      mediaRecorderRef.current = recorder;
-      recorder.start();
-      setIsRecording(true); setRecordingSeconds(0);
-      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000);
-    } catch (err) {
-      showToast('Microphone access nahi mila', { type: 'error' });
-      Sentry.captureException(err, { extra: { context: 'postsGrid.micAccess' } });
-    }
-  };
-
-  const stopRecording = () => { mediaRecorderRef.current?.stop(); };
 
   const handleCreatePost = async () => {
     if (!storeId) { showToast('Please set up your store first.', { type: 'warning' }); return; }
@@ -614,29 +554,11 @@ export function PostsGrid({
             </div>
             <div style={{ position: 'relative' }}>
               <textarea
-                style={{ ...sheetField, padding: '12px 48px 12px 12px', resize: 'none' }}
+                style={{ ...sheetField, padding: 12, resize: 'none' }}
                 rows={3} placeholder="Apne product ke baare mein batayein..."
                 value={newPostCaption} onChange={(e) => setNewPostCaption(e.target.value)}
               />
-              <button
-                type="button"
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={aiLoading}
-                style={{
-                  position: 'absolute', top: 8, right: 8, width: 34, height: 34, borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                  border: '1px solid var(--f-glass-border)', opacity: aiLoading ? 0.5 : 1,
-                  background: isRecording ? 'var(--f-danger)' : 'var(--f-glass-bg-2)',
-                }}
-              >
-                {isRecording ? <FIcon name="micOff" size={15} color="white" /> : <FIcon name="mic" size={15} color="var(--f-orange-light)" />}
-              </button>
             </div>
-            {isRecording && (
-              <p style={{ fontSize: 11, marginTop: 4, fontWeight: 600, color: 'var(--f-danger)' }}>
-                🔴 Recording... {recordingSeconds}s — Stop karne ke liye mic dabao
-              </p>
-            )}
             {aiSuggestion && (aiSuggestion.productName || aiSuggestion.category) && (
               <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, background: 'var(--f-glass-bg)', border: '1px solid var(--f-glass-border)' }}>
                 <FIcon name="sparkles" size={13} color="var(--f-orange-light)" />

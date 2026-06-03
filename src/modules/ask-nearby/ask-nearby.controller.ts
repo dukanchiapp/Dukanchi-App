@@ -1,15 +1,16 @@
 import { Request, Response } from 'express';
-import { sendAskNearby, respondToAskNearby, getMyRequests, checkHourlyLimit } from './ask-nearby.service';
+import { sendAskNearby, respondToAskNearby, getMyRequests, checkHourlyLimit, getPendingRequests, getHourlyLimitStatus } from './ask-nearby.service';
 
 export class AskNearbyController {
   static async send(req: Request, res: Response) {
     const userId = (req as any).user.userId;
 
-    if (!checkHourlyLimit(userId, 5)) {
-      return res.status(429).json({ error: 'Thodi der baad try karo — limit exceed ho gayi' });
+    const limitCheck = checkHourlyLimit(userId, 10);
+    if (!limitCheck.allowed) {
+      return res.status(429).json({ error: 'Thodi der baad try karo — limit exceed ho gayi', remainingMs: limitCheck.remainingMs, resetAt: limitCheck.resetAt });
     }
 
-    const { query, radiusKm, latitude, longitude, areaLabel } = req.body;
+    const { query, radiusKm, latitude, longitude, areaLabel, images } = req.body;
 
     if (!query || typeof query !== 'string' || query.trim().length < 3 || query.trim().length > 200) {
       return res.status(400).json({ error: 'query must be 3-200 characters' });
@@ -25,7 +26,7 @@ export class AskNearbyController {
     }
 
     try {
-      const result = await sendAskNearby(userId, query.trim(), radius, lat, lng, areaLabel?.trim());
+      const result = await sendAskNearby(userId, query.trim(), radius, lat, lng, areaLabel?.trim(), Array.isArray(images) ? images : []);
       return res.json(result);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Server error' });
@@ -56,6 +57,25 @@ export class AskNearbyController {
     try {
       const data = await getMyRequests(userId);
       return res.json(data);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Server error' });
+    }
+  }
+
+  static async getPending(req: Request, res: Response) {
+    const ownerId = (req as any).user.userId;
+    try {
+      const data = await getPendingRequests(ownerId);
+      return res.json(data);
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Server error' });
+    }
+  }
+  static async getLimitStatus(req: Request, res: Response) {
+    const userId = (req as any).user.userId;
+    try {
+      const status = getHourlyLimitStatus(userId, 10);
+      return res.json(status);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Server error' });
     }

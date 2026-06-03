@@ -105,6 +105,13 @@ const evaluateRow = (row: { isBlocked: boolean; deletedAt: Date | null }) =>
   });
 
 export class AuthService {
+  static async checkPhone(phone: string): Promise<boolean> {
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (user) return true;
+    const teamMember = await prisma.teamMember.findUnique({ where: { phone } });
+    return !!teamMember;
+  }
+
   static async signup(data: any, meta: SignupMeta = {}) {
     const { name, phone, password, role, location } = data;
 

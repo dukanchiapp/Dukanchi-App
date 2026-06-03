@@ -166,6 +166,18 @@ async function blacklistAccessTokenIfPresent(
 // ── Controller ──────────────────────────────────────────────────────────────
 
 export class AuthController {
+  static async checkPhone(req: Request, res: Response) {
+    try {
+      const { phone } = req.body;
+      if (!phone) return res.status(400).json({ error: "Phone number is required" });
+      const exists = await AuthService.checkPhone(phone);
+      return res.json({ exists });
+    } catch (error) {
+      logger.error({ err: error }, "Check phone error");
+      return res.status(500).json({ error: "Failed to check phone" });
+    }
+  }
+
   static async signup(req: Request, res: Response) {
     try {
       // Pass request-derived consent provenance — the service hashes the IP

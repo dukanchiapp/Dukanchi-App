@@ -1,4 +1,5 @@
 import { useNotifications, type Notification } from '../context/NotificationContext';
+import { useNavigate } from 'react-router-dom';
 import { FIcon } from './futuristic';
 
 /* ── Session 128.15 — Bright Skin NotificationsDrawer ────────────────────────
@@ -16,12 +17,18 @@ interface NotificationsDrawerProps {
 }
 
 export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProps) {
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, markAsRead } = useNotifications();
+  const navigate = useNavigate();
 
   if (!isOpen) return null;
 
   const handleNotificationClick = (notif: Notification) => {
     if (!notif.isRead) markAsRead(notif.id);
+    if (notif.type === 'NEW_MESSAGE' && notif.referenceId) {
+      navigate(`/chat/${notif.referenceId}`);
+    } else if (notif.type === 'NEW_POST' && notif.referenceId) {
+      navigate(`/post/${notif.referenceId}`);
+    }
     onClose();
   };
 
@@ -44,7 +51,7 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
           top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
           width: 320,
           maxWidth: 'calc(100vw - 32px)',
-          zIndex: 50,
+          zIndex: 100,
           overflow: 'hidden',
           borderRadius: 18,
           background: '#fff',
@@ -64,25 +71,6 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
           <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--b-ink)', margin: 0 }}>
             Notifications
           </h3>
-          {unreadCount > 0 && (
-            <button
-              onClick={markAllAsRead}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: 700,
-                color: 'var(--b-magenta-ink)',
-                fontFamily: 'inherit',
-              }}
-            >
-              <FIcon name="check" size={13} color="var(--b-magenta-ink)" /> Mark all read
-            </button>
-          )}
         </div>
 
         <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
@@ -119,7 +107,7 @@ export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDr
                       }}
                     >
                       <FIcon
-                        name={notif.type === 'NEW_POST' ? 'image' : 'bell'}
+                        name={notif.type === 'NEW_POST' ? 'image' : notif.type === 'NEW_MESSAGE' ? 'msg' : 'bell'}
                         size={15}
                         color={notif.type === 'NEW_POST' ? 'var(--b-magenta-ink)' : 'var(--b-gray-2)'}
                       />

@@ -11,25 +11,26 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  name       String
-  email      String?  @unique
-  phone      String?  @unique
-  password   String
-  role       String   // customer, retailer, supplier, brand, manufacturer, admin
-  location   String?
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  name      String
+  email     String?  @unique
+  phone     String?  @unique
+  password  String
+  role      String // customer, retailer, supplier, brand, manufacturer, admin
+  location  String?
+  createdAt DateTime @default(now())
 
   // KYC Verification
-  kycStatus       String   @default("none") // none, pending, approved, rejected
-  kycDocumentUrl  String?  // uploaded ID document image
-  kycSelfieUrl    String?  // uploaded selfie for verification
-  kycNotes        String?  // admin rejection reason
-  kycStoreName    String?  // Intended store name when submitting KYC
-  kycStorePhoto   String?  // Intended store photo when submitting KYC
-  isBlocked       Boolean  @default(false)
-  kycSubmittedAt  DateTime?
-  kycReviewedAt   DateTime?
+  avatarUrl      String?
+  kycStatus      String    @default("none") // none, pending, approved, rejected
+  kycDocumentUrl String? // uploaded ID document image
+  kycSelfieUrl   String? // uploaded selfie for verification
+  kycNotes       String? // admin rejection reason
+  kycStoreName   String? // Intended store name when submitting KYC
+  kycStorePhoto  String? // Intended store photo when submitting KYC
+  isBlocked      Boolean   @default(false)
+  kycSubmittedAt DateTime?
+  kycReviewedAt  DateTime?
 
   // Soft-delete (DPDP Act compliance — Session 87 hardening)
   // deletedAt = when the grace period ends and account becomes inaccessible
@@ -39,19 +40,19 @@ model User {
   deletionRequestedAt DateTime?
   deletionReason      String?   @db.VarChar(500)
 
-  stores     Store[]
-  messagesSent     Message[] @relation("SentMessages")
-  messagesReceived Message[] @relation("ReceivedMessages")
-  following        Follow[]
-  reviews          Review[]
-  notifications    Notification[]
-  savedItems       SavedItem[]
-  likes            Like[]
-  searchHistory    SearchHistory[]
-  savedLocations   SavedLocation[]
-  reportsMade      Report[] @relation("ReportsMade")
-  reportsReceived  Report[] @relation("ReportsReceived")
-  complaints       Complaint[]
+  stores            Store[]
+  messagesSent      Message[]          @relation("SentMessages")
+  messagesReceived  Message[]          @relation("ReceivedMessages")
+  following         Follow[]
+  reviews           Review[]
+  notifications     Notification[]
+  savedItems        SavedItem[]
+  likes             Like[]
+  searchHistory     SearchHistory[]
+  savedLocations    SavedLocation[]
+  reportsMade       Report[]           @relation("ReportsMade")
+  reportsReceived   Report[]           @relation("ReportsReceived")
+  complaints        Complaint[]
   askNearbyRequests AskNearbyRequest[] @relation("AskNearbyCustomer")
   pushSubscriptions PushSubscription[]
   fcmTokens         FcmToken[]
@@ -69,58 +70,58 @@ model User {
 // Additive: the User table is unchanged; only the virtual back-relation
 // above is new.
 model LegalConsent {
-  id             String   @id @default(uuid())
-  userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   termsVersion   String
   privacyVersion String
 
-  ipHash         String?
-  userAgent      String?  @db.VarChar(512)
+  ipHash    String?
+  userAgent String? @db.VarChar(512)
 
-  consentedAt    DateTime @default(now())
+  consentedAt DateTime @default(now())
 
   @@index([userId])
 }
 
 model Store {
-  id            String    @id @default(uuid())
-  ownerId       String
-  owner         User      @relation(fields: [ownerId], references: [id])
-  storeName     String
-  category      String
-  description   String?
-  latitude      Float
-  longitude     Float
-  address       String
-  phone         String?
-  openingHours  String?
-  openingTime   String?
-  closingTime   String?
-  workingDays   String?
-  gstNumber     String?
-  gstOrBillUrl  String?
-  selfieUrl     String?
-  createdAt     DateTime  @default(now())
-  products      Product[]
-  posts         Post[]
-  followers     Follow[]
-  reviews       Review[]
-  averageRating Float?
-  reviewCount   Int       @default(0)
-  phoneVisible  Boolean   @default(true)
-  hideRatings   Boolean   @default(false)
-  chatEnabled   Boolean   @default(true)
-  is24Hours     Boolean   @default(false)
-  logoUrl       String?
-  coverUrl      String?
-  postalCode    Int?
-  city          String?
-  state         String?
-  manualProductText String?
-  teamMembers   TeamMember[]
-  reportsAgainst    Report[] @relation("ReportedStores")
+  id                 String              @id @default(uuid())
+  ownerId            String
+  owner              User                @relation(fields: [ownerId], references: [id])
+  storeName          String
+  category           String
+  description        String?
+  latitude           Float
+  longitude          Float
+  address            String
+  phone              String?
+  openingHours       String?
+  openingTime        String?
+  closingTime        String?
+  workingDays        String?
+  gstNumber          String?
+  gstOrBillUrl       String?
+  selfieUrl          String?
+  createdAt          DateTime            @default(now())
+  products           Product[]
+  posts              Post[]
+  followers          Follow[]
+  reviews            Review[]
+  averageRating      Float?
+  reviewCount        Int                 @default(0)
+  phoneVisible       Boolean             @default(true)
+  hideRatings        Boolean             @default(false)
+  chatEnabled        Boolean             @default(true)
+  is24Hours          Boolean             @default(false)
+  logoUrl            String?
+  coverUrl           String?
+  postalCode         Int?
+  city               String?
+  state              String?
+  manualProductText  String?
+  teamMembers        TeamMember[]
+  reportsAgainst     Report[]            @relation("ReportedStores")
   askNearbyResponses AskNearbyResponse[]
 
   @@index([ownerId])
@@ -135,8 +136,8 @@ model Follow {
   storeId   String
   createdAt DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storeId])
   @@index([storeId])
@@ -144,42 +145,42 @@ model Follow {
 }
 
 model Product {
-  id              String   @id @default(uuid())
+  id              String                      @id @default(uuid())
   storeId         String
-  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store           Store                       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   productName     String
   brand           String?
   category        String
   price           Float
   description     String?
-  tags            String?  // Comma separated
-  embeddingVector String?  // JSON string for future AI search
+  tags            String? // Comma separated
+  embeddingVector String? // JSON string for future AI search
   embedding       Unsupported("vector(768)")?
-  createdAt       DateTime @default(now())
+  createdAt       DateTime                    @default(now())
   posts           Post[]
   reviews         Review[]
   averageRating   Float?
-  reviewCount     Int      @default(0)
+  reviewCount     Int                         @default(0)
 
   @@index([storeId])
   @@index([category])
 }
 
 model Post {
-  id         String   @id @default(uuid())
-  storeId    String
-  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  productId  String?
-  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  imageUrl   String
-  caption    String?
-  price      Float?
-  isPromoted Boolean  @default(false)
-  isPinned   Boolean  @default(false)
-  isOpeningPost Boolean @default(false)
-  createdAt  DateTime @default(now())
-  expiryDate DateTime? // Set to 30 days from creation by default unless promoted
-  likes      Like[]
+  id            String    @id @default(uuid())
+  storeId       String
+  store         Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId     String?
+  product       Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  imageUrl      String
+  caption       String?
+  price         Float?
+  isPromoted    Boolean   @default(false)
+  isPinned      Boolean   @default(false)
+  isOpeningPost Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  expiryDate    DateTime? // Set to 30 days from creation by default unless promoted
+  likes         Like[]
 
   @@index([storeId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)])
@@ -193,6 +194,7 @@ model Message {
   receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
   message    String
   imageUrl   String?
+  imageUrls  String[] @default([])
   createdAt  DateTime @default(now())
 
   @@index([senderId, receiverId, createdAt(sort: Asc)])
@@ -200,22 +202,22 @@ model Message {
 }
 
 model Category {
-  id             String   @id @default(uuid())
+  id             String  @id @default(uuid())
   categoryName   String
   parentCategory String?
 }
 
 model Review {
   id        String   @id @default(uuid())
-  rating    Int      // 1-5 scale
+  rating    Int // 1-5 scale
   comment   String?
   createdAt DateTime @default(now())
 
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  storeId   String?
-  store     Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -225,14 +227,14 @@ model Review {
 
 model Notification {
   id          String   @id @default(uuid())
-  type        String   // e.g., 'NEW_POST', 'REVIEW_RECEIVED', 'SYSTEM'
+  type        String // e.g., 'NEW_POST', 'REVIEW_RECEIVED', 'SYSTEM'
   content     String
   isRead      Boolean  @default(false)
-  referenceId String?  // Optional ID to a post, store, or review to deep link
+  referenceId String? // Optional ID to a post, store, or review to deep link
   createdAt   DateTime @default(now())
 
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isRead])
   @@index([userId, createdAt(sort: Desc)])
@@ -242,8 +244,8 @@ model SavedItem {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // 'post' or 'store'
-  referenceId String   // ID of the post or store
+  type        String // 'post' or 'store'
+  referenceId String // ID of the post or store
   createdAt   DateTime @default(now())
 
   @@unique([userId, type, referenceId])
@@ -271,26 +273,26 @@ model SavedLocation {
 }
 
 model TeamMember {
-  id             String   @id @default(uuid())
-  storeId        String
-  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  phone          String   @unique
-  passwordHash   String
-  name           String   @default("Team Member")
-  role           String   @default("member") // 'owner' or 'member'
-  createdAt      DateTime @default(now())
+  id           String   @id @default(uuid())
+  storeId      String
+  store        Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  phone        String   @unique
+  passwordHash String
+  name         String   @default("Team Member")
+  role         String   @default("member") // 'owner' or 'member'
+  createdAt    DateTime @default(now())
 }
 
 model Report {
-  id                String   @id @default(uuid())
-  reportedUserId    String?
-  reportedUser      User?    @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
-  reportedStoreId   String?
-  reportedStore     Store?   @relation("ReportedStores", fields: [reportedStoreId], references: [id], onDelete: Cascade)
-  reportedByUserId  String
-  reportedByUser    User     @relation("ReportsMade", fields: [reportedByUserId], references: [id], onDelete: Cascade)
-  reason            String
-  createdAt         DateTime @default(now())
+  id               String   @id @default(uuid())
+  reportedUserId   String?
+  reportedUser     User?    @relation("ReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  reportedStoreId  String?
+  reportedStore    Store?   @relation("ReportedStores", fields: [reportedStoreId], references: [id], onDelete: Cascade)
+  reportedByUserId String
+  reportedByUser   User     @relation("ReportsMade", fields: [reportedByUserId], references: [id], onDelete: Cascade)
+  reason           String
+  createdAt        DateTime @default(now())
 
   @@unique([reportedByUserId, reportedUserId, reportedStoreId]) // Prevent spamming reports
 }
@@ -309,20 +311,20 @@ model Like {
 }
 
 model AppSettings {
-  id              String   @id @default("singleton")
-  appName         String   @default("Local Discoveries")
-  logoUrl         String?
-  primaryColor    String   @default("#4f46e5")
-  accentColor     String   @default("#6366f1")
-  carouselImages  String[] @default([])
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default("singleton")
+  appName        String   @default("Local Discoveries")
+  logoUrl        String?
+  primaryColor   String   @default("#4f46e5")
+  accentColor    String   @default("#6366f1")
+  carouselImages String[] @default([])
+  updatedAt      DateTime @updatedAt
 }
 
 model Complaint {
   id          String   @id @default(uuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  issueType   String   // "store_issue", "bug", "spam", "account", "other"
+  issueType   String // "store_issue", "bug", "spam", "account", "other"
   description String
   status      String   @default("open") // "open", "in_progress", "resolved", "dismissed"
   adminNotes  String?
@@ -357,6 +359,7 @@ model AskNearbyRequest {
   latitude   Float
   longitude  Float
   areaLabel  String?
+  images     String[]            @default([])
   createdAt  DateTime            @default(now())
   responses  AskNearbyResponse[]
   customer   User                @relation("AskNearbyCustomer", fields: [customerId], references: [id], onDelete: Cascade)
@@ -383,7 +386,7 @@ model FcmToken {
   id        String   @id @default(uuid())
   userId    String
   token     String   @unique
-  platform  String   // 'android' | 'ios' | 'web'
+  platform  String // 'android' | 'ios' | 'web'
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

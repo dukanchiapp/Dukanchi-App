@@ -51,6 +51,7 @@ export const IMAGE_MIME_WHITELIST: ReadonlySet<string> = new Set([
   "image/png",
   "image/webp",
   "image/gif",
+  "application/pdf",
 ]);
 
 // Trailing-extension whitelist — keyed off the same image types as the MIME
@@ -65,6 +66,7 @@ export const IMAGE_EXT_WHITELIST: ReadonlySet<string> = new Set([
   "png",
   "webp",
   "gif",
+  "pdf",
 ]);
 
 export const FILE_SIZE_LIMIT_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -284,10 +286,14 @@ export async function verifyAndPersistUpload(
   // (classifier returns { safe: true, error } and we proceed). Adds ~0.8s
   // typical / +6s worst-case to upload latency; bounded by AbortSignal
   // inside classifyImageSafety.
-  const safety = await classifyImageSafety(
-    file.buffer.toString("base64"),
-    detected.mime,
-  );
+  let safety: any = { safe: true, blockReason: undefined, ratings: undefined, durationMs: 0, error: undefined };
+  if (detected.mime.startsWith("image/")) {
+    safety = await classifyImageSafety(
+      file.buffer.toString("base64"),
+      detected.mime,
+    );
+  }
+
   if (!safety.safe) {
     logger.warn(
       {
