@@ -1138,116 +1138,121 @@ export default function SearchPage() {
                   </button>
                 </div>
               ) : (
-                <>
-                  {/* Section 1: Query */}
-                  <div className="mb-6 relative z-30">
-                    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--f-text-2)', marginBottom: 10 }}>
-                      What are you looking for?
-                    </label>
-                    <div style={{ position: 'relative' }}>
-                      <textarea
-                        placeholder="e.g. Paracetamol 500mg ya Ashirvad Atta 5kg"
-                        value={askQuery}
-                        onChange={(e) => { setAskQuery(e.target.value); setShowAskQuerySuggestions(true); }}
-                        maxLength={60}
-                        rows={3}
-                        className="w-full p-4 rounded-2xl mb-4"
-                        style={{
-                          background: 'var(--f-glass-bg-2)',
-                          color: 'var(--f-text-1)',
-                          border: '2px solid transparent',
-                          outline: 'none',
-                          transition: 'border-color 0.2s',
-                          fontSize: 16,
-                          fontWeight: 600,
-                          resize: 'none',
-                        }}
-                      />
-                      
-                      {/* Session 128: 3 Image Upload Support */}
-                      <div style={{ position: 'absolute', bottom: 28, left: 16, right: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <label style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10,
-                          background: 'var(--f-glass-bg-2)', border: '1px solid var(--f-glass-border)', cursor: 'pointer', color: 'var(--b-gray-2)'
-                        }}>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            style={{ display: 'none' }}
-                            onChange={(e) => {
-                              if (e.target.files) {
-                                const newFiles = Array.from(e.target.files);
-                                setAskImages(prev => [...prev, ...newFiles].slice(0, 3));
-                              }
-                            }}
-                          />
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                        </label>
-                        {askImages.map((file, idx) => (
-                          <div key={idx} style={{ position: 'relative', width: 36, height: 36, borderRadius: 8, overflow: 'hidden' }}>
-                            <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            <button
-                              onClick={() => setAskImages(prev => prev.filter((_, i) => i !== idx))}
-                              style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 2, border: 'none', cursor: 'pointer' }}
-                            >
-                              <X size={10} color="#fff" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      {showAskQuerySuggestions && askQuerySuggestions.length > 0 && (
-                        <div className="absolute left-0 right-0 mt-2 rounded-xl overflow-hidden z-20" style={{ background: '#fff', border: '1px solid var(--f-glass-border)', boxShadow: '0 8px 32px rgba(0,0,0,0.16)' }}>
-                          {askQuerySuggestions.map((sug, i) => (
-                            <button
-                              key={i}
-                              onClick={() => {
-                                setAskQuery(sug);
-                                setShowAskQuerySuggestions(false);
+                  <>
+                    {/* Section 1: Query */}
+                    <div className="mb-6 relative z-30">
+                      <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', marginBottom: 10 }}>
+                        What are you looking for?
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <textarea
+                          placeholder="e.g. Paracetamol 500mg ya Ashirvad Atta 5kg"
+                          value={askQuery}
+                          onChange={(e) => { setAskQuery(e.target.value); setShowAskQuerySuggestions(true); }}
+                          maxLength={60}
+                          rows={4}
+                          className="w-full p-4 rounded-2xl mb-2"
+                          style={{
+                            background: '#F9FAFB',
+                            color: 'var(--f-text-1)',
+                            border: '1px solid #D1D5DB',
+                            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
+                            outline: 'none',
+                            transition: 'border-color 0.2s',
+                            fontSize: 16,
+                            fontWeight: 600,
+                            resize: 'none',
+                            paddingBottom: 54, // room for image button
+                          }}
+                          onFocus={(e) => e.target.style.borderColor = 'var(--b-green)'}
+                          onBlur={(e) => e.target.style.borderColor = '#D1D5DB'}
+                        />
+                        
+                        {/* Session 128: 3 Image Upload Support */}
+                        <div style={{ position: 'absolute', bottom: 20, left: 16, right: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
+                          <label style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10,
+                            background: '#fff', border: '1px solid #D1D5DB', cursor: 'pointer', color: 'var(--b-ink)',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.05)', transition: 'all 0.2s'
+                          }}>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                if (e.target.files) {
+                                  const newFiles = Array.from(e.target.files);
+                                  setAskImages(prev => [...prev, ...newFiles].slice(0, 3));
+                                }
                               }}
-                              className="w-full flex items-center gap-3 px-4 py-3.5 text-left"
-                              style={{ borderBottom: i < askQuerySuggestions.length - 1 ? '1px solid var(--f-glass-border)' : 'none', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                            >
-                              <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--f-glass-bg-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Search size={14} color="var(--f-text-2)" />
-                              </div>
-                              <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--f-text-1)' }}>{sug}</span>
-                            </button>
+                            />
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                          </label>
+                          {askImages.map((file, idx) => (
+                            <div key={idx} style={{ position: 'relative', width: 40, height: 40, borderRadius: 10, overflow: 'hidden', border: '1px solid #D1D5DB' }}>
+                              <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <button
+                                onClick={() => setAskImages(prev => prev.filter((_, i) => i !== idx))}
+                                style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', padding: 3, border: 'none', cursor: 'pointer' }}
+                              >
+                                <X size={12} color="#fff" />
+                              </button>
+                            </div>
                           ))}
                         </div>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Section 2: Area */}
-                  <div className="mb-6 relative z-20">
-                    <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--f-text-2)', marginBottom: 10 }}>
-                      Where to search?
-                    </label>
-                    <div style={{ display: 'flex', background: 'var(--f-glass-bg-2)', borderRadius: 18, padding: 6 }}>
-                      {(['my', 'custom'] as const).map(mode => (
-                        <button
-                          key={mode}
-                          onClick={() => setAskAreaMode(mode)}
-                          style={{
-                            flex: 1, padding: '14px 0', borderRadius: 14, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-                            background: askAreaMode === mode ? '#fff' : 'transparent',
-                            color: askAreaMode === mode ? 'var(--b-ink)' : 'var(--f-text-3)',
-                            boxShadow: askAreaMode === mode ? '0 4px 12px rgba(0,0,0,0.08)' : 'none',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {mode === 'my' ? '📍 My Location' : '🔍 Custom Area'}
-                        </button>
-                      ))}
+                        {showAskQuerySuggestions && askQuerySuggestions.length > 0 && (
+                          <div className="absolute left-0 right-0 mt-1 rounded-xl overflow-hidden z-20" style={{ background: '#fff', border: '1px solid #E5E7EB', boxShadow: '0 12px 32px rgba(0,0,0,0.12)' }}>
+                            {askQuerySuggestions.map((sug, i) => (
+                              <button
+                                key={i}
+                                onClick={() => {
+                                  setAskQuery(sug);
+                                  setShowAskQuerySuggestions(false);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-gray-50"
+                                style={{ borderBottom: i < askQuerySuggestions.length - 1 ? '1px solid #F3F4F6' : 'none', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                              >
+                                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Search size={16} color="var(--f-text-2)" />
+                                </div>
+                                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--f-text-1)' }}>{sug}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    
-                    {askAreaMode === 'my' ? (
-                      userLocCtx ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, padding: '16px', background: 'rgba(46, 231, 161, 0.1)', borderRadius: 16, border: '1px solid rgba(46, 231, 161, 0.2)' }}>
-                          <span style={{ fontSize: 18 }}>📍</span>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--b-green)' }}>{userLocCtx.name}</span>
+
+                    {/* Section 2: Area */}
+                    <div className="mb-6 relative z-20">
+                      <label style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--f-text-1)', marginBottom: 10 }}>
+                        Where to search?
+                      </label>
+                      <div style={{ display: 'flex', background: '#F3F4F6', borderRadius: 16, padding: 4, border: '1px solid #E5E7EB' }}>
+                        {(['my', 'custom'] as const).map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => setAskAreaMode(mode)}
+                            style={{
+                              flex: 1, padding: '12px 0', borderRadius: 12, fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
+                              background: askAreaMode === mode ? '#fff' : 'transparent',
+                              color: askAreaMode === mode ? 'var(--b-ink)' : '#6B7280',
+                              boxShadow: askAreaMode === mode ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {mode === 'my' ? '📍 My Location' : '🔍 Custom Area'}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {askAreaMode === 'my' ? (
+                        userLocCtx ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, padding: '16px', background: '#ECFDF5', borderRadius: 16, border: '1px solid #6EE7B7' }}>
+                            <span style={{ fontSize: 20 }}>📍</span>
+                            <span style={{ fontSize: 15, fontWeight: 700, color: '#047857' }}>{userLocCtx.name}</span>
                         </div>
                       ) : (
                         <p style={{ fontSize: 13, color: 'var(--b-orange)', marginTop: 12, fontWeight: 600 }}>Please enable location access in settings.</p>
