@@ -94,14 +94,14 @@ export async function sendAskNearby(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `Categorize this product query: "${query}". Return ONLY the category name from this list: Clothing, Electronics, Jewelry, Cosmetics, Footwear, Groceries, Furniture, Pharmacy, Stationery, Automotive, Books, Toys. If none match, return "Other".` }] }]
+            contents: [{ parts: [{ text: `Categorize this product query: "${query}". Return ONLY the category name from this list: Food, Electronics, Fashion, Grocery, Beauty, Health, Jewellery, Real Estate, Stationery, Auto, Services, Pets, Sports, Hardware, Toys, Gifts. If none match, return "Other".` }] }]
           })
         }
       );
       if (geminiRes.ok) {
         const geminiData = await geminiRes.json() as any;
         const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-        const detectedCategory = text.replace(/[^a-zA-Z]/g, '');
+        const detectedCategory = text.replace(/[^a-zA-Z\s]/g, '').trim();
         if (detectedCategory && detectedCategory !== 'Other') {
           const categoryStores = await prisma.store.findMany({
             where: {
