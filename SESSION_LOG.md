@@ -1,5 +1,50 @@
 # G-AI — Session Change Log
 
+## 2026-06-03 — Session 128.29 — Role-isolation test suite (6-role visibility + chat matrix); regression guard, NO leaks found
+
+**Goal:** Encode the core business rule + security boundary — role-based visibility (store list / detail / posts / search / feed) and the chat permission matrix — as a regression-guard test suite. Test-only; reuse the existing harness (`src/test-helpers/`); NO route/schema/deploy changes. Tests assert the INTENDED SPEC, not whatever the code returns — any spec failure = a real leak to report, not weaken.
+
+**Status:** ✅ All spec tests PASS — **Isolation findings: NONE.** The implementation matches the intended spec exactly. Ships as a regression guard.
+
+| Metric | Value |
+|---|---|
+| PR | [#PENDING](https://github.com/dukanchiapp/Dukanchi-App/pulls) (test-only) |
+| Files added | 2 (`src/__tests__/role-isolation-chat.test.ts`, `role-isolation-visibility.test.ts`) |
+| Tests | 133 → **191** (+58); 22 test files |
+| Typecheck | 0 (web + server + worker) |
+| Coverage | stmts 7.42→**8.1%**, funcs 7.9→**8.22%** (both above CI floor 7); store.service.ts 23.9% / 72.7% funcs, post.service.ts 22.7% |
+
+### What was tested (against the real spec, read from the code)
+
+- **Chat matrix** — `canChat` (auth.middleware.ts:152) tested as a pure function, EXHAUSTIVELY across all 6×6 ordered role pairs (both directions) + named spec cases. Verified rule: `customer↔retailer` ALLOW; `customer↔{supplier,brand,manufacturer}` DENY (both directions — initiator doesn't matter); `retailer↔B2B` ALLOW; B2B↔B2B ALLOW; `admin↔*` DENY (admin uses other flows). Plus a POST /api/messages 403-wiring test (controller maps the service's "Chat not permitted" throw → HTTP 403).
+- **Store list** (`StoreService.getStores`) — customer viewer → Prisma `where.owner.role.in === ['retailer']` AND the simulated result set contains ONLY the retailer store (supplier/brand/manufacturer ABSENT); all 4 B2B viewers → `B2B set` and customer-owned stores excluded.
+- **Store detail** (`store.controller.getStoreById`) — customer→non-retailer store → 404 (no body leaked); customer→retailer → 200; B2B viewer→B2B store → 200.
+- **Store posts** (`StoreService.getStorePosts`) — customer → `where.store.owner.role.in === ['retailer']`; B2B → B2B set.
+- **Feed** (`PostService.getFeed`) — customer → candidate `where.store.owner.role.in === ['retailer']`; retailer → B2B set.
+- **Search** (`SearchController.getAllowedRoles` via GET /api/search) — customer → service called with `['retailer']`; retailer/supplier/brand/manufacturer → B2B set.
+
+### Spec-vs-code note (NOT a leak)
+
+Task spec said customer→non-retailer store detail should be **403**; the code returns **404** *by design* (store.controller: "return 404 (not 403) to avoid leaking existence"). 404 is STRICTER than 403 — it hides existence entirely, so the isolation boundary is fully enforced. The test asserts the real, more-secure 404 (and that no store body leaks) rather than manufacturing a failing 403 assertion. Flagged here for the founder; recommend updating the spec wording to 404, no code change.
+
+### Testing-strategy notes
+
+- `canChat` is the single source of truth for the chat rule → tested as a pure unit (exhaustive, both directions). The HTTP layer is proven by the 403-wiring test (mirrors `messages.routes.test.ts`, which stubs `MessageService`). The real send path's socket/push/notification deps are intentionally out of scope (not needed to prove the deny boundary).
+- Visibility is enforced via the Prisma `owner.role.in` WHERE filter each service builds from the viewer role → asserted on the constructed WHERE clause (the mechanism) with mocked Prisma (Rule F, no real DB), plus a result-set simulation for the store list.
+- `geminiEmbeddings` stubbed so importing the REAL `StoreService` doesn't pull the Gemini client; `SearchService` stubbed (pgvector/Gemini) so the test exercises the real controller's role→allowedRoles wiring.
+
+### Verification
+
+- ✅ `npm test` 191/191 · `npm run typecheck` 0 (web+server+worker) · the 2 new files: 58/58
+- ✅ Rules A / C / E **N/A** — no route mounts, no schema, no deploy. Rule F honored (no real DB/Redis). Rule G: full `npm run typecheck`.
+
+### Awaiting
+
+- Founder/Opus decision on the 403→404 spec wording (recommend: update spec to 404; code is correct & stricter).
+- Optional future hardening: an end-to-end allow-path chat test (would require mocking socket/push/notification) to complement the deny-path wiring test.
+
+---
+
 ## 2026-06-03 — Session 128.28 — Quick hardening pass: repo hygiene + silent-catch breadcrumbs + push deep-link guard + Android config
 
 **Goal:** Low-risk, config-only hardening sweep. No minify/ProGuard, no Prisma migrations, no backend route changes. Tighten the small surfaces that have been accumulating: package.json name + an unused dep, silent storage-catch blocks in App.tsx, an unguarded push deep-link, and Android release-build hygiene (debugging, backup, cleartext).
