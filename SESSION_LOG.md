@@ -1,5 +1,64 @@
 # G-AI — Session Change Log
 
+## 2026-06-03 — Session 128.28 — Quick hardening pass: repo hygiene + silent-catch breadcrumbs + push deep-link guard + Android config
+
+**Goal:** Low-risk, config-only hardening sweep. No minify/ProGuard, no Prisma migrations, no backend route changes. Tighten the small surfaces that have been accumulating: package.json name + an unused dep, silent storage-catch blocks in App.tsx, an unguarded push deep-link, and Android release-build hygiene (debugging, backup, cleartext).
+
+**Status:** ✅ LIVE on main (`3009ff4`). PR [#177](https://github.com/dukanchiapp/Dukanchi-App/pull/177) squash-merged. Web behavior unchanged at runtime (verified `/health` 200 post-merge). Android changes take effect on the next APK build, not the live web.
+
+| Metric | Value |
+|---|---|
+| PR | [#177](https://github.com/dukanchiapp/Dukanchi-App/pull/177) squash `3009ff4` |
+| Files changed | 5 modified + 1 added |
+| Lines | +114 / −22 (6 files in the squash) |
+| Tests | vitest 133/133 · typecheck 0 · build ✓ · `npx cap sync android` ✓ |
+
+### A. Repo hygiene (package.json)
+
+- `"name": "react-example"` → **`"dukanchi-app"`** (the actual app name; was the Vite template default)
+- Removed **`@google/generative-ai` ^0.24.1** dep — grep-confirmed ZERO imports in `src/` / `server.ts` / `scripts/`. `@google/genai` is the live Gemini SDK.
+- Moved **`@types/compression` ^1.8.1**: `dependencies` → `devDependencies` (was misplaced; only used at build/type-check time, not runtime).
+- `npm install` refreshed the lockfile; build still passes.
+
+### B. Observability on silent catches (`src/App.tsx`)
+
+- **3 non-trivial catches** (lines 69, 83, 118 in pre-fix file) now emit `Sentry.addBreadcrumb({ category: 'storage', level: 'warning', ... })` instead of swallowing silently — failures show up in any later captured exception without spamming `captureException` on every private-mode visit.
+- **2 intentional `sessionStorage.setItem` catches** (lines 77, 136) kept silent + one-line comment "sessionStorage unavailable (private mode) — safe to ignore" so the intent is grep-visible (Rule B compliance — silent catch with documented why).
+
+### C. Push deep-link guard (`src/App.tsx` line 179)
+
+- New `isSafeDeepLink(url)` helper:
+  - **Accepts:** relative paths (single leading `/`, not `//`), same-origin absolute URLs (handles Capacitor `https://localhost`), `https://dukanchi.com/*` (cross-origin native → web bridge).
+  - **Rejects:** foreign origins, protocol-relative URLs (`//evil.com/...`), `javascript:`/`data:` URIs, `http:` downgrade variants, URL-parse failures.
+- `pushNotificationActionPerformed` now gates `window.location.href = url` through the guard; rejected URLs emit a Sentry breadcrumb and drop silently (rare legitimate cross-origin cases can be handled with an in-app `<a target="_blank">` instead — out of scope here).
+
+### D. Android config (takes effect next `cap sync` + APK build — no live web impact)
+
+- **`capacitor.config.ts`**: `webContentsDebuggingEnabled` **true → false**. With chrome://inspect a connected ADB device could attach to the production WebView and read all in-app state (cookies, localStorage, IndexedDB). `androidScheme` stays `'https'` — **Rule C N/A** (no CORS audit needed).
+- **`AndroidManifest.xml`**: `allowBackup="true"` → **`"false"`** (fully disables ADB + cloud backup on targetSdk 36, no `fullBackupContent` / `dataExtractionRules` needed); added **`usesCleartextTraffic="false"`** + **`networkSecurityConfig="@xml/network_security_config"`** (belt + suspenders).
+- **New `android/app/src/main/res/xml/network_security_config.xml`**: `<base-config cleartextTrafficPermitted="false" />`. The manifest attr is enough on targetSdk 28+, but this config also covers any WebView/library that consults the NSC file directly.
+
+### Verification (all gates pass)
+
+- ✅ `npm run typecheck` 0 errors (web + server + worker; Rule G)
+- ✅ `npm test` (vitest) **133/133**
+- ✅ `npm run build` → ✓ (81 precache; confirms `@google/generative-ai` removal didn't break anything)
+- ✅ `npx cap sync android` → ✓ (no errors; android assets updated)
+- ✅ Production `/health` 200 application/json post-merge (sanity — no backend change)
+- ✅ Rule A (URL parity) **N/A** — zero route/`apiFetch` changes
+- ✅ Rule B — 3 silent catches now have breadcrumbs; 2 intentional catches have inline comments explaining the why
+- ✅ Rule C (Capacitor CORS audit) **N/A** — `androidScheme` unchanged
+- ✅ Rule D — native APK rebuild + manual smoke pending (config-only this session; no APK built)
+- ✅ Rule E — production curl confirmed post-merge (`/health` 200, no behavior regression because backend was untouched)
+- ✅ Rule G — full `npm run typecheck`, not `npx tsc --noEmit` alone
+
+### Awaiting
+
+- Founder device test on next APK build (Rule D): confirm `webContentsDebuggingEnabled=false` blocks chrome://inspect; ADB backup attempt fails; HTTP cleartext requests blocked. Web tier unchanged.
+- Optional next pass: chase the remaining `@types/*` placement audit + any other dep-shape drift.
+
+---
+
 ## 2026-06-02 — Session 128.26 — AI Suggestions, Dark Map, and In-App Notifications
 
 **Goal:** Founder requested "God Tier" UX improvements to the "Ask Nearby" and Search features: (1) Replace simple input with AI-powered auto-suggestions matching standard search engines, (2) Dark theme for the 3D Map (similar to Google Maps dark mode), and (3) Add an in-app audio notification tone for real-time events since many users won't enable OS-level push notifications.
