@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Session 128.26 hardening — Android network security config.
+    Base config disallows ALL cleartext (http://) traffic app-wide. Paired
+    with android:usesCleartextTraffic="false" on <application> in
+    AndroidManifest.xml (belt + suspenders — manifest attr is enough on
+    targetSdk 28+, but this config also covers any WebView/library that
+    consults the NSC file directly).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
