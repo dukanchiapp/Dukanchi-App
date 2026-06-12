@@ -10,7 +10,11 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: false,
-    webContentsDebuggingEnabled: true,
+    // Session 128.26 hardening: was true (dev leftover). With chrome://inspect
+    // a connected ADB device could attach to the WebView and read all in-app
+    // state (cookies, localStorage, etc.). Flip to false for release APKs.
+    // androidScheme stays 'https' — Rule C N/A (no CORS audit needed).
+    webContentsDebuggingEnabled: false,
     captureInput: true,
   },
   plugins: {

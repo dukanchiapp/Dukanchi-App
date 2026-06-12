@@ -42,6 +42,32 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useLocation } from 'react-router-dom';
 import { isNative } from './lib/api';
 import { isPublicPath } from './constants/publicRoutes';
+import { Sentry } from './lib/sentry-frontend';
+
+/**
+ * Push deep-link guard (Session 128.26 hardening pass).
+ *
+ * Accepts:
+ *   - relative paths (must start with a single "/", not "//" — that's
+ *     protocol-relative which can resolve to a foreign origin)
+ *   - same-origin absolute URLs (handles Capacitor's `https://localhost`)
+ *   - `https://dukanchi.com/*` (cross-origin native → web bridge)
+ *
+ * Rejects: foreign origins, protocol-relative URLs, javascript:/data: URIs,
+ * http: (downgrade) variants, and anything that fails URL parsing.
+ */
+function isSafeDeepLink(url: string): boolean {
+  if (url.startsWith('/') && !url.startsWith('//')) return true;
+  try {
+    const u = new URL(url, window.location.origin);
+    return (
+      u.origin === window.location.origin ||
+      (u.protocol === 'https:' && u.hostname === 'dukanchi.com')
+    );
+  } catch {
+    return false;
+  }
+}
 
 
 /**
@@ -66,7 +92,17 @@ function FlowController() {
   const isStandalone = (() => {
     try {
       if (localStorage.getItem('dk-browser-mode') === '1') return true;
-    } catch(e) {}
+    } catch(e) {
+      // Session 128.26: lightweight breadcrumb so storage failures show up in
+      // any later captured exception. Don't surface as a captured error — this
+      // path is best-effort and falls through to the matchMedia check below.
+      Sentry.addBreadcrumb({
+        category: 'storage',
+        level: 'warning',
+        message: 'localStorage read failed (dk-browser-mode)',
+        data: { error: String((e as Error)?.message ?? e) },
+      });
+    }
 
     const matchStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
@@ -74,13 +110,23 @@ function FlowController() {
       document.referrer.indexOf('android-app://') === 0;
 
     if (matchStandalone) {
+      // sessionStorage unavailable (private mode) — safe to ignore
       try { sessionStorage.setItem('dk-pwa', '1'); } catch(e) {}
       return true;
     }
 
     try {
       if (sessionStorage.getItem('dk-pwa') === '1') return true;
-    } catch(e) {}
+    } catch(e) {
+      // Session 128.26: breadcrumb only — read failure is non-fatal; the
+      // matchMedia path above is the authoritative standalone detector.
+      Sentry.addBreadcrumb({
+        category: 'storage',
+        level: 'warning',
+        message: 'sessionStorage read failed (dk-pwa)',
+        data: { error: String((e as Error)?.message ?? e) },
+      });
+    }
 
     return false;
   })();
@@ -115,7 +161,17 @@ function BrowserModeBanner() {
       const isDismissed = sessionStorage.getItem('dk-banner-dismissed') === '1';
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       setShow(isBrowserMode && !isStandalone && !isDismissed);
-    } catch(e) {}
+    } catch(e) {
+      // Session 128.26: banner is a discovery extra — if all three storage
+      // reads fail, default to hidden (current behaviour) and breadcrumb the
+      // event so the loss is visible in any later captured exception.
+      Sentry.addBreadcrumb({
+        category: 'storage',
+        level: 'warning',
+        message: 'BrowserModeBanner storage reads failed',
+        data: { error: String((e as Error)?.message ?? e) },
+      });
+    }
   }, []);
 
   if (!show) return null;
@@ -133,6 +189,7 @@ function BrowserModeBanner() {
         <a href="/landing" style={{ color: 'var(--b-orange)', fontWeight: 600, textDecoration: 'none' }}>Install</a>
         <button
           onClick={() => {
+            // sessionStorage unavailable (private mode) — safe to ignore
             try { sessionStorage.setItem('dk-banner-dismissed', '1'); } catch(e) {}
             setShow(false);
           }}
@@ -176,7 +233,23 @@ export default function App() {
         await PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
           const url = action.notification.data?.url;
           if (url && typeof url === 'string') {
-            window.location.href = url;
+            // Session 128.26: deep-link guard. Push payloads originate
+            // server-side but Sentry/triage history shows malformed/foreign
+            // URLs sneak in (campaigns, spoofed pushes). Only navigate when
+            // the URL is a relative path OR a same-origin/dukanchi.com
+            // HTTPS URL — otherwise log a breadcrumb and drop it (the rare
+            // legitimate cross-origin case can be handled by an in-app
+            // <a target="_blank"> instead).
+            if (isSafeDeepLink(url)) {
+              window.location.href = url;
+            } else {
+              Sentry.addBreadcrumb({
+                category: 'push',
+                level: 'warning',
+                message: 'push deep-link rejected (foreign origin)',
+                data: { url: url.slice(0, 200) },
+              });
+            }
           }
         });
 
