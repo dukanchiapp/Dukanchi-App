@@ -20,9 +20,27 @@ function levenshtein(a: string, b: string): number {
 }
 
 // ── Vocabulary store (rebuilt periodically from DB) ──
+//
+// SC1 (Session 128.30): the vocabulary is BOUNDED to protect memory + per-query
+// CPU as the catalog grows. correctSpelling/getSuggestions linear-scan this
+// array on EVERY query, so an unbounded vocabulary is both an OOM risk and a
+// latency cliff. We (a) cap the DB reads with `take`, and (b) keep only the
+// TOP MAX_VOCAB most-FREQUENT tokens (frequency = the most useful suggestion
+// candidates; the long tail is dropped under load).
+//
+// LONG-TERM FIX (not now): move typo-correction + autosuggest into Postgres
+// pg_trgm (trigram GIN index + `similarity()` / the `%` operator) so matching
+// runs in the DB and never materialises a full in-memory vocabulary.
 let vocabulary: string[] = [];
 let lastRefresh = 0;
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+// Defensive read caps — refreshVocabulary never pulls the whole catalog into
+// memory. Tuned for pilot-scale; bump only alongside a memory check.
+const MAX_PRODUCTS = 5000;
+const MAX_STORES = 2000;
+// Hard ceiling on the retained vocabulary array (top-N by frequency).
+export const MAX_VOCAB = 15000;
 
 export async function refreshVocabulary(prisma: any) {
   const now = Date.now();
@@ -30,27 +48,46 @@ export async function refreshVocabulary(prisma: any) {
 
   const products = await prisma.product.findMany({
     select: { productName: true, brand: true, category: true, description: true },
+    take: MAX_PRODUCTS,
   });
   const stores = await prisma.store.findMany({
     select: { storeName: true, category: true },
+    take: MAX_STORES,
   });
 
-  const words = new Set<string>();
+  // Frequency map: token → occurrence count. Bounding by frequency keeps the
+  // most-useful suggestion candidates and discards the long tail under load.
+  const counts = new Map<string, number>();
+  const bump = (w: string) => {
+    if (w.length < 2) return;
+    counts.set(w, (counts.get(w) ?? 0) + 1);
+  };
+
   for (const p of products) {
-    tokenize(p.productName).forEach(w => words.add(w));
-    if (p.brand) tokenize(p.brand).forEach(w => words.add(w));
-    if (p.category) tokenize(p.category).forEach(w => words.add(w));
-    // Add full product names for phrase suggestions
-    words.add(p.productName.toLowerCase().trim());
+    tokenize(p.productName).forEach(bump);
+    if (p.brand) tokenize(p.brand).forEach(bump);
+    if (p.category) tokenize(p.category).forEach(bump);
+    // Full product name as a phrase-suggestion candidate.
+    bump(p.productName.toLowerCase().trim());
   }
   for (const s of stores) {
-    tokenize(s.storeName).forEach(w => words.add(w));
-    if (s.category) tokenize(s.category).forEach(w => words.add(w));
-    words.add(s.storeName.toLowerCase().trim());
+    tokenize(s.storeName).forEach(bump);
+    if (s.category) tokenize(s.category).forEach(bump);
+    bump(s.storeName.toLowerCase().trim());
   }
 
-  vocabulary = [...words].filter(w => w.length >= 2);
+  // Retain only the top MAX_VOCAB tokens by frequency (desc), alphabetical for
+  // deterministic ties. Bounds both memory and the per-query linear scan.
+  vocabulary = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, MAX_VOCAB)
+    .map(([w]) => w);
   lastRefresh = now;
+}
+
+/** Observability / test seam — current bounded vocabulary size. */
+export function getVocabularySize(): number {
+  return vocabulary.length;
 }
 
 function tokenize(text: string): string[] {
