@@ -1,5 +1,51 @@
 # G-AI — Session Change Log
 
+## 2026-06-03 — Session 128.30 — Backend resilience: bounded fuzzy-search vocabulary (SC1) + fail-open rate-limiter (C2)
+
+**Goal:** Two backend-resilience fixes. SC1: `refreshVocabulary()` did unbounded `findMany` + built an unbounded in-memory `vocabulary[]` that `correctSpelling`/`getSuggestions` linear-scan per query → OOM + CPU growth with the catalog. C2: the rate-limiter's RedisStore rejects when Redis is down → express-rate-limit `next(err)` → HTTP 500 on EVERY /api request = full outage from a Redis blip. Bound the vocab; make the limiter fail OPEN. Tests for both. No route/URL/schema changes (Rule A N/A); no capacitor scheme change (Rule C N/A); real backend logic → Rule E (prod smoke) applies.
+
+**Status:** ✅ Merged to main. ⏳ NOT yet deployed — manual Fly deploy + Rule E prod smoke deferred to founder (task said "Founder can do the prod smoke").
+
+| Metric | Value |
+|---|---|
+| PR | [#PENDING](https://github.com/dukanchiapp/Dukanchi-App/pulls) |
+| Files modified | 2 (`src/services/fuzzySearch.ts`, `src/middlewares/rate-limiter.middleware.ts`) |
+| Files added | 1 (`src/__tests__/backend-resilience.test.ts`) |
+| Tests | 191 → **197** (+6); 23 files; typecheck 0 |
+| Coverage | fuzzySearch.ts ~0 → **69.9% stmts / 83.3% funcs**; global stmts 8.1→9.31%, funcs 8.22→9.37% (> CI floor 7) |
+
+### SC1 — bounded vocabulary (`src/services/fuzzySearch.ts`)
+
+- `take: MAX_PRODUCTS (5000)` + `take: MAX_STORES (2000)` on the two `findMany` reads (bounded DB read).
+- Tokenizing now accumulates a `Map<word,count>`; vocabulary = the **top `MAX_VOCAB` (15000)** tokens by frequency desc (alphabetical tie-break). Memory + per-query linear scan are now hard-bounded; frequency keeps the most-useful suggestion candidates.
+- Kept the existing `REFRESH_INTERVAL` (5 min) throttle.
+- Added a comment noting the long-term fix is Postgres `pg_trgm` (NOT implemented now).
+- Added `export getVocabularySize()` (observability + test seam).
+
+### C2 — fail-open rate-limiter (`src/middlewares/rate-limiter.middleware.ts`)
+
+- New exported `failOpen(inner: Store, label): Store` wrapper. On ANY thrown/rejected store error it SWALLOWS the error and returns `{ totalHits: 0, resetTime: undefined }` from `increment` (request ALLOWED); `decrement`/`resetKey`/`resetAll`/`init` swallow too. Emits a THROTTLED (≤1/30s per limiter) `logger.warn` + `Sentry.captureMessage` so the degraded window is observable.
+- `makeRedisStore` now returns `failOpen(new RedisStore(...), prefix)` → ALL four limiters (auth/upload/message/general) wrapped, zero call-site change.
+- Deliberate tradeoff (in-code comment): during a Redis outage prioritise AVAILABILITY (stay up, briefly unprotected) over abuse-protection; a short unprotected window beats a hard outage, and the loud log makes it visible. Normal operation UNCHANGED — healthy Redis → real counts pass straight through (proven by the passthrough test).
+
+### Tests (`src/__tests__/backend-resilience.test.ts`, 6 tests)
+
+- SC1: 60k-token catalog → `getVocabularySize() <= MAX_VOCAB` + `take` caps passed to Prisma; small catalog → vocab present + `correctSpelling('samsng') → 'samsung'` still works.
+- C2 unit: passthrough (inner resolves → value flows through unchanged, no warn); fail-open (inner throws → `{totalHits:0}` + warn fired); decrement/resetKey swallow.
+- C2 HTTP: a limiter whose store throws → GET route returns **200 (not 500)** + degradation warn. (Outage simulated at the Store level via a throwing fake inner; sendCommand mock resolves a sha so RedisStore's import-time Lua preload for the 4 real limiters doesn't dangle — pure test artifact, prod request traffic awaits that promise.)
+
+### Verification
+
+- ✅ `npm test` 197/197 (was 191; +6) · `npm run typecheck` 0 (web+server+worker) · the new file 6/6, 0 unhandled errors.
+- ✅ Rule A / C **N/A** (no route/URL/schema/scheme change). Rule F honored (no real DB/Redis). Rule G: full typecheck.
+- ⏳ Rule E: real backend change — prod `/health` 200 + search/suggestions functional + rate-limiting active under normal Redis must be confirmed POST-DEPLOY.
+
+### Awaiting
+
+- **Founder (Rule E):** manual `flyctl deploy -a dukanchi-app`, then curl prod `/health` (200 json), confirm search/suggestions still return results, and confirm rate-limiting is still active under normal (healthy) Redis. (No deploy performed this session — task did not include the explicit deploy authorization.)
+
+---
+
 ## 2026-06-03 — Session 128.29 — Role-isolation test suite (6-role visibility + chat matrix); regression guard, NO leaks found
 
 **Goal:** Encode the core business rule + security boundary — role-based visibility (store list / detail / posts / search / feed) and the chat permission matrix — as a regression-guard test suite. Test-only; reuse the existing harness (`src/test-helpers/`); NO route/schema/deploy changes. Tests assert the INTENDED SPEC, not whatever the code returns — any spec failure = a real leak to report, not weaken.
