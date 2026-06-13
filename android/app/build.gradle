@@ -1,5 +1,19 @@
 apply plugin: 'com.android.application'
 
+// Phase A (Session 128.32): load signing creds from a LOCAL, gitignored
+// keystore.properties (NEVER committed — see android/.gitignore). The build
+// works WITHOUT it (CI / before the founder fills creds) — it just produces an
+// UNSIGNED release APK then. `ksReady` additionally requires the passwords to
+// be REAL (not the committed placeholders), so a placeholder file does not
+// cause a signing failure — it cleanly falls back to unsigned.
+def ksFile = rootProject.file("keystore.properties")
+def hasKs = ksFile.exists()
+def ksProps = new Properties()
+if (hasKs) { ksProps.load(new FileInputStream(ksFile)) }
+def ksReady = hasKs &&
+    ksProps['storePassword'] && !ksProps['storePassword'].toString().startsWith('__REPLACE') &&
+    ksProps['keyPassword'] && !ksProps['keyPassword'].toString().startsWith('__REPLACE')
+
 android {
     namespace = "com.dukanchi.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +21,9 @@ android {
         applicationId "com.dukanchi.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        // Phase B (Session 128.32): EVERY Play Store upload MUST increment versionCode.
+        versionCode 2
+        versionName "1.0.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,10 +31,35 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            // Populated ONLY when keystore.properties has real creds (ksReady).
+            // Absent / placeholder file → this stays empty and is NOT attached
+            // to the release buildType below → the build stays UNSIGNED (valid
+            // for CI + minify verification; the founder produces the signed
+            // build after filling the two passwords).
+            if (ksReady) {
+                storeFile file(ksProps['storeFile'])
+                storePassword ksProps['storePassword']
+                keyAlias ksProps['keyAlias']
+                keyPassword ksProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
-            minifyEnabled false
+            // Phase C (Session 128.32): R8 minify + resource shrink. Uses the
+            // CONSERVATIVE default (proguard-android.txt, NOT -optimize) to
+            // lower the risk of an over-aggressive strip. Keep rules live in
+            // proguard-rules.pro.
+            // ⚠️ A minified build that COMPILES can still CRASH from a stripped
+            // class — "build success" is NOT proof it works. The real gate is
+            // the founder's on-device smoke test (see SESSION_LOG Awaiting).
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            // Sign only when real creds are present (Phase A); else UNSIGNED.
+            if (ksReady) signingConfig signingConfigs.release
         }
     }
 }
