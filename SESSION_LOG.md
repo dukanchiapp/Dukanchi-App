@@ -1,5 +1,53 @@
 # G-AI — Session Change Log
 
+## 2026-06-13 — Session 128.31 — D3: Review unique constraint (one per user per store/product) — migration generated + validated locally, prod apply DEFERRED
+
+**Goal:** Enforce one review per (user, store) and one per (user, product) via two `@@unique` constraints on Review. This is a Prisma migration with POTENTIAL DATA LOSS (duplicate reviews removed). HARD RULE this session: generate + validate the migration LOCALLY, commit it, and DEFER the prod apply to the founder with the exact dup count — do NOT run `prisma migrate deploy` against prod. Catch the resulting P2002 in the create path → 409. Rule A/C N/A (no URL/scheme change).
+
+**Status:** ✅ Migrated schema + migration committed + locally validated + P2002→409 handler + tests. ⏳ Prod apply DEFERRED to founder (no data to lose — see audit).
+
+| Metric | Value |
+|---|---|
+| PR | [#PENDING](https://github.com/dukanchiapp/Dukanchi-App/pulls) |
+| Files modified | `prisma/schema.prisma`, `src/modules/misc/misc.controller.ts` |
+| Files added | `prisma/migrations/20260613003526_review_unique_constraints/migration.sql`, `src/__tests__/reviews.routes.test.ts` |
+| Tests | 197 → **199** (+2); 24 files; typecheck 0 |
+| Coverage | misc.service.ts 29.6% stmts / 100% funcs; global stmts 9.31→9.63%, funcs 9.37→10.15% (> CI floor 7) |
+
+### Phase 1 — read-only dup audit (PROD Neon, SELECT only, deleted nothing)
+
+Ran a SELECT-only audit via `psql "$DATABASE_URL"` against the **PROD** Neon DB (`ep-crimson-block-aorkdzv6-pooler...neondb` — note: `DATABASE_URL` and `DATABASE_URL_TEST` in `.env` currently point to the SAME DB, so there is no separate test branch). Result:
+
+- duplicate `(userId, storeId)` rows that would be removed: **0** (0 dup groups)
+- duplicate `(userId, productId)` rows that would be removed: **0** (0 dup groups)
+- total reviews in prod: **0**
+
+→ The migration's dedup DELETEs are a **no-op** on the current prod dataset; **zero data loss** on apply.
+
+### Phase 2 — schema + migration (atomic dedup → constraint)
+
+- `prisma/schema.prisma` Review: added `@@unique([userId, storeId])` + `@@unique([userId, productId])`. storeId/productId NULLABLE → Postgres treats NULLs as DISTINCT → the two constraints never collide.
+- Migration generated WITHOUT touching any DB: canonical index SQL obtained via DB-free `prisma migrate diff --from-schema-datamodel <old> --to-schema-datamodel <new> --script` (datamodel→datamodel needs no DB/shadow — avoids the prod-connect hazard of `migrate dev` AND the local pgvector/cube/earthdistance extension-replay problem). Hand-authored `migration.sql`: two dedup DELETEs (keep newest createdAt per pair, tie-break larger id) PREPENDED before the two `CREATE UNIQUE INDEX` (Prisma names `Review_userId_storeId_key` / `Review_userId_productId_key`). Atomic + idempotent + a no-op when zero dups.
+- **Validated on a LOCAL throwaway DB** (`review_migval`, dropped after): seeded 10 rows (store dups, a createdAt-tie, product dups, a user with BOTH a store + product review, a cross-user same-store review). After running the real `migration.sql`: survivors = `c,other,p3only,pb,s3only,z2` (newest-per-pair kept; tie → larger id `z2`; the user's store + product reviews coexisted via NULL-distinct; cross-user review kept); both unique indexes created; a duplicate `(u1,s1)` insert then failed with `unique_violation`; a new-target insert succeeded. NOT applied to prod.
+
+### Phase 3 — app handling (P2002 → 409)
+
+`MiscController.createReview` now catches `error.code === 'P2002'` (mirrors the existing pattern in team.controller / user.service) → returns **409** `{ error: "You've already reviewed this." }` instead of a 500. Test (`reviews.routes.test.ts`, +2): mock `prisma.review.create` to reject with a P2002 → assert route returns **409 (not 500)**; first-time review still returns 200.
+
+### Verification
+
+- ✅ `npm test` 199/199 (was 197; +2) · `npm run typecheck` 0 (web+server+worker) · new reviews test 2/2.
+- ✅ Migration validated on LOCAL DB (NOT prod). `prisma validate` clean.
+- ✅ Rule A / C N/A (no URL/scheme change). Rule F honored (audit read-only; validation on a throwaway local DB).
+
+### Awaiting — FOUNDER must apply the migration to prod (data-loss gate)
+
+1. **Dup count (Phase 1, prod):** 0 store dups, 0 product dups, 0 total reviews.
+2. **Data-loss statement:** applying this migration to prod will permanently delete **N=0** duplicate reviews on the CURRENT dataset (the dedup keeps the most recent review per user/target pair). The dedup is defensive — if reviews accumulate before apply, it removes only true duplicates. Founder should re-run the Phase-1 audit immediately before applying and confirm the count is acceptable.
+3. **Safe deploy ORDER:** (a) deploy the new CODE first (so the P2002→409 handler is LIVE), THEN (b) apply the migration. NOTE: prod has no `_prisma_migrations` table (Path B — this project applies migrations via `psql -f`), so the founder applies via `psql "$DATABASE_URL" -f prisma/migrations/20260613003526_review_unique_constraints/migration.sql` (the established pattern) OR `prisma migrate deploy` after baselining the migrations table. The SQL is idempotent/atomic either way.
+
+---
+
 ## 2026-06-03 — Session 128.30 — Backend resilience: bounded fuzzy-search vocabulary (SC1) + fail-open rate-limiter (C2)
 
 **Goal:** Two backend-resilience fixes. SC1: `refreshVocabulary()` did unbounded `findMany` + built an unbounded in-memory `vocabulary[]` that `correctSpelling`/`getSuggestions` linear-scan per query → OOM + CPU growth with the catalog. C2: the rate-limiter's RedisStore rejects when Redis is down → express-rate-limit `next(err)` → HTTP 500 on EVERY /api request = full outage from a Redis blip. Bound the vocab; make the limiter fail OPEN. Tests for both. No route/URL/schema changes (Rule A N/A); no capacitor scheme change (Rule C N/A); real backend logic → Rule E (prod smoke) applies.

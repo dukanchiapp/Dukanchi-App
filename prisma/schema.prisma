@@ -222,7 +222,14 @@ model Review {
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // A review must belong to either a store OR a product, enforced via logic
+  // A review must belong to either a store OR a product, enforced via logic.
+  // D3 (Session 128.31): one review per user per store, one per user per product.
+  // storeId/productId are NULLABLE → Postgres treats NULLs as DISTINCT, so the
+  // two constraints never collide (a store review has productId NULL and vice
+  // versa). The create path catches the resulting P2002 → 409 (see
+  // MiscController.createReview).
+  @@unique([userId, storeId])
+  @@unique([userId, productId])
 }
 
 model Notification {
