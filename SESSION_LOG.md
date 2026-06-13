@@ -1,5 +1,85 @@
 # G-AI — Session Change Log
 
+## 2026-06-13 — Session 128.33 — Backend resilience #181 + Review unique constraint #182: LIVE on Fly v104 (migration applied)
+
+**Goal:** Execute the production deploy + database migration for PRs #181 (resilience: bounded fuzzy vocab + fail-open rate-limiter) and #182 (Review unique constraint) that were merged but not yet live. Rule E is the central gate; hard-abort on first failure; deploy authorized; direct `psql` on prod authorized (Path B — prod has no `_prisma_migrations` table).
+
+**Status:** ✅ ALL GREEN. Deploy live on **Fly v104**; migration applied in a single transaction (0 rows deleted, 2 unique indexes created); 25-call rate-limit pattern proves the limiter is ACTIVE and failOpen did NOT engage under healthy Redis.
+
+| Metric | Value |
+|---|---|
+| Code merged | PR #181 (`1bbf03b`, resilience), PR #182 (`63ad26d`, review constraint) |
+| Pre-flight HEAD | `c2f9d3d` (descended from #182 + #183) |
+| Fly version | **v103 → v104** (complete; machine `9080d70da60d18` started + 1/1 healthcheck passing) |
+| Migration | `20260613003526_review_unique_constraints` applied to prod Neon in a single tx |
+| Rows deleted by dedup | **0 (store dedup) + 0 (product dedup)** — matches both audits |
+| Indexes created | **2** — `Review_userId_storeId_key`, `Review_userId_productId_key` |
+
+### Pre-flight (all pass)
+
+1. `git status` clean (only untracked `fly_logs.txt`); HEAD `c2f9d3d` descends from c2f9d3d ✅.
+2. `flyctl auth whoami` → `dukanchiapp@gmail.com` ✅.
+3. `flyctl status` Vpre = **v103**, machine started, 1/1 health check passing ✅.
+4. `DATABASE_URL` read silently into a scope-local var (length 155, value never printed, never exported) ✅.
+
+### Phase 1 — Deploy
+
+`flyctl deploy -a dukanchi-app` → machine reached good state, DNS verified, **Vpost = v104** (complete, healthcheck passing). Transient "machine in non-startable state: replacing" at 16:31:22 is the rolling-deploy machine swap (expected); healthcheck flipped to passing within the 90s warm-up.
+
+### Phase 2 — Post-deploy smoke (Rule E)
+
+**Step 8 — /health:** `HTTP 200`, `application/json; charset=utf-8`, body `{"status":"ok","db":"up","redis":"up","timestamp":1781368417302}` → db + redis both healthy.
+
+**Step 9 — 25× POST /api/auth/login** (real auth-limiter route; task's `/api/login` is a typo — 404):
+```
+401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 429 429 429 429 429
+```
+20× `401` (invalid creds, allowed past the limiter — `max: 20` in production) then 5× `429` (rate-limited). **AUTH LIMITER ACTIVE; failOpen DID NOT engage** — proves PR #181 doesn't regress normal rate-limiting under healthy Redis.
+
+**Step 10 — log sanity** (last 200 lines of `flyctl logs`):
+- `rate-limiter degraded` / `failing open` occurrences: **0** ✅
+- `refreshVocabulary` stack traces: **0** ✅
+- `rate-limit-redis` / rate-limit-error stack traces: **0** ✅
+
+Non-blocking note: 1 INFO-level `ValidationError: ERR_ERL_DOUBLE_COUNT` line for IP `66.241.125.180` (a known network scanner) — express-rate-limit detected that the request hit two limiters (likely a global + auth limiter both incrementing). This is a pre-existing structural condition (NOT a regression from the failOpen wrapper — the wrapper preserves passthrough), no stack trace, INFO level, and the 20→5 429 pattern proves the limiter functions correctly. Flagged for a follow-up audit.
+
+### Phase 3 — Migration (data-loss gate)
+
+**Step 11 — re-run dup audit** (read-only, immediately before applying — race-window catch):
+```
+store_dups=0 | product_dups=0 | total_reviews=0
+```
+
+**Step 12 — Decision gate:** both 0 → SAFE → proceed.
+
+**Step 13 — Apply migration** in a single tx via `psql -v ON_ERROR_STOP=1 --single-transaction -f prisma/migrations/20260613003526_review_unique_constraints/migration.sql`. Verbatim psql output:
+```
+DELETE 0   -- store dedup
+DELETE 0   -- product dedup
+CREATE INDEX   -- Review_userId_storeId_key
+CREATE INDEX   -- Review_userId_productId_key
+```
+
+**Step 14 — Index verification** (`pg_indexes` on `Review`):
+```
+Review_userId_productId_key
+Review_userId_storeId_key
+```
+Count = **2** (required exact). ✅
+
+### Verification
+
+- ✅ Pre-flight (1–4), deploy (5–6), smoke (8/9/10), audit (11), apply (13), verify (14) — every checkpoint green.
+- ✅ Rule E (Rule E "production curl smoke test after backend deploy") satisfied via steps 8/9/10 + step 14 verify.
+- ✅ Rules A/C N/A (no route/scheme change). Rule F honored (audit + apply on the documented Path B; psql tx atomic; DBURL never exported/printed).
+- Hard-abort rules: none triggered (every gate passed).
+
+### Awaiting
+
+Only remaining item: **Track B — Android release** (Session 128.32). Founder must (1) fill the two real passwords in `android/keystore.properties`, (2) `./gradlew assembleRelease` (signed APK) or `bundleRelease` (Play AAB), (3) install the minified SIGNED build on a real device and smoke test (launch / login / feed / Map / chat-realtime / push). Fallback if the minified build crashes: `minifyEnabled false` (signed-unminified is still distributable) while ProGuard is debugged.
+
+---
+
 ## 2026-06-13 — Session 128.32 — Android release hardening: reproducible signing + versionCode bump + minify/ProGuard (built UNSIGNED; on-device smoke DEFERRED)
 
 **Goal:** Harden the Android release build — (A) reproducible Gradle signing with NO secrets in committed files, (B) versionCode bump, (C) R8 minify + ProGuard keep rules. Android-ONLY; does NOT touch the pending Fly web deploy. Rules A/C/E N/A (no backend/route/scheme change). **Rule D applies** — a minified build that COMPILES can still CRASH from a stripped class, so "build success" is NOT proof it works; the real gate is the founder's on-device smoke test (Awaiting).
