@@ -57,6 +57,11 @@ captures/
 #*.jks
 #*.keystore
 
+# Signing creds — Phase A (Session 128.32). LOCAL ONLY, never committed
+# (contains the keystore passwords). android/app/build.gradle loads it
+# conditionally; absent/placeholder → unsigned build.
+keystore.properties
+
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
 .cxx/

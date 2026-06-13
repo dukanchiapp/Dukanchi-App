@@ -1,5 +1,57 @@
 # G-AI — Session Change Log
 
+## 2026-06-13 — Session 128.32 — Android release hardening: reproducible signing + versionCode bump + minify/ProGuard (built UNSIGNED; on-device smoke DEFERRED)
+
+**Goal:** Harden the Android release build — (A) reproducible Gradle signing with NO secrets in committed files, (B) versionCode bump, (C) R8 minify + ProGuard keep rules. Android-ONLY; does NOT touch the pending Fly web deploy. Rules A/C/E N/A (no backend/route/scheme change). **Rule D applies** — a minified build that COMPILES can still CRASH from a stripped class, so "build success" is NOT proof it works; the real gate is the founder's on-device smoke test (Awaiting).
+
+**Status:** ✅ Config done + release APK BUILT (minify/ProGuard compiles cleanly). ⏳ Built UNSIGNED (placeholder creds) + on-device smoke NOT yet run — founder gate.
+
+| Metric | Value |
+|---|---|
+| PR | [#PENDING](https://github.com/dukanchiapp/Dukanchi-App/pulls) |
+| Files modified | `android/.gitignore`, `android/app/build.gradle`, `android/app/proguard-rules.pro` |
+| Files added (committed) | none |
+| Files added (LOCAL, gitignored) | `android/keystore.properties` (placeholder passwords — never committed) |
+| Build | `./gradlew assembleRelease` → BUILD SUCCESSFUL (1m33s); `minifyReleaseWithR8` + resource-shrink ran; **0 R8 errors** |
+| APK | `android/app/build/outputs/apk/release/app-release-unsigned.apk` · **4.8 MB** · **UNSIGNED** · versionCode **2** / versionName **1.0.1** |
+
+### Phase A — reproducible signing (no committed secrets)
+
+- New `android/keystore.properties` (LOCAL ONLY, gitignored): real non-secrets pre-filled (`storeFile=/Users/apple/Documents/dukanchi-keys/dukanchi-release.jks`, `keyAlias=dukanchi`) + the two passwords as `__REPLACE_FROM_PASSWORD_MANAGER__` placeholders with a founder-instruction comment block.
+- `android/.gitignore`: added `keystore.properties` (verified `git check-ignore` → ignored; absent from `git status`).
+- `android/app/build.gradle`: loads keystore.properties CONDITIONALLY. `ksReady = file exists AND passwords are real (not placeholders)`. `signingConfigs.release` is populated + attached to `buildTypes.release` ONLY when `ksReady` → committed build.gradle has ZERO password literals, and a placeholder/absent file yields an UNSIGNED build instead of a signing FAILURE (improves on a naive `hasKs`-only guard, which would fail signing on placeholder passwords — realizing the task's stated "build still works / produces unsigned" intent).
+
+### Phase B — version
+
+- `versionCode 1 → 2`, `versionName "1.0" → "1.0.1"`, with a comment that every Play Store upload must bump versionCode. Confirmed in the built APK's `output-metadata.json` (versionCode 2 / 1.0.1).
+
+### Phase C — minify + ProGuard
+
+- `buildTypes.release`: `minifyEnabled true` + `shrinkResources true`; kept the CONSERVATIVE `proguard-android.txt` (NOT `-optimize`) to lower strip risk.
+- `proguard-rules.pro`: comprehensive keep rules with per-block rationale — Capacitor Plugin subclasses + `com.getcapacitor.**` + `com.capacitorjs.plugins.**` + Cordova bridge (reflective plugin discovery), `@JavascriptInterface` members (JS↔native bridge), Firebase + GMS (FCM reflection) + dontwarn, `-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable`, app package, enum values/valueOf.
+
+### Phase D — build verification (COMPILE-ONLY — NOT a runtime guarantee)
+
+- `.env` `VITE_GOOGLE_MAPS_API_KEY` confirmed set (Map needs it inlined at build:mobile time).
+- `npm run sync:android` (build:mobile + cap sync) → ok, 6 plugins synced.
+- `cd android && ./gradlew assembleRelease` → **BUILD SUCCESSFUL** in 1m33s; R8 minify + resource-shrink executed with NO keep-rule build failures. Output `app-release-unsigned.apk` (4.8 MB, UNSIGNED — placeholder creds, as designed).
+- ⚠️ This proves the minify config COMPILES — it does NOT prove the app runs. A stripped class can still crash at launch/runtime.
+
+### Verification
+
+- ✅ `./gradlew assembleRelease` BUILD SUCCESSFUL (R8 minify clean). committed build.gradle has zero password literals; keystore.properties gitignored + not staged.
+- Typecheck/web tests: not re-run (no web/TS source changed — Android Gradle/ProGuard only).
+- ✅ Rules A/C/E N/A (no backend/route/scheme). Rule D: native build → founder on-device smoke pending (below).
+
+### Awaiting — FOUNDER hard gate (a minified build can compile but crash from a stripped class)
+
+1. **Fill the two real passwords** in `android/keystore.properties` (`storePassword` + `keyPassword`) from the password manager.
+2. **Produce the signed build:** `cd android && ./gradlew assembleRelease` (signed APK) — or `./gradlew bundleRelease` for a Play Store AAB.
+3. **INSTALL the minified SIGNED build on a REAL device and smoke test** — this is the REAL gate: launch (no crash), login, home feed, Map, chat/realtime, push notification. If anything crashes, capture the logcat class name → add a targeted `-keep` to `proguard-rules.pro`.
+4. **FALLBACK:** if the minified build crashes on-device and the keep rules can't be fixed quickly, set `minifyEnabled false` (a signed-but-unminified build is still a valid, distributable, Play-Store-acceptable build) and ship that while ProGuard is debugged separately.
+
+---
+
 ## 2026-06-13 — Session 128.31 — D3: Review unique constraint (one per user per store/product) — migration generated + validated locally, prod apply DEFERRED
 
 **Goal:** Enforce one review per (user, store) and one per (user, product) via two `@@unique` constraints on Review. This is a Prisma migration with POTENTIAL DATA LOSS (duplicate reviews removed). HARD RULE this session: generate + validate the migration LOCALLY, commit it, and DEFER the prod apply to the founder with the exact dup count — do NOT run `prisma migrate deploy` against prod. Catch the resulting P2002 in the create path → 409. Rule A/C N/A (no URL/scheme change).
