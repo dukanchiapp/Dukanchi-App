@@ -36,7 +36,11 @@ export class StoreController {
         return res.status(403).json({ error: "KYC verification required", kycStatus: currentUser.kycStatus });
       }
 
-      const { phone } = req.body;
+      // Session 128.34: destructure the schema-validated allowlist up front
+      // (defense-in-depth against mass-assignment, paired with the now-strict
+      // createStoreSchema in validators/schemas.ts). Below the duplicate-phone
+      // check we re-use these same names — NO `...req.body` spread anywhere.
+      const { storeName, category, latitude, longitude, address, phone } = req.body;
 
       if (phone) {
         const owner = await prisma.user.findUnique({ where: { id: ownerId } });
@@ -51,7 +55,14 @@ export class StoreController {
         }
       }
 
-      const storeData = { ...req.body, ownerId };
+      // Session 128.34: defense-in-depth against mass-assignment. The route
+      // already runs `validate(createStoreSchema)` (now passthrough-free, so
+      // unknown keys are stripped at the schema layer) — but we ALSO build
+      // storeData from the explicit allowlist destructured above so an
+      // attacker can NEVER smuggle a privilege field like `verified` /
+      // `premium` / `kycStatus` / `role` into prisma.store.create even if
+      // the schema ever gets re-loosened.
+      const storeData = { storeName, category, latitude, longitude, address, phone, ownerId };
       const store = await StoreService.createStore(storeData);
       return res.json(store);
     } catch (error) {
