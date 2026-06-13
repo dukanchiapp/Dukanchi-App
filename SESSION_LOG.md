@@ -1,5 +1,79 @@
 # G-AI — Session Change Log
 
+## 2026-06-13 — Session 128.34 — Input validation: mass-assignment fix + passthrough audit + gap-module schemas (Path A)
+
+**Goal:** Close the mass-assignment vector in `store.controller`, drop `.passthrough()` across all 11 existing zod schemas (so unknown client keys are stripped by default), add `validateQuery` / `validateParams` middleware helpers, and wire validation on 5 previously unvalidated gap modules (users / team / ai / ask-nearby / landing). Rule A applies (URL count must be unchanged); Rule C N/A; Rule E (post-deploy smoke) deferred to founder. Spec-recon discrepancy resolved as **Path A — extend existing pattern**, do NOT create a parallel `src/lib/validation.ts` system.
+
+**Status:** ✅ Merged-ready. ⏳ Prod deploy deferred to founder (Rule E sentinel smoke checklist below).
+
+| Metric | Value |
+|---|---|
+| PR | [#PENDING](https://github.com/dukanchiapp/Dukanchi-App/pulls) |
+| Files modified | 8 — `validators/schemas.ts`, `validators/validate.ts`, `src/modules/stores/store.controller.ts`, `src/modules/{users,team,ai,ask-nearby,landing}/*.routes.ts` |
+| Files added | 1 — `src/__tests__/input-validation.test.ts` (13 tests) |
+| Tests | 199 → **212** (+13); 25 test files; **typecheck 0**; **build ✓**; **Rule A URL count 80 unchanged** |
+
+### Recon discrepancy resolved
+
+Task's stated RECON claim "ZERO modules currently use zod" was inaccurate — `zod ^4.4.3` is installed, `validators/schemas.ts` had 10 zod schemas, and 11 route mounts (auth signup/login, stores create, posts create/update, messages send, kyc submit, misc complaint/report/review, account delete) were already wired via the existing `validate()` middleware. Path A was selected (extend the existing pattern). Path B (create a parallel `src/lib/validation.ts` with controller-helper pattern) would have required rewiring all 11 working validations — a regression vector the "zero functional regression" goal forbids.
+
+### Schemas tightened (passthrough audit)
+
+**11/11** existing schemas had `.passthrough()` REMOVED (default zod strip now in effect). Closes the mass-assignment vector at the schema layer — `validators/validate.ts` already assigns `result.data` (the stripped object) back to `req.body`, so downstream `...req.body` spreads can no longer carry attacker-supplied unknown keys.
+
+- signupSchema · loginSchema · createPostSchema · updatePostSchema · createStoreSchema · createReviewSchema · sendMessageSchema · submitComplaintSchema · submitReportSchema · submitKycSchema · deleteAccountSchema
+
+One legitimate field surfaced by the strip: `createPostSchema` was missing `storeId` (post.controller reads it for the ownership gate). Added `storeId: uuidLike.optional()` to the schema — caught by the existing posts test (`POST /api/posts → 404 when storeId references nonexistent store`).
+
+### Mass-assignment fix sites
+
+- **`src/modules/stores/store.controller.ts:54`** — was `const storeData = { ...req.body, ownerId }`. Now explicit destructure of the 6-field allowlist (`storeName`, `category`, `latitude`, `longitude`, `address`, `phone`) + `ownerId` from JWT. Regression test asserts `verified` / `premium` / `kycStatus` / `role` / `averageRating` / attacker-supplied `ownerId` are ALL absent from the data object passed to `StoreService.createStore` (only the 7 allowlist keys present, `ownerId === JWT.userId`).
+
+Grep audit for other Prisma spread sites: `grep -rE "\.\.\.req\.body|data: req\.body" src/modules` → only the one site in `store.controller.ts`. **No other mass-assignment surface in the codebase.**
+
+### Gap modules wired (was: 0 validate calls each)
+
+- **users** (8 routes): all 8 now have `validateParams(idParamSchema)` (or local `userIdParam` for the legacy `/:userId/store`). PUT `/:id` adds `validate(updateUserProfileBody)` body check (name/phone/email allowlist).
+- **team** (3 routes): GET `/:storeId` + DELETE `/:id` get param validation; POST `/` gets `validate(addTeamMemberBody)`.
+- **ai** (3 routes): all 3 POSTs get body validation — MIME-type whitelist + 20MB base64 cap (Gemini cost guard).
+- **ask-nearby** (2 of 5 routes — the 3 GETs take no input): `send` enforces query/radius/coords/images cap; `respond` enforces uuid + yes/no.
+- **landing** (1 of 2 routes — public GET takes no input): admin PUT body must be a non-null object.
+
+**Total newly validated routes: 17.** Admin (27 routes) explicitly **DEFERRED to a follow-up session** — scope was already large, and admin's input surface is heterogeneous enough to warrant its own audit.
+
+### Helpers added
+
+`validators/validate.ts` now exports `validate` (body, unchanged) + new `validateQuery(schema)` + `validateParams(schema)`. Same { error, issues } 400 shape; on success Object.assign the parsed (and zod-coerced) values back into `req.query` / `req.params` (Express 5 makes these read-only on direct re-assign).
+
+### Shared schemas (new)
+
+`uuidLike` (8-4-4-4-12 hex regex — permissive vs zod's RFC-strict `.uuid()`, so both production v4 UUIDs AND the project's test-fixture nil-ish IDs validate identically) · `idParamSchema` ({ id: uuidLike }) · `paginationQuerySchema` (page/limit defaults + 100-cap) · `phoneSchema` (Indian, optional +91) · `roleSchema` (6-role enum).
+
+### Verification
+
+- ✅ `npm test` 212/212 (was 199; +13). All 4 transient regressions from the schema-tighten (3 in users-routes-test using non-UUID-shape :id; 1 in posts-routes-test where `storeId` was stripped because not declared on schema) were fixed by (a) adding `uuidLike` permissive regex + (b) adding `storeId` to `createPostSchema`. Zero functional regression.
+- ✅ `npm run typecheck` 0 (web + server + worker).
+- ✅ `npm run build` ✓ (81 precache).
+- ✅ Rule A — URL count `80` unchanged (`grep -rE "router\\.(get|post|put|patch|delete)" src/modules`). Zero route mounts added/changed/removed.
+- ✅ The Session 128.30 role-isolation suite continues passing (58 tests in the 2 isolation files; no behavioural drift).
+
+### Deviations / judgement calls
+
+- **Test fixture UUIDs (`00000000-0000-0000-0000-000000000001`)** are nil-ish — version digit 0, variant digit 0 — and zod 4's strict `.uuid()` rejects them. Production Prisma `@default(uuid())` makes v4 UUIDs that pass strict; the test fixtures don't. Chose to introduce a permissive `uuidLike` regex (8-4-4-4-12 hex, version-unconstrained) for ID-shape checks so both production and tests validate identically. Strict `.uuid()` is still used in existing pre-existing schemas where the legacy tests already used v4-shaped UUIDs.
+- **Admin module (27 routes)** deferred. Adding 27 schemas + tests would push this session past the "low-risk hardening" bar. Documented in Awaiting.
+- **`addTeamMemberBody`** keeps the existing TeamService rule "password min 4" (not the customer signup's min 8). Internal team-member accounts have a different threat model — service-layer message stays as the spec.
+- **`updateLandingContentBody`** gates content as `z.record(z.string(), z.unknown())` — non-null object. Did NOT lock down the nested CMS shape; that's a separate content-schema task.
+
+### Awaiting
+
+- **Founder Rule E smoke** after `flyctl deploy`:
+  1. Valid happy path: `POST /api/auth/login` (real creds) → 200, `POST /api/messages` (valid receiverId + message) → 200/201.
+  2. Mass-assignment attempt: `POST /api/stores` with valid required fields + `{ verified: true, premium: true, role: "admin" }` → 200/201 with the row stored having NONE of those fields (or 400 if you'd prefer the strict variant — current behaviour is silent strip, which is what the test verifies).
+  3. Invalid query param on a gap module: `GET /api/users/not-a-uuid` → 400 with structured `issues`.
+- **Follow-up session**: admin module validation (27 routes) — schemas in `validators/schemas.ts`, wire via existing `validate()` / new `validateQuery` / `validateParams`, mirror this session's pattern.
+
+---
+
 ## 2026-06-13 — Session 128.33 — Backend resilience #181 + Review unique constraint #182: LIVE on Fly v104 (migration applied)
 
 **Goal:** Execute the production deploy + database migration for PRs #181 (resilience: bounded fuzzy vocab + fail-open rate-limiter) and #182 (Review unique constraint) that were merged but not yet live. Rule E is the central gate; hard-abort on first failure; deploy authorized; direct `psql` on prod authorized (Path B — prod has no `_prisma_migrations` table).
