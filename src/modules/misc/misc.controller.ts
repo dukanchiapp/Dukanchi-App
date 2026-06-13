@@ -79,6 +79,12 @@ export class MiscController {
       if (error.message === "Must review either a store or a product" || error.message === "Cannot review both store and product at once") {
         return res.status(400).json({ error: error.message });
       }
+      // D3 (Session 128.31): @@unique([userId,storeId]) / @@unique([userId,productId])
+      // make a second review by the same user on the same target throw Prisma
+      // P2002. Return a clean 409 (not a 500) — the user already reviewed this.
+      if (error.code === 'P2002') {
+        return res.status(409).json({ error: "You've already reviewed this." });
+      }
       logger.error({ err: error }, "Failed to post review");
       return res.status(500).json({ error: "Failed to save review" });
     }
