@@ -1,5 +1,133 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.37 — Admin module input validation: LIVE on Fly v107 (B1 27-route follow-up)
+
+**Goal:** Mirror PR #185 (B1 input validation) for the admin module — the 27-route follow-up Claude Code itself flagged when deferring admin from #185. Same Path-A pattern: central `validators/schemas.ts` + route-level `validate/validateQuery/validateParams`, default-strip (no `.passthrough()`), reuse `idParamSchema`/`paginationQuerySchema`/`uuidLike`/`roleSchema`. Mass-assignment-prone routes (PUT /users/:id, POST /users/bulk-update, PUT /complaints/:id, PUT /kyc/:id, PUT /settings, POST /reset-password) get strict allowlists. **Hardening only — zero functional regression for the live admin-panel client.**
+
+**Status:** ✅ ALL GATES GREEN. **Fly v106 → v107 live.** Auth-precedence preserved in prod (every unauthenticated admin call → 401 JSON, NOT 400 — validation does not leak before auth gate).
+
+| Metric | Value |
+|---|---|
+| PR | [#188](https://github.com/dukanchiapp/Dukanchi-App/pull/188) (merged 7ba5ca0) |
+| Files modified | 3 — `validators/schemas.ts` (+118), `src/modules/admin/admin.routes.ts` (rewired), `src/__tests__/admin-validation.test.ts` (new, +340) |
+| Tests | 214 → **232** (+18); `npm run typecheck` 0 (frontend + server + worker); `npm run build` ✓; **Rule A URL count 70 = 70 unchanged** |
+| Fly | **v106 → v107** complete (image `deployment-01KV2R9XAC23WF1ZRAVS9E9VE6`, sin, 1/1 health passing) |
+
+### Phase 0 — Recon (audit ground-truth from live admin-panel client)
+
+Read all 27 routes' controller methods + greped `admin-panel/src/pages/*` for every `api.get/put/post/delete('/api/admin/...')` call. Every body field declared below maps to an actual UI call there. The role enum truth-source is `admin-panel/src/pages/Users.tsx:8 const ROLES = ['all', 'customer', 'retailer', 'supplier', 'brand', 'manufacturer', 'admin']`; complaint status truth is `Complaints.tsx STATUS_CONFIG = {open, in_progress, resolved, dismissed}`; KYC status is `{pending, approved, rejected}` (the UI PUTs only approved/rejected but admin/.service supports the full set).
+
+Critical finding: `PUT /api/admin/settings` was passing **raw `req.body`** to `AdminService.updateSettings(req.body)` (`admin.controller.ts:260`). Even though the service field-by-field destructures internally, the route had zero schema gate — an unknown body key, if a future service refactor naively spread `data`, would land in the Prisma upsert. New `adminUpdateSettingsBody` allowlist closes this at the boundary.
+
+### Phase 1 — `validators/schemas.ts` (+118 lines)
+
+New `// ── Admin: ... ──` section. 17 exported schemas (admin* prefix), reusing #185 shared building blocks. Highlights:
+
+```ts
+// Mass-assignment-prone (strict allowlist):
+export const adminUpdateUserBody = z.object({
+  role: roleSchema.optional(),       // 6-role enum — no forged "superadmin"
+  isBlocked: z.boolean().optional(),
+});
+export const adminBulkUpdateUsersBody = z.object({
+  userIds: z.array(uuidLike).min(1).max(500),
+  isBlocked: z.boolean(),
+});
+export const adminResetPasswordBody = z.object({
+  userId: uuidLike,
+  newPassword: z.string().min(8),
+});
+export const adminUpdateSettingsBody = z.object({
+  appName: z.string().min(1).max(120).optional(),
+  logoUrl: z.string().max(2048).nullable().optional(),
+  primaryColor: z.string().max(32).optional(),
+  accentColor: z.string().max(32).optional(),
+  carouselImages: z.array(z.string().min(1).max(2048)).max(20).optional(),
+});
+
+// Typed enums for the status-filter list routes:
+const complaintStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'dismissed']);
+const kycStatusEnum = z.enum(['pending', 'approved', 'rejected']);
+// Status query accepts the 'all' UI sentinel via z.union(z.literal('all'), enum).
+
+// Required field for PUT /api/admin/kyc/:id:
+export const adminUpdateKycBody = z.object({
+  status: kycStatusEnum,             // REQUIRED — live UI never PUTs without it
+  notes: z.string().max(5000).optional(),
+});
+```
+
+Pagination capped at 100 (inherited from `paginationQuerySchema`); the live UI sends `limit=15` so the cap is comfortable headroom.
+
+### Phase 2 — `admin.routes.ts` rewire
+
+Every route below the auth gate now has the matching `validate / validateQuery / validateParams` middleware inserted between `requireAdmin` and the controller. Auth-precedence preserved → 401/403 still come before 400. Routes with no input (`GET /me`, `GET /stats`, `GET /settings`, `GET /stores/export`) get no validation middleware. `POST /settings/upload` deliberately keeps only the existing multer + uploadLimiter + `verifyAndPersistUpload` chain — multipart bodies aren't validated by zod.
+
+Example:
+```ts
+router.put("/users/:id",
+  authenticateAdminToken, requireAdmin,
+  validateParams(idParamSchema), validate(adminUpdateUserBody),
+  AdminController.updateUser);
+```
+
+### Phase 3 — `src/__tests__/admin-validation.test.ts` (+18 tests)
+
+Mirrors `input-validation.test.ts` structure. Mocks `prisma/redis/env/logger/@sentry/node/AdminService`. `pubClient.sendCommand` returns `'test-script-sha'` so `RedisStore.init` for the upload limiter loads cleanly without noisy unhandled-rejection traces (pattern from `backend-resilience.test.ts`). Buckets:
+
+- **Mass-assignment regression (4 tests):** `PUT /users/:id` with `{role:'retailer', isBlocked:true, balance:999999, kycStatus:'approved', isAdminSuperPowers:true, passwordHash:'pwned'}` → `AdminService.updateUser` called with `(uuid, 'retailer', true)` only (extras stripped); `{role:'superadmin'}` → 400 (no service call); `POST /users/bulk-update` with `{userIds, isBlocked, forceDeletePosts, role, balance}` → service called with only `(ids, bool, currentUserId)`; `PUT /settings` with `{appName, primaryColor, ownerId, secretFlag, adminEmail}` → service receives only `{appName, primaryColor}`.
+- **Param + query sentinels (6 tests):** non-UUID `:id`/`:storeId` → 400 (was: pass-through to Prisma); `?limit=99999` → 400; `?role=superadmin` → 400; happy path `?role=all&page=2&limit=15&search=foo` → 200 (live UI shape); `/chats/history` missing `u1` → 400.
+- **Body shape sentinels (6 tests):** `reset-password` short newPassword → 400; `complaints/:id` invalid status `"lol"` → 400; `kyc/:id` missing status → 400; `kyc/:id` forged status `"fake"` → 400; `kyc/:id` `{status:'approved'}` → 200 (live UI happy path); `bulk-update` `{userIds:[]}` → 400.
+- **Auth precedence (2 tests):** `PUT /users/:id` without `dk_admin_token` → 401 (validation doesn't leak); `DELETE /users/not-a-uuid` without auth → 401 (NOT 400).
+
+### Phase 4 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **232 passed / 232** (was 214; +18) |
+| `npm run typecheck` | `tsc -p tsconfig.app.json --noEmit` 0 errors; `tsc -p tsconfig.server.json --noEmit` 0; `tsc -p tsconfig.worker.json --noEmit` 0 (Rule G) |
+| `npm run build` | ✓ built in 467ms; PWA precache 81 entries |
+| Rule A — URL parity | `apiFetch` unique paths on `main` = 70; on this branch = 70. **Zero URL changes.** |
+
+CI on PR #188: blocking `Typecheck + Test + Build` ✅ PASS; informational `Bundle Size Report` ❌ (pre-existing `preactjs/compressed-size-action@v3` misconfig — same fail on every recent PR; non-blocking by name).
+
+### Phase 5 — Production smoke (Rule E)
+
+`flyctl deploy -a dukanchi-app` → image `deployment-01KV2R9XAC23WF1ZRAVS9E9VE6`, rolling update on machine `9080d70da60d18` (sin), `1 total, 1 passing`. After 90s sleep:
+
+1. **Liveness:** `GET https://dukanchi.com/api/health` → `HTTP/2 200`. CSP header (reportOnly) unchanged from v106. ✅
+2. **Auth-precedence sentinel 1:** `PUT /api/admin/users/11111111-1111-4111-8111-111111111111` with `{role:"superadmin"}` and NO cookie → `401 application/json` (NOT 400 — auth gate fires before the new role-enum validation). ✅
+3. **Auth-precedence sentinel 2:** `DELETE /api/admin/users/not-a-uuid` with NO cookie → `401 application/json` (NOT 400 — the new UUID validation doesn't leak before auth). ✅
+4. **Auth baseline:** `GET /api/admin/users` no cookie → `401 application/json`. ✅
+
+Mass-assignment regression coverage is at the test layer (unit + middleware); on-device admin-panel smoke is not required this session (no schema additions the live UI doesn't already send — every body field maps to an existing `api.put/post` call audited in Phase 0).
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): zero new/removed `apiFetch` paths; main = branch = 70. ✅
+- **Rule B** (no silent catches): no new `.catch(() => {})`; pre-commit grep clean. ✅
+- **Rule C** (Capacitor): N/A — no `capacitor.config.ts` touched. ✅
+- **Rule D** (native smoke): N/A — no `api.ts` / `AuthContext` / Socket.IO / `isNative()` changes. ✅
+- **Rule E** (post-deploy smoke): 4/4 prod smokes ✅ (above).
+- **Rule F** (DB isolation): N/A — no local write-path smokes; all tests use mocked Prisma. ✅
+- **Rule G** (typecheck): `npm run typecheck` (all 3 projects), NOT `npx tsc --noEmit`. ✅
+
+### Open follow-ups (carried)
+
+- Gate-10 mass-assignment **on-device** smoke (Session 128.35 follow-up) — founder action, optional now that admin surface is also covered server-side.
+- Track B Android signed APK + on-device smoke (Session 128.32 follow-up).
+- CSP `reportOnly: false` flip — next session after 24-48h post-v106 Sentry clean.
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#188](https://github.com/dukanchiapp/Dukanchi-App/pull/188) merged (7ba5ca0); 27 admin routes wired with zod schemas (Path A, mirror of #185); +18 tests (214 → 232); typecheck/build/URL-parity all green; **Fly v106 → v107 live, smokes green**.
+- **Decisions:** mass-assignment-prone routes get strict allowlists (no `.passthrough()`); role updates constrained to the 6-role enum (no forged "superadmin"); pagination capped at 100; `PUT /api/admin/settings` raw-body risk closed via new `adminUpdateSettingsBody` allowlist; KYC `status` required (matches live UI).
+- **Deviations/surprises:** task spec referenced "URL count 80" — actual baseline is 70 (verified on main); Rule A still satisfied (no diff). Informational Bundle-Size CI check fails on every recent PR due to a pre-existing `preactjs/compressed-size-action@v3` misconfig — out of scope.
+- **Phase E queue impact:** Admin surface now matches the rest of the API for mass-assignment defense; can move on to the next hardening item (CSP enforce flip after Sentry-clean window, or whatever Opus picks next).
+- **Pending approval:** none — session is fully landed.
+
+---
+
 ## 2026-06-14 — Session 128.36 — CSP R2 connectSrc fix + double-count limiter cleanup: LIVE on Fly v106
 
 **Goal:** Close two prod-Sentry-confirmed issues without changing routes/schema. (1) Sentry NODE-EXPRESS-4 logged Profile-page fetch/canvas loads from `pub-267a374465...r2.dev` as connect-src violations — CSP `imgSrc` included R2, `connectSrc` did NOT. Today's `reportOnly:true` means logs only, but the upcoming enforce flip would BLOCK customer profile images. Mirror the env-driven R2 entry into `connectSrc`. (2) `ERR_ERL_DOUBLE_COUNT` info-level warnings on `/api/auth/*` traffic: `generalLimiter` mounted at `/api` AND `authLimiter` mounted per-route both increment the same request. Add a `skip` to `generalLimiter` for `/auth/*`. **CSP enforce flip stays deferred** — `reportOnly: true` unchanged this session.
