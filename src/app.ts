@@ -125,20 +125,32 @@ const cspDirectives = {
 };
 
 if (env.NODE_ENV === 'production') {
-  // Production: full helmet protection + CSP Report-Only.
+  // Production: full helmet protection + CSP ENFORCING.
+  //
+  // Session 128.41 (2026-06-14) — flipped reportOnly: true → false after the
+  // 5-day Sentry watch window across v106 (R2 connectSrc fix, Session 128.36)
+  // → v107 → v108 → v109 → v110 → v111 came back clean for NODE-EXPRESS-4.
+  // The same `cspDirectives` block has been report-only-tested over that
+  // window; only the toggle flips, the policy itself is unchanged.
+  //
+  // The /api/csp-report endpoint stays live — enforce mode still receives
+  // CSP violation reports, so any new directive miss is observable (and
+  // becomes a real-user UX problem, not just a log line). 24h founder/Opus
+  // watch on NODE-EXPRESS-4 post-flip; any new csp_violation event there =
+  // a real block → consider directive tighten or rollback.
   app.use(
     helmet({
       contentSecurityPolicy: {
         useDefaults: false,
-        reportOnly: true,
+        reportOnly: false,
         directives: cspDirectives,
       },
     }),
   );
 } else {
-  // Dev: same CSP Report-Only policy (so dev surfaces violations the same
-  // way), but relax the unrelated cross-origin headers that broke iframe
-  // previews and local tooling before.
+  // Dev: KEEP CSP in Report-Only so local iteration doesn't break when a
+  // new asset/inline-script lands before the directive is added. Devs still
+  // see violations in the console; pages render.
   app.use(
     helmet({
       contentSecurityPolicy: {
