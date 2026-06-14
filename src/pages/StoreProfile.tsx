@@ -14,6 +14,7 @@ import { useClosingSoon } from '../hooks/useClosingSoon';
 import { useUserLocation } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
 import { PageMeta } from '../components/PageMeta';
+import { buildStoreLdJson } from '../lib/seo-html';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
 import { haptic } from '../lib/haptics';
@@ -295,44 +296,13 @@ export default function StoreProfilePage() {
     : 'Local store on Dukanchi — apki local market ab aapke phone par.';
   const metaImage = store?.coverUrl || store?.logoUrl || undefined;
   // LD-JSON LocalBusiness — only emit once store data is loaded.
-  // PII discipline: no owner.name / owner.id / ownerId / phone-when-private.
-  const storeLd: Record<string, unknown> | undefined = store ? {
-    '@context': 'https://schema.org',
-    '@type': 'LocalBusiness',
-    name: store.storeName,
-    url: `https://dukanchi.com/store/${store.id}`,
-    ...(metaImage ? { image: metaImage } : {}),
-    ...(store.description ? { description: store.description } : {}),
-    address: {
-      '@type': 'PostalAddress',
-      ...(store.address ? { streetAddress: store.address } : {}),
-      ...(store.city ? { addressLocality: store.city } : {}),
-      ...(store.state ? { addressRegion: store.state } : {}),
-      ...(store.postalCode ? { postalCode: store.postalCode } : {}),
-      addressCountry: 'IN',
-    },
-    // Phone only if the retailer opted IN to public display (schema field
-    // `phoneVisible` defaults to true per prisma/schema.prisma:113 — but if
-    // explicitly set to false, withhold here too).
-    ...(store.phone && store.phoneVisible !== false ? { telephone: store.phone } : {}),
-    ...(typeof store.latitude === 'number' && typeof store.longitude === 'number' ? {
-      geo: {
-        '@type': 'GeoCoordinates',
-        latitude: store.latitude,
-        longitude: store.longitude,
-      },
-    } : {}),
-    // aggregateRating only when there are enough reviews to be meaningful —
-    // 5 is the floor schema.org consumers (Google) require to surface stars
-    // in SERPs (anything below that is misleading thumbnail noise).
-    ...(store.reviewCount >= 5 && typeof store.averageRating === 'number' ? {
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: store.averageRating.toFixed(1),
-        reviewCount: store.reviewCount,
-      },
-    } : {}),
-  } : undefined;
+  // Session 128.40: shared builder with the bot-render middleware
+  // (src/lib/seo-html.ts) so the client-rendered LD-JSON and the
+  // server-rendered LD-JSON can NEVER drift. PII discipline (no owner,
+  // phoneVisible gate, reviewCount >= 5) is enforced inside buildStoreLdJson.
+  const storeLd: Record<string, unknown> | undefined = store
+    ? buildStoreLdJson({ ...store, image: metaImage })
+    : undefined;
 
   return (
     <>

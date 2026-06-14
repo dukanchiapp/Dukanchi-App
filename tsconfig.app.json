@@ -28,6 +28,7 @@
     "src/lib/sentry-frontend.ts",
     "src/lib/posthog.ts",
     "src/lib/haptics.ts",
+    "src/lib/seo-html.ts",
     "src/lib/legal/**/*",
     "src/main.tsx",
     "src/App.tsx",

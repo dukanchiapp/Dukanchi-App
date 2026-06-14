@@ -2,6 +2,7 @@ import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 import { generateEmbedding } from "../../services/geminiEmbeddings";
 import { logger } from "../../lib/logger";
+import { invalidateStoreBotCache } from "../../middlewares/bot-render.middleware";
 
 const ADMIN_STATS_KEY = 'admin:stats';
 
@@ -56,6 +57,10 @@ export class StoreService {
       data: updateData
     });
     try { await pubClient.del(ADMIN_STATS_KEY); } catch { /* Redis unavailable — non-fatal */ }
+    // Session 128.40: invalidate bot-render HTML cache so the next crawler
+    // request sees the updated store fields within one request rather than
+    // up to 5 min later (the TTL).
+    invalidateStoreBotCache(id);
     return store;
   }
 

@@ -36,6 +36,13 @@ import { upload, getUploadedFileUrl, verifyAndPersistUpload, FILE_SIZE_LIMIT_BYT
 import { authenticateToken } from "./middlewares/auth.middleware";
 import { fallthroughErrorHandler } from "./middlewares/error.middleware";
 import { generalLimiter, uploadLimiter } from "./middlewares/rate-limiter.middleware";
+import {
+  botRenderLanding,
+  botRenderSearch,
+  botRenderMap,
+  botRenderLegal,
+  botRenderStore,
+} from "./middlewares/bot-render.middleware";
 
 export const app = express();
 app.set('trust proxy', 1);
@@ -449,6 +456,33 @@ app.get('/sitemap.xml', (_req, res) => {
 app.get('/llms.txt', (_req, res) => {
   res.type('text/plain').sendFile(path.resolve(process.cwd(), 'public', 'llms.txt'));
 });
+
+// ── 9a.4. Bot-rendering middleware (Session 128.40) ─────────────────────────
+// Intercepts requests from documented crawlers (Googlebot, GPTBot, etc.) and
+// link unfurlers (WhatsApp, Slackbot, etc.) and serves a static HTML doc
+// with route-specific meta + LD-JSON. Real users → next() → SPA. This is
+// what fixes WhatsApp link previews for /store/:id and makes the same page
+// indexable by AI/search bots without paying for full SSR/SSG.
+//
+// Mount order (CRITICAL): AFTER the static-file handlers above (so robots/
+// sitemap/llms still serve their files even to bots), BEFORE the legal
+// canonical-rewrite below (so bots get our full bot HTML for /legal/*,
+// non-bot users get the existing canonical-rewritten SPA shell), and BEFORE
+// server.ts's express.static(distPath) + app.get('*') catch-all (so / and
+// /store/:id reach our handlers for bots before falling through to index.html).
+//
+// API routes (/api/*) are NOT touched — they're mounted earlier in this
+// file and handle their own 401/200 contracts. The middleware never matches
+// them because we mount it on specific public URL paths.
+app.get('/',         botRenderLanding);
+app.get('/landing',  botRenderLanding);
+app.get('/search',   botRenderSearch);
+app.get('/map',      botRenderMap);
+app.get('/store/:id', botRenderStore);
+// Legal: bot-render must run BEFORE the canonical-rewrite handler below, so
+// bots get full meta + LD-JSON; non-bot users fall through to next() which
+// hits the rewrite below.
+app.get('/legal/:slug', botRenderLegal);
 
 // ── 9a.5. SEO — server-side per-route canonical for /legal/* (Session 128.23)
 // All /legal/* paths share dist/index.html (the SPA shell), which carries a
