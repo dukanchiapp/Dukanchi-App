@@ -97,6 +97,12 @@ const cspDirectives = {
     "https://maps.googleapis.com",
     "https://fonts.googleapis.com", // Maps SDK fetches font CSS via XHR, not <link>
     "https://fonts.gstatic.com", // PR #43 — Workbox SW fetch context (SW fetch → connect-src, NOT font-src)
+    // Session 128.36 — R2 origin parity with imgSrc above. Sentry NODE-EXPRESS-4
+    // logged Profile page fetch()/canvas-load of pub-267a374465...r2.dev images
+    // as a connect-src violation (currently report-only, would BLOCK on enforce
+    // flip). Same env-driven pattern as imgSrc:83 — secret-set host preferred,
+    // wildcard fallback so the directive is never empty.
+    env.R2_PUBLIC_URL || "https://*.r2.dev",
     "wss://dukanchi.com",
     "wss:", // catch-all for Capacitor / socket.io transport fallback
   ],
