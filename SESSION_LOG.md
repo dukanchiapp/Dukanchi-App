@@ -1,5 +1,173 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.39 — GEO/SEO foundation: llms.txt + Helmet meta + LocalBusiness JSON-LD: LIVE on Fly v109
+
+**Goal:** Three GTM-unlock SEO foundations, all client-side. (1) `public/llms.txt` for AI search engines per llmstxt.org spec — gives LLM-powered crawlers a structured site description. (2) `react-helmet-async` + `<PageMeta>` wired on all 8 public routes — each route gets its own title / description / canonical / OG / Twitter card. (3) Schema.org LocalBusiness JSON-LD on `/store/:id` — every retailer profile becomes individually discoverable + sharable with rich preview. No SSR/SSG this session (the bigger architectural lift is the explicit follow-up — see Awaiting + the SPA-limitation note).
+
+**Status:** ✅ ALL GATES GREEN. **Fly v108 → v109 live.** llms.txt serving with content-type text/plain; per-page Helmet meta wired across 8 public routes; LocalBusiness LD-JSON injected on /store/:id with PII discipline (phone-gated by `phoneVisible`, no owner name/ID, aggregateRating only ≥ 5 reviews).
+
+| Metric | Value |
+|---|---|
+| PR | [#192](https://github.com/dukanchiapp/Dukanchi-App/pull/192) (merged `fc6c2ac`) |
+| Files | 16 changed: 4 new (`public/llms.txt`, `src/components/PageMeta.tsx`, 2 new test files), 12 edits (App + 7 page files + LegalLayout + app.ts + package.json/lock) |
+| Tests | 241 → **255** (+14: 9 PageMeta + 5 llms.txt) |
+| Fly | **v108 → v109** complete (machine `9080d70da60d18` sin, 1/1 health passing) |
+| Rule A | `src/modules` router count **80 = 80** (unchanged); apiFetch **70 = 70** (unchanged); +1 backend URL on `src/app.ts` (`/llms.txt`) = the explicit deliverable per spec |
+
+### Phase 0 — Recon (4 RECON-vs-truth findings)
+
+| Task claim | Truth |
+|---|---|
+| "react-helmet-async NOT installed" | Existing imperative `usePageMeta` hook in `src/hooks/usePageMeta.ts` patches title + og:title on 6 routes (Home/Search/Map/StoreProfile/Profile/Messages) with `· Dukanchi` middle-dot format |
+| `publicPhone` field for privacy gate | Real field is `phoneVisible` per `prisma/schema.prisma:113` (defaults to true) |
+| "sitemap.xml is static today, dynamic /store URLs as follow-up" | Dynamic sitemap with /store + /product URLs ALREADY exists at `src/modules/seo/seo.routes.ts` (registered at `app.ts:367` BEFORE the static fallback at `app.ts:441`); Session 128.38 already capped its findMany reads at 50k each |
+| "Refactor LegalLayout.tsx:126 title side-effect" | LegalLayout actually has TWO useEffects to refactor: title + canonical/og:url (Session 128.23 baseline); both replaced with one declarative `<PageMeta appendBrand={false}>` |
+
+Resolution: kept usePageMeta on auth-only routes (Profile + Messages — per spec "skip auth-only"); replaced it on the 4 public callers (Home/Search/Map/StoreProfile); used `phoneVisible` field; noted sitemap finding in Phase 5 + Awaiting.
+
+### Phase 1 — `public/llms.txt` (98 lines, llmstxt.org spec)
+
+Sections: H1 (`# Dukanchi`), one-line description, Key URLs (canonical site + landing + search + map + retailer-profile pattern + sitemap + robots), "What Dukanchi is" (5 bullets on positioning, GTM, tech stack), Pages organized by Discovery / Auth / Legal / Auth-only-DO-NOT-index, Brand & contact (founder email, support, grievance link), and Notes-for-AI-agents (SPA limitations, lang-coexistence on the same canonical, user-generated content disclosure on store pages).
+
+Express route at `src/app.ts:444` mirrors the existing `/robots.txt` + `/sitemap.xml` patterns: explicit `res.type('text/plain')` so crawlers don't get the SPA shell + MIME-sniff into the wrong renderer. Vite's default static-asset handling copies `public/llms.txt` → `dist/llms.txt` at build (confirmed in build output).
+
+### Phase 2 — `react-helmet-async` + `<PageMeta>`
+
+`npm install react-helmet-async` → `^3.0.0` (React 19 native support — has a `React19Dispatcher.d.ts` in the lib).
+
+`src/components/PageMeta.tsx`:
+- Props: `{ title, description, canonical, image?, type?, appendBrand?, jsonLd? }`
+- Emits: `<title>`, `<meta name=description>`, `<link rel=canonical>`, full OG block (`og:type`/`og:title`/`og:description`/`og:url`/`og:image`), Twitter card (`twitter:card=summary_large_image` + title/description/image), optional `<script type=application/ld+json>`.
+- Default title suffix: `${title} | Dukanchi`. `appendBrand={false}` skips the suffix for callers supplying a fully-formed title (legal pages preserve `${title} — Dukanchi` em-dash format).
+- Default image: `https://dukanchi.com/icons/icon-512x512.png` so social previews always render something.
+
+`<App>` wrapped in `<HelmetProvider>` at the same Router level (between ErrorBoundary and Router).
+
+### Phase 3 — 8 public routes wired
+
+| Route | File | Action |
+|---|---|---|
+| `/` | `src/pages/Home.tsx` | replaced `usePageMeta({title:'Home'})` with `<PageMeta>` — "Discover Local Stores Near You" |
+| `/landing` | `src/pages/LandingPage.tsx` | added `<PageMeta>` — "Local Market Discovery in India" |
+| `/search` | `src/pages/Search.tsx` | replaced `usePageMeta` — "Search Local Stores" |
+| `/map` | `src/pages/Map.tsx` | replaced `usePageMeta` — "Stores Near You — Map View" |
+| `/store/:id` | `src/pages/StoreProfile.tsx` | replaced `usePageMeta` — dynamic title from store data (storeName + category + address); image = coverUrl ?? logoUrl |
+| `/signup` | `src/pages/Signup.tsx` | added `<PageMeta>` — "Sign up" |
+| `/login` | `src/pages/Login.tsx` | added `<PageMeta>` — "Log in" |
+| `/legal/*` (5 pages) | `src/components/legal/LegalLayout.tsx` | merged title + canonical/og:url effects into `<PageMeta appendBrand={false}>`; em-dash format preserved verbatim |
+
+Profile + Messages (the other 2 `usePageMeta` callers) intentionally left alone — they're auth-only routes that should NOT have rich SEO meta. Documented in PageMeta's JSDoc.
+
+### Phase 4 — LocalBusiness JSON-LD on `/store/:id`
+
+`StoreProfile` builds a schema.org LocalBusiness payload inline (conditional on `store` being loaded) and passes it as `jsonLd` to `<PageMeta>`. The payload is conservative:
+
+```ts
+{
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  name: store.storeName,
+  url: `https://dukanchi.com/store/${store.id}`,
+  image: store.coverUrl ?? store.logoUrl,           // omitted when neither exists
+  description: store.description,                    // omitted when blank
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: store.address,                    // each field omitted (not blank) when null
+    addressLocality: store.city,
+    addressRegion: store.state,
+    postalCode: store.postalCode,
+    addressCountry: 'IN',
+  },
+  // PRIVACY: phone only when retailer opted in via store.phoneVisible !== false
+  telephone: store.phone,
+  geo: { '@type': 'GeoCoordinates', latitude, longitude },   // both must be typeof "number"
+  aggregateRating: {                                          // only when reviewCount >= 5
+    '@type': 'AggregateRating',
+    ratingValue: store.averageRating.toFixed(1),
+    reviewCount: store.reviewCount,
+  },
+}
+```
+
+PII discipline: owner.name / owner.id / ownerId NEVER appear. The `phoneVisible !== false` gate mirrors the existing UI gate at `StoreProfile.tsx:480+593` (the same field is used to hide the call button — schema parity with what's user-visible). aggregateRating floor at 5 reviews matches what Google requires to surface stars in SERPs (anything below is misleading thumbnail noise).
+
+### Phase 5 — sitemap.xml (no-op; already dynamic)
+
+Confirmed: `src/modules/seo/seo.routes.ts` registers a dynamic `/sitemap.xml` that includes every store + product URL (Session 128.38 capped its findMany reads at 50k each with Sentry sentinels). Static fallback at `app.ts:441` exists for the `public/sitemap.xml` case but the dynamic route at `app.ts:367` wins because it's mounted first. Verified via smoke (Phase 8) — `curl https://dukanchi.com/sitemap.xml` returns real store UUIDs that map to live retailer profiles.
+
+### Phase 6 — Tests (+14)
+
+**`src/__tests__/page-meta.test.ts`** (9 tests, render-tree introspection — no JSX runtime needed). Strategy: PageMeta returns `<Helmet>{children}</Helmet>`; we walk Helmet's children to assert tag shape. Avoids the react-helmet-async v3 SSR context plumbing (which doesn't reliably populate in pure-Node + React 19 dispatcher contexts). Tests cover: title-suffix default + `appendBrand=false` verbatim preservation; canonical/og:url/og:image/twitter:card threading; image fallback to brand icon; og:type default vs explicit; LD-JSON emit + omit-when-undefined; one story-style "complete /store/:id" integration of every tag.
+
+**`src/__tests__/llms-txt.test.ts`** (5 tests, supertest against a minimal Express harness using the real `public/llms.txt`). Tests: 200 + text/plain content-type; body contains `# Dukanchi` H1 (llmstxt.org spec); body lists `/store/{id}` pattern + Discovery + Legal URLs; body explicitly marks Auth-only paths as DO-NOT-index.
+
+### Phase 7 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **255 passed / 255** (was 241; +14) |
+| `npm run typecheck` | frontend + server + worker projects all clean (Rule G) |
+| `npm run build` | ✓ 87 modules transformed in 451ms; no Helmet SSR warnings; `dist/llms.txt` confirmed (Vite static-asset copy) |
+| Rule A — `src/modules` router count | **80 = 80** (unchanged) |
+| Rule A — `apiFetch` count | **70 = 70** (unchanged) |
+| Rule A — direct `app.*` routes in `src/app.ts` | 8 → **9** (+1: `/llms.txt` is the explicit task deliverable, mirrors the existing `/robots.txt` + `/sitemap.xml` pattern) |
+
+CI on #192: blocking `Typecheck + Test + Build` ✅ PASS (1m45s); informational `Bundle Size Report` ❌ (pre-existing `preactjs/compressed-size-action@v3` `build-script: build` misconfig — non-blocking).
+
+### Phase 8 — Production smoke (Rule E)
+
+`flyctl deploy -a dukanchi-app` → machine `9080d70da60d18` (sin), rolling update, 1/1 healthcheck passing. After 90s sleep:
+
+1. **`/health`** → `HTTP/2 200 application/json` `{"status":"ok","db":"up","redis":"up"}` ✅
+2. **`HEAD /llms.txt`** → `HTTP/2 200`, **`content-type: text/plain; charset=utf-8`** ✅
+3. **`GET /llms.txt`** body verbatim head:
+   ```
+   # Dukanchi
+
+   > Dukanchi is a hyperlocal B2B2C retail discovery platform for India — it connects customers with local stores ("dukaan") in their immediate neighbourhood for product search, chat-based purchase intent, and live store status.
+
+   Last updated: 2026-06-14
+
+   ## Key URLs
+   ```
+4. **`GET /`** initial HTML (pre-JS) — shows the index.html baseline meta (`<title>Dukanchi — apna bazaar, apni dukaan</title>` + matching og:title). This is the HONEST SPA limitation: pre-JS crawlers see baseline; Helmet-injected meta lands in the DOM only after JS hydration. Googlebot's JS-renderer handles it correctly; WhatsApp/Slack non-JS unfurlers see the baseline.
+5. **`GET /sitemap.xml`** returns real store UUIDs — confirmed the dynamic sitemap (Session 128.38) is alive + serving as the source of crawlable retailer URLs.
+6. **`GET /store/<real-id>`** initial HTML — shows the baseline title + the existing index.html-built-in Organization/WebSite LD-JSON (NOT the per-store LocalBusiness LD-JSON; that hydrates client-side). This is the WhatsApp/Slack-preview limitation called out in the PR description.
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): zero `src/modules` changes; zero `apiFetch` changes; +1 explicit deliverable on `src/app.ts` (the `/llms.txt` route is the task-mandated NEW URL). ✅
+- **Rule B** (no silent catches): no new `.catch(() => {})`; LegalLayout's html-lang side-effect still throws upward on error (was never silent). ✅
+- **Rule C** (Capacitor): N/A — no `capacitor.config.ts` touched. ✅
+- **Rule D** (native smoke): N/A — no `src/lib/api.ts` / `AuthContext` / Socket.IO / `isNative()` changes. ✅
+- **Rule E** (post-deploy smoke): 6/6 ✅ (above).
+- **Rule F** (DB isolation): N/A — no local DB writes; tests stub at the supertest layer. ✅
+- **Rule G** (typecheck): `npm run typecheck` (all 3 projects), NOT `npx tsc --noEmit`. ✅
+
+### Known limitation (honest, called out in the PR description)
+
+Dukanchi is a client-rendered SPA. Helmet updates meta tags IN the live DOM after JS hydration → Googlebot's JS-rendering crawler sees correct per-route meta. BUT non-JS crawlers AND WhatsApp / Slack link previews (which often do NOT render JS) will see the index.html shell's baseline landing meta when `/store/:id` is shared. Fixing this needs SSR/SSG — explicitly out of scope this session, listed in Awaiting.
+
+### Awaiting (carried follow-ups)
+
+1. **SSR/SSG for `/store/:id`** — non-JS crawlers + WhatsApp/Slack link previews see per-store meta. Larger architectural lift (Vite SSR, or a separate edge-rendered route for `/store/:id` specifically).
+2. ~~Dynamic sitemap.xml with all public store URLs~~ — already shipped (recon finding).
+3. Migrate `usePageMeta` callers on Profile + Messages to PageMeta (low-priority — auth-only routes with no SEO value).
+4. **CSP `reportOnly: false` flip** — next session after the 24-48h post-v106 Sentry-clean window (v107/108/109 deploys have continued the watch; should be ready by next session).
+5. safeFetch migration of the 5 already-bounded fetch callsites (Session 128.38 follow-up).
+6. Gate-10 on-device mass-assignment smoke (Session 128.35 follow-up — founder action).
+7. Track B Android signed APK + smoke (Session 128.32 — founder action).
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#192](https://github.com/dukanchiapp/Dukanchi-App/pull/192) merged (`fc6c2ac`); `public/llms.txt` + Express route serving text/plain; react-helmet-async installed; `<PageMeta>` component built and wired across all 8 public routes; LocalBusiness JSON-LD on `/store/:id` with PII discipline (phone gated by `phoneVisible`, no owner identity, aggregateRating ≥ 5 reviews); 14 new tests (PageMeta render-tree introspection + llms.txt route via supertest); typecheck/build/Rule-A all green; **Fly v108 → v109 live**, 6/6 Rule E smokes green (/health JSON, /llms.txt HEAD + body verbatim, sitemap with real store IDs, /store/<id> pre-JS shell as documented).
+- **Decisions:** kept `usePageMeta` hook on the 2 auth-only callers (Profile + Messages) and migrated only the 4 public callers; preserved legal-page em-dash title format via `appendBrand={false}` (PageMeta default is `| Dukanchi` pipe); aggregateRating floor 5 reviews (Google SERP threshold); phone gated by the real `phoneVisible` field (not the task spec's `publicPhone`); LegalLayout's two pre-existing useEffects (title + canonical/og:url) both replaced by a single PageMeta render — `<html lang>` side-effect kept (Helmet doesn't manage that).
+- **Deviations/surprises:** 4 RECON-vs-truth findings surfaced upfront (table above). Dynamic sitemap already exists (Phase 5 = no-op); `publicPhone` → `phoneVisible`; `usePageMeta` hook already present; LegalLayout had two side-effects, not one. SPA-vs-SSR limitation called out honestly — Helmet meta lands client-side only; WhatsApp/Slack non-JS unfurlers will still see the baseline.
+- **Phase E queue impact:** SEO foundation in place. The big-bang follow-up is SSR/SSG so WhatsApp/Slack/non-JS crawlers see per-store meta — biggest GTM win once shipped (every retailer's WhatsApp share gets a rich card with store name + photo). Smaller follow-ups: CSP enforce flip (now in range), `usePageMeta` cleanup on auth routes.
+- **Pending approval:** none — both PRs merged, deploy + smokes green, docs landed.
+
+---
+
 ## 2026-06-14 — Session 128.38 — Scale lockdown: safeFetch helper + findMany caps: LIVE on Fly v108
 
 **Goal:** External HTTP timeout discipline + light retry, and a defensive `findMany` cap pass across all 64 callsites. Pattern: failOpen / SC1 — centralise the bounded-IO contract, observe the threshold, never silently drop. Scope locked at **Path C** after upfront recon found the task's "no timeout, no AbortController" claim was wrong for 6 of 7 listed sites + the geminiVision SDK call also uses `config.abortSignal`. Path C = build the `safeFetch` helper for future migration, close the 1 confirmed gap (ask-nearby Gemini), and do the full findMany audit.
