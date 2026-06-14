@@ -208,3 +208,93 @@ describe('resilience › C2 rate-limiter fails open over HTTP (Redis down)', () 
     );
   });
 });
+
+// ── Session 128.36 — double-count fix (ERR_ERL_DOUBLE_COUNT regression) ─────
+describe('resilience › Phase 2 fix: generalLimiter skips /api/auth/*', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('generalLimiter is SKIPPED on /api/auth/* requests; authLimiter still fires per-request', async () => {
+    // Mirrors prod wiring: src/app.ts:307 `app.use('/api', generalLimiter)` +
+    // src/app.ts:334 `app.use('/api/auth', authRoutes)` with per-route
+    // authLimiter. Inside `generalLimiter` Express has stripped the '/api'
+    // mount, so req.path is '/auth/login' — exactly what the skip checks.
+    const expressMod = await import('express');
+    const rateLimit = (await import('express-rate-limit')).default;
+    const app = expressMod.default();
+    app.use(expressMod.default.json());
+
+    const generalInner = {
+      init: vi.fn(),
+      increment: vi.fn().mockResolvedValue({ totalHits: 1, resetTime: undefined }),
+      decrement: vi.fn().mockResolvedValue(undefined),
+      resetKey: vi.fn().mockResolvedValue(undefined),
+      resetAll: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Store;
+    const authInner = {
+      init: vi.fn(),
+      increment: vi.fn().mockResolvedValue({ totalHits: 1, resetTime: undefined }),
+      decrement: vi.fn().mockResolvedValue(undefined),
+      resetKey: vi.fn().mockResolvedValue(undefined),
+      resetAll: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Store;
+
+    // The exact `skip` rule shipped in rate-limiter.middleware.ts.
+    const generalLimiterTest = rateLimit({
+      store: generalInner,
+      windowMs: 60_000,
+      max: 300,
+      skip: (req: { path: string }) => req.path.startsWith('/auth/'),
+    });
+    const authLimiterTest = rateLimit({
+      store: authInner,
+      windowMs: 15 * 60_000,
+      max: 20,
+    });
+
+    const apiRouter = expressMod.default.Router();
+    const authRouter = expressMod.default.Router();
+    authRouter.post('/login', authLimiterTest, (_req, res) => res.json({ ok: true }));
+    apiRouter.use('/auth', authRouter);
+    app.use('/api', generalLimiterTest, apiRouter);
+
+    for (let i = 0; i < 5; i++) {
+      const r = await request(app).post('/api/auth/login').send({});
+      expect(r.status).toBe(200);
+    }
+
+    expect(generalInner.increment).not.toHaveBeenCalled(); // skip kicked in
+    expect(authInner.increment).toHaveBeenCalledTimes(5);  // auth limiter still active
+  });
+
+  it('generalLimiter STILL fires on /api/* non-auth paths (skip is auth-scoped only)', async () => {
+    const expressMod = await import('express');
+    const rateLimit = (await import('express-rate-limit')).default;
+    const app = expressMod.default();
+    app.use(expressMod.default.json());
+
+    const generalInner = {
+      init: vi.fn(),
+      increment: vi.fn().mockResolvedValue({ totalHits: 1, resetTime: undefined }),
+      decrement: vi.fn().mockResolvedValue(undefined),
+      resetKey: vi.fn().mockResolvedValue(undefined),
+      resetAll: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Store;
+
+    const generalLimiterTest = rateLimit({
+      store: generalInner,
+      windowMs: 60_000,
+      max: 300,
+      skip: (req: { path: string }) => req.path.startsWith('/auth/'),
+    });
+
+    const apiRouter = expressMod.default.Router();
+    apiRouter.get('/posts', (_req, res) => res.json({ ok: true }));
+    app.use('/api', generalLimiterTest, apiRouter);
+
+    await request(app).get('/api/posts');
+    await request(app).get('/api/posts');
+    await request(app).get('/api/posts');
+
+    expect(generalInner.increment).toHaveBeenCalledTimes(3); // non-auth → still counted
+  });
+});

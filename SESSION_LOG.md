@@ -1,5 +1,74 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.36 — CSP R2 connectSrc fix + double-count limiter cleanup: LIVE on Fly v106
+
+**Goal:** Close two prod-Sentry-confirmed issues without changing routes/schema. (1) Sentry NODE-EXPRESS-4 logged Profile-page fetch/canvas loads from `pub-267a374465...r2.dev` as connect-src violations — CSP `imgSrc` included R2, `connectSrc` did NOT. Today's `reportOnly:true` means logs only, but the upcoming enforce flip would BLOCK customer profile images. Mirror the env-driven R2 entry into `connectSrc`. (2) `ERR_ERL_DOUBLE_COUNT` info-level warnings on `/api/auth/*` traffic: `generalLimiter` mounted at `/api` AND `authLimiter` mounted per-route both increment the same request. Add a `skip` to `generalLimiter` for `/auth/*`. **CSP enforce flip stays deferred** — `reportOnly: true` unchanged this session.
+
+**Status:** ✅ ALL GATES GREEN. **Fly v105 → v106 live.** Production CSP header now lists the R2 host on both `img-src` AND `connect-src`. Rate-limit 25× smoke shows the expected `20×401 → 5×429` pattern (UNCHANGED from prior sessions — auth limiter still active). `ERR_ERL_DOUBLE_COUNT` log hits during the smoke window: **0**.
+
+| Metric | Value |
+|---|---|
+| PR | [#PENDING](https://github.com/dukanchiapp/Dukanchi-App/pulls) |
+| Files modified | 3 — `src/app.ts`, `src/middlewares/rate-limiter.middleware.ts`, `src/__tests__/backend-resilience.test.ts` |
+| Tests | 212 → **214** (+2); typecheck 0; build ✓; **Rule A URL count 80 unchanged** |
+| Fly | **v105 → v106** complete |
+
+### Phase 1 — CSP R2 connectSrc
+
+`src/app.ts` `cspDirectives.connectSrc` — added the env-driven R2 entry mirroring `imgSrc:83`:
+
+```ts
+env.R2_PUBLIC_URL || "https://*.r2.dev",
+```
+
+Production header now exposes (verified via `curl -sI https://dukanchi.com/`):
+
+> `connect-src 'self' data: blob: https://*.i.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://nominatim.openstreetmap.org https://maps.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://pub-267a374465a24f869e4bb90f6217d03f.r2.dev wss://dukanchi.com wss:`
+
+`R2_PUBLIC_URL` IS set in prod (the resolved literal `pub-267a374465...r2.dev` host appears in the live header — the defensive `*.r2.dev` fallback wasn't needed). `img-src` R2 entry preserved (no accidental dedup).
+
+### Phase 2 — Double-count limiter cleanup
+
+`src/middlewares/rate-limiter.middleware.ts` `generalLimiter` gained:
+
+```ts
+skip: (req) => req.path.startsWith('/auth/'),
+```
+
+Production wiring: `app.ts:307 app.use('/api', generalLimiter)` strips the `/api` mount inside the middleware, so `req.path` is `/auth/login` (NOT `/api/auth/login`). With this skip, only the per-route `authLimiter` increments on `/api/auth/*` — the documented double-count disappears.
+
+### Phase 3 — Tests (+2)
+
+`src/__tests__/backend-resilience.test.ts` gains a "Phase 2 fix" describe block:
+- Test 1: mount both limiters with fake passthrough inner stores in the prod-mirror shape (`app.use('/api', generalLimiterTest, apiRouter)` + `apiRouter.use('/auth', authRouter.post('/login', authLimiterTest, ...))`). Send 5× POST /api/auth/login → assert `generalInner.increment` was called **0 times** (skip kicked in) AND `authInner.increment` was called **5 times** (auth limiter still active per-request).
+- Test 2: scope check — the skip is auth-only. 3× GET /api/posts → `generalInner.increment` called **3 times** (general limiter STILL fires on non-auth paths).
+
+### Phase 4 — Production smoke (Rule E, all gates green)
+
+1. **Health:** `HTTP 200` `application/json` body `{status:ok, db:up, redis:up}`. ✅
+2. **CSP fix:** `connect-src` header now includes `https://pub-267a374465a24f869e4bb90f6217d03f.r2.dev` (verbatim, env-resolved). `img-src` R2 entry preserved. ✅
+3. **Double-count smoke:** 25× POST /api/auth/login → `401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 429 429 429 429 429` — IDENTICAL pattern to prior sessions (20×401 then 5×429). Auth limiter still active; behaviour UNCHANGED for the auth surface. ✅
+4. **Log grep:** `flyctl logs --no-tail | tail -100 | grep -iE 'ERR_ERL_DOUBLE_COUNT|double_count'` returned **0** hits during the smoke window. ✅
+
+### Verification
+
+- ✅ `npm test` 214/214 (was 212; +2). `npm run typecheck` 0. `npm run build` ✓.
+- ✅ Rule A — URL count `80` unchanged.
+- ✅ Hard-abort rules: none triggered.
+
+### Deviations / notes
+
+- Earlier `flyctl secrets list | grep R2_PUBLIC_URL` returned empty — interpreted as "not set, defensive fallback would apply." Live CSP header proves the secret IS set (the literal host appears, not the wildcard) — the `grep` likely missed it due to pagination/format. Behaviour is correct either way; no code change implied.
+- **Profile-page browser-console verification deferred to founder.** Curl can only see the response header (which now includes R2 in connect-src). The actual no-violation confirmation needs a real browser load of `https://dukanchi.com/profile` with DevTools open. Sentry NODE-EXPRESS-4 should also stop logging new connect-src R2 violations starting now — that's the durable signal.
+
+### Awaiting
+
+**CSP `reportOnly` is still TRUE.** Next session: monitor Sentry NODE-EXPRESS-4 for **24–48h**. If no new violations beyond the R2 one we just fixed, flip `reportOnly:false` in a follow-up PR. If new violations appear, fix those first BEFORE the enforce flip.
+
+Other open follow-ups (carried): Optional Gate-10 mass-assignment on-device smoke (Session 128.35); admin module validation (27 routes); Track B Android signed APK + on-device smoke (Session 128.32).
+
+---
+
 ## 2026-06-14 — Session 128.35 — B1 input validation: LIVE on Fly v105
 
 **Goal:** Operational deploy for PR #185 (B1 — Path-A input validation rollout: mass-assignment fix in store.controller, `.passthrough()` audit, gap-module schemas, validateQuery/validateParams helpers). Rule E is the central gate; hard-abort on first failure; deploy authorized; no migration (B1 had no schema change).

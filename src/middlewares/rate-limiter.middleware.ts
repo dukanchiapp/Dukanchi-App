@@ -133,4 +133,11 @@ export const generalLimiter = rateLimit({
   message: { error: "Too many requests. Please slow down." },
   standardHeaders: true,
   legacyHeaders: false,
+  // Session 128.36: skip /api/auth/* — those routes have their own
+  // authLimiter (max 20/15min). Without this skip, both limiters fire on the
+  // same request → express-rate-limit logs the documented ERR_ERL_DOUBLE_COUNT
+  // warning (observed in prod Sentry on the scanner traffic at 66.241.125.180).
+  // Express strips the '/api' mount prefix inside this middleware, so req.path
+  // is post-mount → '/auth/login' (NOT '/api/auth/login').
+  skip: (req) => req.path.startsWith('/auth/'),
 });
