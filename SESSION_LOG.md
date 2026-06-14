@@ -1,5 +1,112 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.43 — Phase 4.2 coverage push: kyc + team + notification spec tests (+38, IDOR-critical, NO bugs)
+
+**Goal:** Mirror Phase 4.1 (Session 128.42) for the next 3 untested services. Cover `kyc.service.ts` (2 methods), `team.service.ts` (3 methods, IDOR-critical owner-only boundary), `notification.service.ts` (3 methods, IDOR-critical cross-user-contamination guard). **Test-only PR. Zero source changes. No deploy.** Philosophy locked: tests encode INTENDED SPEC; if a spec test fails → STOP, report as POTENTIAL IDOR BUG FOUND, do NOT weaken.
+
+**Status:** ✅ All 3 services covered. 12 explicit IDOR-marquee tests across team + notification. **NO bugs found** — every spec assertion passed first run.
+
+| Metric | Value |
+|---|---|
+| PR | [#201](https://github.com/dukanchiapp/Dukanchi-App/pull/201) merged `b4fe2ce` |
+| Files | 3 new test files: `src/__tests__/kyc.service.test.ts` (+8 tests, +135 lines), `src/__tests__/team.service.test.ts` (+21 tests, +260 lines), `src/__tests__/notification.service.test.ts` (+9 tests, +205 lines) |
+| Tests | 326 → **364** (+38) |
+| Coverage | `kyc.service.ts`: **100% lines** (5/5); `notification.service.ts`: **100% lines** (4/4); `team.service.ts`: **96.15% lines** (25/26) |
+| IDOR tests | **12** explicit IDOR-labelled (team:8, notification:4) — all PASSED |
+| Rule A | N/A — test-only, no URL change |
+| Rule E | N/A — no deploy |
+
+### Phase 0 — RECON (spec table surfaced inline pre-write)
+
+**`kyc.service.ts`** (2 methods, 32 lines): `submitKyc` writes 6 kyc fields + idempotent resubmission (kycNotes:null reset clears prior admin rejection note); `getKycStatus` returns 6-field select. **No IDOR vector at the service boundary** (controller passes own userId).
+
+**`team.service.ts`** (3 methods, 63 lines) — **IDOR-CRITICAL**: 3-arg owner gate consistently applied across all 3 methods (`store.ownerId === userId AND !teamMemberId`). Business rules captured: per-store cap of 3 members, password min 4 (vs customer signup 8), team-member impersonation tokens BLANKET-denied on remove BEFORE existence check (no info leak about whether target id exists).
+
+**`notification.service.ts`** (3 methods, 26 lines) — **IDOR-CRITICAL**: WHERE userId scoping present in all 3 methods. `markAsRead` uses `{id, userId}` BOTH-fields WHERE (prevents cross-user update via id-guess). `markAllAsRead` is updateMany scoped to `{userId, isRead:false}` (no cross-user contamination on bulk).
+
+### Phase 1 — `kyc.service.ts` spec tests (+8)
+
+- happy path: writes 6 kyc fields + status='pending' + kycSubmittedAt=now (within test window ±100ms) + kycNotes=null + invalidates `admin:stats` cache
+- Redis del failure is non-fatal (try/catch on source line 22)
+- Optional storeName/storePhoto default to null when omitted
+- **SPEC ENCODED — resubmission idempotency**: second submit OVERWRITES prior URLs AND resets kycNotes:null (so an admin's prior rejection note from round 1 doesn't carry into round 2 and confuse both user + reviewing admin)
+- getKycStatus: 6-field select shape asserted (no pwd/phone leak); null for vanished user; kycStatus:null for never-submitted user
+
+### Phase 2 — `team.service.ts` IDOR + business-rule tests (+21)
+
+**`getTeamMembers` (4):** owner OK; non-owner DENIED + findMany never called; missing-store same-error (no existence oracle); team-member impersonation token DENIED even when underlying userId IS the owner.
+
+**`addTeamMember` (12):** owner OK with bcrypt-hashed pwd (cost 4 in test env) + service-set role:'member'; default name "Team Member"; non-owner DENIED; team-member token DENIED; missing-store same-error; phone-required; password-required; **password <4 rejected** (the team-account floor distinct from customer signup's 8-char floor); password EXACTLY 4 accepted (boundary); **per-store cap of 3 members enforced**; duplicate phone rejected pre-create; bcrypt round-trip verification.
+
+**`removeTeamMember` (5):** owner OK; non-owner DENIED; **IDOR MARQUEE — team-member token BLANKET-DENIED BEFORE the findUnique existence check** (the gate at source line 54 fires before line 56 — so a team-member token cannot probe whether a target id exists via different error messages); team-member trying to remove themselves DENIED (same blanket rule); non-existent id (owner caller) → "Team member not found".
+
+### Phase 3 — `notification.service.ts` cross-user-contamination tests (+9)
+
+**`getNotifications` (3):** WHERE userId scoping (containment guard); take:50 cap; orderBy createdAt desc.
+
+**`markAsRead` (2):** **SPEC MARQUEE — WHERE is `{id, userId}` BOTH fields**. If a future refactor flips to just `{id}`, ANY user could update ANY notification by guessing the id — the test catches that regression. IDOR attacker call → Prisma P2025 (no row matches both); WHERE on the attempt asserted.
+
+**`markAllAsRead` (4):** **SPEC MARQUEE — updateMany WHERE includes userId**. If this filter is dropped EVERY notification gets flipped — the marquee failure mode. WHERE also includes `isRead:false` (no needless writes). Returns `{success:true}` regardless of count. Attacker scoping test confirms scoped writes.
+
+### Phase 4 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **364 passed / 364** (was 326; +38) |
+| `npm run typecheck` | 3 projects clean |
+| Coverage on target files | kyc 100% / notification 100% / team 96.15% (uncovered = 1000-cap Sentry sentinel at line 24, not worth a 1000-row mock) |
+| Global coverage | 14.95% lines (was 14.5% pre-session; +0.45pt — small gain because target files are small) |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+**All existing test suites green** (no pre-existing test regressed): Phase 4.1 (auth + account), role-isolation (58), input-validation, admin-validation, safeFetch, scale-lockdown, PageMeta, llms-txt, bot-detect, bot-render, csp-enforce, auth.integration, auth.refresh, signup-consent.
+
+CI on #201: blocking `Typecheck + Test + Build` ✅ PASS (1m42s); informational `Bundle Size Report` ❌ (pre-existing, non-blocking).
+
+### Bugs found: NONE
+
+Every one of the 38 spec assertions passed on first run. The intended contracts hold:
+- `team.service.ts`: the 3-arg owner gate (store-exists + ownerId-match + no-teamMemberId) is consistently applied across all 3 methods. Team-member-token blanket-deny on remove fires BEFORE existence check (verified by counting `findUnique` mock invocations — 0 when token has teamMemberId set).
+- `notification.service.ts`: WHERE userId scoping present in all 3 methods. `markAsRead`'s `{id, userId}` both-fields contract is asserted via the mock's call-args inspection — if a future refactor drops the userId, the test fails.
+- `kyc.service.ts`: idempotent resubmit with kycNotes-null reset confirmed across two consecutive calls (both `mock.calls` write `kycNotes: null`).
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): N/A — test-only. ✅
+- **Rule B** (no silent catches): no new `.catch(() => {})`; test catches capture errors for assertions. ✅
+- **Rule C** (Capacitor): N/A. ✅
+- **Rule D** (native smoke): N/A. ✅
+- **Rule E** (post-deploy smoke): N/A — no deploy this session. ✅
+- **Rule F** (DB isolation): N/A — all Prisma calls mocked at module boundary. ✅
+- **Rule G** (typecheck): `npm run typecheck` all 3 projects clean. ✅
+
+### Deviations & assumptions
+
+- **Business rules surfaced beyond task spec** (in a good way): the team.service has a hard cap of **3 members per store** (source line 41) — the task spec didn't mention it, but it's a real business rule worth encoding. Captured as a dedicated spec test.
+- **One uncovered line** in `team.service.ts` (line 24, the Sentry cap-hit sentinel when findMany returns exactly 1000 members). Not worth a 1000-row mock — the cap-add path is exercised by Session 128.38's scale-lockdown integration. Documented in the test file.
+- **No password-reset test** in `kyc.service` (there isn't one — KYC doesn't have a reset method). The task spec didn't ask for it either; just noting that the service surface is the full 2 methods covered.
+
+### Awaiting
+
+Nothing new this session. Carried follow-ups remain:
+1. 24h founder Sentry watch on NODE-EXPRESS-4 post-CSP-flip (Session 128.41).
+2. WebP store-image count audit in prod (Session 128.40 — informational).
+3. SSR migration if real users should get pre-rendered meta.
+4. `usePageMeta` migration on Profile + Messages to PageMeta (low-priority).
+5. safeFetch migration of the 5 already-bounded callsites (Session 128.38 follow-up).
+6. Gate-10 on-device mass-assignment smoke (#185 — founder action).
+7. Track B Android signed APK + smoke (#128.32 — founder action).
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#201](https://github.com/dukanchiapp/Dukanchi-App/pull/201) merged (`b4fe2ce`); 3 new test files (+38 tests covering 100% lines on kyc + notification, 96.15% on team); tests 326 → **364**; typecheck/build clean; no source changes (test-only); all 326 pre-existing tests still green. **12 explicit IDOR-marquee tests** across team (8) + notification (4) — all passed.
+- **Decisions:** Encoded INTENDED spec, not implementation. The IDOR-marquee assertions are the security headline: `team.service` 3-arg owner gate consistently applied across all 3 methods (existence check on remove BLANKED — no info leak); `notification.service` WHERE userId scoping present on findMany / update {id,userId} / updateMany. `kyc.service` resubmission-idempotency (kycNotes:null reset) is the UX-critical spec point.
+- **Deviations/surprises:** Beyond the task spec, surfaced and tested the per-store **3-member cap** in `team.service` (line 41 — a real business rule). One uncovered line on team.service is the Sentry cap-hit sentinel (only fires when findMany returns exactly 1000 — exercised by Session 128.38's integration test). **No bugs found** — every IDOR spec assertion passed, including the marquee proofs that `markAsRead`'s WHERE is `{id, userId}` both-fields and `markAllAsRead`'s WHERE includes userId.
+- **Phase E queue impact:** Closes the kyc/team/notification services in the Phase 4 coverage push. Remaining high-LOC untested services per coverage report: `post.service.ts` (~22%), `search.service.ts`, `message.service.ts`, `ask-nearby.service.ts` (Session 128.38 partial). Same "encode the spec, never weaken" pattern applies.
+- **Pending approval:** none — PR merged.
+
+---
+
 ## 2026-06-14 — Session 128.42 — Phase 4.1 coverage push: auth.service + account.service to 100% lines (test-only)
 
 **Goal:** Direct service-level spec coverage for the two most business-critical untested services. `auth.service.ts` had only HTTP-level integration coverage (auth.integration.test.ts + auth.refresh.test.ts + signup-consent.test.ts); the service-level edges (3-case dup-phone branch, opaque-error parity, User-vs-TeamMember precedence, deprecated `issueTokenForUser` carve-out) were uncovered. `account.service.ts` had ZERO prior tests despite being DPDP-compliance critical. **Test-only PR. Zero source changes. No deploy.**
