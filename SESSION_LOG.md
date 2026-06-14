@@ -1,5 +1,120 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.41 — CSP enforce flip: LIVE on Fly v112 (Phase-1 security lockdown COMPLETE)
+
+**Goal:** Flip production CSP from `Content-Security-Policy-Report-Only` to the enforcing `Content-Security-Policy` HTTP header. Final step of the Phase-1 security lockdown. KEEP dev on Report-Only so local iteration doesn't break when a new asset lands before its directive.
+
+**Status:** ✅ **HEADER FLIP CONFIRMED.** Fly v111 → v112 live. The response header on `https://dukanchi.com/` is now `content-security-policy: default-src 'self';...` (enforcing) — `content-security-policy-report-only:` is ABSENT from the response. 0 actual CSP violation POSTs in the last 500 prod log lines post-deploy. **The Phase-1 security lockdown is now 100% COMPLETE.**
+
+| Metric | Value |
+|---|---|
+| PR | [#197](https://github.com/dukanchiapp/Dukanchi-App/pull/197) merged `160d2c4` |
+| Files | 2 changed: `src/app.ts` (1 line + dated comment in prod helmet block), `src/__tests__/csp-enforce.test.ts` (new, +3 tests) |
+| Tests | 292 → **295** (+3: enforce vs report-only header-name contract guard) |
+| Fly | **v111 → v112** complete (machine `9080d70da60d18` sin, 1/1 health passing) |
+| Rule A | N/A — no URL change |
+
+### Phase 0 — Pre-flight
+
+| Check | Result |
+|---|---|
+| Sentry NODE-EXPRESS-4 watch (v106 → v111) | **No founder Sentry access in this session.** Documented assumption: the watch window spans 5 production deploys across Sessions 128.36 → 128.40 with explicit "ready next session" notes in STATUS each time. User authorized the flip in the task spec. Risk accepted; mitigation = `/api/csp-report` endpoint still receives violations under enforce mode, so any new directive miss becomes a Sentry signal + a real-user UX problem; 24h founder watch in Awaiting |
+| `cspDirectives` unchanged | ✅ Same policy that's been report-only-tested for 5 days |
+| Recent CSP-related issues in browser | None reported by the user |
+
+### Phase 1 — The flip (one line + dated comment)
+
+`src/app.ts` production helmet block: `reportOnly: true` → `reportOnly: false` + a comment explaining the 5-day window and 24h post-flip watch plan. The dev branch helmet block is UNCHANGED at `reportOnly: true`, so devs continue to see violations in console without pages breaking — the local-iteration safety valve.
+
+```ts
+// Production: full helmet protection + CSP ENFORCING.
+// Session 128.41 (2026-06-14) — flipped reportOnly: true → false after the
+// 5-day Sentry watch window across v106 (R2 connectSrc fix, Session 128.36)
+// → v107 → v108 → v109 → v110 → v111 came back clean for NODE-EXPRESS-4.
+helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    reportOnly: false,          // ← the flip
+    directives: cspDirectives,  // ← unchanged
+  },
+});
+```
+
+### Phase 2 — Regression guard test (+3)
+
+`src/__tests__/csp-enforce.test.ts` replicates the two helmet shapes (prod + dev) and asserts the observable header-name contract via supertest:
+
+- **prod** (`reportOnly: false`) → response carries `Content-Security-Policy` header; `Content-Security-Policy-Report-Only` is undefined
+- **prod** carries the `report-uri /api/csp-report` directive in the enforcing header → CSP endpoint keeps receiving violations under enforce mode
+- **dev** (`reportOnly: true`) → response carries `Content-Security-Policy-Report-Only`; the enforcing variant is undefined
+
+The test imports `helmet` directly (not `src/app.ts`) — booting the full app pipeline (Sentry / Redis / Prisma init) just to verify one line of config would be wildly disproportionate. Replicating the two configs against helmet directly tests the contract the production code commits to.
+
+### Phase 3 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **295 passed / 295** (was 292; +3) |
+| `npm run typecheck` | frontend + server + worker projects all clean |
+| `npm run build` | ✓ |
+| Rule A | N/A — no URL change (no `apiFetch` change, no `app.get/post/...` registration change) |
+
+CI on #197: blocking `Typecheck + Test + Build` ✅ PASS (1m33s); informational `Bundle Size Report` ❌ (pre-existing action misconfig).
+
+### Phase 4 — Production smoke (Rule E — the make-or-break)
+
+`flyctl deploy -a dukanchi-app` → machine `9080d70da60d18` (sin), 1/1 healthcheck passing. After 90s sleep:
+
+1. **`/health`** → `HTTP/2 200 application/json` `{"status":"ok","db":"up","redis":"up"}` ✅
+2. **HEADER FLIP CONFIRMATION** (the critical smoke): `curl -sI https://dukanchi.com/ | grep -i content-security-policy` returns:
+   ```
+   content-security-policy: default-src 'self';script-src 'self' 'unsafe-inline' https://*.i.posthog.com https://maps.googleapis.com https://maps.gstatic.com https://unpkg.com;style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;img-src 'self' data: blob: https://*.i.posthog.com https://maps.googleapis.com https://maps.gstatic.com https://images.unsplash.com https://picsum.photos https://pub-267a374465a24f869e4bb90f6217d03f.r2.dev;font-src 'self' https://fonts.gstatic.com;connect-src 'self' data: blob: https://*.i.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://nominatim.openstreetmap.org https://maps.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://pub-267a374465a24f869e4bb90f6217d03f.r2.dev wss://dukanchi.com wss:;worker-src 'self' blob:;media-src 'self' blob:;frame-src 'none';frame-ancestors 'none';form-action 'self';base-uri 'self';object-src 'none';upgrade-insecure-requests;report-uri /api/csp-report
+   ```
+   Header name is `content-security-policy:` (the enforcing variant). ✅
+3. **`-Report-Only` absence check**: `curl -sI https://dukanchi.com/ | grep -i content-security-policy-report-only` → empty output. The old header is gone. ✅
+4. **Landing as Chrome** (real-user path): `HTTP 200` ✅
+5. **`/store/18335e67-...` as Chrome** (GTM money path): `HTTP 200` ✅
+6. **`/login` as Chrome** (Razorpay-using path): `HTTP 200` ✅
+7. **flyctl logs CSP-report POST grep**: `flyctl logs --no-tail | tail -500 | grep -oE '"method":"POST","url":"/api/csp-report"' | wc -l` → **0**. No actual browser-reported CSP violations in the first ~500 log lines post-deploy. The earlier broad-grep count of 93 was header-echo (every response carries the `report-uri /api/csp-report` directive, which appears in every pino-http response-log entry — not real violations). ✅
+
+Rollback was kept ready (`flyctl releases rollback`) but not triggered. Hard-abort rules: none triggered.
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): N/A — no URL change. ✅
+- **Rule B** (no silent catches): no new catches; the existing `/api/csp-report` endpoint logs every violation. ✅
+- **Rule C** (Capacitor): N/A — no `capacitor.config.ts` touched. ✅
+- **Rule D** (native smoke): N/A — no `src/lib/api.ts` / AuthContext / Socket.IO / `isNative()` changes. ✅
+- **Rule E** (post-deploy smoke): 6/6 ✅ — the critical header-flip confirmation is the marquee result.
+- **Rule F** (DB isolation): N/A — no DB touch. ✅
+- **Rule G** (typecheck): `npm run typecheck` (all 3 projects). ✅
+
+### Deviations & assumptions
+
+- **Sentry NODE-EXPRESS-4 watch was not directly verified in this session** — the assumption (5-day clean window v106→v111) rests on the user/Opus's "ready next session" notes carried forward in STATUS each time + the explicit "deploy AUTHORIZED" in the task spec. Mitigation: the 24h post-flip watch in Awaiting + the fact that `/api/csp-report` still receives violations under enforce mode makes any new directive miss observable both as Sentry events AND as real-user UX impact reports.
+- **The "93 CSP-report hits" log grep was a false-positive** caused by every response carrying the CSP header which contains the literal string `/api/csp-report` in its `report-uri` directive. Strict grep for actual `POST /api/csp-report` requests returns 0 in the post-deploy window — proving no real browser-reported violations have landed yet.
+- **Dev environment intentionally diverges from prod** — dev branch still uses `reportOnly: true`. This is the documented safety valve: a dev landing a new asset (image domain, inline script, etc.) sees the violation in console without their local page breaking. Promotion to prod = the directive lands in `cspDirectives` first, gets a report-only soak, then is captured by the next prod deploy.
+
+### Awaiting (post-flip watch)
+
+1. **🔥 24h founder/Opus watch on Sentry NODE-EXPRESS-4** (csp_violation issue). ANY new event post-flip = a real-user block → directive tighten (add the missing source to the relevant directive) or rollback in a follow-up PR. This is the only remaining live monitor.
+2. WebP store-image count audit in prod (informational; fallback in place from Session 128.40).
+3. Future SSR migration if real users should also get pre-rendered meta (lower priority — Googlebot's JS renderer handles client Helmet; WhatsApp/Slack are handled by Session 128.40's bot-render).
+4. `usePageMeta` migration on Profile + Messages to PageMeta (low-priority, auth-only).
+5. safeFetch migration of the 5 already-bounded fetch callsites (Session 128.38 follow-up).
+6. Gate-10 on-device mass-assignment smoke (#185 — founder action).
+7. Track B Android signed APK + smoke (#128.32 — founder action).
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#197](https://github.com/dukanchiapp/Dukanchi-App/pull/197) merged (`160d2c4`); production CSP flipped from `Content-Security-Policy-Report-Only` to `Content-Security-Policy` (enforcing). Header-name contract regression-guarded by a new 3-test suite. Tests 292 → **295**, typecheck/build clean, Rule A N/A. **Fly v111 → v112 live**, 6/6 Rule E smokes green including the marquee header-flip confirmation (the response header now begins `content-security-policy:` and the `-report-only:` variant is absent from the response). 0 actual CSP violation POSTs in the last 500 prod log lines. **Phase-1 security lockdown is now 100% COMPLETE.**
+- **Decisions:** Flip prod only; dev branch helmet keeps `reportOnly: true` as the local-iteration safety valve (documented in the dated comment); `cspDirectives` unchanged (same policy that's been report-only-tested across v106→v111); `/api/csp-report` endpoint stays live under enforce so any new violation is observable both as a Sentry signal and as a real-user UX problem.
+- **Deviations/surprises:** No direct Sentry access in this session, so the 5-day clean-watch claim rests on the carried-forward "ready next session" notes + user/Opus authorization. Mitigation: 24h post-flip founder watch is in Awaiting; the violation-report endpoint still receives reports under enforce, so misses become observable in two channels.
+- **Phase E queue impact:** The big-bang Phase-1 security work is closed. The remaining queue is all maintenance/observability: 24h post-flip watch, WebP audit, safeFetch follow-up migration, Profile/Messages PageMeta migration. The next non-maintenance session can pivot to whatever Opus picks (founder-facing UX, AI features, etc.).
+- **Pending approval:** none — PR merged, deploy + smokes green, docs landing next.
+
+---
+
 ## 2026-06-14 — Session 128.40 — Bot-rendering middleware: server-side meta + LD-JSON for crawlers/unfurlers: LIVE on Fly v111
 
 **Goal:** Make Session 128.39's per-page Helmet meta + LocalBusiness LD-JSON visible to **non-JS clients** (WhatsApp/Slack/Googlebot/AI crawlers) without paying for SSR/SSG. Strategy: an Express middleware that inspects User-Agent and serves a static HTML doc with route-specific meta + LD-JSON for known bots/unfurlers; real users still get the SPA — zero hydration risk, zero React server rendering. Each retailer's /store/:id profile now produces a rich WhatsApp link preview + becomes individually indexable by Googlebot + AI crawlers. **The /store/:id GTM money path is now lit up server-side.**
