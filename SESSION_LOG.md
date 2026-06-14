@@ -1,5 +1,121 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.45 — Phase 5.1 coverage push: post.service.ts — 28.57% → 89.14% (+42, IDOR-critical, NO bugs)
+
+**Goal:** Open the Phase-5 wave with the biggest untested service — `post.service.ts`, the 469-LOC core engine (9 public methods including `getFeed`, the personalised ranking pipeline). Mirror the Phase-4 wave pattern (#128.42 / 43 / 44): encode INTENDED spec, STOP on real bug, test-only PR. **Aim 70-80% lines; achieved 89.14%.**
+
+**Status:** ✅ Single-service push complete. **NO bugs found** across all 42 new tests. 6 explicit IDOR-marquee tests on the ownership boundary all PASSED.
+
+| Metric | Value |
+|---|---|
+| PR | [#205](https://github.com/dukanchiapp/Dukanchi-App/pull/205) merged `153ea87` |
+| Files | 1 new test file: `src/__tests__/post.service.test.ts` (+42 tests, +692 lines) |
+| Tests | 409 → **451** (+42) |
+| Coverage on `post.service.ts` | **28.57% → 89.14% lines (50/175 → 156/175)** • Stmts 24.88→84.21 · Branches 19.35→74.19 · Funcs 29.41→70.58 |
+| Global coverage | Lines 16.77% → **18.32%** (+1.55pt) |
+| IDOR tests | **6 explicit IDOR-marquee** (updatePost / deletePost / deleteAllStorePosts ×2 / togglePin / toggleLike-no-self-notify) — all PASSED |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+### Phase 0 — RECON (spec table surfaced pre-write)
+
+9 public methods grouped by surface:
+- **Ownership-bearing (IDOR-critical):** `updatePost` (owner check via `post.store.ownerId !== userId`), `deletePost` (same gate + cascade likes+savedItems+post.delete), `deleteAllStorePosts` (store-owner gate + `STORE_POSTS_CASCADE_CAP=50_000` + Sentry sentinel), `togglePin` (owner gate + per-store 3-pin cap).
+- **User-action (any authed user):** `toggleLike` (unique `userId_postId` toggle + best-effort notification side-effect to post author + socket emit), `toggleSave` (composite-key `{userId, type:'post', referenceId}` toggle).
+- **Reads:** `getInteractions` (WHERE userId on likes+savedItems+follows, take:500 each per #128.38 cap), `getFeed` (233-LOC ranking engine — role filter, soft-delete cascade, FEED_FOLLOWS_CAP=10000, diversity cap max-2-per-store, seen-penalty ×0.4 multiplier, fire-and-forget Redis sAdd seen-set).
+- **Create:** `createPost` (post.create + BullMQ enqueue; **no service-level ownership check** — controller's job).
+
+### Phase 1 — SECURITY-CRITICAL IDOR tests (Part A)
+
+- **`updatePost` (5)**: owner-OK allowlisted body (caption/imageUrl/price+parseFloat); IDOR non-owner DENIED + NO update attempted; "Not found" BEFORE auth check (no oracle); price="" clears to null; undefined-keyed body fields are NOT in the update set (allowlist verified).
+- **`deletePost` (3)**: cascade order proven (`like.deleteMany` → `savedItem.deleteMany` (type='post') → `post.delete` — FK order matters); IDOR non-owner DENIED + NO cascade started; "Not found" before auth.
+- **`deleteAllStorePosts` (5)**: bounded fetch via `STORE_POSTS_CASCADE_CAP=50000`; IDOR non-owner DENIED + NO cascade; missing-store same-error (no existence oracle); **cap-hit sentinel fires Sentry warning at exactly 50000 rows**; empty-store skips the cascade-block (line 462 guard).
+- **`togglePin` (5)**: owner pin (false→true) calls count(); owner unpin (true→false) SKIPS count check; IDOR non-owner DENIED + NO count/update; "Post not found" before auth; **3-pin cap per store** — attempting 4th throws "Maximum 3 pinned posts allowed".
+
+### Phase 2 — USER ACTIONS (Part B) + HAPPY-PATH CONTRACT (Part C)
+
+**Part B — toggle idempotency:**
+- **`toggleLike` (5)**: like-create + notify side-effect path; unlike-delete + no-notify path; **IDEMPOTENCY** — double-toggle round-trips; **SECURITY — post author liking own post does NOT self-notify** (`authorId !== userId` guard at source line 358); notification.create failure is best-effort (does NOT throw or affect toggle result — `.catch()` at line 373).
+- **`toggleSave` (3)**: save-create / save-delete paths; unique-lookup uses composite key `{userId, type:'post', referenceId}` (proves type-discriminator is part of the contract — not just postId).
+
+**Part C — happy-path contract:**
+- **`createPost` (4)**: create + BullMQ `notificationQueue.add('publishPostNotifications', {...})`; optional product.connect; store-vanished doesn't abort the create (notification enqueue best-effort); **SPEC NOTE — service does NOT verify caller owns the storeId; controller's job** (documented by absence — no user lookup, no ownership comparison).
+- **`getInteractions` (2)**: WHERE userId scope on all 3 queries (likes / savedItems / follows) + take:500 each; savedPostIds filtered to `type==='post'` only (store/product saves NOT in the post id list — proves the filter behavior).
+- **`getFeed` (9)** — the engine contract (NOT line-by-line scoring math):
+  - empty candidates → `{posts: [], pagination: {page, limit, total:0, totalPages:0}}` without throwing.
+  - customer role → `allowedRoles=['retailer']` (mirror of #128.30 role-isolation contract).
+  - retailer role → 4 B2B roles (`retailer`/`supplier`/`manufacturer`/`brand`).
+  - admin role → all 6 roles (including customer + admin).
+  - candidate fetch is **3× limit** (over-fetch for the diversity-cap + scoring buffer).
+  - **DIVERSITY CAP MARQUEE — 5 same-store candidates → exactly 2 in result** (per-page max 2 per source, the documented contract at line 297-302).
+  - **SEEN-PENALTY RANKING — seen post ranks LOWER than unseen of equal base score** (the × 0.4 multiplier wire-through proof at line 286).
+  - **FEED_FOLLOWS_CAP=10000 sentinel** fires Sentry warning when follow list is exactly at cap.
+  - Redis `sMIsMember` failure is FAIL-OPEN (feed still renders, no penalty applied — try/catch at line 246).
+  - `isOwnPost` flag set on returned posts where `store.ownerId === userId`.
+
+### Phase 3 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **451 passed / 451** (was 409; +42) |
+| `npm run typecheck` | 3 projects clean |
+| Coverage on post.service.ts | **89.14% lines** (was 28.57%) — Stmts 84.21 / Branches 74.19 / Funcs 70.58 |
+| Global lines coverage | 16.77% → **18.32%** (+1.55pt) |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+**All existing test suites green** (no pre-existing test regressed): Phase 4.1 (auth + account), Phase 4.2 (kyc + team + notification), Phase 4.3 (bulkImport + misc), role-isolation (58), input-validation, admin-validation, safeFetch, scale-lockdown, PageMeta, llms-txt, bot-detect, bot-render, csp-enforce, auth.integration, auth.refresh, signup-consent.
+
+CI on #205: blocking `Typecheck + Test + Build` ✅ PASS (1m44s); informational `Bundle Size Report` ❌ (pre-existing, non-blocking).
+
+### Bugs found: NONE
+
+All 42 spec assertions passed. One mid-development test-only fix: the idempotency test was missing a `prisma.notification.create` mock for the like-creation round, so the service's best-effort `.catch()` chained off `undefined` and threw. Service code is fine; mock setup was incomplete. Fixed by adding the mock.
+
+The intended contracts hold across post.service:
+- Ownership gate consistent across all 4 IDOR-bearing methods (`!owner → "Unauthorized"`).
+- Cascade order on deletePost: likes → savedItems → post.delete (FK order matters).
+- Diversity cap on getFeed: exactly 2 per store per page, no exceptions.
+- Seen-penalty wire-through: seen posts ranked lower deterministically.
+- Sentry cap-hit sentinels fire at exactly the cap value (50000 for cascade, 10000 for feed follows).
+- Best-effort side-effects (notification create on like, notification queue on create, Redis sAdd on feed) NEVER abort the primary operation.
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): N/A — test-only. ✅
+- **Rule B** (no silent catches): no new `.catch(() => {})`; test catches capture errors for assertion. ✅
+- **Rule C** (Capacitor): N/A. ✅
+- **Rule D** (native smoke): N/A. ✅
+- **Rule E** (post-deploy smoke): N/A — no deploy this session. ✅
+- **Rule F** (DB isolation): N/A — all Prisma calls mocked at module boundary. ✅
+- **Rule G** (typecheck): `npm run typecheck` all 3 projects clean. ✅
+
+### Deviations & assumptions
+
+- **Coverage at 89.14% lines** (not 100%) — exceeds the 70-80% target. Uncovered ~11% sits in the deep `getFeed` scoring helpers (haversine + getTimeOfDayCategories + the per-post score map callback's branchy math). These are exercised indirectly via the diversity-cap + seen-penalty integration tests; chasing line-by-line scoring math would be brittle and low-value. The funcs % (70.58) is lower than stmts/branches/lines because the 2 private helpers aren't invoked by name in any test.
+- **1 documented "SPEC NOTE"** rather than a bug report: `createPost` does NOT verify caller owns the storeId at the service layer — controller's job. Documented by what's NOT called (no user lookup). Same pattern as `bulkImport.importProducts` in #128.44.
+
+### Awaiting
+
+Nothing new this session. Carried follow-ups remain:
+1. 24h founder Sentry watch on NODE-EXPRESS-4 post-CSP-flip (Session 128.41).
+2. WebP store-image count audit in prod (Session 128.40 — informational).
+3. SSR migration if real users should get pre-rendered meta.
+4. `usePageMeta` migration on Profile + Messages to PageMeta (low-priority).
+5. safeFetch migration of the 5 already-bounded callsites (Session 128.38).
+6. Gate-10 on-device mass-assignment smoke (#185 — founder).
+7. Track B Android signed APK + smoke (#128.32 — founder).
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#205](https://github.com/dukanchiapp/Dukanchi-App/pull/205) merged (`153ea87`); 1 new test file (+42 tests covering 89.14% lines on the 469-LOC post.service.ts core engine — was 28.57%); tests 409 → **451**; typecheck/build clean; no source changes (test-only); all 409 pre-existing tests still green. **6 explicit IDOR-marquee tests** on the ownership boundary (updatePost/deletePost/deleteAllStorePosts×2/togglePin/toggleLike-no-self-notify) — all passed.
+- **Decisions:** Encoded INTENDED spec. Marquees: ownership gate consistent across all 4 IDOR-bearing methods (`!owner → "Unauthorized"`); cascade order on deletePost (likes → savedItems → post.delete, FK order matters); **getFeed diversity cap proven via 5-same-store → 2-in-result**; **seen-penalty ranking wire-through proven** (seen post ranks lower than unseen of equal base score); **Sentry cap-hit sentinels fire at exact cap values** (50000 / 10000). Best-effort side-effects (notification create, BullMQ enqueue, Redis sAdd) NEVER abort the primary operation.
+- **Deviations/surprises:** Coverage at 89.14% (target was 70-80%) — exceeded by enough that the remaining 11% in private scoring helpers isn't worth line-by-line testing; the diversity-cap + seen-penalty integration tests exercise those indirectly. 1 documented "SPEC NOTE" (createPost doesn't verify storeId ownership — controller's job, documented by absence) following the same Phase-4 pattern. **No bugs found** — every spec assertion passed.
+- **Phase E queue impact:** Opens the Phase-5 coverage wave. Remaining untested services per coverage report: `search.service.ts`, `message.service.ts`, `ask-nearby.service.ts` (partial from #128.38), plus the smaller user.service + landing.service surfaces. The "encode the spec, never weaken" pattern is now well-rehearsed across 5 sessions (#128.30 + Phase-4 ×3 + Phase 5.1).
+- **Pending approval:** none — PR merged.
+
+---
+
 ## 2026-06-14 — Session 128.44 — Phase 4.3 coverage push: bulkImport + misc → Phase-4 wave ✅ COMPLETE (+45, NO bugs)
 
 **Goal:** Final coverage push closing the Phase-4 wave. Cover the last two business-critical untested services — `bulkImport.service.ts` (4 methods, 292 lines: XLSX/CSV parse + Gemini-driven column mapping + Redis-backed 5/day rate limit + per-row idempotent product upsert) and `misc.service.ts` (6 methods: complaints/reports/reviews/aggregates/singleton settings). **Test-only PR. Zero source changes. No deploy.** Philosophy carried from #128.30/#128.42/#128.43: tests encode INTENDED SPEC; if a spec test fails → STOP, report, do NOT weaken.
