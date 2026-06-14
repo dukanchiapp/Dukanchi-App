@@ -1,5 +1,74 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.35 — B1 input validation: LIVE on Fly v105
+
+**Goal:** Operational deploy for PR #185 (B1 — Path-A input validation rollout: mass-assignment fix in store.controller, `.passthrough()` audit, gap-module schemas, validateQuery/validateParams helpers). Rule E is the central gate; hard-abort on first failure; deploy authorized; no migration (B1 had no schema change).
+
+**Status:** ✅ ALL REQUIRED GATES GREEN. Deploy live on **Fly v105**. Gate 10 (mass-assignment regression smoke against prod) deferred per the task's own skip clause (no production JWT readily available without enumerating prod users — out of scope this session; in-test mass-assignment regression in #185 already proves the controller-level allowlist).
+
+| Metric | Value |
+|---|---|
+| Code merged | PR #185 (`034bbb5`, B1 input validation) |
+| Pre-flight HEAD | `034bbb5` ✅ |
+| Fly version | **v104 → v105** (complete; machine `9080d70da60d18` started + 1/1 healthcheck passing) |
+| Migration | none (B1 had no schema change) |
+
+### Pre-flight (all pass)
+
+- `git status` clean (only untracked `fly_logs.txt`).
+- `git log -1 --oneline` → `034bbb5` (B1 squash) ✅.
+- `flyctl auth whoami` → `dukanchiapp@gmail.com` ✅.
+- `flyctl status` Vpre = **v104**, machine started, 1/1 healthcheck passing ✅.
+
+### Phase 1 — Deploy
+
+`flyctl deploy -a dukanchi-app` → machine reached good state, DNS verified, **Vpost = v105** (complete, 46s old at status check, healthcheck passing). Standard transient "machine in non-startable state: replacing" during the rolling machine swap (recovered within warm-up window).
+
+### Phase 2 — Post-deploy smoke (Rule E)
+
+After 90s warm-up:
+
+**Gate 7 — /health:** ✅
+- `HTTP 200`, `application/json; charset=utf-8`
+- Body: `{"status":"ok","db":"up","redis":"up","timestamp":1781420110104}` — db + redis both healthy.
+
+**Gate 8 — VALID HAPPY PATH (happy-shape regression check):** ✅
+- `POST /api/auth/login` with `{"phone":"9999999999","password":"x"}` → **HTTP 401** `{"error":"Invalid credentials"}`.
+- Schema accepted the shape (NOT 400), auth correctly rejected the fake creds (NOT 500). The .passthrough() removal didn't break the legitimate-shape login path.
+
+**Gate 9 — VALIDATION GATE (the B1 proof):** ✅
+- `POST /api/auth/login` with `{}` → **HTTP 400** with zod-structured issues:
+  ```json
+  {"error":"Validation failed","issues":[
+    {"expected":"string","code":"invalid_type","path":["phone"],"message":"Invalid input: expected string, received undefined"},
+    {"expected":"string","code":"invalid_type","path":["password"],"message":"Invalid input: expected string, received undefined"}
+  ]}
+  ```
+- Validation IS loaded, IS wired, IS rejecting bad input. Each missing field has a `path` + `message` — frontend can render field-level errors. NOT 500 (schema not loaded) and NOT 401 (validation bypassed) — confirms the new strict schemas are in effect.
+
+**Gate 10 — MASS-ASSIGNMENT REGRESSION:** ⏳ deferred (per task's own skip clause).
+- Production JWT was not readily available from local `.env` / recent test runs / recent SESSION_LOG entries. Forging one would require querying the prod User table to enumerate a real retailer's id, which is out of session scope (the Path-B-style auto-mode classifier correctly declined that read). The defensive controller-level allowlist + schema-strip behaviour is already proven in unit tests (`src/__tests__/input-validation.test.ts` — "mass-assignment regression: POST /api/stores" asserts `verified` / `premium` / `kycStatus` / `role` / `averageRating` / forged-`ownerId` are ALL absent from the data object passed to `StoreService.createStore` when an attacker bundles them with valid fields). Founder can re-run the live mass-assignment check on-device when convenient (instructions in Awaiting).
+
+Hard-abort rules: none triggered. All 3 required gates passed.
+
+### Verification
+
+- ✅ Pre-flight, deploy (5–6), Gates 7/8/9 — every required checkpoint green.
+- ✅ Rule E satisfied via /health + happy-path regression + validation gate. No db/auth/route regression observed.
+- ✅ Rules A/C N/A (no URL/scheme/schema change). Rule F honored (no prod-write writes from this session).
+
+### Awaiting
+
+Founder optional follow-up smoke for **Gate 10** (mass-assignment, on-device with a real retailer login):
+1. Log in as a retailer (mobile or web), capture the dk_token cookie.
+2. `POST /api/stores` with valid required fields + attacker payload: `{ verified: true, premium: true, role: "admin", ownerId: "anything-else" }`.
+3. Expect response 200/201 with the stored row having `verified=false`, `premium=false`, no `role` field on Store (schema column doesn't exist), and `ownerId === your JWT.userId` (not the attacker's value).
+4. Cleanup: delete the test store via the existing store-delete flow or `psql DELETE FROM "Store" WHERE "storeName" = 'OpusTestStore'`.
+
+Other open follow-ups (unchanged from #185 docs): admin module validation (27 routes); Android signed APK + on-device smoke (Track B from Session 128.32).
+
+---
+
 ## 2026-06-13 — Session 128.34 — Input validation: mass-assignment fix + passthrough audit + gap-module schemas (Path A)
 
 **Goal:** Close the mass-assignment vector in `store.controller`, drop `.passthrough()` across all 11 existing zod schemas (so unknown client keys are stripped by default), add `validateQuery` / `validateParams` middleware helpers, and wire validation on 5 previously unvalidated gap modules (users / team / ai / ask-nearby / landing). Rule A applies (URL count must be unchanged); Rule C N/A; Rule E (post-deploy smoke) deferred to founder. Spec-recon discrepancy resolved as **Path A — extend existing pattern**, do NOT create a parallel `src/lib/validation.ts` system.
