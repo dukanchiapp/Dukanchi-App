@@ -2,6 +2,7 @@ import { prisma } from '../../config/prisma';
 import { getIO } from '../../config/socket';
 import { logger } from '../../lib/logger';
 import { sendPushToUser } from '../../services/push.service';
+import { safeFetch } from '../../lib/safeFetch';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -49,9 +50,14 @@ export async function sendAskNearby(
   areaLabel?: string,
   images: string[] = [],
 ) {
-  // Bounding box pre-filter — reduces full-table scan to small geographic slice
+  // Bounding box pre-filter — reduces full-table scan to small geographic slice.
+  // Session 128.38 (C-cap): in a dense metro the bounding box could still
+  // return thousands; downstream slices to 15 matches anyway, so 2000 is more
+  // than enough to feed the Haversine refinement + category match without
+  // ballooning memory under worst-case city density.
   const latDelta = radiusKm / 111;
   const lngDelta = radiusKm / (111 * Math.cos(latitude * (Math.PI / 180)));
+  const NEARBY_STORES_CAP = 2000;
   const stores = await prisma.store.findMany({
     where: {
       latitude:  { gte: latitude  - latDelta,  lte: latitude  + latDelta  },
@@ -64,7 +70,11 @@ export async function sendAskNearby(
       latitude: true,
       longitude: true,
     },
+    take: NEARBY_STORES_CAP,
   });
+  if (stores.length === NEARBY_STORES_CAP) {
+    logger.warn({ latitude, longitude, radiusKm, cap: NEARBY_STORES_CAP }, '[ASK_NEARBY] geo-bbox cap hit — dense area or expanded radius');
+  }
 
   // Haversine refinement — removes bounding box corners outside the true radius
   const nearby = stores.filter(
@@ -86,19 +96,28 @@ export async function sendAskNearby(
     distinct: ['storeId'],
   });
 
-  // If no direct product matches, use AI Category Routing
+  // If no direct product matches, use AI Category Routing.
+  // Session 128.38: bounded via safeFetch (5s deadline, no retry — this is a
+  // best-effort enrichment on a user-facing path; if Gemini hangs, we want to
+  // fall through to "no match" fast, NOT block the response). The existing
+  // catch-block fall-through behaviour is preserved: any failure (timeout,
+  // network, non-OK status) leaves matchingProducts empty and we return the
+  // "no match" path — same UX as before, but no longer holds the request
+  // hostage to Gemini latency.
   if (matchingProducts.length === 0 && process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
     try {
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+      const geminiRes = await safeFetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: `Categorize this product query: "${query}". Return ONLY the category name exactly from this list: Food, Electronics, Fashion, Grocery, Beauty, Health, Jewellery, Real Estate, Stationery, Auto, Services, Pets, Sports, Hardware, Toys, Gifts. If none match, return "Other".` }] }]
-          })
-        }
+          }),
+        },
+        { label: 'gemini.ask-nearby', timeoutMs: 5_000, retries: 0 },
       );
-      if (geminiRes.ok) {
+      if (!('reason' in geminiRes) && geminiRes.ok) {
         const geminiData = await geminiRes.json() as any;
         const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
         const detectedCategory = text.replace(/[^a-zA-Z\s]/g, '').trim();
@@ -113,6 +132,11 @@ export async function sendAskNearby(
           matchingProducts.push(...categoryStores.map(s => ({ storeId: s.id })));
           logger.info({ query, detectedCategory, storeCount: categoryStores.length }, '[ASK_NEARBY] AI Category Routing matched');
         }
+      }
+      // safeFetch already emits a Sentry breadcrumb on terminal failure;
+      // local log keeps the structured context for log-grep workflows.
+      else if ('reason' in geminiRes) {
+        logger.warn({ reason: geminiRes.reason, attempts: geminiRes.attempts }, '[ASK_NEARBY] AI Category recognition skipped (safeFetch terminal)');
       }
     } catch (err) {
       logger.error({ err }, '[ASK_NEARBY] AI Category recognition failed');

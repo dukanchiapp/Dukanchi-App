@@ -1,6 +1,11 @@
+import * as Sentry from "@sentry/node";
 import { prisma } from "../../config/prisma";
 import { env } from "../../config/env";
 import bcrypt from "bcrypt";
+
+// Session 128.38 (C-cap). One store's team is typically <20 members in
+// practice; 1000 is defensive headroom for franchise / chain accounts.
+const TEAM_MEMBERS_CAP = 1000;
 
 export class TeamService {
   static async getTeamMembers(storeId: string, userId: string, teamMemberId?: string) {
@@ -9,11 +14,16 @@ export class TeamService {
       throw new Error("Only the owner can manage the team");
     }
 
-    return prisma.teamMember.findMany({
+    const members = await prisma.teamMember.findMany({
       where: { storeId },
       select: { id: true, phone: true, name: true, role: true, createdAt: true },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'asc' },
+      take: TEAM_MEMBERS_CAP,
     });
+    if (members.length === TEAM_MEMBERS_CAP) {
+      Sentry.captureMessage('team.getTeamMembers.cap-hit', { level: 'warning', tags: { service: 'team' }, extra: { storeId, cap: TEAM_MEMBERS_CAP } });
+    }
+    return members;
   }
 
   static async addTeamMember(data: any, userId: string, teamMemberId?: string) {

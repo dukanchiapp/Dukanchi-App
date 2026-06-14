@@ -30,6 +30,7 @@
     "src/lib/sentry.ts",
     "src/lib/redis-keys.ts",
     "src/lib/legal/versions.ts",
+    "src/lib/safeFetch.ts",
     "server.ts",
     "scripts/**/*.ts",
     "validators/**/*.ts"

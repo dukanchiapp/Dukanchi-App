@@ -1,7 +1,16 @@
+import * as Sentry from "@sentry/node";
 import { Router } from "express";
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 import { logger } from "../../lib/logger";
+
+// Session 128.38 (C-cap). Sitemap currently fits in one urlset; cap at 50k
+// each (Google sitemap protocol's per-file limit). If we ever hit the cap,
+// the Sentry sentinel signals it's time to switch to a sitemap-index pattern
+// (multiple sitemap files referenced from a parent index). Until then a
+// single-file sitemap is simpler + cached for 1 hour.
+const SITEMAP_STORE_CAP = 50_000;
+const SITEMAP_PRODUCT_CAP = 50_000;
 
 export const seoRoutes = Router();
 
@@ -9,7 +18,7 @@ seoRoutes.get('/', async (_req, res): Promise<any> => {
   try {
     const CACHE_KEY = "sitemap_xml";
     const cached = await pubClient.get(CACHE_KEY);
-    
+
     if (cached) {
       res.header("Content-Type", "application/xml");
       return res.send(cached);
@@ -19,15 +28,23 @@ seoRoutes.get('/', async (_req, res): Promise<any> => {
       select: {
         id: true,
         createdAt: true,
-      }
+      },
+      take: SITEMAP_STORE_CAP,
     });
+    if (stores.length === SITEMAP_STORE_CAP) {
+      Sentry.captureMessage('seo.sitemap.stores.cap-hit', { level: 'warning', tags: { service: 'seo' }, extra: { cap: SITEMAP_STORE_CAP } });
+    }
 
     const products = await prisma.product.findMany({
         select: {
             id: true,
             createdAt: true,
-        }
+        },
+        take: SITEMAP_PRODUCT_CAP,
     });
+    if (products.length === SITEMAP_PRODUCT_CAP) {
+      Sentry.captureMessage('seo.sitemap.products.cap-hit', { level: 'warning', tags: { service: 'seo' }, extra: { cap: SITEMAP_PRODUCT_CAP } });
+    }
 
     const baseUrl = "https://dukanchi.com";
     

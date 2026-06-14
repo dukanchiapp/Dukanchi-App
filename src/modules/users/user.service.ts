@@ -1,7 +1,16 @@
+import * as Sentry from "@sentry/node";
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 
 const ADMIN_STATS_KEY = 'admin:stats';
+
+// Session 128.38 (C-category caps). Hit-the-cap emits Sentry breadcrumb so we
+// see growth before truncation matters; chosen 5000 as generous headroom over
+// expected per-user upper bound (~hundreds), with 100× safety margin.
+const PER_USER_FOLLOWED_CAP = 5000;
+const PER_USER_SAVED_ITEMS_CAP = 5000;
+const PER_USER_REVIEWS_CAP = 5000;
+const PER_USER_LOCATIONS_CAP = 1000;
 
 export class UserService {
   static async getUserStore(userId: string) {
@@ -52,16 +61,24 @@ export class UserService {
           select: { id: true, storeName: true, category: true, address: true, averageRating: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: PER_USER_FOLLOWED_CAP,
     });
+    if (follows.length === PER_USER_FOLLOWED_CAP) {
+      Sentry.captureMessage('user.getFollowedStores.cap-hit', { level: 'warning', tags: { service: 'user' }, extra: { userId, cap: PER_USER_FOLLOWED_CAP } });
+    }
     return follows.map(f => f.store);
   }
 
   static async getSavedItems(userId: string) {
     const saved = await prisma.savedItem.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: PER_USER_SAVED_ITEMS_CAP,
     });
+    if (saved.length === PER_USER_SAVED_ITEMS_CAP) {
+      Sentry.captureMessage('user.getSavedItems.cap-hit', { level: 'warning', tags: { service: 'user' }, extra: { userId, cap: PER_USER_SAVED_ITEMS_CAP } });
+    }
 
     // For post-type saved items, fetch associated posts.
     // Per D2 (anonymize policy): we DO NOT filter out posts whose author was
@@ -85,14 +102,19 @@ export class UserService {
   }
 
   static async getReviews(userId: string) {
-    return prisma.review.findMany({
+    const reviews = await prisma.review.findMany({
       where: { userId },
       include: {
         store: { select: { id: true, storeName: true } },
         product: { select: { id: true, productName: true } }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: PER_USER_REVIEWS_CAP,
     });
+    if (reviews.length === PER_USER_REVIEWS_CAP) {
+      Sentry.captureMessage('user.getReviews.cap-hit', { level: 'warning', tags: { service: 'user' }, extra: { userId, cap: PER_USER_REVIEWS_CAP } });
+    }
+    return reviews;
   }
 
   static async getSearchHistory(userId: string) {
@@ -104,9 +126,14 @@ export class UserService {
   }
 
   static async getLocations(userId: string) {
-    return prisma.savedLocation.findMany({
+    const locations = await prisma.savedLocation.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      take: PER_USER_LOCATIONS_CAP,
     });
+    if (locations.length === PER_USER_LOCATIONS_CAP) {
+      Sentry.captureMessage('user.getLocations.cap-hit', { level: 'warning', tags: { service: 'user' }, extra: { userId, cap: PER_USER_LOCATIONS_CAP } });
+    }
+    return locations;
   }
 }

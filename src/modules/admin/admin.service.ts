@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 import { env } from "../../config/env";
@@ -8,6 +9,16 @@ import ExcelJS from "exceljs";
 const ADMIN_STATS_KEY = 'admin:stats';
 const ADMIN_STATS_TTL = 60;
 const PROTECTED_ADMIN_ID = '5cbf1a3d-e8e7-4b64-836a-58475bbbb7d9';
+
+// Session 128.38 — defensive findMany caps.
+// C-category (unbounded admin listings): cap + Sentry sentinel.
+const ADMIN_STORE_MEMBERS_LIST_CAP = 10_000;
+const ADMIN_EXPORT_STORES_CAP = 50_000;
+// D-category (cascade reads — must be ~complete for FK cleanup). Cap is the
+// safety net against runaway-content outliers; if a real cascade hits the
+// cap, the operation completes for the first N rows + emits Sentry so ops
+// knows the cleanup needs a re-run.
+const CASCADE_FETCH_CAP = 50_000;
 
 export class AdminService {
   static async getStats() {
@@ -137,12 +148,21 @@ export class AdminService {
       prisma.report.deleteMany({ where: { OR: [{ reportedByUserId: id }, { reportedUserId: id }] } }),
     ]);
 
-    const userStores = await prisma.store.findMany({ where: { ownerId: id } });
+    const userStores = await prisma.store.findMany({ where: { ownerId: id }, take: CASCADE_FETCH_CAP });
+    if (userStores.length === CASCADE_FETCH_CAP) {
+      Sentry.captureMessage('admin.deleteUser.userStores.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { userId: id, cap: CASCADE_FETCH_CAP } });
+    }
     for (const store of userStores) {
-      const storePosts = await prisma.post.findMany({ where: { storeId: store.id } });
+      const storePosts = await prisma.post.findMany({ where: { storeId: store.id }, take: CASCADE_FETCH_CAP });
+      if (storePosts.length === CASCADE_FETCH_CAP) {
+        Sentry.captureMessage('admin.deleteUser.storePosts.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { storeId: store.id, cap: CASCADE_FETCH_CAP } });
+      }
       const postIds = storePosts.map(p => p.id);
-      
-      const storeProducts = await prisma.product.findMany({ where: { storeId: store.id } });
+
+      const storeProducts = await prisma.product.findMany({ where: { storeId: store.id }, take: CASCADE_FETCH_CAP });
+      if (storeProducts.length === CASCADE_FETCH_CAP) {
+        Sentry.captureMessage('admin.deleteUser.storeProducts.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { storeId: store.id, cap: CASCADE_FETCH_CAP } });
+      }
       const productIds = storeProducts.map(p => p.id);
       
       await prisma.$transaction([
@@ -185,10 +205,16 @@ export class AdminService {
   }
 
   static async deleteStore(id: string) {
-    const storePosts = await prisma.post.findMany({ where: { storeId: id } });
+    const storePosts = await prisma.post.findMany({ where: { storeId: id }, take: CASCADE_FETCH_CAP });
+    if (storePosts.length === CASCADE_FETCH_CAP) {
+      Sentry.captureMessage('admin.deleteStore.storePosts.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { storeId: id, cap: CASCADE_FETCH_CAP } });
+    }
     const postIds = storePosts.map(p => p.id);
 
-    const storeProducts = await prisma.product.findMany({ where: { storeId: id } });
+    const storeProducts = await prisma.product.findMany({ where: { storeId: id }, take: CASCADE_FETCH_CAP });
+    if (storeProducts.length === CASCADE_FETCH_CAP) {
+      Sentry.captureMessage('admin.deleteStore.storeProducts.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { storeId: id, cap: CASCADE_FETCH_CAP } });
+    }
     const productIds = storeProducts.map(p => p.id);
 
     await prisma.$transaction([
@@ -212,7 +238,7 @@ export class AdminService {
         { owner: { name: { contains: search, mode: 'insensitive' } } },
       ];
     }
-    return prisma.store.findMany({
+    const stores = await prisma.store.findMany({
       where,
       select: {
         id: true, storeName: true, category: true, logoUrl: true, address: true, city: true, state: true, postalCode: true, latitude: true, longitude: true, createdAt: true,
@@ -220,7 +246,12 @@ export class AdminService {
         _count: { select: { teamMembers: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: ADMIN_STORE_MEMBERS_LIST_CAP,
     });
+    if (stores.length === ADMIN_STORE_MEMBERS_LIST_CAP) {
+      Sentry.captureMessage('admin.getStoreMembers.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { cap: ADMIN_STORE_MEMBERS_LIST_CAP } });
+    }
+    return stores;
   }
 
   static async getStoreMemberDetails(storeId: string) {
@@ -254,7 +285,11 @@ export class AdminService {
         _count: { select: { teamMembers: true, posts: true, followers: true } },
       },
       orderBy: { createdAt: 'desc' },
+      take: ADMIN_EXPORT_STORES_CAP,
     });
+    if (stores.length === ADMIN_EXPORT_STORES_CAP) {
+      Sentry.captureMessage('admin.exportStores.cap-hit', { level: 'warning', tags: { service: 'admin' }, extra: { cap: ADMIN_EXPORT_STORES_CAP } });
+    }
 
     const rows = stores.map(s => ({
       'Store ID': s.id,

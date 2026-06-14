@@ -1,7 +1,14 @@
+import * as Sentry from "@sentry/node";
 import { prisma } from "../../config/prisma";
 import { notificationQueue } from "../../config/bullmq";
 import { pubClient } from "../../config/redis";
 import { v4 as uuidv4 } from "uuid";
+
+// Session 128.38 — defensive findMany caps.
+// C: feed-build follow-list (used as IN-clause filter — could blow up the SQL
+// IN list and the in-memory Set if uncapped). D: cascade post-id read.
+const FEED_FOLLOWS_CAP = 10_000;
+const STORE_POSTS_CASCADE_CAP = 50_000;
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;
@@ -117,7 +124,14 @@ export class PostService {
     let whereClause: any = { store: storeFilter };
 
     // ── Fetch follows once (needed for filtering AND scoring) ───────────────
-    const follows = await prisma.follow.findMany({ where: { userId }, select: { storeId: true } });
+    // Session 128.38: cap at FEED_FOLLOWS_CAP. Used both as a Set lookup (for
+    // scoring) AND as an IN-clause for the "following" feed query — uncapped,
+    // a 100k-follow user would explode the SQL IN list. 10k is the documented
+    // ceiling; sentinel fires before truncation impacts the feed UX.
+    const follows = await prisma.follow.findMany({ where: { userId }, select: { storeId: true }, take: FEED_FOLLOWS_CAP });
+    if (follows.length === FEED_FOLLOWS_CAP) {
+      Sentry.captureMessage('post.feed.follows.cap-hit', { level: 'warning', tags: { service: 'post' }, extra: { userId, cap: FEED_FOLLOWS_CAP } });
+    }
     const followedStoreIds = new Set(follows.map(f => f.storeId));
 
     if (feedType === 'following') {
@@ -439,7 +453,10 @@ export class PostService {
     const store = await prisma.store.findUnique({ where: { id: storeId } });
     if (!store || store.ownerId !== userId) throw new Error("Unauthorized");
 
-    const posts = await prisma.post.findMany({ where: { storeId }, select: { id: true } });
+    const posts = await prisma.post.findMany({ where: { storeId }, select: { id: true }, take: STORE_POSTS_CASCADE_CAP });
+    if (posts.length === STORE_POSTS_CASCADE_CAP) {
+      Sentry.captureMessage('post.deleteAllStorePosts.cap-hit', { level: 'warning', tags: { service: 'post' }, extra: { storeId, cap: STORE_POSTS_CASCADE_CAP } });
+    }
     const postIds = posts.map(p => p.id);
 
     if (postIds.length > 0) {
