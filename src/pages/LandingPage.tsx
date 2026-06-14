@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { FIcon, FLogo } from '../components/futuristic';
 import { LegalLinks } from '../components/legal/LegalLinks';
+import { PageMeta } from '../components/PageMeta';
 
 /* ── Futuristic v2 skin · Phase 9 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. The landing CMS wiring
@@ -288,6 +289,12 @@ export default function LandingPage() {
   const goodItems: string[] = Array.isArray(d.problem?.goodCol?.items) ? d.problem.goodCol.items : DEFAULT.problem.goodCol.items;
 
   return (
+    <>
+    <PageMeta
+      title="Local Market Discovery in India"
+      description="Dukanchi connects you with local shops in your area. Browse, chat, and buy from neighbourhood retailers. Apki local market ab aapke phone par."
+      canonical="https://dukanchi.com/landing"
+    />
     <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', color: 'var(--f-text-1)', fontFamily: 'var(--f-font)', overflowX: 'hidden' }}>
       {/* Aurora wash */}
       <div style={{ position: 'fixed', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none', zIndex: 0 }} />
@@ -543,5 +550,6 @@ export default function LandingPage() {
         </footer>
       </div>
     </div>
+    </>
   );
 }

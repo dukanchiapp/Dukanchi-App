@@ -7,6 +7,7 @@ import { captureEvent } from '../lib/posthog';
 import { Eye, EyeOff } from 'lucide-react';
 import { FIcon, FLogo } from '../components/futuristic';
 import { ConsentCheckbox } from '../components/legal/ConsentCheckbox';
+import { PageMeta } from '../components/PageMeta';
 
 const inputStyle: CSSProperties = {
   width: '100%', padding: '12px 14px 12px 42px', fontSize: 13,
@@ -150,6 +151,12 @@ export default function LoginPage() {
   };
 
   return (
+    <>
+    <PageMeta
+      title="Log in"
+      description="Log in to your Dukanchi account to discover local stores, chat with retailers, and track orders."
+      canonical="https://dukanchi.com/login"
+    />
     <div
       className="f-bg-aurora"
       style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}
@@ -390,5 +397,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

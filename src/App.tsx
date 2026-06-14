@@ -26,6 +26,7 @@ const LegalTermsPage = lazy(() => import('./pages/legal/TermsPage'));
 const LegalAccountDeletionPage = lazy(() => import('./pages/legal/AccountDeletionPage'));
 const LegalGrievancePage = lazy(() => import('./pages/legal/GrievancePage'));
 const LegalCookiesPage = lazy(() => import('./pages/legal/CookiesPage'));
+import { HelmetProvider } from 'react-helmet-async';
 import { NotificationProvider } from './context/NotificationContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -263,6 +264,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <HelmetProvider>
     <Router>
       <AuthProvider>
         <ToastProvider>
@@ -309,6 +311,7 @@ export default function App() {
         </ToastProvider>
       </AuthProvider>
     </Router>
+    </HelmetProvider>
     </ErrorBoundary>
   );
 }

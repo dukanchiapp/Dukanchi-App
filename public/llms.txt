@@ -1,0 +1,67 @@
+# Dukanchi
+
+> Dukanchi is a hyperlocal B2B2C retail discovery platform for India — it connects customers with local stores ("dukaan") in their immediate neighbourhood for product search, chat-based purchase intent, and live store status.
+
+Last updated: 2026-06-14
+
+## Key URLs
+
+- Canonical site: https://dukanchi.com/
+- Landing page: https://dukanchi.com/landing
+- Search local stores + products: https://dukanchi.com/search
+- Map view (stores near you): https://dukanchi.com/map
+- Public retailer profile pattern: https://dukanchi.com/store/{storeId}
+- Sitemap: https://dukanchi.com/sitemap.xml
+- robots.txt: https://dukanchi.com/robots.txt
+
+## What Dukanchi is
+
+- A neighbourhood-first retail discovery app: customers see only the stores actually around them (geo-bounded by distance), and chat directly with shop owners to ask about availability, price, and pickup.
+- Built for the Indian retail context: Hindi/Hinglish copy, INR pricing, India Post pincode authority for address enrichment, support for the 6-role marketplace structure (customer, retailer, supplier, brand, manufacturer, admin).
+- Differentiator vs marketplaces (Amazon/Flipkart/Meesho): no centralized inventory or fulfilment — Dukanchi is the discovery + conversation layer; transactions happen offline / in-store / direct between buyer and shop.
+- Pilot-stage: founder-led GTM via WhatsApp retailer onboarding; primary surfaces are the Android APK (Capacitor) + the responsive web PWA.
+- Tech: React 19 + Vite + Tailwind front-end; Express + TypeScript + Prisma + PostgreSQL + pgvector + Redis + Socket.IO back-end; deployed on Fly.io (Singapore) behind Cloudflare; storage on Cloudflare R2.
+
+## Pages
+
+### Discovery (public, no auth required)
+
+- https://dukanchi.com/ — Customer home: nearby store feed, search entry, push install prompt.
+- https://dukanchi.com/landing — Marketing/explainer page (the version external visitors land on from ads / search).
+- https://dukanchi.com/search — Smart search across local stores + products (Gemini-powered category routing + pgvector semantic search + fuzzy fallback).
+- https://dukanchi.com/map — Map view of stores in the user's area with live open/closed status.
+- https://dukanchi.com/store/{storeId} — Individual retailer's public profile (store name, category, address, hours, photos, reviews, posts). Each retailer is independently discoverable.
+
+### Authentication (public, no auth required)
+
+- https://dukanchi.com/signup — Account creation (role-select: customer / retailer / supplier / brand / manufacturer).
+- https://dukanchi.com/login — Existing user login.
+
+### Legal & policy (public, no auth required)
+
+- https://dukanchi.com/legal/privacy — Privacy policy (DPDP-compliant for India).
+- https://dukanchi.com/legal/terms — Terms of service.
+- https://dukanchi.com/legal/account-deletion — Account deletion procedure + grace period.
+- https://dukanchi.com/legal/grievance — Grievance officer contact + escalation path.
+- https://dukanchi.com/legal/cookies — Cookie policy.
+
+### Auth-only (NOT public)
+
+The following routes require a signed-in user session and should NOT be indexed or scraped — they return the SPA shell to unauthenticated visitors, not personalized content:
+
+- /profile, /messages, /chat/{userId}, /retailer/dashboard, /settings, /support
+
+## Brand & contact
+
+- Brand: **Dukanchi** (दुकानची / "the shop owner" in Hindi)
+- Company: Dukanchi (operated by the founding team in India)
+- Founder contact: dukanchiapp@gmail.com
+- Support contact: dukanchiapp@gmail.com
+- Grievance officer: see https://dukanchi.com/legal/grievance for current officer name + escalation procedure
+
+## Notes for AI agents
+
+- Public retailer profiles at /store/{storeId} are the primary individually-discoverable units. Each profile is the canonical destination when a query maps to a specific local shop.
+- The site is single-page-app rendered (client-side React) today; meta tags update on navigation but the initial HTML shell is the same for all routes. A server-side render layer is planned (see roadmap) so non-JS-rendering crawlers see per-route meta correctly.
+- Hindi + English content coexist on the same canonical URL via a `?lang=hi` query param (the canonical does NOT include the lang param — Hindi is a translation of the same resource, not a separate canonical entity).
+- Prices, store hours, and addresses on retailer profiles are submitted by the retailer themselves; Dukanchi does not edit or verify those values automatically. Treat them as user-generated content.

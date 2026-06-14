@@ -4,7 +4,7 @@
 //    localhost:3000/*  |  localhost:5173/*  |  192.168.1.*/*  |  *.ngrok-free.dev/*  |  *.ngrok.io/*
 // OR: Set restriction to "None" for development (re-restrict before production)
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { usePageMeta } from '../hooks/usePageMeta';
+import { PageMeta } from '../components/PageMeta';
 import { apiFetch } from '../lib/api';
 import { GoogleMap as GoogleMapComponent, useJsApiLoader, Marker as MarkerComponent } from '@react-google-maps/api';
 import { Link } from 'react-router-dom';
@@ -53,7 +53,6 @@ const fabStyle = {
 } as const;
 
 export default function MapPage() {
-  usePageMeta({ title: 'Map' });
   const [stores, setStores] = useState<any[]>([]);
   const [storesLoading, setStoresLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<any>(null);
@@ -212,6 +211,12 @@ export default function MapPage() {
   
 
   return (
+    <>
+    <PageMeta
+      title="Stores Near You — Map View"
+      description="Explore local stores around you on the map. Live open/closed status, distance, and directions to neighbourhood shops."
+      canonical="https://dukanchi.com/map"
+    />
     <div
       style={{
         height: '100dvh', // Fixed viewport height
@@ -730,5 +735,6 @@ export default function MapPage() {
 
       </div>
     </div>
+    </>
   );
 }

@@ -11,6 +11,7 @@ import { loadDoc, type LegalSlug } from '../../lib/legal/loadDoc';
 import { MarkdownRenderer, slugifyHeading } from './MarkdownRenderer';
 import { LanguageToggle } from './LanguageToggle';
 import { FIcon } from '../futuristic';
+import { PageMeta } from '../PageMeta';
 
 interface LegalLayoutProps {
   slug: LegalSlug;
@@ -120,42 +121,17 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
     return () => { cancelled = true; };
   }, [slug, lang, reloadKey]);
 
-  // Keep the browser tab title in sync.
-  useEffect(() => {
-    const prev = document.title;
-    document.title = `${title} — Dukanchi`;
-    return () => { document.title = prev; };
-  }, [title]);
-
-  // Keep <html lang> in sync with the chosen language, AND set self-canonical
-  // + og:url for the active /legal/* page (Session 128.23 — SEO Part 2).
-  // index.html ships with a hardcoded canonical → "https://dukanchi.com/", so
-  // without this every legal page told Google "I'm a duplicate of /". On
-  // mount we point canonical + og:url at /legal/{slug}; on unmount we restore
-  // both, plus the previous html lang. ?lang=hi is intentionally NOT in the
-  // canonical — Hindi is a translation of the same legal document, not a
-  // separate canonical resource.
-  //
-  // Folded into the existing html-lang effect (vs a separate canonical
-  // effect) so we don't add new uncovered callbacks to a 0%-coverage file —
-  // keeps the global function-coverage baseline above the 8% CI floor.
+  // Session 128.39 — title + canonical + og:url moved to declarative <PageMeta>
+  // below (rendered inline at the start of the JSX). Helmet manages the DOM
+  // mutations + restores on unmount automatically. We still keep ONE effect
+  // for html lang because Helmet doesn't manage <html lang>. The em-dash
+  // suffix is preserved exactly via `appendBrand={false}` on PageMeta.
   useEffect(() => {
     const root = document.documentElement;
     const prevLang = root.lang;
     root.lang = lang;
-    const canonicalUrl = `https://dukanchi.com/legal/${slug}`;
-    const canonicalEl = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
-    const ogUrlEl = document.querySelector<HTMLMetaElement>('meta[property="og:url"]');
-    const prevCanonical = canonicalEl?.getAttribute('href') ?? null;
-    const prevOgUrl = ogUrlEl?.getAttribute('content') ?? null;
-    if (canonicalEl) canonicalEl.setAttribute('href', canonicalUrl);
-    if (ogUrlEl) ogUrlEl.setAttribute('content', canonicalUrl);
-    return () => {
-      root.lang = prevLang;
-      if (canonicalEl && prevCanonical !== null) canonicalEl.setAttribute('href', prevCanonical);
-      if (ogUrlEl && prevOgUrl !== null) ogUrlEl.setAttribute('content', prevOgUrl);
-    };
-  }, [slug, lang]);
+    return () => { root.lang = prevLang; };
+  }, [lang]);
 
   const toc = useMemo(() => (status === 'loaded' ? extractToc(content) : []), [content, status]);
   const retry = () => setReloadKey(k => k + 1);
@@ -182,6 +158,14 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
   );
 
   return (
+    <>
+    <PageMeta
+      title={`${title} — Dukanchi`}
+      description={`${titleEn} for Dukanchi — local market discovery app for India. Read the latest version of this document in English or हिन्दी.`}
+      canonical={`https://dukanchi.com/legal/${slug}`}
+      type="article"
+      appendBrand={false}
+    />
     <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 88, fontFamily: 'var(--f-font)' }}>
       <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
 
@@ -281,5 +265,6 @@ export function LegalLayout({ slug, titleEn, titleHi }: LegalLayoutProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
