@@ -1,5 +1,176 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.38 — Scale lockdown: safeFetch helper + findMany caps: LIVE on Fly v108
+
+**Goal:** External HTTP timeout discipline + light retry, and a defensive `findMany` cap pass across all 64 callsites. Pattern: failOpen / SC1 — centralise the bounded-IO contract, observe the threshold, never silently drop. Scope locked at **Path C** after upfront recon found the task's "no timeout, no AbortController" claim was wrong for 6 of 7 listed sites + the geminiVision SDK call also uses `config.abortSignal`. Path C = build the `safeFetch` helper for future migration, close the 1 confirmed gap (ask-nearby Gemini), and do the full findMany audit.
+
+**Status:** ✅ ALL GATES GREEN. **Fly v107 → v108 live.** safeFetch in place, ask-nearby Gemini bounded at 5s, 17 findMany sites capped (11 C + 6 D), tests 232 → 241.
+
+| Metric | Value |
+|---|---|
+| PR | [#190](https://github.com/dukanchiapp/Dukanchi-App/pull/190) (merged `2ac7c4c`) |
+| Files | 10 changed: `src/lib/safeFetch.ts` (new, 184), `src/__tests__/safeFetch.test.ts` (new, 152), `src/__tests__/scale-lockdown.test.ts` (new, 160), `tsconfig.server.json` (+1 include line), 6 service files patched |
+| Tests | 232 → **241** (+9: 6 safeFetch + 3 scale-lockdown) |
+| Fly | **v107 → v108** complete (machine `9080d70da60d18` sin, 1/1 health passing) |
+| Rule A | backend route count **80 = 80**; apiFetch **70 = 70** (zero changes) |
+
+### Phase 0 — Recon → Path C (mirror of session 128.34's Path-A decision)
+
+Task RECON listed 7 "no timeout, no AbortController" external HTTP callsites. Ground truth from reading each one:
+
+| # | Site | Claimed | Actual |
+|---|---|---|---|
+| 1 | geminiEmbeddings.ts:18 | no timeout | `AbortSignal.timeout(30_000)` + 3-retry loop |
+| 2 | search.service.ts:164 | no timeout | `AbortSignal.timeout(30_000)` |
+| 3 | ask-nearby.service.ts:92 | no timeout | **NO timeout — the only real gap** |
+| 4 | bulkImport.service.ts:150 | no timeout | `AbortSignal.timeout(30_000)` |
+| 5–7 | store.controller.ts:144/207/231 | no timeout | `AbortSignal.timeout(5_000)` ×3 |
+| 8 | geminiVision.ts ×4 SDK calls | "wrap-deadline needed" | `config: { abortSignal: AbortSignal.timeout(...) }` already wired |
+
+User chose **Path C: Hybrid** — build the helper, wire only the real gap (ask-nearby), full findMany audit, defer the 5 already-bounded callsites' migration to a follow-up.
+
+### Phase 1 — `src/lib/safeFetch.ts` (+184)
+
+```ts
+export async function safeFetch(url, init, opts): Promise<Response | SafeFetchError>
+export class DeadlineExceededError extends Error
+export async function withDeadline<T>(promise, ms, label): Promise<T>
+```
+
+- Per-attempt `AbortController` + setTimeout deadline (default 5000ms)
+- Retry with exponential backoff `[300, 900]ms` on 5xx + 429; **never** on 4xx (caller error → silent, no Sentry pollution)
+- On terminal failure: `logger.warn` + `Sentry.captureMessage('safeFetch.<label>.<reason>')`
+- Returns `Response` on success (caller does `.json()`); returns discriminated `{ ok:false, reason:'timeout'|'network'|'http', label, attempts, status? }` on failure
+- Merges caller's `signal` with internal AbortController (cancellation chain)
+- `withDeadline` companion: `Promise.race` against a `DeadlineExceededError`; SDK callers (e.g. @google/genai) can `instanceof`-check + fall back
+
+### Phase 2 — Wired the one real gap
+
+`src/modules/ask-nearby/ask-nearby.service.ts:92` (the AI Category Routing branch when direct product match returns empty):
+
+```ts
+const geminiRes = await safeFetch(url, init, {
+  label: 'gemini.ask-nearby', timeoutMs: 5_000, retries: 0,
+});
+if (!('reason' in geminiRes) && geminiRes.ok) { /* parse + use */ }
+else if ('reason' in geminiRes) { logger.warn({...}, '[ASK_NEARBY] AI Category recognition skipped (safeFetch terminal)'); }
+```
+
+Existing fallback path (return "no matching store") is preserved verbatim — the only change is that we now **fail fast** at 5s instead of waiting up to Gemini's own SDK timeout (~30s+) under upstream stall.
+
+### Phase 3 — findMany audit table (64 calls / 14 files)
+
+| Cat | Count | Description | Action |
+|---|---|---|---|
+| **A** | 13 | already paginated `skip+take`, zod-gated | untouched |
+| **B** | 28 | bounded by query semantics or hard-capped (`take:50`/`200`/`500`/`limit*10`/etc.) | untouched |
+| **C** | 11 | UNBOUNDED, growable, user-facing | **cap + Sentry sentinel** |
+| **D** | 6 | cascade reads — must be ~complete for FK cleanup | **CASCADE_FETCH_CAP=50k + sentinel** |
+
+**C-category caps (11 sites):**
+
+| File:line | Op | Cap | Why |
+|---|---|---|---|
+| user.service.ts:48 | followed stores list | 5000 | typical user follows <100; 50× safety margin |
+| user.service.ts:61 | saved items | 5000 | heavy users may have thousands |
+| user.service.ts:88 | user's reviews | 5000 | small typical N, defensive cap |
+| user.service.ts:107 | saved locations | 1000 | tiny set, defensive |
+| team.service.ts:12 | team members per store | 1000 | <20 typical; chain accounts cap at 1k |
+| ask-nearby.service.ts:56 | geo bbox stores | 2000 | downstream slices to 15 anyway |
+| seo.routes.ts:18 | sitemap stores | 50000 | Google per-file limit; sentinel = time to add sitemap-index |
+| seo.routes.ts:25 | sitemap products | 50000 | same |
+| admin.service.ts:215 | getStoreMembers | 10000 | admin endpoint, generous |
+| admin.service.ts:250 | exportStores (XLSX) | 50000 | export operation; sentinel + retry idiom for >50k |
+| post.service.ts:120 | feed follows IN-clause | 10000 | uncapped IN-list would blow up SQL |
+
+**D-category cascades (6 sites, all share `CASCADE_FETCH_CAP = 50_000`):**
+
+| File:line | Op | Notes |
+|---|---|---|
+| admin.service.ts:140 | userStores (deleteUser) | per-user store count |
+| admin.service.ts:142 | storePosts (deleteUser cascade, per-store) | |
+| admin.service.ts:145 | storeProducts (deleteUser cascade, per-store) | |
+| admin.service.ts:188 | storePosts (deleteStore) | |
+| admin.service.ts:191 | storeProducts (deleteStore) | |
+| post.service.ts:442 | posts (deleteAllStorePosts) | |
+
+If a cascade hits the cap, the operation completes for the first 50k rows + Sentry alerts ops; the cleanup script is idempotent (`deleteMany({ where: { storeId } })`), so re-running the operation cleans the rest. No silent partial-delete.
+
+### Phase 4 — Tests (+9)
+
+`src/__tests__/safeFetch.test.ts` ×6:
+- Happy 200: returns Response, no Sentry, no warn
+- Timeout: returns `{ok:false, reason:'timeout', attempts:1}` + Sentry breadcrumb + logger.warn; wall-clock within 40–500ms envelope of the 50ms deadline
+- 5xx retry: 3 attempts total (1 + 2 retries) with `[5,10]ms` backoff overrides → final error union with `status:503, attempts:3` + Sentry
+- 4xx no-retry: terminal on first attempt, **no Sentry** (caller error, not infra)
+- `withDeadline` happy: returns the underlying value before deadline
+- `withDeadline` fail: throws `DeadlineExceededError` after `ms`, Sentry breadcrumb emitted
+
+`src/__tests__/scale-lockdown.test.ts` ×3:
+- ask-nearby Gemini timeout → service returns `{found:0, message:"..."}` (no 500, no throw)
+- findMany cap regression: `getFollowedStores` mock returns exactly 5000 rows → Prisma called with `take:5000` + Sentry sentinel fires
+- findMany cap silent below threshold: mock returns 1 row → `take:5000` still passed, Sentry NOT called
+
+### Phase 5 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **241 passed / 241** (was 232; +9) |
+| `npm run typecheck` | all 3 projects clean (frontend / server / worker) per Rule G |
+| `npm run build` | ✓ built in 555ms; PWA precache 81 entries |
+| Rule A — backend route count | `grep -rE 'router\.(get\|post\|put\|patch\|delete)' src/modules \| wc -l` = **80** on both `main` and this branch (zero changes) |
+| Rule A — apiFetch count | **70 = 70** (zero frontend changes) |
+
+CI on PR #190: blocking `Typecheck + Test + Build` ✅ PASS (1m36s); informational `Bundle Size Report` ❌ (pre-existing `preactjs/compressed-size-action@v3` `build-script: build` misconfig — same fail on every recent PR; non-blocking by name).
+
+**Note (Rule G):** initial typecheck failed because `tsconfig.server.json` has an explicit include list and the new `src/lib/safeFetch.ts` wasn't in it. Added one line: `"src/lib/safeFetch.ts"`. Without `npm run typecheck` this would have shipped silently (the root `tsc --noEmit` is permissive — see Rule G's origin in session 92.1).
+
+### Phase 6 — Deploy + Rule E smoke
+
+`flyctl deploy -a dukanchi-app` → image `deployment-01KV2RKQGB5RGSGNYNFM7N7H6X`, rolling update on machine `9080d70da60d18` (sin), 1/1 health passing.
+
+After 90s sleep:
+
+1. **`/health`** (the real route is `/health`, NOT `/api/health` — `src/app.ts:273` registers it at the root): `HTTP/2 200 application/json` body `{"status":"ok","db":"up","redis":"up","timestamp":...}`. ✅
+2. **Search wall-clock:** `GET /api/search?q=milk` (unauth) → 401 in **0.25s** wall-clock — auth-rejected path is snappy. (Authed search path's timeout discipline is unchanged today; will be in scope when the 5 deferred callsites migrate to safeFetch.)
+3. **Login double-count carryover (#187):** 25× `POST /api/auth/login` → `20×401 then 5×429` (canonical pattern from session 128.36; auth limiter active, generalLimiter still skipping `/auth/*`). ✅
+4. **Log grep:** `flyctl logs --no-tail | grep -iE 'timeout|aborted|safefetch|ERR_ERL_DOUBLE_COUNT'` → **0 hits** in the 200-line tail. No new timeout events fired during the smoke window, and the double-count cleanup from #187 still holds. ✅
+
+**False-alarm during smoke:** initially curled `https://dukanchi.com/api/health` and got `200 text/html` — looked like a regression. Investigation: the real route is `/health` (not `/api/health`), so the `/api/health` URL was matching the Express SPA-fallback route and serving the React app's index.html. Prior session logs ("HTTP 200 `{status:ok, db:up}`") were imprecise — the actual path was always `/health`. Confirmed by reading `src/app.ts:273`. No bug. Worth fixing the prior logs / future smoke scripts to use `/health` exactly.
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): backend routes 80 = 80; apiFetch 70 = 70. ✅
+- **Rule B** (no silent catches): the one new catch in ask-nearby logs `[ASK_NEARBY] AI Category recognition skipped (safeFetch terminal)` with structured context before falling through. The safeFetch helper itself never silently drops — every terminal failure has a Sentry breadcrumb + a `logger.warn`. ✅
+- **Rule C** (Capacitor): N/A — no capacitor.config.ts touched. ✅
+- **Rule D** (native smoke): N/A — no `src/lib/api.ts` / `AuthContext` / Socket.IO / `isNative()` changes. ✅
+- **Rule E** (post-deploy smoke): 4/4 ✅ (above).
+- **Rule F** (DB isolation): N/A — no local DB writes; tests use mocked Prisma. ✅
+- **Rule G** (typecheck): `npm run typecheck` — and it **caught a real strict-config error** that `npx tsc --noEmit` alone would have missed (the missing tsconfig.server.json include for `src/lib/safeFetch.ts`). ✅
+
+### Deviations & assumptions
+
+- **RECON-vs-truth mismatch surfaced upfront** (sessions 128.34, 128.37 precedent); STOPPED, asked, user picked Path C. The 5 already-bounded fetch callsites and the 4 already-bounded vision SDK calls are left untouched today — their existing AbortSignal-based timeouts work; migrating them to safeFetch is mechanical follow-up and would be a no-op behaviorally.
+- **"Search wall-clock < 6s"** Rule-E gate from the task spec was effectively a no-op test in Path C: search.service still uses its own `AbortSignal.timeout(30_000)`, not safeFetch — and the smoke was unauthed (401 in 0.25s). To exercise the search timeout, a future session needs an authed JWT + a way to simulate Gemini latency on the prod path.
+- **No fallback-path ambiguities** found during wiring — ask-nearby's existing try/catch + "no matching store" branch is preserved verbatim; the safeFetch error union just feeds the same logical branch.
+
+### Open follow-ups (carried)
+
+- **safeFetch migration of the 5 already-bounded callsites** — mechanical, deferrable. Drops the heterogeneous 30s/5s timeouts in favor of one consistent contract + retry policy.
+- **CSP `reportOnly: false` flip** — next session after 24-48h post-v106 Sentry clean (the v106→v107→v108 window is the active monitoring period).
+- Gate-10 on-device mass-assignment smoke (#185 follow-up) — founder action.
+- Track B Android signed APK + smoke (#128.32) — founder action.
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#190](https://github.com/dukanchiapp/Dukanchi-App/pull/190) merged (`2ac7c4c`); safeFetch helper + withDeadline in `src/lib/safeFetch.ts` with 6 unit tests; ask-nearby Gemini wired with 5s deadline + structured fallback log; 17 findMany sites capped (11 C-category user-facing caps + 6 D-category cascade caps, all with Sentry cap-hit sentinels); 3 integration tests covering ask-nearby degrade + cap regression; tests 232 → **241**, typecheck/build/Rule-A all green; **Fly v107 → v108 live, smokes green**.
+- **Decisions:** Path C locked after upfront recon (6/7 listed fetches + 4 SDK calls already had AbortSignal-based timeouts; only ask-nearby was a real gap). Default safeFetch timeout 5s; retry only on 5xx/429; never on 4xx; Sentry breadcrumb on terminal failure only (4xx is caller error, not infra). Cascade fetches share one `CASCADE_FETCH_CAP = 50_000`. User-facing caps generously sized (1k–50k) so 99.9%+ of users see no truncation; sentinel signals when growth crosses the threshold.
+- **Deviations/surprises:** task spec listed 7 "no timeout" callsites; 6 already had `AbortSignal.timeout(...)`. Prior session logs referenced `/api/health` (the SPA-fallback path) when they meant `/health` (the real route at `app.ts:273`). Bundle-size CI check still fails on every PR due to pre-existing `preactjs/compressed-size-action@v3` misconfig — informational by name, non-blocking.
+- **Phase E queue impact:** scale-lockdown skeleton is in place; bounded-HTTP contract is centralised; findMany growth is observable. Next phase work can lean on this: migrating the 5 deferred callsites, adding pg_trgm for fuzzy search, or moving to the CSP enforce flip (after Sentry-clean window).
+- **Pending approval:** none — session fully landed.
+
+---
+
 ## 2026-06-14 — Session 128.37 — Admin module input validation: LIVE on Fly v107 (B1 27-route follow-up)
 
 **Goal:** Mirror PR #185 (B1 input validation) for the admin module — the 27-route follow-up Claude Code itself flagged when deferring admin from #185. Same Path-A pattern: central `validators/schemas.ts` + route-level `validate/validateQuery/validateParams`, default-strip (no `.passthrough()`), reuse `idParamSchema`/`paginationQuerySchema`/`uuidLike`/`roleSchema`. Mass-assignment-prone routes (PUT /users/:id, POST /users/bulk-update, PUT /complaints/:id, PUT /kyc/:id, PUT /settings, POST /reset-password) get strict allowlists. **Hardening only — zero functional regression for the live admin-panel client.**
