@@ -1,5 +1,113 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.42 — Phase 4.1 coverage push: auth.service + account.service to 100% lines (test-only)
+
+**Goal:** Direct service-level spec coverage for the two most business-critical untested services. `auth.service.ts` had only HTTP-level integration coverage (auth.integration.test.ts + auth.refresh.test.ts + signup-consent.test.ts); the service-level edges (3-case dup-phone branch, opaque-error parity, User-vs-TeamMember precedence, deprecated `issueTokenForUser` carve-out) were uncovered. `account.service.ts` had ZERO prior tests despite being DPDP-compliance critical. **Test-only PR. Zero source changes. No deploy.**
+
+**Status:** ✅ Both services at **100% line coverage**. NO bugs found — all spec assertions passed.
+
+| Metric | Value |
+|---|---|
+| PR | [#199](https://github.com/dukanchiapp/Dukanchi-App/pull/199) merged `c12f891` |
+| Files | 2 new tests: `src/__tests__/auth.service.test.ts` (+20 tests, +363 lines), `src/__tests__/account.service.test.ts` (+11 tests, +213 lines) |
+| Tests | 295 → **326** (+31) |
+| Coverage | `auth.service.ts`: 100% lines (70/70) — Stmts 98.73% / Branch 97.36% / Funcs 100%. `account.service.ts`: 100% lines (19/19) — was 0% with ZERO prior tests |
+| Rule A | N/A — test-only, no URL change |
+| Rule E | N/A — no deploy this session |
+
+### Phase 0 — RECON (spec surface captured in PR description)
+
+Read both services end-to-end. Mapped every public method's reads/writes/error paths/security edges. Surfaced inline before writing tests so the spec being encoded was visible — and corrected one task assumption: existing HTTP integration tests (auth.integration / auth.refresh / signup-consent) already cover login happy/wrong-pw/blocked/deleted-pending/refresh-rotation/DPDP-consent. The GAP this session fills is direct service-level coverage of the edges those HTTP tests don't reach: `checkPhone` (0 prior), the 3-case dup-phone branch in `signup` (the D1 30-day grace policy), opaque-error parity proofs at the service layer, User-vs-TeamMember precedence, and the deprecated `issueTokenForUser` carve-out.
+
+### Phase 1 — `auth.service.ts` spec tests (+20)
+
+- **`checkPhone` (3 tests)**: User-table-wins short-circuit (teamMember.findUnique not called when User row exists); TeamMember fallback when no User match; neither-table → false.
+- **`signup` dup-phone 3-case branch (3 tests, D1 30-day grace policy)**:
+  - (a) Active duplicate → throws `"This phone number already exists"`; no transaction attempted.
+  - (b) Deleted-in-grace duplicate → throws `UnavailableUserError("deleted_pending")`. **The security-critical path** — without this branch, a user whose phone is in the 30-day grace window could silently create a new account and orphan their old data.
+  - (c) Past-grace duplicate → throws opaque `"This phone number already exists"`. Compat for the TODO hard-delete-worker (documented at auth.service.ts:139-141); when the worker ships, this branch becomes unreachable.
+- **`signup` happy path (2 tests)**: bcrypt called with `env.BCRYPT_ROUNDS` (4 in test env); return shape strips `password`, includes `accessToken` + `refreshToken`.
+- **`login` security (4 tests)** — the opaque-error parity proof:
+  - Unknown phone → `"Invalid credentials"`.
+  - Known phone + wrong password → `"Invalid credentials"` (SAME string — no error-string leak that could distinguish unknown-phone from wrong-password).
+  - **SECURITY ASSERTION**: blocked user + WRONG password → `"Invalid credentials"`, NOT `UnavailableUserError`. This proves the wrong-password branch fires BEFORE the availability check, so an attacker cannot probe block status by submitting wrong passwords.
+  - Blocked user + CORRECT password → `UnavailableUserError("blocked")` (the legitimate path after passing the password check).
+- **`login` User-vs-TeamMember precedence (1 test)**: when phone is in BOTH tables, User wins and `teamMember.findUnique` is NEVER consulted. This is the documented hijack-prevention contract (auth.service.ts:196-198).
+- **`login` TeamMember path (2 tests)**: valid team-member creds → impersonation token (`userId = ownerId`, `teamMemberId` carried in the refresh-token payload); blocked store owner gates the team-member session (`UnavailableUserError("blocked")`).
+- **`issueTokenForUser` deprecated path (5 tests)**: null for missing user; null for blocked; null for deleted_pending without carve-out; happy path; deleted_pending WITH `acceptDeletedPending:true` → token issued (the /restore + /refresh carve-out).
+
+### Phase 2 — `account.service.ts` spec tests (+11)
+
+**Zero prior tests for this DPDP-critical service.** Both public methods covered to 100%:
+
+- **`requestDeletion` (6 tests)**:
+  - Timestamps: `deletionRequestedAt = NOW`, `deletedAt = NOW + 30 days` (exact 30-day delta asserted within a 100ms tolerance).
+  - Reason passed through (no service-level truncation; DB-level VARCHAR(500) cap is the boundary).
+  - Null reason when no argument provided.
+  - **DPDP atomicity**: `fcmToken.deleteMany` + `pushSubscription.deleteMany` + `user.update` all run INSIDE a single `$transaction()` call (tx-internal call captures asserted).
+  - `invalidateUserStatusCache(userId)` called AFTER the transaction commits — so the auth middleware doesn't allow a deleted user through for up to 60s.
+  - **SECURITY**: throws `"Soft-delete write did not persist timestamps"` if the tx returns null timestamps, AND does NOT call `invalidateUserStatusCache` on that error path (so the auth middleware can't be tricked into treating a half-baked delete as a real one).
+- **`restore` (5 tests)** — the discriminated-union contract:
+  - Vanished user (findUnique → null) → returns `null`; no update, no cache invalidate.
+  - User with `deletionRequestedAt = null` (never requested deletion) → `{id, alreadyActive: true}`; no update, no cache invalidate.
+  - User with `deletedAt` in the past (grace closed) → `{id, expired: true}`; no update, no cache invalidate.
+  - Happy path (in-grace user) → `user.update({deletedAt: null, deletionRequestedAt: null, deletionReason: null})` (all 3 fields cleared atomically) + `invalidateUserStatusCache(userId)` + returns `{id, restored: true}`.
+  - **Boundary**: `deletedAt` EXACTLY at the cutoff (Date.now() - 1) → expired (strict `<= Date.now()` comparison per account.service.ts:81).
+
+### Phase 3 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **326 passed / 326** (was 295; +31) |
+| `npm run typecheck` | 3 projects clean |
+| Coverage on target files | `auth.service.ts`: 100% lines (70/70); `account.service.ts`: 100% lines (19/19) |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+**All existing test suites green** (no pre-existing test regressed): role-isolation (58), input-validation, admin-validation, safeFetch, scale-lockdown, PageMeta, llms-txt, bot-detect, bot-render, csp-enforce, auth.integration, auth.refresh, signup-consent.
+
+CI on #199: blocking `Typecheck + Test + Build` ✅ PASS (1m41s); informational `Bundle Size Report` ❌ (pre-existing action misconfig, non-blocking).
+
+### Bugs found: NONE
+
+The philosophy held: tests encode the INTENDED SPEC, if a spec test fails → STOP, report it as POTENTIAL BUG FOUND, do NOT weaken. **Every spec assertion passed.** One test-only fix mid-development: in the dup-phone branch (b) test, `mockResolvedValueOnce` was being consumed twice across redundant expectation styles (`.rejects.toBeInstanceOf(...)` + a follow-up `try { await service }`). The fix was test-side only: consolidate to one call with try/catch capturing the error, then assert both instanceof + reason on the captured error. The service behavior was correct throughout.
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): N/A — test-only. ✅
+- **Rule B** (no silent catches): no new `.catch(() => {})`; test catches capture the error for assertions. ✅
+- **Rule C** (Capacitor): N/A. ✅
+- **Rule D** (native smoke): N/A. ✅
+- **Rule E** (post-deploy smoke): N/A — no deploy this session. ✅
+- **Rule F** (DB isolation): N/A — all Prisma calls mocked at module boundary. ✅
+- **Rule G** (typecheck): `npm run typecheck` all 3 projects clean. ✅
+
+### Deviations & assumptions
+
+- The task spec referenced "password reset" as a possible auth.service method to cover — it doesn't exist in `auth.service.ts`. There's no password-reset flow in the codebase today (only admin-driven password reset via `AdminService.resetPassword`). Not a deviation; just spec drift in the task prompt. The actual `auth.service.ts` methods (signup/login/checkPhone/issueTokenForUser) are all fully covered.
+- The task spec asked for "refresh token rotation" coverage — that's exhaustively covered by the existing `auth.refresh.test.ts` (T1-T6) at the HTTP integration layer, not by `auth.service.ts` directly (`generateRefreshToken` + rotation live in `src/services/refreshToken.service.ts`). Direct service-level rotation testing was therefore out-of-scope for this file.
+
+### Awaiting
+
+Nothing new. Carried follow-ups from prior sessions remain:
+1. 24h founder Sentry watch on NODE-EXPRESS-4 post-CSP-flip (Session 128.41).
+2. WebP store-image count audit in prod (Session 128.40 — informational).
+3. SSR migration if real users should get pre-rendered meta (lower priority since bot-render handles WhatsApp/Slack, client Helmet handles Googlebot).
+4. `usePageMeta` migration on Profile + Messages to PageMeta (low-priority, auth-only).
+5. safeFetch migration of the 5 already-bounded callsites (Session 128.38 follow-up).
+6. Gate-10 on-device mass-assignment smoke (#185 — founder action).
+7. Track B Android signed APK + smoke (#128.32 — founder action).
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#199](https://github.com/dukanchiapp/Dukanchi-App/pull/199) merged (`c12f891`); 2 new test files (+31 tests covering 100% lines on both `auth.service.ts` and `account.service.ts`); tests 295 → **326**; typecheck/build clean; no source changes (test-only); all pre-existing 295 tests still green.
+- **Decisions:** Encoded INTENDED spec, not implementation. The opaque-error parity proof at login (3 separate assertions establishing that unknown-phone, wrong-password, and wrong-password-against-blocked-user ALL return the same `"Invalid credentials"` string) is the security marquee result — it's the proof that auth.service cannot be used as an account-status oracle. DPDP atomicity assertion on `requestDeletion` (fcmToken + pushSub + user.update inside one `$transaction`) is the compliance marquee result.
+- **Deviations/surprises:** Task spec mentioned "password reset" + "refresh token rotation" as auth.service methods to cover — password reset is admin-only (covered in admin tests, not auth.service); refresh rotation lives in refreshToken.service.ts and is HTTP-tested via auth.refresh.test.ts (T1-T6). Both noted as out-of-scope-by-architecture rather than deferred. **No bugs found** — every spec assertion passed on the first real run; the one mid-development test fix was a mock-consumption issue (Vitest's `mockResolvedValueOnce` consumed across two expectation styles), not a service bug.
+- **Phase E queue impact:** Closes the "auth/account service direct tests" item from the Phase 4 coverage push. Next high-value targets (per the running coverage report): post.service.ts (~22%), search.service.ts (~moderate), message.service.ts. The same "encode the spec, never weaken" pattern applies.
+- **Pending approval:** none — PR merged, docs landing in the next commit.
+
+---
+
 ## 2026-06-14 — Session 128.41 — CSP enforce flip: LIVE on Fly v112 (Phase-1 security lockdown COMPLETE)
 
 **Goal:** Flip production CSP from `Content-Security-Policy-Report-Only` to the enforcing `Content-Security-Policy` HTTP header. Final step of the Phase-1 security lockdown. KEEP dev on Report-Only so local iteration doesn't break when a new asset lands before its directive.
