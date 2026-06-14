@@ -1,5 +1,184 @@
 # G-AI — Session Change Log
 
+## 2026-06-14 — Session 128.40 — Bot-rendering middleware: server-side meta + LD-JSON for crawlers/unfurlers: LIVE on Fly v111
+
+**Goal:** Make Session 128.39's per-page Helmet meta + LocalBusiness LD-JSON visible to **non-JS clients** (WhatsApp/Slack/Googlebot/AI crawlers) without paying for SSR/SSG. Strategy: an Express middleware that inspects User-Agent and serves a static HTML doc with route-specific meta + LD-JSON for known bots/unfurlers; real users still get the SPA — zero hydration risk, zero React server rendering. Each retailer's /store/:id profile now produces a rich WhatsApp link preview + becomes individually indexable by Googlebot + AI crawlers. **The /store/:id GTM money path is now lit up server-side.**
+
+**Status:** ✅ ALL GATES GREEN. **Fly v109 → v111 live** (v110 deployed with a mount-order bug caught immediately via Rule E smoke — bot-render handlers were registered AFTER existing /landing + / handlers, so Express's first-match-wins resolved before them; fix shipped in PR #195 as v111). Tests 255 → 292 (+37). 6/6 Rule E smokes green, including the cache HIT log proof (rendered + cached 14ms → cache HIT 2-3ms).
+
+| Metric | Value |
+|---|---|
+| Code PR | [#194](https://github.com/dukanchiapp/Dukanchi-App/pull/194) merged `23d3390` (initial) + [#195](https://github.com/dukanchiapp/Dukanchi-App/pull/195) merged `331ef4f` (mount-order fix) |
+| Files | 13 changed in #194: 5 new (`bot-detect.middleware.ts`, `bot-render.middleware.ts`, `seo-html.ts`, 2 test files), 8 edits (app.ts + StoreProfile + store.service + admin.service + 2 tsconfigs + package json/lock). +2 edits in #195 (app.ts mount reorder + seo-html landing copy parity). |
+| Tests | 255 → **292** (+37: 24 bot-detect + 13 bot-render) |
+| Fly | **v109 → v111** (v110 + v111 — first deploy caught a mount-order bug at the Rule E gate, fix re-deployed) |
+| Rule A | `src/modules` router count UNCHANGED at **80** (bot-render is app-level interception, not new router endpoints); apiFetch 70 = 70 |
+
+### Phase 0 — Recon
+
+| Truth-source | Resolution |
+|---|---|
+| SPA catch-all lives at `server.ts:104` (`app.get('*')`) in production mode; in dev mode Vite middlewares handle it | Bot-render mounted in `src/app.ts` so it runs BEFORE `server.ts`'s catch-all chain |
+| Store update sites: `store.service.ts:54` (StoreService.updateStore) + `admin.service.ts:559` (admin KYC bulk update mutating storeName/logoUrl) | Both wired with `invalidateStoreBotCache(id)` |
+| `lru-cache` already in dep tree (3 transitive versions) | Installed `lru-cache@^11` as direct dep |
+| `StoreProfile.tsx` had inline LD-JSON builder (Session 128.39 lines 299-340) | Refactored to import `buildStoreLdJson` from new `src/lib/seo-html.ts` — single source of truth |
+| Existing `app.get('/landing', ...)` (line 392, serving public/landing.html) + `app.get('/', ...)` (line 411, Session 128.12 Googlebot-friendly handler) | Surfaced via post-deploy smoke (v110); bot-render mounts moved BEFORE them in PR #195 (v111) |
+
+### Phase 1 — `bot-detect.middleware.ts`
+
+Plain `toLowerCase().includes(token)` against pinned, doc-linked UA lists. **15 bot tokens**: googlebot, bingbot, slurp, duckduckbot, baiduspider, yandexbot, applebot, gptbot, chatgpt-user, oai-searchbot, claudebot, anthropic-ai, ccbot, perplexitybot, google-extended. **14 unfurler tokens**: whatsapp, slackbot, twitterbot, telegrambot, discordbot, facebookexternalhit, linkedinbot, embedly, redditbot, skypeuripreview, pinterest, line/, vkshare, viber. Three exports: `isBot`, `isLinkUnfurler`, `isBotOrUnfurler`. **No regex** — the failure mode (every request treated as a bot) is exactly what we must avoid.
+
+### Phase 2 — `src/lib/seo-html.ts`
+
+Single source of truth shared by:
+- the new bot-render middleware (server-side), and
+- `StoreProfile.tsx` (client Helmet block via `PageMeta.jsonLd` — refactored to import `buildStoreLdJson` from here so the two paths can NEVER drift).
+
+Exports:
+- `buildBaseHtml({title, description, canonical, image?, type?, ldJson?, bodyText?})` — complete `<html lang="en"><head>...</head><body>{noscript}</body></html>` string. NO React, NO bundle, NO scripts. HTML-escapes user-supplied strings.
+- `buildStoreLdJson(store)` — Schema.org LocalBusiness payload with PII discipline enforced in one place: owner.name/ownerId NEVER emitted; telephone gated by `phoneVisible !== false`; aggregateRating only when `reviewCount >= 5` (Google SERP threshold); address fields OMITTED (not blank) when null.
+- `buildLandingLdJson()` — Organization + WebSite payloads (mirror of what `public/landing.html` already ships).
+- Per-route meta convenience functions: `landingMeta()` / `searchMeta()` / `mapMeta()` / `legalMeta(slug)` / `storeMeta(store)` / `storeNotFoundMeta(id)`.
+- `unfurlSafeImage(url)` — strips `.webp` URLs (WhatsApp rejects WebP in link previews) and falls back to the brand icon. Applied transparently in both buildStoreLdJson and buildBaseHtml.
+
+Brand-copy parity (PR #195): `landingMeta()` title + description deliberately mirror `public/landing.html`'s established copy (`Dukanchi — apna bazaar, apni dukaan` / `Ab aapki local market aapke phone par...`) so reordering bot-render BEFORE the static-landing handler does NOT regress the SEO signal Google already indexes for the bare domain.
+
+### Phase 3 — `bot-render.middleware.ts`
+
+6 handlers mounted on the public routes via `src/app.ts:398-403` (the position fix from PR #195 — BEFORE the existing static-landing handler at 392 and the Session 128.12 / handler at 411):
+
+```ts
+app.get('/',          botRenderLanding);
+app.get('/landing',   botRenderLanding);
+app.get('/search',    botRenderSearch);
+app.get('/map',       botRenderMap);
+app.get('/store/:id', botRenderStore);
+app.get('/legal/:slug', botRenderLegal);
+```
+
+Each handler: `if (!isBotOrUnfurler(req)) return next();` — non-bots fall through to the existing pipeline (static landing for / and /landing; canonical-rewrite for /legal; SPA shell for the rest). Bots → `buildBaseHtml` → 200/`text/html`/`cache-control: public, max-age=300`. The `/store/:id` handler does a lean read-only Prisma query (only the 16 fields seo-html.ts needs); 404-fallback HTML (with `storeNotFoundMeta`) for missing stores so crawlers retrying after a delete still see a real meta block, not an upstream 500.
+
+NOT mounted on `/signup`, `/login`, `/profile`, `/messages`, `/chat/*`, `/retailer/dashboard`, `/settings`, `/support`, `/admin-panel/*` — auth + admin routes are not for crawlers. `/api/*` is mounted earlier in `src/app.ts` and untouched (confirmed via Smoke 6).
+
+### Phase 4 — LRU cache for `/store/:id`
+
+- Library: `lru-cache@^11`.
+- Cap: 500 entries. Bounded memory.
+- TTL: 5 min (matches `Cache-Control: max-age=300`).
+- Key: storeId. Value: full rendered HTML string.
+
+**Cache invalidation audit:**
+
+| Site | What mutates | Hook |
+|---|---|---|
+| `src/modules/stores/store.service.ts:54` (StoreService.updateStore) | All retailer-edited fields: name, category, description, address, phone, hours, logo/cover, geo, postal, phoneVisible, etc. | ✅ `invalidateStoreBotCache(id)` at line 60 |
+| `src/modules/admin/admin.service.ts:559` (admin KYC bulk-import update) | storeName, logoUrl | ✅ `invalidateStoreBotCache(existingStore.id)` at line 562 |
+| `prisma.store.create` (StoreService.createStore + admin path) | new row — no cache entry exists by definition | N/A |
+| `prisma.store.delete` (admin.service.deleteStore) | row gone | Next bot request → 404 fallback HTML (graceful) |
+
+### Phase 5 — WebP audit (informational)
+
+Upload middleware accepts `image/webp` but the client cropper produces JPEG by default (`compressImage.ts:29` quality 0.85). Real-world `.webp` store images are rare (direct file picker bypassing cropper). `unfurlSafeImage()` falls back to brand icon for any `.webp` regardless. Future task (when DBURL is available): `SELECT count(*) FROM "Store" WHERE "coverUrl" LIKE '%.webp' OR "logoUrl" LIKE '%.webp'` for actual exposure quantification.
+
+### Phase 6 — Tests (+37)
+
+**`bot-detect.test.ts` (24 tests)**:
+- 12 bot UAs (one per family — googlebot, bingbot, slurp, duckduckbot, baiduspider, yandexbot, applebot, gptbot, chatgpt-user, claudebot, perplexitybot, ccbot) → isBot=true + isBotOrUnfurler=true
+- 7 unfurler UAs (whatsapp, slackbot, twitterbot, telegrambot, discordbot, facebookexternalhit, linkedinbot) → isLinkUnfurler=true + isBotOrUnfurler=true; cross-check isBot=false
+- 5 real-browser UAs (Chrome 132 macOS, Safari 18 macOS, Firefox 135 Windows, iOS Safari 18, Android Chrome 132) → ALL three classifiers return false
+- 3 edge cases: missing UA, empty UA, case-insensitive (`WHATSAPP/2.0` still matches)
+
+The required-4 (googlebot, gptbot, whatsapp, slackbot) per task spec all present.
+
+**`bot-render.test.ts` (13 tests)**:
+- WhatsApp UA → HTML containing store name + LocalBusiness LD-JSON + `cache-control: max-age=300`
+- 404 fallback HTML when Prisma returns null
+- Chrome UA → SPA stub fall-through; `prisma.store.findUnique` never called
+- Cache HIT after first MISS (Prisma called exactly once across 2 WhatsApp requests)
+- `invalidateStoreBotCache` forces fresh Prisma read on the next request
+- LD-JSON parity: `phoneVisible: true` → telephone present; `phoneVisible: false` → telephone OMITTED
+- aggregateRating only when reviewCount >= 5
+- No owner identity anywhere in payload (string-level regex check)
+- `.webp` image → brand icon fallback
+
+### Phase 7 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **292 passed / 292** (was 255; +37) |
+| `npm run typecheck` | frontend + server + worker projects all clean (Rule G — caught one strict-config error in SeoStore.postalCode type, fixed before commit) |
+| `npm run build` | ✓ no Helmet/SSR warnings |
+| Rule A — `src/modules` router count | **80 = 80** (unchanged — bot-render is app-level interception, not new router endpoints) |
+| Rule A — direct `app.*` routes on `src/app.ts` | 9 → **15** (+6: the explicit task deliverables — /, /landing, /search, /map, /store/:id, /legal/:slug each gain a bot-render mount BEFORE existing handlers) |
+| Rule A — apiFetch count | **70 = 70** (unchanged) |
+
+### Phase 8 — Production smoke (Rule E)
+
+Two deploys this session:
+- **v110 (PR #194)**: bot-render code shipped but mount order WRONG (registered AFTER existing /landing + / handlers). Caught at Rule E gate when Smoke 2 (Googlebot on /) returned the existing `public/landing.html` content (`<!DOCTYPE html><html lang="en" data-theme="yellow">...`), NOT the bot-render output.
+- **v111 (PR #195)**: mount order fixed (moved to line 398, BEFORE the existing handlers) + `landingMeta()` copy aligned with `public/landing.html`'s established brand title (no SEO regression on the bare-domain signal Google already indexes).
+
+**All 6 Rule E smokes green on v111:**
+
+1. **`/health`** → `HTTP/2 200 application/json` `{"status":"ok","db":"up","redis":"up"}` ✅
+2. **`GET /` as Googlebot** → bot-render output: `<!doctype html><html lang="en"><head>...<title>Dukanchi — apna bazaar, apni dukaan</title>...<meta name="description" content="Ab aapki local market aapke phone par. Local stores se seedha connect karo." />...<link rel="canonical" href="https://dukanchi.com/" />...` (lean head, no Vite bundle, brand-aligned title) ✅
+3. **`GET /` as Chrome (control)** → existing `public/landing.html` SPA fall-through `<!DOCTYPE html><html lang="en" data-theme="yellow">...` (the Session 128.23 landing baseline). Real users unchanged. ✅
+4. **`GET /store/18335e67-...` as WhatsApp** (THE GTM MONEY PATH) — bot-render output with real store data:
+   ```
+   <title>Hameed — General in Kurla Vijay Mansion | Dukanchi</title>
+   <meta name="description" content="Hameed General Store aapka apna padosi dukaan! ..." />
+   <link rel="canonical" href="https://dukanchi.com/store/18335e67-6aff-490c-b332-19e85be6f5dc" />
+   <meta property="og:type" content="profile" />
+   <meta property="og:title" content="Hameed — General in Kurla Vijay Mansion | Dukanchi" />
+   <meta property="og:image" content="https://pub-267a374465a24f869e4bb90f6217d03f.r2.dev/1780097516639-a113ba81c990b4db-1000124942.jpg" />
+   <meta name="twitter:card" content="summary_large_image" />
+   ```
+   ✅
+5. **Cache HIT verified via flyctl logs**:
+   ```
+   [BOT_RENDER] cache MISS — rendered + cached   (responseTime 14ms)
+   [BOT_RENDER] cache HIT                         (responseTime 2ms)
+   [BOT_RENDER] cache HIT                         (responseTime 3ms)
+   ```
+   Server-side cache lookup is sub-3ms warm vs sub-15ms cold (the ~200ms curl wall-clock is Singapore RTT). ✅
+6. **`GET /health` as WhatsApp** → STILL `content-type: application/json` + JSON body (NOT bot-render HTML). API routes are correctly isolated from the bot-render path. ✅
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): `src/modules` router count UNCHANGED at 80; apiFetch 70 = 70. `app.*` direct routes 9 → 15 (+6 explicit deliverables documented in PR). ✅
+- **Rule B** (no silent catches): the bot-render middleware's catch on Prisma errors logs structured `logger.warn` + serves a 404 fallback HTML (never a 500); no `.catch(() => {})`. ✅
+- **Rule C** (Capacitor): N/A — no `capacitor.config.ts` touched. ✅
+- **Rule D** (native smoke): N/A — no `src/lib/api.ts` / AuthContext / Socket.IO / `isNative()` changes. ✅
+- **Rule E** (post-deploy smoke): 6/6 ✅ (above); the bug-catch-and-fix cycle is exactly what Rule E exists for.
+- **Rule F** (DB isolation): N/A — no local DB writes; tests stub Prisma at the supertest layer. ✅
+- **Rule G** (typecheck): `npm run typecheck` (all 3 projects) — caught a SeoStore.postalCode type mismatch (number vs string from Prisma) which was fixed before commit. ✅
+
+### Deviations & assumptions
+
+- **Mount-order bug shipped to v110 and caught at Rule E** — the Phase 0 recon missed the two existing `/` and `/landing` handlers (lines 392 + 411). PR #194 mounted bot-render AFTER them; Express's first-match-wins meant the new handlers never fired for `/`. Caught immediately via the documented Smoke 2/3 contrast — Googlebot was returning the existing static landing.html, not bot-render. PR #195 reordered the mounts and aligned `landingMeta()` copy with the existing brand title to avoid an SEO regression. v110 → v111 within 30 minutes. This is the value of Rule E.
+- **Smoke for the existing landing copy parity:** the previously-deployed `/` for Googlebot was already rich (Session 128.23 landing.html). After PR #195, Googlebot now gets bot-render output with the SAME title/description ("Dukanchi — apna bazaar, apni dukaan" + "Ab aapki local market..."). The brand-anchor signal is preserved; the LD-JSON shape shifts from `@graph` (in landing.html) to two separate scripts (in bot-render), which is the schema.org-recommended pattern for separate-entity payloads.
+- **Cache warmup behaviour:** the first WhatsApp request on a not-recently-rendered store ID takes ~14ms server-side (Prisma + render); subsequent requests are ~2-3ms. At 5-minute TTL + 500-entry cap, this absorbs the expected viral-share spike pattern (thousands of unfurlers within seconds of one share) without DB pressure.
+
+### Awaiting (carried follow-ups)
+
+1. **CSP `reportOnly: false` flip** — the v106→v111 watch window is well-complete now; ready for the next session.
+2. **WebP store-image count audit** in prod (informational; fallback already in place).
+3. Future SSR migration if we ever want real users to get the same pre-rendered meta. Lower priority — Googlebot's JS renderer already handles the client-side Helmet path; WhatsApp/Slack are the gap THIS session closes server-side.
+4. `usePageMeta` migration on Profile + Messages to PageMeta (auth-only — low priority).
+5. safeFetch migration of the 5 already-bounded fetch callsites (Session 128.38 follow-up).
+6. Gate-10 on-device mass-assignment smoke (#185 — founder action).
+7. Track B Android signed APK + smoke (#128.32 — founder action).
+
+### Summary for Opus (locked block)
+
+- **Done:** Bot-rendering middleware live on Fly v111. WhatsApp/Slack/Googlebot/AI crawlers now see **per-store HTML with LocalBusiness LD-JSON** at /store/:id (the GTM money path) + per-route meta on /, /landing, /search, /map, /legal/*. Real users still get the SPA — zero hydration change. Single source of truth (`src/lib/seo-html.ts`) shared with StoreProfile's client Helmet so the two paths can never drift. Tests 255 → **292** (+37). 6/6 Rule E smokes green, cache HIT log proven (14ms cold → 2-3ms warm). PR [#194](https://github.com/dukanchiapp/Dukanchi-App/pull/194) merged + follow-up fix PR [#195](https://github.com/dukanchiapp/Dukanchi-App/pull/195) merged.
+- **Decisions:** Plain `includes()` UA matching (no regex catastrophes); LRU cache 500 entries × 5 min TTL with explicit invalidation on the 2 audited write sites; PII discipline centralised in `buildStoreLdJson` (no owner, phoneVisible gate, reviewCount ≥ 5); WhatsApp-safe image swap (any `.webp` → brand icon); `landingMeta()` copy aligned with `public/landing.html` to preserve the brand-anchor SEO signal.
+- **Deviations/surprises:** Phase-0 recon missed the existing `/` + `/landing` static handlers — bot-render was mounted AFTER them in PR #194 → v110 deploy returned the wrong content for Googlebot. **Caught immediately at the Rule E gate**, fixed in PR #195 within 30min (v110 → v111). This is exactly the post-deploy smoke catching a real-but-recoverable bug. After fix, all 6 smokes green.
+- **Phase E queue impact:** SEO surface is now complete for crawlers/unfurlers. Next phase work has these on hand: CSP enforce flip (the Sentry-clean watch from v106→v111 is well-complete); WebP store-image audit; SSR migration only if we want real users to get the same pre-rendered meta (lower priority since client Helmet covers Googlebot's JS-render path).
+- **Pending approval:** none — both PRs merged, deploy + smokes green, docs landed.
+
+---
+
 ## 2026-06-14 — Session 128.39 — GEO/SEO foundation: llms.txt + Helmet meta + LocalBusiness JSON-LD: LIVE on Fly v109
 
 **Goal:** Three GTM-unlock SEO foundations, all client-side. (1) `public/llms.txt` for AI search engines per llmstxt.org spec — gives LLM-powered crawlers a structured site description. (2) `react-helmet-async` + `<PageMeta>` wired on all 8 public routes — each route gets its own title / description / canonical / OG / Twitter card. (3) Schema.org LocalBusiness JSON-LD on `/store/:id` — every retailer profile becomes individually discoverable + sharable with rich preview. No SSR/SSG this session (the bigger architectural lift is the explicit follow-up — see Awaiting + the SPA-limitation note).
