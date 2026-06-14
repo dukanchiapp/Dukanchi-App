@@ -3,6 +3,7 @@ import { prisma } from "../../config/prisma";
 import { pubClient } from "../../config/redis";
 import { env } from "../../config/env";
 import { invalidateUserStatusCache } from "../../middlewares/user-status";
+import { invalidateStoreBotCache } from "../../middlewares/bot-render.middleware";
 import bcrypt from "bcrypt";
 import ExcelJS from "exceljs";
 
@@ -557,6 +558,10 @@ export class AdminService {
         if (user.kycStorePhoto) updateData.logoUrl = logoUrl;
         if (Object.keys(updateData).length > 0) {
           await prisma.store.update({ where: { id: existingStore.id }, data: updateData });
+          // Session 128.40: KYC-flow update path also mutates user-visible
+          // store fields (storeName / logoUrl); invalidate bot-render cache
+          // for parity with the main updateStore site.
+          invalidateStoreBotCache(existingStore.id);
         }
         storeId = existingStore.id;
       } else {
