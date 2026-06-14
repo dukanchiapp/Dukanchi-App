@@ -1,5 +1,137 @@
 # G-AI — Session Change Log
 
+## 2026-06-15 — Session 128.46 — Phase 5.2 coverage push: message.service.ts — 0% → 100% (+36, IDOR-CRITICAL chat surface, NO bugs)
+
+**Goal:** Cover the highest-trust IDOR boundary in the codebase — chat. `message.service.ts` (197 LOC, 3 methods: `getMessages` / `getConversations` / `sendMessage`) is where a single WHERE-clause regression could leak one user's private messages to another. Target 90%+ lines / 100% on IDOR-bearing paths. Encode INTENDED SPEC; STOP on any IDOR failure as CRITICAL.
+
+**Status:** ✅ **100% line coverage** (44/44). 7 explicit IDOR-marquee tests on the chat surface — **all PASSED**. **NO bugs found** across all 36 new tests. The intended contracts are watertight.
+
+| Metric | Value |
+|---|---|
+| PR | [#207](https://github.com/dukanchiapp/Dukanchi-App/pull/207) merged `922584c` |
+| Files | 1 new test file: `src/__tests__/message.service.test.ts` (+36 tests, +603 lines) |
+| Tests | 451 → **487** (+36) |
+| Coverage on `message.service.ts` | **0% → 100% lines (44/44)** • Stmts 0→100 · Branches 0→85.93 · Funcs 0→100 |
+| Global coverage | Lines 18.32% → **18.89%** (+0.57pt) |
+| IDOR tests | **7 explicit IDOR-marquee** (getMessages ×2 / getConversations ×1 / sendMessage ×4) — all PASSED |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+### Phase 0 — RECON
+
+3 public methods. The chat surface's IDOR contracts:
+- **`getMessages(userId, otherUserId, before?, limit=100)`**: WHERE `OR: [{senderId:userId, receiverId:otherUserId}, {senderId:otherUserId, receiverId:userId}]` — **both ids appear on EVERY branch**. The hijack-prevention contract: no branch is missing one of the ids, so a third party C cannot read A↔B messages even by passing crafted args.
+- **`getConversations(userId)`**: WHERE `OR: [{senderId:userId}, {receiverId:userId}]` — **always scoped to userId on both branches**. D2 anonymize: deleted users NOT hidden (Session 88 policy); `deletedAt` surfaced for frontend "Deleted user" render. Unread heuristic: first-encountered (DESC) where `receiverId===userId` → unread:1.
+- **`sendMessage(senderId, receiverId, text, imageUrl?, imageUrls=[])`**: ordered gates: read both → sender availability check → receiver availability check → `canChat(senderRole, receiverRole)` permission check → **ONLY THEN `message.create`**. Side-effects (socket emit, in-app notification, push) are best-effort wrapped in try/catch — never abort the primary write. Push uses Rule B-compliant logger.warn + Sentry.captureException (Session 88 S4 fix preserved). `ChatRejectionError` subclass carries `subject:'sender'|'recipient'` + `reason:UnavailableReason` for the controller to map → 401/403/404/410.
+
+### Phase 1 — IDOR-MARQUEE tests (+28 in PART A)
+
+**`getMessages` (9 tests):**
+- **SECURITY MARQUEE — WHERE OR has BOTH userId AND otherUserId on EVERY branch** (the hijack-prevention contract); branches asserted symmetric.
+- **IDOR ATTEMPT — User C querying for A↔B with C as the first arg** → returns only C-involved pairings; USER_B never appears in either WHERE branch.
+- limit cap: `Math.min(limit, 100)` — limit=9999 → take=101 (100+1 for hasMore detection).
+- hasMore detection: extra row popped + nextCursor populated.
+- No hasMore: fewer rows than take → `nextCursor: null`.
+- Cursor pagination: `before` → `cursor: {id: before}` + `skip: 1`.
+- No `before` → no cursor + no skip.
+- Return order ASCENDING (Prisma DESC query → service `.reverse()` to ASC for display).
+- Empty conversation → `{messages:[], hasMore:false, nextCursor:null}`.
+
+**`getConversations` (7 tests):**
+- **SECURITY MARQUEE — WHERE OR `[{senderId:userId},{receiverId:userId}]`** — both branches require userId.
+- Dedup by other-participant: 5 messages × 3 distinct partners → 3 conversation rows.
+- Unread heuristic (inbound): most-recent message `receiverId===userId` → unread:1.
+- Unread heuristic (outbound): most-recent `senderId===userId` → unread:0.
+- **D2 ANONYMIZE**: partner with `deletedAt` set still appears + `deletedAt` surfaced (Session 88 policy — historical context preserved).
+- STORE META (Session 126 rich rows): partner with store → row carries `category/openingTime/closingTime/coords/city/postalCode`.
+- Partner with no store → `store: null` + uses `user.name` fallback.
+
+**`sendMessage` (12 tests):**
+- Happy path: allowed pair (customer→retailer per #128.30 matrix) + both active → message.create runs with sender+receiver wired correctly.
+- **CRITICAL ORDERING — denied pair: `canChat` returns false → throws BEFORE `message.create`**. Prisma.create is NEVER called (the permission-gate proof).
+- Sender not found → "User not found"; canChat NOT consulted.
+- Receiver not found → "User not found".
+- Sender BLOCKED → `ChatRejectionError("sender", "blocked")`; canChat NOT consulted.
+- Receiver BLOCKED → `ChatRejectionError("recipient", "blocked")`; **message NEVER lands in blocked user's inbox**.
+- Receiver DELETED (past grace) → `ChatRejectionError("recipient", "deleted_expired")`.
+- Receiver DELETED_PENDING (within grace) → `ChatRejectionError("recipient", "deleted_pending")`.
+- **SECURITY ORDERING — sender check fires BEFORE receiver check** (so the error doesn't leak receiver's block/delete status when sender is also unavailable).
+- Stores both text AND imageUrl when both supplied.
+- `imageUrls` plural array preserved verbatim (image-only message with empty text).
+- **SPEC NOTE — self-message** (`senderId === receiverId`) ALLOWED when `canChat(role, role)` returns true (same-role B2B per #128.30 matrix); service has no separate self-message guard — documented passing-by-design.
+
+### Phase 2 — SIDE-EFFECT BEST-EFFORT (8 tests in PART B)
+
+- Socket emit + `notification.create` attempted after message.create.
+- **BEST-EFFORT: `getIO()` throwing does NOT abort the message create** — message still returned.
+- BEST-EFFORT: `notification.create` failure does NOT abort.
+- PUSH: `sendPushToUser` called with body capped at **77+"..." for messages >80 chars** (verified payload length is exactly 80).
+- PUSH: body fallback "📷 Image" for empty-text image-only messages.
+- **PUSH: Rule B compliant (Session 88 S4 fix preserved)** — `sendPushToUser` failure → `logger.warn` + `Sentry.captureException` (NOT silent `.catch(()=>{})`); message resolution unaffected.
+- PUSH: title uses `sender.name` when present; "Naya message" fallback when null.
+
+### Phase 3 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **487 passed / 487** (was 451; +36) |
+| `npm run typecheck` | 3 projects clean |
+| Coverage on message.service.ts | **100% lines** (was 0%) — Stmts 100 / Branches 85.93 / Funcs 100 |
+| Global lines coverage | 18.32% → **18.89%** (+0.57pt) |
+| Role-isolation suite (58 — canChat matrix) | ✅ unchanged green (the service wires canChat through; the matrix tests in #128.30 still pass) |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+**All existing test suites green** (no pre-existing test regressed): Phase 4 wave (auth/account/kyc/team/notification/bulkImport/misc), Phase 5.1 (post.service), role-isolation (58), input-validation, admin-validation, safeFetch, scale-lockdown, PageMeta, llms-txt, bot-detect, bot-render, csp-enforce, auth.integration, auth.refresh, signup-consent.
+
+CI on #207: blocking `Typecheck + Test + Build` ✅ PASS (1m32s); informational `Bundle Size Report` ❌ (pre-existing, non-blocking).
+
+### Bugs found: NONE
+
+All 36 spec assertions passed. **The intended contracts are watertight**:
+- **IDOR scoping on `getMessages`** WHERE includes BOTH userId AND otherUserId on every branch (verified via `args.where.OR.forEach(branch => expect(branch).toHaveProperty('senderId').and.toHaveProperty('receiverId'))`)
+- **IDOR scoping on `getConversations`** WHERE always includes userId
+- **`sendMessage` gate ordering**: sender-found → receiver-found → sender-active → receiver-active → canChat → ONLY THEN message.create (verified via mock call-count assertions: `expect(prisma.message.create).not.toHaveBeenCalled()` on every denial path)
+- **Best-effort side-effects** (socket emit, in-app notif, push) NEVER abort the primary write
+
+One mid-development test-only fix: the "push title uses name" test inherited a `mockResolvedValueOnce` queue from the parent `beforeEach`. `vi.clearAllMocks()` doesn't drain the queue; `vi.mocked(...).mockReset()` does. Service code is fine.
+
+### Anti-Silent-Failure compliance
+
+- **Rule A** (URL parity): N/A — test-only. ✅
+- **Rule B** (no silent catches): no new `.catch(() => {})`; the service's existing push-failure `.catch()` ALREADY logs + Sentry-captures per Session 88's S4 fix; the test verifies this contract holds. ✅
+- **Rule C** (Capacitor): N/A. ✅
+- **Rule D** (native smoke): N/A. ✅
+- **Rule E** (post-deploy smoke): N/A — no deploy this session. ✅
+- **Rule F** (DB isolation): N/A — all Prisma calls mocked. ✅
+- **Rule G** (typecheck): `npm run typecheck` all 3 projects clean. ✅
+
+### Deviations & assumptions
+
+- **Coverage at 100% lines / 85.93% branches** — branches uncovered are likely conditional fallbacks in the conversation aggregation (e.g., when `otherStore` is undefined and falls back to `other.name`, that branch isn't exercised when `stores` is empty — but the both-store-present and no-store cases are both tested). Not worth chasing the last ~14% branch coverage on conversation-row UI shaping.
+- **1 documented "SPEC NOTE"**: self-message (`senderId === receiverId`) is ALLOWED when `canChat(role, role)` returns true (same-role B2B per the role-isolation matrix from #128.30). The service has no separate self-message guard; documented as passing-by-design contract test so silent drift is impossible.
+
+### Awaiting
+
+Nothing new this session. Carried follow-ups remain:
+1. 24h founder Sentry watch on NODE-EXPRESS-4 post-CSP-flip (Session 128.41).
+2. WebP store-image count audit in prod (Session 128.40 — informational).
+3. SSR migration if real users should get pre-rendered meta.
+4. `usePageMeta` migration on Profile + Messages to PageMeta (low-priority).
+5. safeFetch migration of the 5 already-bounded callsites (Session 128.38).
+6. Gate-10 on-device mass-assignment smoke (#185 — founder).
+7. Track B Android signed APK + smoke (#128.32 — founder).
+
+### Summary for Opus (locked block)
+
+- **Done:** PR [#207](https://github.com/dukanchiapp/Dukanchi-App/pull/207) merged (`922584c`); 1 new test file (+36 tests covering 100% lines on `message.service.ts` — the IDOR-critical chat surface, was 0%); tests 451 → **487**; typecheck/build clean; no source changes (test-only); all 451 pre-existing tests still green (role-isolation suite of 58 incl. canChat matrix unchanged). **7 explicit IDOR-marquee tests** on getMessages/getConversations/sendMessage — all passed.
+- **Decisions:** Encoded INTENDED spec. Marquees: **getMessages WHERE has BOTH userId AND otherUserId on every branch** (the symmetric `[{sender:user,recv:other},{sender:other,recv:user}]` contract); **getConversations WHERE always scopes to userId** on both branches; **sendMessage gate ordering** (sender→receiver→canChat→create — Prisma.create asserted NEVER called on every denial path); **Session 88 S4 push-failure Rule B compliance** preserved (logger.warn + Sentry.captureException, not silent catch); **D2 anonymize** policy on conversations (deleted users not hidden, deletedAt surfaced).
+- **Deviations/surprises:** 1 mid-development mock-setup fix (mockResolvedValueOnce queue inherited from parent beforeEach — `clearAllMocks` doesn't drain; `mockReset()` does). Service code is fine. 1 documented "SPEC NOTE" (self-message allowed when canChat agrees — same-role B2B). **No bugs found** — IDOR contracts are watertight.
+- **Phase E queue impact:** Chat surface now has full direct service coverage on top of the existing role-isolation (#128.30) + HTTP-level (`messages.routes.test.ts`) coverage. Remaining Phase-5 targets: `search.service.ts`, `ask-nearby.service.ts` (partial from #128.38), `user.service.ts`, `landing.service.ts`. The "encode the spec, never weaken" pattern is now 6 sessions deep.
+- **Pending approval:** none — PR merged.
+
+---
+
 ## 2026-06-14 — Session 128.45 — Phase 5.1 coverage push: post.service.ts — 28.57% → 89.14% (+42, IDOR-critical, NO bugs)
 
 **Goal:** Open the Phase-5 wave with the biggest untested service — `post.service.ts`, the 469-LOC core engine (9 public methods including `getFeed`, the personalised ranking pipeline). Mirror the Phase-4 wave pattern (#128.42 / 43 / 44): encode INTENDED spec, STOP on real bug, test-only PR. **Aim 70-80% lines; achieved 89.14%.**
