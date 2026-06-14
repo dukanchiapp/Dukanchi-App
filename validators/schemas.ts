@@ -240,3 +240,121 @@ export const askNearbyRespondBody = z.object({
 export const updateLandingContentBody = z.object({
   content: z.record(z.string(), z.unknown()),
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Session 128.37 — Admin module input validation (27-route follow-up to #185).
+//
+// Every admin route is already gated by `authenticateAdminToken + requireAdmin`,
+// so 401/403 come BEFORE validation. These schemas exist to (a) close the
+// mass-assignment surface on the privilege-write routes (PUT /users/:id,
+// POST /users/bulk-update, PUT /complaints/:id, PUT /kyc/:id, PUT /settings,
+// POST /reset-password) by allowlisting fields at the schema layer, and
+// (b) coerce/cap query inputs (page/limit/status/role) so a malicious or
+// buggy client can't unbounded-fetch or smuggle invented status values past
+// the controller into a Prisma where clause.
+//
+// Live-UI shapes were audited against admin-panel/src/pages/* — every body
+// field below maps to an actual `api.put/post(...)` call there. No guessing.
+// ─────────────────────────────────────────────────────────────────────────
+
+// Reusable across admin status-filter list routes (complaints + kyc).
+// The 'all' sentinel is the live UI's "no filter" value (see admin-panel
+// Complaints.tsx + KycReview.tsx) — the service strips it server-side.
+const complaintStatusEnum = z.enum(['open', 'in_progress', 'resolved', 'dismissed']);
+const kycStatusEnum = z.enum(['pending', 'approved', 'rejected']);
+
+// ── Admin: users ──
+export const adminListUsersQuery = paginationQuerySchema.extend({
+  search: z.string().max(200).optional(),
+  // role filter accepts any of the 6 known roles OR the 'all' sentinel.
+  role: z.union([z.literal('all'), roleSchema]).optional(),
+});
+
+export const adminResetPasswordBody = z.object({
+  userId: uuidLike,
+  newPassword: z.string().min(8, 'newPassword must be at least 8 characters'),
+});
+
+// Mass-assignment-prone: this body is read field-by-field in the controller
+// and forwarded to AdminService.updateUser(id, role, isBlocked). The schema
+// strict-allowlists exactly those two fields. `role` is constrained to the
+// 6 known roles — an attacker can't forge "superadmin" / "owner" / arbitrary
+// strings into the role column.
+export const adminUpdateUserBody = z.object({
+  role: roleSchema.optional(),
+  isBlocked: z.boolean().optional(),
+});
+
+// Mass-assignment-prone: bulk block/unblock. userIds capped at 500 to
+// prevent unbounded prisma.user.updateMany targets in one call.
+export const adminBulkUpdateUsersBody = z.object({
+  userIds: z.array(uuidLike).min(1, 'userIds must contain at least 1 id').max(500),
+  isBlocked: z.boolean(),
+});
+
+// ── Admin: stores ──
+export const adminListStoresQuery = paginationQuerySchema.extend({
+  search: z.string().max(200).optional(),
+});
+
+// ── Admin: store-members / team ──
+export const adminGetStoreMembersQuery = z.object({
+  search: z.string().max(200).optional(),
+});
+
+export const adminStoreIdParam = z.object({ storeId: uuidLike });
+export const adminMemberIdParam = z.object({ memberId: uuidLike });
+
+// ── Admin: reports ──
+export const adminListReportsQuery = paginationQuerySchema;
+
+// ── Admin: chats ──
+export const adminListChatsQuery = paginationQuerySchema;
+
+export const adminChatHistoryQuery = z.object({
+  u1: uuidLike,
+  u2: uuidLike,
+});
+
+// ── Admin: settings ──
+// Strict allowlist: AdminService.updateSettings reads exactly these 5 fields
+// today (admin.service.ts:383). Any unknown key in the PUT body is silently
+// dropped by zod's default-strip — the field can't reach the Prisma upsert.
+// `carouselImages` mirrors the live UI's `string[]` of R2 keys/URLs.
+export const adminUpdateSettingsBody = z.object({
+  appName: z.string().min(1).max(120).optional(),
+  // Logo can be cleared by sending `null` per Settings.tsx ("logoUrl || null").
+  logoUrl: z.string().max(2048).nullable().optional(),
+  primaryColor: z.string().max(32).optional(),
+  accentColor: z.string().max(32).optional(),
+  carouselImages: z.array(z.string().min(1).max(2048)).max(20).optional(),
+});
+
+// ── Admin: complaints ──
+export const adminListComplaintsQuery = paginationQuerySchema.extend({
+  status: z.union([z.literal('all'), complaintStatusEnum]).optional(),
+});
+
+// Allowlist for `updateComplaint(id, status, adminNotes)`.
+export const adminUpdateComplaintBody = z.object({
+  status: complaintStatusEnum.optional(),
+  adminNotes: z.string().max(5000).optional(),
+});
+
+// ── Admin: posts ──
+export const adminListPostsQuery = paginationQuerySchema.extend({
+  search: z.string().max(200).optional(),
+});
+
+// ── Admin: kyc ──
+export const adminListKycQuery = paginationQuerySchema.extend({
+  status: z.union([z.literal('all'), kycStatusEnum]).optional(),
+});
+
+// Allowlist for `updateKycStatus(userId, status, notes)`. `status` is required
+// (UI never PUTs without it — sends `{status:'approved'}` or
+// `{status:'rejected', notes}`).
+export const adminUpdateKycBody = z.object({
+  status: kycStatusEnum,
+  notes: z.string().max(5000).optional(),
+});
