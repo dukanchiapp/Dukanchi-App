@@ -388,6 +388,21 @@ app.post(
   },
 );
 
+// ── 9.bot. Bot-rendering middleware (Session 128.40) — MUST RUN BEFORE the
+// existing static-landing handlers below. For bot/unfurler UAs we serve a
+// purpose-built HTML doc with route meta + LD-JSON (no bundle, no React).
+// For everyone else next() falls through to the existing handlers (static
+// landing for /, /landing; canonical-rewrite for /legal; SPA shell for the
+// rest). API routes (/api/*) are NOT touched — they were registered earlier
+// in this file. Mount ORDER is critical: bot-render → existing static
+// handlers → server.ts's express.static + app.get('*') catch-all.
+app.get('/',          botRenderLanding);
+app.get('/landing',   botRenderLanding);
+app.get('/search',    botRenderSearch);
+app.get('/map',       botRenderMap);
+app.get('/store/:id', botRenderStore);
+app.get('/legal/:slug', botRenderLegal);
+
 // ── 9. Static landing page — served before Vite middleware so it bypasses the SPA ─
 app.get('/landing', (_req, res) => {
   return res.sendFile(path.resolve(process.cwd(), 'public', 'landing.html'));
@@ -457,32 +472,10 @@ app.get('/llms.txt', (_req, res) => {
   res.type('text/plain').sendFile(path.resolve(process.cwd(), 'public', 'llms.txt'));
 });
 
-// ── 9a.4. Bot-rendering middleware (Session 128.40) ─────────────────────────
-// Intercepts requests from documented crawlers (Googlebot, GPTBot, etc.) and
-// link unfurlers (WhatsApp, Slackbot, etc.) and serves a static HTML doc
-// with route-specific meta + LD-JSON. Real users → next() → SPA. This is
-// what fixes WhatsApp link previews for /store/:id and makes the same page
-// indexable by AI/search bots without paying for full SSR/SSG.
-//
-// Mount order (CRITICAL): AFTER the static-file handlers above (so robots/
-// sitemap/llms still serve their files even to bots), BEFORE the legal
-// canonical-rewrite below (so bots get our full bot HTML for /legal/*,
-// non-bot users get the existing canonical-rewritten SPA shell), and BEFORE
-// server.ts's express.static(distPath) + app.get('*') catch-all (so / and
-// /store/:id reach our handlers for bots before falling through to index.html).
-//
-// API routes (/api/*) are NOT touched — they're mounted earlier in this
-// file and handle their own 401/200 contracts. The middleware never matches
-// them because we mount it on specific public URL paths.
-app.get('/',         botRenderLanding);
-app.get('/landing',  botRenderLanding);
-app.get('/search',   botRenderSearch);
-app.get('/map',      botRenderMap);
-app.get('/store/:id', botRenderStore);
-// Legal: bot-render must run BEFORE the canonical-rewrite handler below, so
-// bots get full meta + LD-JSON; non-bot users fall through to next() which
-// hits the rewrite below.
-app.get('/legal/:slug', botRenderLegal);
+// (Session 128.40 — the bot-render handlers for /, /landing, /search, /map,
+// /store/:id, /legal/:slug are mounted higher up at ~line 398, BEFORE the
+// static-landing + canonical-rewrite handlers below, so they get first crack
+// at bot UAs and fall through to next() for real users.)
 
 // ── 9a.5. SEO — server-side per-route canonical for /legal/* (Session 128.23)
 // All /legal/* paths share dist/index.html (the SPA shell), which carries a

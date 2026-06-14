@@ -215,11 +215,20 @@ interface MetaInput {
   ldJson?: Array<Record<string, unknown>>;
 }
 
-/** Convenience: pre-baked landing meta (same shape used for / and /landing). */
+/**
+ * Pre-baked landing meta for / and /landing.
+ *
+ * Title + description deliberately MIRROR public/landing.html (Session 128.23
+ * baseline) so reordering bot-render BEFORE the static-landing handler does
+ * NOT regress the brand-title/description signal Google already indexes for
+ * the bare domain. Keep these in lock-step with public/landing.html's
+ * <title>/<meta name=description>/<meta property=og:*> — the static file is
+ * the SEO source-of-truth for the brand homepage.
+ */
 export function landingMeta(): MetaInput {
   return {
-    title: 'Dukanchi — Local Market Discovery in India',
-    description: 'Discover stores in your neighbourhood, chat directly with shop owners, and find products near you. Apki local market ab aapke phone par.',
+    title: 'Dukanchi — apna bazaar, apni dukaan',
+    description: 'Ab aapki local market aapke phone par. Local stores se seedha connect karo.',
     canonical: 'https://dukanchi.com/',
     type: 'website',
     ldJson: buildLandingLdJson(),
