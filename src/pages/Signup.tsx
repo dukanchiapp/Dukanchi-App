@@ -6,6 +6,7 @@ import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { FIcon, FLogo } from '../components/futuristic';
 import { ConsentCheckbox } from '../components/legal/ConsentCheckbox';
+import { PageMeta } from '../components/PageMeta';
 
 /* ── Futuristic v2 skin · Phase 7 / feat/futuristic-redesign ──
    View layer restyled to the deep-space glass system. The auth flow —
@@ -86,6 +87,12 @@ export default function SignupPage() {
   };
 
   return (
+    <>
+    <PageMeta
+      title="Sign up"
+      description="Create your free Dukanchi account. Join as a customer or list your shop as a retailer."
+      canonical="https://dukanchi.com/signup"
+    />
     <div
       className="f-bg-aurora"
       style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', fontFamily: 'var(--f-font)' }}
@@ -212,5 +219,6 @@ export default function SignupPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

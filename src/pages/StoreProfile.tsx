@@ -13,7 +13,7 @@ import { getLiveStatus } from '../lib/liveStatus';
 import { useClosingSoon } from '../hooks/useClosingSoon';
 import { useUserLocation } from '../context/LocationContext';
 import { useToast } from '../context/ToastContext';
-import { usePageMeta } from '../hooks/usePageMeta';
+import { PageMeta } from '../components/PageMeta';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
 import { haptic } from '../lib/haptics';
@@ -73,7 +73,6 @@ export default function StoreProfilePage() {
   const { location: userLocCtx } = useUserLocation();
   const userLoc = userLocCtx ? { lat: userLocCtx.lat, lng: userLocCtx.lng } : null;
   const [store, setStore] = useState<any>(null);
-  usePageMeta({ title: store?.storeName || 'Store' });
   const [, setProducts] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -281,7 +280,70 @@ export default function StoreProfilePage() {
     ...(showReviews ? [{ key: 'reviews', label: 'Reviews', count: reviews.length }] : []),
   ];
 
+  // Session 128.39 — per-store PageMeta + LD-JSON.
+  // Title/description fall back to a generic store label while data loads, so
+  // crawlers + social unfurlers that hit the page during the empty-state
+  // window still see SOMETHING coherent. The structured-data payload is the
+  // GTM unlock: each retailer's profile becomes individually discoverable
+  // (LocalBusiness schema). We intentionally OMIT owner identity (no PII).
+  const metaCanonical = id ? `https://dukanchi.com/store/${id}` : 'https://dukanchi.com/';
+  const metaTitle = store
+    ? `${store.storeName}${store.category ? ` — ${store.category}` : ''}${store.address ? ` in ${store.address}` : ''}`
+    : 'Store';
+  const metaDescription = store
+    ? (store.description?.slice(0, 200) || `${store.category || 'Local'} store${store.address ? ` in ${store.address}` : ''}. Connect on Dukanchi.`)
+    : 'Local store on Dukanchi — apki local market ab aapke phone par.';
+  const metaImage = store?.coverUrl || store?.logoUrl || undefined;
+  // LD-JSON LocalBusiness — only emit once store data is loaded.
+  // PII discipline: no owner.name / owner.id / ownerId / phone-when-private.
+  const storeLd: Record<string, unknown> | undefined = store ? {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: store.storeName,
+    url: `https://dukanchi.com/store/${store.id}`,
+    ...(metaImage ? { image: metaImage } : {}),
+    ...(store.description ? { description: store.description } : {}),
+    address: {
+      '@type': 'PostalAddress',
+      ...(store.address ? { streetAddress: store.address } : {}),
+      ...(store.city ? { addressLocality: store.city } : {}),
+      ...(store.state ? { addressRegion: store.state } : {}),
+      ...(store.postalCode ? { postalCode: store.postalCode } : {}),
+      addressCountry: 'IN',
+    },
+    // Phone only if the retailer opted IN to public display (schema field
+    // `phoneVisible` defaults to true per prisma/schema.prisma:113 — but if
+    // explicitly set to false, withhold here too).
+    ...(store.phone && store.phoneVisible !== false ? { telephone: store.phone } : {}),
+    ...(typeof store.latitude === 'number' && typeof store.longitude === 'number' ? {
+      geo: {
+        '@type': 'GeoCoordinates',
+        latitude: store.latitude,
+        longitude: store.longitude,
+      },
+    } : {}),
+    // aggregateRating only when there are enough reviews to be meaningful —
+    // 5 is the floor schema.org consumers (Google) require to surface stars
+    // in SERPs (anything below that is misleading thumbnail noise).
+    ...(store.reviewCount >= 5 && typeof store.averageRating === 'number' ? {
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: store.averageRating.toFixed(1),
+        reviewCount: store.reviewCount,
+      },
+    } : {}),
+  } : undefined;
+
   return (
+    <>
+    <PageMeta
+      title={metaTitle}
+      description={metaDescription}
+      canonical={metaCanonical}
+      image={metaImage}
+      type="profile"
+      jsonLd={storeLd}
+    />
     <div style={{ position: 'relative', minHeight: '100vh', background: 'var(--f-bg-deep)', paddingBottom: 80, fontFamily: 'var(--f-font)' }}>
       {/* Aurora wash */}
       <div style={{ position: 'absolute', inset: 0, background: 'var(--f-page-bg)', pointerEvents: 'none' }} />
@@ -863,5 +925,6 @@ export default function StoreProfilePage() {
         />
       )}
     </div>
+    </>
   );
 }

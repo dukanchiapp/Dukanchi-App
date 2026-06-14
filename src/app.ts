@@ -441,6 +441,14 @@ app.get('/robots.txt', (_req, res) => {
 app.get('/sitemap.xml', (_req, res) => {
   res.type('application/xml').sendFile(path.resolve(process.cwd(), 'public', 'sitemap.xml'));
 });
+// Session 128.39 — llms.txt for AI search engines (llmstxt.org spec).
+// Same pattern as robots/sitemap above: explicit text/plain Content-Type so
+// crawlers don't get the SPA index.html shell + MIME-sniff into the wrong
+// renderer. The file is checked into public/ and copied into dist/ at
+// build time via Vite's default static-asset handling.
+app.get('/llms.txt', (_req, res) => {
+  res.type('text/plain').sendFile(path.resolve(process.cwd(), 'public', 'llms.txt'));
+});
 
 // ── 9a.5. SEO — server-side per-route canonical for /legal/* (Session 128.23)
 // All /legal/* paths share dist/index.html (the SPA shell), which carries a

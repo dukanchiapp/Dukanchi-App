@@ -8,14 +8,13 @@ import { apiFetch } from '../lib/api';
 import { captureEvent } from '../lib/posthog';
 import { Sentry } from '../lib/sentry-frontend';
 import { useCategories } from '../hooks/useCategories';
-import { usePageMeta } from '../hooks/usePageMeta';
+import { PageMeta } from '../components/PageMeta';
 import { Search, X, SlidersHorizontal, ArrowRight, Clock, Store, Navigation, ChevronRight, Check, MapPin } from 'lucide-react';
 import { RadarPulse } from '../components/futuristic/RadarPulse';
 import { useJsApiLoader } from '@react-google-maps/api';
 
 export default function SearchPage() {
   const { token } = useAuth();
-  usePageMeta({ title: 'Search' });
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [results, setResults] = useState<{ products: any[]; stores: any[] }>({
@@ -457,6 +456,12 @@ export default function SearchPage() {
   };
 
   return (
+    <>
+    <PageMeta
+      title="Search Local Stores"
+      description="Find shops, products, and services near you. Smart search across local retailers in your area."
+      canonical="https://dukanchi.com/search"
+    />
     <div
       style={{
         minHeight: '100vh',
@@ -1372,5 +1377,6 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

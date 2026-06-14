@@ -79,6 +79,7 @@
     "rate-limit-redis": "^4.3.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "react-helmet-async": "^3.0.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.15.1",
     "redis": "^5.12.1",

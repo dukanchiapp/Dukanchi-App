@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext';
 import { useUserLocation } from '../context/LocationContext';
 import LocationPicker from '../components/LocationPicker';
 import { useFeed } from '../hooks/useFeed';
-import { usePageMeta } from '../hooks/usePageMeta';
+import { PageMeta } from '../components/PageMeta';
 import { Post, Interactions } from '../types';
 import { apiFetch } from '../lib/api';
 import { Sentry } from '../lib/sentry-frontend';
@@ -37,7 +37,6 @@ const fChevBtn: CSSProperties = {
 };
 
 export default function HomePage() {
-  usePageMeta({ title: 'Home' });
   const [feedType, setFeedType] = useState('global');
   const [locationRange, setLocationRange] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('');
@@ -331,6 +330,12 @@ export default function HomePage() {
   }, [pullY, refreshing, refresh]);
 
   return (
+    <>
+    <PageMeta
+      title="Discover Local Stores Near You"
+      description="Discover stores in your neighbourhood, chat directly with shop owners, and find products near you. Apki local market ab aapke phone par."
+      canonical="https://dukanchi.com/"
+    />
     <div
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
@@ -815,5 +820,6 @@ export default function HomePage() {
       {/* Session 128.15 — Notifications drawer (controlled by Header's bell). */}
       <NotificationsDrawer isOpen={notifsOpen} onClose={() => setNotifsOpen(false)} />
     </div>
+    </>
   );
 }
