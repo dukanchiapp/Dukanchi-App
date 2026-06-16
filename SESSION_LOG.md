@@ -1,5 +1,90 @@
 # G-AI — Session Change Log
 
+## 2026-06-15 — Session 128.51 — Phase 6.2 coverage push: store.service + user.service → final hardening complete (+54, ALLOWLIST/IDOR marquees, NO bugs)
+
+**Goal:** Close the LAST two high-blast-radius coverage gaps surfaced by the Session 128.49 diagnostic. `store.service.ts` (214 LOC, 26.56% baseline) carries the **allowlist defense** in updateStore (silently drops crafted-body fields like ownerId/role/isBlocked) plus role-visibility + soft-delete cascades. `user.service.ts` (140 LOC, 30.3% baseline) carries the **field-scope** defense in getUserProfile (only id/name/role/email project, never phone/password/kyc*) plus the P2002→opaque-error map for phone-uniqueness leak prevention. Mirror Phase 5.x + 6.1 methodology.
+
+**Status:** ✅ Both targets exceeded. `store.service.ts` 26.56% → **98.43% lines** (Funcs 100/22). `user.service.ts` 30.3% → **100% lines** (Funcs 100/11, Branches 100). **NO bugs found** across all 54 new tests; all 9 marquees passed first try.
+
+| Metric | Value |
+|---|---|
+| PR | [#215](https://github.com/dukanchiapp/Dukanchi-App/pull/215) merged `3990029` |
+| Files | 2 new test files: `src/__tests__/store.service.test.ts` (+28, 370 lines) · `src/__tests__/user.service.test.ts` (+26, 281 lines) |
+| Tests | 594 → **648** (+54, zero pre-existing regressed) |
+| Coverage on `store.service.ts` | **26.56% → 98.43% lines** • Stmts 98.61 · Branches 94.28 · Funcs **100 (22/22)** |
+| Coverage on `user.service.ts` | **30.3% → 100% lines** • Stmts 100 · Branches 100 · Funcs **100 (11/11)** |
+| Marquee tests | **9 explicit** — all PASSED |
+| Rule A | N/A — test-only |
+| Rule E | N/A — no deploy |
+
+### Phase 0 — RECON
+
+Path correction surfaced: task spec said `src/services/{store,user}.service.ts`; actual paths are `src/modules/{stores,users}/{store,user}.service.ts`. No deviation in scope — same files identified in Session 128.49's diagnostic.
+
+**`store.service.ts`** — 8 methods: createStore, updateStore (21-field allowlist), getStores (role-visibility + soft-delete), getStoreById (soft-delete cascade), toggleFollow (self-notification guard), getStorePosts, createProduct (fire-and-forget embedding), getProducts (soft-delete).
+
+**`user.service.ts`** — 8 methods: getUserStore, getUserProfile (field-scope), updateUserProfile (P2002 mapper), getFollowedStores/getSavedItems/getReviews/getSearchHistory/getLocations (5 user-scoped reads with caps).
+
+### Phase 1 — Spec-encoded tests (+54)
+
+**store.service.ts (+28):**
+
+**MARQUEE 1 — updateStore ALLOWLIST defense (5):** crafted body with `ownerId` / `role` / `isBlocked` / `adminPassword` / `kycStatus` → silently DROPPED before `prisma.update`; only the 21 allowlist fields propagate · all 21 fields verify-roundtrip · postalCode parseInt('not-a-number') → null (not NaN) · invalidateStoreBotCache fires post-update · Redis del failure best-effort.
+
+**MARQUEE 2 — getStores role-visibility (6):** customer viewer → `visibleRoles=['retailer']` only · B2B-retailer viewer → all 4 (`retailer/supplier/brand/manufacturer`) · B2B-supplier viewer same · category filter · excludeOwnerId for own-store hiding · pagination math.
+
+**MARQUEE 3 — getStoreById soft-delete cascade (4):** WHERE `owner.deletedAt: null` filter · currentUserId absent → followers include is `false` · currentUserId present → followers include scoped WHERE userId · returns null when soft-deleted.
+
+**MARQUEE 4 — toggleFollow self-notification GUARD (5):** caller ≠ owner → notification.create + socket emit fire · **caller === owner (self-follow) → notification + socket SKIPPED** · existing follow → unfollow, no new notifications · store not found → throws, no follow.create · notification failure best-effort (Rule B-compliant source comment preserved).
+
+**createStore (4) + getStorePosts (3) + createProduct (2) + getProducts (4)** for the remaining read-only coverage.
+
+**user.service.ts (+26):**
+
+**MARQUEE 5 — getUserProfile FIELD-SCOPE (3):** WHERE `deletedAt: null` · **select projects ONLY `{id, name, role, email}`** — explicit negative assertions that `phone`, `password`, `kycDocumentUrl`, `kycSelfieUrl`, `deletedAt` are NOT in the select set (defense against field-explosion regression) · soft-deleted user returns null.
+
+**MARQUEE 6 — updateUserProfile P2002 → opaque error (4):** happy path with Redis del · **Prisma P2002 → "This phone number is already in use" (raw P2002 code MUST NOT leak)** — `not.toContain('P2002')` + `not.toContain('Unique constraint')` · non-P2002 errors re-thrown unchanged (preserves Sentry visibility) · Redis del failure best-effort.
+
+**MARQUEE 7 — WHERE userId IDOR scope (5):** every read method (followed, saved, reviews, searchHistory, locations) WHERE clause explicitly scoped to userId · cross-user `USER_B` param → only USER_B in WHERE, never USER_A.
+
+**MARQUEE 8 — 4 cap sentinels:** PER_USER_FOLLOWED_CAP=5000 · PER_USER_SAVED_ITEMS_CAP=5000 · PER_USER_REVIEWS_CAP=5000 · PER_USER_LOCATIONS_CAP=1000 — each fires `Sentry.captureMessage('user.<method>.cap-hit')` on exact-cap hit; **below cap → no Sentry fire** (explicit assertion).
+
+**MARQUEE 9 — D2 anonymize policy preserved in getSavedItems:** deleted-author posts STILL surface (not filtered); `owner.deletedAt` included so the UI renders "Deleted user" — Session 88 policy preserved end-to-end.
+
+### Phase 2 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (was 594; +54) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean (79 precache entries / 2760.57 KiB) |
+| Coverage on `store.service.ts` | **0% → 98.43% lines** · 1 uncovered (line 152) |
+| Coverage on `user.service.ts` | **0% → 100% lines** · 0 uncovered |
+
+Uncovered line analysis:
+- `store.service.ts:152` — the `error.message === 'Store not found'` re-throw branch inside toggleFollow's outer catch. The "store not found → throws" test exercises the throw indirectly (the inner throw fires before the outer catch), but v8 marks the explicit re-throw line as uncovered. Cosmetic.
+
+### Deviations / SPEC NOTES
+
+None. All 9 marquees passed first try. Path correction (`src/services/` vs `src/modules/`) was a task-spec typo, not a code deviation.
+
+### Coverage wave grand total (Phase 4 + 5 + 6.1 + 6.2, 6 sessions, 14 services)
+
+| Phase | Service | Coverage | Tests added |
+|---|---|---|---|
+| 4 | auth/account/kyc/team/notification/bulkImport/misc | 90–100% | +210 |
+| 5.1 | post.service.ts | 89.14% | +30 |
+| 5.2 | message.service.ts | **100%** | +36 |
+| 5.3 | search.service.ts | 95.12% | +23 |
+| 5.3 | ask-nearby.service.ts | 97.5% | +21 |
+| 6.1 | admin.service.ts | 96.02% | +60 |
+| **6.2** | **store.service.ts** (this session) | **98.43%** | **+28** |
+| **6.2** | **user.service.ts** (this session) | **100%** | **+26** |
+
+**Phase 6.2 = FINAL hardening session.** All 14 high-blast-radius services now have ≥89% line coverage; 7 of 14 at ≥95%. **+434 tests across 14 services over 6 sessions. Thread-cumulative: 199 → 648.**
+
+The Session 128.49 diagnostic identified `store.service.ts` + `user.service.ts` as the last 2 high-blast-radius gaps. Both are now closed. Remaining low-coverage files are controllers (thin glue), pages (better protected by Playwright than unit tests), and helpers (covered indirectly by service tests). **The coverage wave is complete.**
+
 ## 2026-06-15 — Session 128.49 — Phase 6.1 coverage push: admin.service.ts (THE highest-blast-radius unprotected service) — 0% → 96.02% (+60 tests, cascade-MARQUEE + PROTECTED_ADMIN_ID defense, NO bugs)
 
 **Goal:** Close the single largest defensive gap in the repo. `admin.service.ts` (594 LOC, 25 public methods, 0% baseline coverage) carries the highest blast radius of any service: 10-table FK cascade in `deleteUser` + 8-table per-store cascade in `deleteStore` + the `PROTECTED_ADMIN_ID` bootstrap-admin defense (line 12: `'5cbf1a3d-e8e7-4b64-836a-58475bbbb7d9'`). A regression in any of these silently corrupts production with no rollback.
