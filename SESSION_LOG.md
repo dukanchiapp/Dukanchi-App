@@ -1,5 +1,43 @@
 # G-AI — Session Change Log
 
+## 2026-06-16 — Session 128.52 — Tiled Dukanchi doodle pattern as default cover banner fallback (visual)
+
+**What changed:** replaced the plain gradient (`var(--b-grad)`) layer-3 cover fallback in `src/pages/Profile.tsx` (line 630) and `src/pages/StoreProfile.tsx` (line 340) with a tiled Dukanchi doodle pattern from `public/store-cover-doodle.png`. Fallback chain unchanged elsewhere (coverUrl → logoUrl blurred → NEW doodle, was: gradient).
+
+| Metric | Value |
+|---|---|
+| PR | [#217](https://github.com/dukanchiapp/Dukanchi-App/pull/217) merged `c4fe0b3` |
+| Files modified | `src/pages/Profile.tsx` (+15/-1 line at the layer-3 fallback) · `src/pages/StoreProfile.tsx` (+15/-1 line at the layer-3 fallback) |
+| Asset added | `public/store-cover-doodle.png` — 178,583 bytes (~174 KB) |
+| Bundle delta | precache: 79 → 80 entries / 2760.57 → 2935.26 KiB (+174.69 KiB raw). PNG is already lossily compressed so gzip delta ≈ raw delta. |
+| Tests | 648/648 green (unchanged — no tests touch the banner fallback layer) |
+| Rule A | cosmetic-only — no route added/removed |
+| Rule E | not invoked this session — deploy at founder's discretion |
+
+### Visual choices
+
+- `backgroundSize: 300px auto` preserves the doodle's portrait aspect while tiling at a tasteful density across the ~810×200 banner.
+- `backgroundColor: #FFF8EA` matches the cream paper-tone of the doodle PNG so tile seams are invisible.
+- `role="img"` + `aria-label="Dukanchi doodle pattern"` retains accessibility parity with the prior decorative div.
+
+### Phase 2 deferred — cover-picker UI upgrade
+
+Task spec asked to add a "Use Dukanchi doodle" option in Profile.tsx's cover edit flow. **The cover-upload UI is NOT in Profile.tsx** — it lives in [src/components/dashboard/StoreFormFields.tsx](https://github.com/dukanchiapp/Dukanchi-App/blob/main/src/components/dashboard/StoreFormFields.tsx) (lines 91-107, used by RetailerDashboard). The existing UI only has a single button ("Change Cover" / "Add Cover Photo") with no "remove" / "default" option.
+
+Task spec instructed: *"If no edit-cover UI exists in Profile.tsx (could be in a separate component file) → STOP and report; do NOT speculate-add UI."* So the cover-picker upgrade is deferred to a follow-up PR. The fallback naturally activates whenever coverUrl is null (e.g. on account creation, or via a future "remove cover" / "use default doodle" button wired in StoreFormFields.tsx).
+
+### Visual smoke
+
+Local dev server started (Vite at http://localhost:5173/). Founder must visually verify both Profile and StoreProfile pages for stores without `coverUrl`. Production deploy decision pending.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean — doodle PNG in precache manifest (entry +1) |
+
 ## 2026-06-15 — Session 128.51 — Phase 6.2 coverage push: store.service + user.service → final hardening complete (+54, ALLOWLIST/IDOR marquees, NO bugs)
 
 **Goal:** Close the LAST two high-blast-radius coverage gaps surfaced by the Session 128.49 diagnostic. `store.service.ts` (214 LOC, 26.56% baseline) carries the **allowlist defense** in updateStore (silently drops crafted-body fields like ownerId/role/isBlocked) plus role-visibility + soft-delete cascades. `user.service.ts` (140 LOC, 30.3% baseline) carries the **field-scope** defense in getUserProfile (only id/name/role/email project, never phone/password/kyc*) plus the P2002→opaque-error map for phone-uniqueness leak prevention. Mirror Phase 5.x + 6.1 methodology.
