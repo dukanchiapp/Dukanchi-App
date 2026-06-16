@@ -337,7 +337,18 @@ export default function StoreProfilePage() {
                 style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.9)', transform: 'scale(1.15)' }}
               />
             ) : (
-              <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: 'url(/store-cover-doodle.png)',
+                  backgroundRepeat: 'repeat',
+                  backgroundSize: '300px auto',
+                  backgroundColor: '#FFF8EA',
+                }}
+                role="img"
+                aria-label="Dukanchi doodle pattern"
+              />
             )}
             {/* Session 128.19: bottom fade-to-cream gradient removed per
                 founder ("profile banner ke bottom mein jo blur element
