@@ -1,5 +1,82 @@
 # G-AI — Session Change Log
 
+## 2026-06-15 — Session 128.50 — Remove duplicate React /landing route — static public/landing.html is the sole landing (Fly v113→v114, −37 kB bundle)
+
+**Goal:** Eliminate the dual-landing UX bug founder verified on v113. Logged-in users hitting `/landing` got the React-SPA `LandingPage.tsx` ("Ab Aapki Local Market Aapke Phone Par" design); logged-out users correctly got `public/landing.html` (Session 128.23's "Sab milega jo aas-paas hai" rich orange design served by Express). Two different designs at the same URL depending on auth state — confusing.
+
+**Status:** ✅ Deployed Fly v113→v114. 5/5 Rule E smokes green. React `<Route path="/landing">` + lazy import + the 557-line component file all removed. Bundle delta: **−37.05 kB raw / −7.57 kB gzip / −58.49 kB sourcemap** for the eliminated LandingPage chunk.
+
+| Metric | Value |
+|---|---|
+| PR | [#214](https://github.com/dukanchiapp/Dukanchi-App/pull/214) (pending merge) |
+| Fly version | 113 → **114** |
+| Files | `src/pages/LandingPage.tsx` (−557 lines, deleted) · `src/App.tsx` (−2 lines: lazy import + Route) |
+| Tests | 534/534 green (unchanged — no test imports LandingPage) |
+| Bundle delta | LandingPage-Bo08goAA.js eliminated: **−37.05 kB raw / −7.57 kB gzip / −58.49 kB sourcemap** |
+| Rule A | ✅ — one React route removed (`/landing`). Express route unchanged. No user-visible URL change. |
+| Rule E | ✅ 5/5 smokes green against v114 |
+
+### Phase 0 — Audit (pre-delete grep)
+
+| Reference class | Hits | Action |
+|---|---|---|
+| `LandingPage` component refs | 3 | All removed (lazy import line 13 + Route line 284 + file def) |
+| `<Route path="/landing">` | 1 | Removed |
+| `navigate('/landing')` | 1 (App.tsx:148) | **KEPT** — correct full-page-load behavior to static HTML |
+| `<a href="/landing">` | 1 (App.tsx:189) | **KEPT** — same |
+| `<PageMeta />` / Helmet refs to landing | 0 | No orphans (the deleted file's internal PageMeta wiring went with it) |
+| Test imports of LandingPage | 0 | No test cleanup needed |
+| Other `/landing` strings | 0 unique | Only false-positive substring matches (`landingPublicRoutes` CMS module, comment refs in sw.ts / app.ts) |
+
+Zero deviations from expected baseline → safe to proceed.
+
+### Phase 1 — Deletion
+
+- `rm src/pages/LandingPage.tsx` (557 lines)
+- `src/App.tsx` line 13: removed `const LandingPage = lazy(() => import('./pages/LandingPage'));`
+- `src/App.tsx` line 284: removed `<Route path="/landing" element={<LandingPage />} />`
+
+The two remaining `/landing` references in App.tsx (line shifts after the lazy import removal: now :148 navigate + :189 anchor) are CORRECT — they trigger a full page load. The browser hits `GET /landing`, Express's `sendFile public/landing.html` handler returns the static page. The React-SPA no longer intercepts that route.
+
+### Phase 3 — Bot-render compatibility
+
+Session 128.40's `botRenderLanding` middleware (mounted on `'/'` and `'/landing'`) is unchanged. Bot/unfurler UAs (WhatsApp, Slack, Twitter, Telegram, Facebook crawler, Googlebot) still get the lean LD-JSON head before falling through to the static handler. Smoke 3 verifies WhatsApp UA still receives the OG meta block.
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **534/534 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean — no LandingPage chunk in dist/ |
+| Bundle delta | LandingPage chunk eliminated: −37.05 kB raw / −7.57 kB gzip / −58.49 kB sourcemap |
+
+### Rule E smoke battery (v113 → v114)
+
+| # | Smoke | Result |
+|---|---|---|
+| 1 | `/health` | `200 application/json; charset=utf-8` ✅ |
+| 2 | `/landing` Chrome | `<!DOCTYPE html><html lang="en" data-theme="yellow">` — static `landing.html` ✅ |
+| 2b | `/landing` Chrome `id="root"` count | **0** ✅ (NOT the SPA shell) |
+| 3 | `/landing` WhatsApp | `<title>Dukanchi — apna bazaar, apni dukaan</title>` + full OG/Twitter meta (botRenderLanding intact) ✅ |
+| 4 | `/` Chrome | static `landing.html` (`data-theme="yellow"`) — Session 128.12 behavior unchanged ✅ |
+| 5 | `/` Chrome HTTP | 200 ✅ |
+
+The `data-theme="yellow"` attribute is unique to `public/landing.html` — its presence proves the static HTML is serving, NOT the SPA index.html (which has `<div id="root"></div>`).
+
+### Deviations
+
+None. Phase 0 audit confirmed no orphan references; the 3+3 ref baseline matched exactly. Bot-render middleware preserved without modification.
+
+### Awaiting
+
+Founder browser smoke:
+1. Load `https://dukanchi.com/landing` in incognito (no auth) → "Sab milega jo aas-paas hai" rich orange design
+2. Load `https://dukanchi.com/landing` in authenticated tab → **SAME** design (NOT the old "Ab Aapki Local Market" SPA design)
+3. Logout from inside the app → lands on `/landing` → SAME design
+
+If any tab shows the OLD "Ab Aapki Local Market" design → likely a stale service-worker cache; hard-refresh and screenshot for diagnosis.
+
 ## 2026-06-15 — Session 128.48 — Bug fixes from founder's v112 manual prod verification: CSP places.googleapis.com + Messages spacing (Fly v112→v113, CSP regression test +3)
 
 **Goal:** Fix 2 founder-reported bugs from v112 (Phase-1 CSP enforce flip) browser verification: (HIGH) "Choose location" Places autocomplete blocked by CSP; (MEDIUM) Messages page cramped spacing. Add CSP regression guard so the autocomplete-blocked failure mode cannot silently re-ship.
