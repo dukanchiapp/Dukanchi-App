@@ -627,7 +627,18 @@ export default function ProfilePage() {
             ) : store.logoUrl ? (
               <img src={store.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.9)', transform: 'scale(1.2)' }} />
             ) : (
-              <div style={{ width: '100%', height: '100%', background: 'var(--b-grad)' }} />
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  backgroundImage: 'url(/store-cover-doodle.png)',
+                  backgroundRepeat: 'repeat',
+                  backgroundSize: '300px auto',
+                  backgroundColor: '#FFF8EA',
+                }}
+                role="img"
+                aria-label="Dukanchi doodle pattern"
+              />
             )}
             {/* Session 128.20: bottom fade-to-cream removed for parity with
                 StoreProfile (Session 128.19 — founder ask). Cover image now
