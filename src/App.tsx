@@ -10,7 +10,6 @@ import LoginPage from './pages/Login';
 import NotFoundPage from './pages/NotFound';
 
 const HomePage = lazy(() => import('./pages/Home'));
-const LandingPage = lazy(() => import('./pages/LandingPage'));
 const SearchPage = lazy(() => import('./pages/Search'));
 const MapPage = lazy(() => import('./pages/Map'));
 const MessagesPage = lazy(() => import('./pages/Messages'));
@@ -281,7 +280,6 @@ export default function App() {
               }>
               <Routes>
                 <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-                <Route path="/landing" element={<LandingPage />} />
                 <Route path="/search" element={<SearchPage />} />
                 <Route path="/map" element={<MapPage />} />
                 <Route path="/store/:id" element={<StoreProfilePage />} />
