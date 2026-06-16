@@ -51,7 +51,7 @@
     "@sentry/react": "^10.57.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "@tailwindcss/vite": "^4.3.1",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "^6.0.2",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.78.1",
     "clsx": "^2.1.1",
