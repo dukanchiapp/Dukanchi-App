@@ -241,11 +241,11 @@ export default function MessagesPage() {
             position: 'sticky',
             top: 0,
             zIndex: 20,
-            padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 0',
+            padding: 'calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px',
             background: 'var(--b-grad)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 14 }}>
             <h1
               style={{
                 fontSize: 24,
@@ -291,7 +291,7 @@ export default function MessagesPage() {
 
           {/* Tabs */}
           {user?.role !== 'customer' && (
-            <div style={{ display: 'flex', marginTop: 12 }}>
+            <div style={{ display: 'flex', marginTop: 14 }}>
               <button 
                 onClick={() => setActiveTab('chats')}
                 style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'chats' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
@@ -310,7 +310,7 @@ export default function MessagesPage() {
 
         {/* ── Loading skeletons ── */}
         {loading && (
-          <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ padding: '14px 16px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[1, 2, 3, 4, 5].map(i => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 14, padding: '13px 14px', borderRadius: 18,
@@ -418,7 +418,7 @@ export default function MessagesPage() {
 
         {/* ── Conversation list ── */}
         {activeTab === 'chats' && !loading && filtered.length > 0 && (
-          <div style={{ padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ padding: '14px 16px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
             {filtered.map(conv => (
               <ConversationRow
                 key={conv.userId}

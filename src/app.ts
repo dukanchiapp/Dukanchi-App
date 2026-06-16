@@ -71,6 +71,7 @@ const cspDirectives = {
     "https://*.i.posthog.com",
     "https://maps.googleapis.com",
     "https://maps.gstatic.com",
+    "https://places.googleapis.com", // Places Autocomplete (LocationPicker + Search Ask-Nearby Custom Area) — Session 128.48
     "https://unpkg.com",
   ],
   styleSrc: [
@@ -102,6 +103,7 @@ const cspDirectives = {
     "https://*.ingest.us.sentry.io",
     "https://nominatim.openstreetmap.org",
     "https://maps.googleapis.com",
+    "https://places.googleapis.com", // Places Autocomplete (LocationPicker + Search Ask-Nearby Custom Area) — Session 128.48
     "https://fonts.googleapis.com", // Maps SDK fetches font CSS via XHR, not <link>
     "https://fonts.gstatic.com", // PR #43 — Workbox SW fetch context (SW fetch → connect-src, NOT font-src)
     // Session 128.36 — R2 origin parity with imgSrc above. Sentry NODE-EXPRESS-4
