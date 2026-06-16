@@ -1,5 +1,104 @@
 # G-AI — Session Change Log
 
+## 2026-06-15 — Session 128.48 — Bug fixes from founder's v112 manual prod verification: CSP places.googleapis.com + Messages spacing (Fly v112→v113, CSP regression test +3)
+
+**Goal:** Fix 2 founder-reported bugs from v112 (Phase-1 CSP enforce flip) browser verification: (HIGH) "Choose location" Places autocomplete blocked by CSP; (MEDIUM) Messages page cramped spacing. Add CSP regression guard so the autocomplete-blocked failure mode cannot silently re-ship.
+
+**Status:** ✅ Deployed Fly v112→v113. Full Rule E smoke battery green — CSP header verbatim confirms both `places.googleapis.com` directives + `maps.googleapis.com` preserved. Founder browser smoke pending.
+
+| Metric | Value |
+|---|---|
+| PR | [#212](https://github.com/dukanchiapp/Dukanchi-App/pull/212) (pending merge) |
+| Fly version | 112 → **113** |
+| Files | `src/app.ts` (+2 CSP entries) · `src/pages/Messages.tsx` (5 spacing lines) · `src/__tests__/csp-places.test.ts` (+3 tests, new file) |
+| Tests | 531 → **534** (+3 CSP-places regression guard) |
+| Rule A | N/A — no URL change |
+| Rule C | N/A — no Capacitor change |
+| Rule E | ✅ 4-curl battery passed against v113 |
+
+### Phase 0 — Audit
+
+Greped `src/` for all `googleapis.com` / `gstatic.com` references. Surfaced 4 host classes:
+
+| Host | Used by | CSP status before this PR |
+|---|---|---|
+| `maps.googleapis.com` | LocationContext geocode + Maps SDK + Static Map img + StoreFormFields | scriptSrc + imgSrc + connectSrc ✓ |
+| `maps.gstatic.com` | Maps SDK | scriptSrc + imgSrc ✓ |
+| `fonts.googleapis.com` | Maps font CSS + Service Worker | styleSrc + connectSrc ✓ |
+| `fonts.gstatic.com` | Service Worker font fetch | fontSrc + connectSrc ✓ |
+| **`places.googleapis.com`** | **Places Autocomplete library + AutocompleteService XHR** | **MISSING from both scriptSrc AND connectSrc — the bug** |
+| `generativelanguage.googleapis.com` | Gemini fetch in search.service / ask-nearby.service / bulkImport.service / geminiEmbeddings | **N/A — server-side only**, Node process makes the fetch, never reaches browser |
+
+Only `places.googleapis.com` is the real gap. The Gemini host is intentionally absent from browser CSP because all Gemini fetches happen server-side.
+
+### Phase 1 — CSP fix (src/app.ts)
+
+- `scriptSrc[]`: added `https://places.googleapis.com` adjacent to `https://maps.gstatic.com` with comment "Places Autocomplete (LocationPicker + Search Ask-Nearby Custom Area) — Session 128.48"
+- `connectSrc[]`: added the same entry adjacent to `https://maps.googleapis.com` with the matching comment
+
+Both directives needed:
+- `script-src`: the @googlemaps/places library (post-2024 API surface) loads sub-scripts from `places.googleapis.com`
+- `connect-src`: `AutocompleteService` fetch + `PlacesService.getDetails` XHRs hit `places.googleapis.com` directly
+
+### Phase 2 — Messages spacing (src/pages/Messages.tsx)
+
+5 spacing-only edits (no colors/fonts/sizes/layout changes):
+
+| Line | Before | After | Effect |
+|---|---|---|---|
+| Header sticky band padding | `'... 0'` | `'... 16px'` | Breathing below the yellow gradient bar |
+| Title row marginBottom | `12` | `14` | More gap between "Messages" + search pill |
+| Tabs marginTop | `12` | `14` | Same — gap before tabs |
+| Loading skeletons padding | `'8px 16px'` | `'14px 16px 10px'` | Top breathing for skeleton state |
+| Conversation list padding | `'8px 16px'` | `'14px 16px 10px'` | Top breathing for first conversation row |
+
+The page uses inline `style={{}}` throughout (futuristic v2 skin pattern per the file header comment), so this matches existing convention rather than introducing Tailwind utilities.
+
+### Phase 3 — CSP regression test (src/__tests__/csp-places.test.ts +3)
+
+Source-text scan (NOT runtime import — mirrors `csp-enforce.test.ts`'s deliberate avoidance of booting Sentry/Redis/Prisma to verify directive contents):
+1. `scriptSrc` body contains `https://places.googleapis.com`
+2. `connectSrc` body contains `https://places.googleapis.com`
+3. **Regression safety net** — `maps.googleapis.com` preserved in BOTH directives (catches a future refactor that removes the wrong line)
+
+### Phase 4 — Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **534/534 green** (was 531; +3) |
+| `npm run typecheck` | 3 projects clean (Rule G) |
+| `npm run build` | clean (Vite + Workbox SW manifest) |
+
+### Phase 5 — Deploy + Rule E smoke battery
+
+`flyctl deploy -a dukanchi-app` → **v112 → v113**.
+
+After 90s wait:
+
+| Smoke | Expected | Got |
+|---|---|---|
+| `GET /health` | `200 application/json` | ✅ `200 application/json; charset=utf-8` |
+| CSP `script-src` includes `places.googleapis.com` | yes | ✅ `script-src 'self' 'unsafe-inline' https://*.i.posthog.com https://maps.googleapis.com https://maps.gstatic.com https://places.googleapis.com https://unpkg.com` |
+| CSP `connect-src` includes `places.googleapis.com` | yes | ✅ `connect-src 'self' data: blob: https://*.i.posthog.com https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://nominatim.openstreetmap.org https://maps.googleapis.com https://places.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://pub-267a374465a24f869e4bb90f6217d03f.r2.dev wss://dukanchi.com wss:` |
+| `maps.googleapis.com` preserved in scriptSrc/imgSrc/connectSrc | yes | ✅ all 3 directives still carry it |
+| `curl -A 'Chrome/120' /` | 200 | ✅ HTTP 200 |
+
+Deploy warning observed: Fly's smoke-check reported "not listening on 0.0.0.0:3000" — false positive (the /health curl above proves the app IS serving traffic at v113). The hallpass process shown is Fly's SSH proxy, not our app.
+
+### Deviations
+
+None. Audit confirmed `places.googleapis.com` is the only client-side CSP gap. No other Google subdomains surfaced.
+
+### Awaiting
+
+Founder browser smoke:
+1. Load `https://dukanchi.com/` → open DevTools Console (F12)
+2. Click "Change" location → type "rohini" → predictions should populate
+3. Open Messages page → confirm visual breathing room around header/search/tabs/first card
+4. Console must show ZERO new CSP errors for any Google subdomain
+
+If any CSP violation appears for a subdomain we missed, founder forwards the screenshot and we follow up in a separate PR.
+
 ## 2026-06-15 — Session 128.47 — Phase 5.3 coverage push: search.service + ask-nearby.service → Phase-5 ✅ COMPLETE (+44, IDOR-marquee on respond/getPending, NO bugs)
 
 **Goal:** Close the Phase-5 coverage wave. `search.service.ts` (334 LOC, 5 methods on `SearchService`) + `ask-nearby.service.ts` (296 LOC, 6 module-level exports) — both touch external services (Gemini via safeFetch, Redis cache, socket emit, push) and both carry IDOR boundaries: `searchHistory` (WHERE userId), `getMyRequests` (WHERE customerId), `getPendingRequests` (WHERE ownerId), and the marquee `respondToAskNearby` 403 gate. Target 80%+ lines on both; 100% on IDOR-bearing methods. Encode INTENDED SPEC; STOP on real bugs.
