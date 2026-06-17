@@ -33,7 +33,21 @@ export default function MessagesPage() {
   const [suggestedStores, setSuggestedStores] = useState<any[]>([]);
   const [askNearbyCards, setAskNearbyCards] = useState<any[]>([]);
   const [respondingIds, setRespondingIds] = useState<Set<string>>(new Set());
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+
+  // Full-screen image lightbox: ESC key closes, body scroll locked while open.
+  useEffect(() => {
+    if (!lightboxImage) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setLightboxImage(null); };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightboxImage]);
   const reopenCountRef = useRef(0);
   const { token, user, isLoading: authLoading } = useAuth();
   const { location: userLocCtx } = useUserLocation();
@@ -358,13 +372,20 @@ export default function MessagesPage() {
                   {card.images && card.images.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                       {card.images.map((imgUrl: string, idx: number) => (
-                        <img
+                        <button
                           key={idx}
-                          src={imgUrl}
-                          alt={`Attached photo ${idx + 1}`}
-                          loading="lazy"
-                          style={{ width: 96, height: 96, borderRadius: 12, objectFit: 'cover', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0 }}
-                        />
+                          type="button"
+                          onClick={() => setLightboxImage(imgUrl)}
+                          aria-label={`View attached photo ${idx + 1} fullscreen`}
+                          style={{ padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: 12, lineHeight: 0 }}
+                        >
+                          <img
+                            src={imgUrl}
+                            alt={`Attached photo ${idx + 1}`}
+                            loading="lazy"
+                            style={{ width: 96, height: 96, borderRadius: 12, objectFit: 'cover', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0, display: 'block' }}
+                          />
+                        </button>
                       ))}
                     </div>
                   )}
@@ -522,6 +543,63 @@ export default function MessagesPage() {
           </div>
         )}
       </div>
+
+      {/* Session 128.57: full-screen image lightbox. Backdrop click + ESC + X
+          button all close. Body scroll locked while open. Inline (no dep). */}
+      {lightboxImage && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Attached photo viewer"
+          onClick={() => setLightboxImage(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.92)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            cursor: 'zoom-out',
+            padding: 16,
+          }}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setLightboxImage(null); }}
+            aria-label="Close photo viewer"
+            style={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.15)',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={24} color="#fff" />
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Attached photo full view"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              borderRadius: 8,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              cursor: 'default',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
