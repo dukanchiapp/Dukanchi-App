@@ -220,6 +220,11 @@ export async function respondToAskNearby(
 
   if (answer === 'yes') {
     const { customerId, query } = response.request;
+    // Pass through the customer's attached images so the resulting chat
+    // thread shows the photos the retailer just reviewed on their Queries
+    // card. Without this, the chat had only text — the retailer/customer
+    // lost visual context of what was actually asked about.
+    const customerImages = response.request.images || [];
 
     // Find or create conversation by sending the first auto-message
     await prisma.message.create({
@@ -227,6 +232,7 @@ export async function respondToAskNearby(
         senderId: ownerId,
         receiverId: customerId,
         message: `Haan! '${query}' available hai hamare paas. Aao ya chat karein! 🏪`,
+        imageUrls: customerImages,
       },
     });
 
