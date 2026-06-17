@@ -1,5 +1,64 @@
 # G-AI — Session Change Log
 
+## 2026-06-17 — Session 128.58 — Chat: include customer photos in accept-query auto-message + chat-thread lightbox (Fly v120 → v121)
+
+**Bug founder-spotted on v120:** when a retailer accepts a Queries stock request ("Haan, hai stock!"), the resulting chat thread showed only the auto-message text — **without** the customer's attached photo that was visible on the Queries card. Visual context lost between Queries → Chat hand-off.
+
+### Root cause — backend
+
+`respondToAskNearby` (`src/modules/ask-nearby/ask-nearby.service.ts`) "yes" branch (line 221-231) created the auto-chat message without passing the customer's attached `imageUrls`. The relation `response.request` is already included via `include: { request: true }` (line 209), so `response.request.images` is selectable.
+
+**Fix:** add `const customerImages = response.request.images || [];` + pass `imageUrls: customerImages` into `prisma.message.create`. Prisma schema already has `Message.imageUrls String[] @default([])` (verified in recon).
+
+### Frontend — Chat.tsx lightbox extension
+
+Chat.tsx already supported both `imageUrl` (legacy single) and `imageUrls` (array) in the message renderer (line 594-602) — but the `<img>` had no click affordance. Wrapped each in a `<button type="button">` trigger that opens a full-screen lightbox. Same pattern as Messages.tsx Queries-card lightbox shipped in #227 / v120.
+
+**Three close paths:**
+- Backdrop tap (zoom-out cursor)
+- X button (44×44 touch target)
+- ESC key
+
+**Body scroll lock** while open. `e.stopPropagation` on image so tapping the photo doesn't close the modal. Full a11y: `role="dialog"` + `aria-modal="true"` + per-image aria-labels.
+
+### Test compatibility
+
+Existing `ask-nearby.service.test.ts` "owner OK + answer=yes" test (line 354-369) asserts only `senderId` / `receiverId` / `message.toContain('milk')` individually — does NOT use `.toEqual()` on the whole data object. Adding `imageUrls` is additive, not breaking. 648/648 stayed green.
+
+| Metric | Value |
+|---|---|
+| PR | [#229](https://github.com/dukanchiapp/Dukanchi-App/pull/229) merged `b9b95dd` |
+| Files | `src/modules/ask-nearby/ask-nearby.service.ts` (+3 lines: const + imageUrls field + comment) · `src/pages/Chat.tsx` (+85/−3 lines: lightbox state + effect + img→button wrapper + overlay JSX) |
+| Tests | 648/648 green (unchanged — additive backend change, no test asserted exact `.toEqual()` shape) |
+| Fly version | 120 → **121** |
+| Rule A | N/A — no route change |
+| Rule E | ✅ deployed v121, smoke battery green |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean |
+
+### Rule E smoke + bundle verification (v121)
+
+| Smoke | Result |
+|---|---|
+| `/health` | `200 application/json` · `db:up redis:up` ✅ |
+| fly logs error scan | **zero** error/fatal/crash entries ✅ |
+| Chat chunk hash v120 → v121 | new **`Chat-D-AB_syc.js`** (19,175 bytes; rebuilt) ✅ |
+| Prod Chat chunk content scan | `aria-modal` = 1 ✅ · `body.style.overflow` (scroll lock save+apply+restore) = 3 ✅ · `Close photo viewer` (X aria) = 1 ✅ |
+
+### Awaiting
+
+Founder visual smoke on prod v121:
+1. As customer, send an ask-nearby request with attached photo via Search
+2. As retailer, open Messages → Queries tab → tap "Haan, hai stock!"
+3. The resulting auto-chat message in the chat thread should **include the customer's photo inline** (was text-only on v120)
+4. Tap the photo → fullscreen lightbox opens → ESC/X/backdrop all close
+
 ## 2026-06-17 — Session 128.57 — Messages: full-screen lightbox on attached photo click (Fly v119 → v120)
 
 Founder-spotted on v119 after the previous PR shipped clickable 96×96 photo previews on the retailer Queries card — tapping a photo did nothing. Industry-standard pattern (WhatsApp / Instagram) is to open the image in a full-screen viewer.
