@@ -121,7 +121,7 @@ export default function SignupPage() {
             </div>
           )}
 
-          <form onSubmit={handleSignup} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <form onSubmit={handleSignup} autoComplete="off" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <label htmlFor="account-type" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--f-text-2)', marginBottom: 6 }}>
@@ -155,6 +155,7 @@ export default function SignupPage() {
                 <input
                   type="text"
                   required
+                  autoComplete="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Full Name *"
@@ -167,6 +168,7 @@ export default function SignupPage() {
                 <input
                   type="tel"
                   required
+                  autoComplete="off"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="Phone Number *"
@@ -179,6 +181,7 @@ export default function SignupPage() {
                 <input
                   type="password"
                   required
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Password *"
