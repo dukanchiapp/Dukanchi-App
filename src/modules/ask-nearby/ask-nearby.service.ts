@@ -288,6 +288,7 @@ export async function getPendingRequests(ownerId: string) {
           latitude: true,
           longitude: true,
           customerId: true,
+          images: true,
           customer: { select: { name: true } }
         }
       }

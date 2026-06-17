@@ -292,17 +292,17 @@ export default function MessagesPage() {
           {/* Tabs */}
           {user?.role !== 'customer' && (
             <div style={{ display: 'flex', marginTop: 14 }}>
-              <button 
+              <button
                 onClick={() => setActiveTab('chats')}
-                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'chats' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'chats' ? '#111827' : 'rgba(0,0,0,0.55)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
                 Chats
-                {activeTab === 'chats' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
+                {activeTab === 'chats' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: '#111827', borderRadius: '3px 3px 0 0' }} />}
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('queries')}
-                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'queries' ? 'white' : 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '12px 0', border: 'none', background: 'transparent', color: activeTab === 'queries' ? '#111827' : 'rgba(0,0,0,0.55)', fontWeight: 700, fontSize: 15, position: 'relative', cursor: 'pointer' }}>
                 Queries {askNearbyCards.filter(c => !c.accepted).length > 0 && <span style={{ marginLeft: 6, background: 'var(--f-orange)', color: 'white', fontSize: 11, padding: '2px 6px', borderRadius: 10 }}>{askNearbyCards.filter(c => !c.accepted).length}</span>}
-                {activeTab === 'queries' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: 'white', borderRadius: '3px 3px 0 0' }} />}
+                {activeTab === 'queries' && <div style={{ position: 'absolute', bottom: 0, left: '20%', right: '20%', height: 3, background: '#111827', borderRadius: '3px 3px 0 0' }} />}
               </button>
             </div>
           )}
@@ -356,13 +356,14 @@ export default function MessagesPage() {
                   </p>
                   
                   {card.images && card.images.length > 0 && (
-                    <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                       {card.images.map((imgUrl: string, idx: number) => (
                         <img
                           key={idx}
                           src={imgUrl}
-                          alt=""
-                          style={{ width: 60, height: 60, borderRadius: 10, objectFit: 'cover' }}
+                          alt={`Attached photo ${idx + 1}`}
+                          loading="lazy"
+                          style={{ width: 96, height: 96, borderRadius: 12, objectFit: 'cover', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', flexShrink: 0 }}
                         />
                       ))}
                     </div>
