@@ -1,5 +1,60 @@
 # G-AI — Session Change Log
 
+## 2026-06-17 — Session 128.54 — Doodle becomes immediate cover fallback — logoUrl-blur banner layer removed (Fly v116 → v117)
+
+**Bug discovered (founder verified via v116 production screenshot):** stores without `coverUrl` but WITH `logoUrl` were rendering blurred-logo banners instead of the Dukanchi doodle pattern. The intermediate `store.logoUrl` blur-fallback (introduced before #217) was overriding the doodle for any store with a logo.
+
+**Founder spec from #217:** *"doodle for all stores without coverUrl, regardless of old/new"* — the logoUrl-blur layer was an unintended override. This PR removes it.
+
+**Fallback chain:**
+
+| Before (3 layers) | After (2 layers) |
+|---|---|
+| 1. `store.coverUrl` → uploaded cover | 1. `store.coverUrl` → uploaded cover |
+| 2. `store.logoUrl` → **blurred + scaled** (the bug) | 2. doodle pattern → **always** |
+| 3. doodle pattern → only when both null | — |
+
+**Scope:** removed 8 lines total — the middle ternary branch in:
+- `src/pages/Profile.tsx` (line 627-628, blur 14px / scale 1.2)
+- `src/pages/StoreProfile.tsx` (line 333-338, blur 14px / scale 1.15)
+
+The small circular 92px logo display elsewhere on the page (Profile.tsx line 662, StoreProfile ~line 407) is UNTOUCHED — different JSX subtree, different purpose.
+
+| Metric | Value |
+|---|---|
+| PR | [#221](https://github.com/dukanchiapp/Dukanchi-App/pull/221) merged `24334ce` |
+| Files | `src/pages/Profile.tsx` (−2 lines) · `src/pages/StoreProfile.tsx` (−6 lines) |
+| Tests | 648/648 green (unchanged — no test references logoUrl-blur banner) |
+| Fly version | 116 → **117** |
+| Rule A | N/A — no route change |
+| Rule E | ✅ deployed v117, smoke battery green |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean |
+
+### Rule E smoke battery (v117)
+
+| Smoke | Result |
+|---|---|
+| `/health` | `200 application/json` · `db:up redis:up` ✅ |
+| `/store-cover-doodle.png` HEAD | `HTTP/2 200` ✅ |
+| fly logs error scan | **zero** error/fatal/crash entries ✅ |
+| Profile chunk hash (v116 → v117) | `Profile-CW-mjaRw.js` → **`Profile-7_BN5S5g.js`** (rebuilt) ✅ |
+| StoreProfile chunk hash (v116 → v117) | `StoreProfile-DVLl0HvN.js` → **`StoreProfile--Sq3HOnA.js`** (rebuilt) ✅ |
+| Profile chunk content | `blur(14px)` hits = **0** · `store-cover-doodle` hits = **1** ✅ |
+| StoreProfile chunk content | `blur(14px)` hits = **0** · `store-cover-doodle` hits = **1** ✅ |
+
+The bundle-content scan confirms: logoUrl-blur code is GONE from prod chunks; doodle code remains intact in both.
+
+### Awaiting
+
+Founder visual smoke on prod v117: store with no `coverUrl` but WITH `logoUrl` should now show the **Dukanchi doodle banner**, NOT the blurred-logo banner. Small 92px circular logo on the same page is unchanged.
+
 ## 2026-06-16 — Session 128.53 — Critical UX fix: disable browser autofill on signup form (saved-login credentials were pre-filling the new-account form)
 
 **Bug discovered:** Founder verified that visiting `/signup` in Chrome/Safari auto-populated the form with saved login credentials (the founder's own admin phone + password from when they last logged in via the same browser). Critical UX/security bug for pre-launch testing — any visitor to /signup saw another user's credentials pre-filled.
