@@ -624,8 +624,6 @@ export default function ProfilePage() {
           <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
             {store.coverUrl ? (
               <img src={store.coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : store.logoUrl ? (
-              <img src={store.logoUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(14px) brightness(0.9)', transform: 'scale(1.2)' }} />
             ) : (
               <div
                 style={{
