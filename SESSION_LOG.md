@@ -1,5 +1,81 @@
 # G-AI — Session Change Log
 
+## 2026-06-17 — Session 128.56 — Messages Queries: include images in backend + 60→96 preview + WCAG AA tab contrast on yellow header (Fly v118 → v119)
+
+**Bugs found (founder verified on v118 after the ask-nearby upload was unbroken):**
+
+| # | Surface | Bug |
+|---|---|---|
+| 3 | Backend data | `getPendingRequests` Prisma select missing `images` field — retailers got empty image arrays on their Queries cards even when customers attached photos |
+| 4 | UI | Queries card image preview hardcoded at 60×60 — too small to recognize the customer's request photo |
+| 5 | A11Y | Yellow Messages header used `rgba(255,255,255,0.6)` for inactive tab text — white-on-yellow fails WCAG AA |
+
+### Bug 3 — data path
+
+| Layer | State |
+|---|---|
+| Prisma schema | `AskNearbyRequest.images String[] @default([])` ✅ exists (line 369) |
+| `sendAskNearby` write | `data: { ..., images: images \|\| [] }` ✅ persists |
+| **`getPendingRequests` read** | `select: { ..., customer }` ❌ **missing `images: true`** |
+| Frontend `Messages.tsx:87` | `item.request.images \|\| []` (always fell through to []) |
+
+Fix: added `images: true` to the request.select block (line 282-293 in ask-nearby.service.ts). Frontend untouched (already reads the field). The companion test in `ask-nearby.service.test.ts:420-432` only asserts WHERE clause + take (the IDOR contract); does NOT assert select-include shape, so this fix is non-breaking.
+
+### Bug 4 — UI parity
+
+| | Before | After |
+|---|---|---|
+| Thumbnail | 60×60, no border | **96×96**, `1px solid #E5E7EB` border, soft shadow |
+| Wrapper | `gap: 6`, no wrap | `gap: 8`, `flexWrap: 'wrap'` |
+| a11y | `alt=""` | `alt="Attached photo N"` + `loading="lazy"` |
+
+Why 96×96 vs PR #223's 80×80 on the Search modal: this is a retailer-facing decision surface (review stock request → yes/no). Bigger previews aid faster decisions. The Search modal's 80×80 is the customer composing their request.
+
+### Bug 5 — A11Y on yellow header
+
+Inactive tab text `rgba(255,255,255,0.6)` on the yellow Dukanchi header — white-on-yellow at 60% opacity fails WCAG AA.
+
+| | Before | After |
+|---|---|---|
+| Active text | `white` | **`#111827`** (near-black) |
+| Inactive text | `rgba(255,255,255,0.6)` | **`rgba(0,0,0,0.55)`** |
+| Underline bar | `background: white` | `background: #111827` |
+
+Dark-on-yellow is the standard high-contrast pairing (think traffic signs).
+
+| Metric | Value |
+|---|---|
+| PR | [#225](https://github.com/dukanchiapp/Dukanchi-App/pull/225) merged `697e44c` |
+| Files | `src/modules/ask-nearby/ask-nearby.service.ts` (+1 line) · `src/pages/Messages.tsx` (3 logical edits: tab styles + thumbnail wrapper + thumbnail img) |
+| Tests | 648/648 green (unchanged — IDOR test asserts WHERE+take only, not select-include shape) |
+| Fly version | 118 → **119** |
+| Rule A | N/A — no route change (existing endpoint, additional field surfaced) |
+| Rule E | ✅ deployed v119, smoke battery green |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean |
+
+### Rule E smoke battery + bundle verification (v119)
+
+| Smoke | Result |
+|---|---|
+| `/health` | `200 application/json` · `db:up redis:up` ✅ |
+| fly logs error scan | **zero** error/fatal/crash entries ✅ |
+| Messages chunk hash v118 → v119 | v119 **`Messages-8OYukFw1.js`** (rebuilt) ✅ |
+| Prod Messages chunk content scan | `width:96` (preview) = 1 ✅ · `#111827` (active tab + underline) = 4 ✅ · `rgba(0,0,0,0.55)` (inactive tab contrast) present (verified via broader grep — first scan's escape pattern was overspecific) ✅ · `rgba(255,255,255,.6)` (old white-on-yellow) = **0** ✅ |
+
+### Awaiting
+
+Founder visual smoke on v119:
+1. As customer in Search: attach photo + send ask-nearby request
+2. As retailer in Messages → Queries tab: confirm the photo appears at **96×96** on the card (was empty in v118 due to Bug 3, was 60×60 in v117 due to Bug 4)
+3. Chats / Queries tabs read clearly as dark text on the yellow header (WCAG AA contrast)
+
 ## 2026-06-17 — Session 128.55 — Ask Nearby: root-cause field-name bug + larger image previews + real error surfacing (Fly v117 → v118)
 
 **Bugs discovered (founder verified on v117 production):**
