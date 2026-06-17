@@ -1,5 +1,75 @@
 # G-AI — Session Change Log
 
+## 2026-06-17 — Session 128.55 — Ask Nearby: root-cause field-name bug + larger image previews + real error surfacing (Fly v117 → v118)
+
+**Bugs discovered (founder verified on v117 production):**
+1. Attached-image thumbnails in the Ask Nearby modal were 40×40px — too small to recognize at a glance
+2. Clicking "Send Request to Nearby Shops" with an attached image surfaced a generic *"Network error, dobara try karo"* toast — the real upload error was hidden
+
+### 🚨 Root cause found during RECON (was NOT a transient)
+
+Every single ask-nearby image upload was 400ing silently. Field-name mismatch:
+
+| Side | Field name |
+|---|---|
+| Server `/api/upload` route (`upload.middleware.ts`) | `upload.single("file")` |
+| Frontend `src/pages/Search.tsx:408` | `formData.append('image', file)` |
+
+Multer rejected every image with `400 "No file uploaded"`. The outer catch surfaced the generic toast — hiding the actual cause.
+
+**Audit:** Greped every frontend `/api/upload` callsite. KYCForm, BulkUpload, PostsGrid×2, RetailerDashboard×3, Profile, Chat **all** correctly use `'file'`. **Search.tsx was the lone offender** — a copy-paste bug from when ask-nearby was wired in.
+
+### Fix scope — 1 file, 3 layers
+
+**Bug 1** (visual hierarchy):
+- Add-image button: 40×40 (SVG 20×20) → **80×80 (SVG 28×28)**
+- Thumbnails: 40×40 → **80×80** with `display: block` on img + a11y `aria-label`
+- Close X button: 12px → 22×22 hit target
+
+**Bug 2** (the actual upload):
+- **(a) ROOT CAUSE FIX**: `formData.append('image' → 'file')` so multer accepts the upload at all
+- (b) Pre-flight 10 MB size guard with Hinglish message ("Image N bahut badi hai (10 MB se zyada)…")
+- (c) Server error body parsing — if upload fails, parse JSON `error`/`message` field and surface it; fallback to `Image upload fail hua (status)` for non-JSON
+- (d) Outer catch constructs `Request bhejne mein dikkat: <err.message>` so all downstream failures (geocoding, /send, etc.) get specific messages too
+
+Two separate `Sentry.captureException` calls now scope by failure surface: `search.askNearby.imageUpload` (with `imageCount`) vs `search.askNearbySend`.
+
+| Metric | Value |
+|---|---|
+| PR | [#223](https://github.com/dukanchiapp/Dukanchi-App/pull/223) merged `8e456cc` |
+| Files | `src/pages/Search.tsx` — +50/−20 (1 file) |
+| Tests | 648/648 green (unchanged — no test covers the modal UI) |
+| Fly version | 117 → **118** |
+| Rule A | N/A — no route change |
+| Rule E | ✅ deployed v118, smoke battery green |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean |
+
+### Rule E smoke battery + bundle verification (v118)
+
+| Smoke | Result |
+|---|---|
+| `/health` | `200 application/json` · `db:up redis:up` ✅ |
+| fly logs error scan | **zero** error/fatal/crash entries ✅ |
+| Search chunk hash v117 → v118 | v117 → **`Search-C1qhkzcl.js`** (35,810 bytes; rebuilt) ✅ |
+| Prod Search chunk content scan | `Request bhejne mein dikkat` = 1 ✅ · `bahut badi hai` = 1 ✅ · `10485760` (10 MB literal, minified) = 1 ✅ · `append('file'` = 1 ✅ · `append('image'` = **0** (old bug GONE) ✅ · `width:80,height:80` = 2 (button + thumbnail) ✅ |
+
+### Diagnostic signal
+
+The prod fly logs for the last 4h surfaced ZERO `upload|ask-nearby|askNearby` entries before the fix — meaning the request never even reached the server (the field-name mismatch made multer reject and the toast fired before /send was attempted). That's consistent with the root-cause being client-side, not transport.
+
+### Awaiting
+
+Founder visual smoke on prod v118:
+1. Open Ask Nearby modal in Search — thumbnails + Add-image button should be **80×80**
+2. Attach an image + click "Send Request to Nearby Shops" — should either **succeed** OR show a **specific error message** (e.g. "Image 1 bahut badi hai…", "Image upload fail hua (413)"), never the generic "Network error, dobara try karo"
+
 ## 2026-06-17 — Session 128.54 — Doodle becomes immediate cover fallback — logoUrl-blur banner layer removed (Fly v116 → v117)
 
 **Bug discovered (founder verified via v116 production screenshot):** stores without `coverUrl` but WITH `logoUrl` were rendering blurred-logo banners instead of the Dukanchi doodle pattern. The intermediate `store.logoUrl` blur-fallback (introduced before #217) was overriding the doodle for any store with a logo.
