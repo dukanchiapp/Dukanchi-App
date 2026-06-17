@@ -1,5 +1,56 @@
 # G-AI — Session Change Log
 
+## 2026-06-16 — Session 128.53 — Critical UX fix: disable browser autofill on signup form (saved-login credentials were pre-filling the new-account form)
+
+**Bug discovered:** Founder verified that visiting `/signup` in Chrome/Safari auto-populated the form with saved login credentials (the founder's own admin phone + password from when they last logged in via the same browser). Critical UX/security bug for pre-launch testing — any visitor to /signup saw another user's credentials pre-filled.
+
+**Root cause:** Signup form's phone + password inputs had no `autoComplete` attributes. Chrome's heuristic matches any password input on the same domain to saved logins regardless of context (login vs signup). The fix is the spec-correct HTML attribute `autoComplete="new-password"` on the password field plus `autoComplete="off"` on the phone field.
+
+**Fix scope:** 4 attribute additions, zero logic changes.
+
+| Element | Attribute added | Rationale |
+|---|---|---|
+| `<form>` wrapper (line 124) | `autoComplete="off"` | Belt-and-suspenders for stubborn browsers |
+| Name input (line 155-156) | `autoComplete="name"` | Helpful + safe |
+| Phone input (line 167-168) | `autoComplete="off"` | New-account identifier, not a returning login |
+| Password input (line 179-180) | `autoComplete="new-password"` | Spec-correct for signup — browsers offer "Suggest strong password" rather than autofilling saved ones |
+
+`Login.tsx` UNCHANGED — autofill UX preserved for returning users (verified via grep: zero `autoComplete` attributes touched in Login.tsx).
+
+**Founder context:** pre-launch, single-developer testing. The founder's admin credentials being saved in their dev browser is the exact source of the auto-fill. No production user impact yet.
+
+**Scope note:** Signup form has 3 inputs (name/phone/password) — NO Confirm Password field exists. Per task spec ("do not invent UI"), did NOT add a 4th input. If a confirm-pw field is added later, it should also carry `autoComplete="new-password"`.
+
+| Metric | Value |
+|---|---|
+| PR | [#219](https://github.com/dukanchiapp/Dukanchi-App/pull/219) merged `629141c` |
+| Files | `src/pages/Signup.tsx` — 4 attribute additions (form + 3 inputs) |
+| Tests | 648/648 green (unchanged) |
+| Rule A | N/A — no route change |
+| Rule E | not invoked — deploy at founder's discretion |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G) |
+| `npm run build` | clean |
+
+### Visual smoke
+
+Local dev server at http://localhost:5173/signup. Founder must verify: open signup page in fresh Chrome window → all 3 inputs appear empty → browser does NOT autofill phone/password with saved admin credentials → clicking password field may offer "Suggest strong password" (this is the CORRECT new-password behavior, not a bug).
+
+### Deferred (P2 follow-up — bundle before retailer onboarding window)
+
+1. **`createAdmin.ts` security cleanup** — script lives in working tree and was committed to git history; should be:
+   - removed from working tree
+   - added to `.gitignore` (or the path it sits under, depending on location)
+   - scrubbed from git history via `git filter-repo` + force-push (after stakeholder warning since this rewrites history)
+2. **Admin password rotation** — the credential that auto-filled into the signup form is the current production admin password. Rotate it once history is scrubbed.
+
+Both items together = ONE bundled security-hardening PR. Founder requested all of this land before retailer onboarding begins.
+
 ## 2026-06-16 — Session 128.52 — Tiled Dukanchi doodle pattern as default cover banner fallback (visual)
 
 **What changed:** replaced the plain gradient (`var(--b-grad)`) layer-3 cover fallback in `src/pages/Profile.tsx` (line 630) and `src/pages/StoreProfile.tsx` (line 340) with a tiled Dukanchi doodle pattern from `public/store-cover-doodle.png`. Fallback chain unchanged elsewhere (coverUrl → logoUrl blurred → NEW doodle, was: gradient).
