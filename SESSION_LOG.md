@@ -1,5 +1,62 @@
 # G-AI — Session Change Log
 
+## 2026-06-17 — Session 128.57 — Messages: full-screen lightbox on attached photo click (Fly v119 → v120)
+
+Founder-spotted on v119 after the previous PR shipped clickable 96×96 photo previews on the retailer Queries card — tapping a photo did nothing. Industry-standard pattern (WhatsApp / Instagram) is to open the image in a full-screen viewer.
+
+**Implementation:** inline component, **no new dependency**. One `useState<string | null>` for the open URL + one `useEffect` for ESC + scroll lock.
+
+**Three close paths:**
+- Backdrop tap (zoom-out cursor)
+- X button top-right (44×44 touch target — meets Apple HIG / Material accessibility guidelines)
+- ESC key (keydown listener while open)
+
+**Body scroll lock** while lightbox open. `e.stopPropagation` on the image itself so tapping the photo doesn't close the modal under the user.
+
+**A11Y:**
+- `role="dialog"` + `aria-modal="true"` + `aria-label="Attached photo viewer"` on the overlay
+- `aria-label="View attached photo N fullscreen"` on each thumbnail trigger
+- `aria-label="Close photo viewer"` on the X button
+- Thumbnails wrapped in `<button type="button">` for proper keyboard activation
+- Original 96×96 thumbnail styling from #225 preserved exactly (border + shadow), now inside an unstyled transparent button
+
+| Metric | Value |
+|---|---|
+| PR | [#227](https://github.com/dukanchiapp/Dukanchi-App/pull/227) merged `07baf6b` |
+| Files | `src/pages/Messages.tsx` — **+84/−6 lines** (1 file, 0 new deps) |
+| Tests | 648/648 green (unchanged — no test touches Messages JSX) |
+| Fly version | 119 → **120** |
+| Bundle delta | Messages chunk **20,122 bytes** on v120 (vs v119 was smaller; net +84 source lines → ~+1.5 KB raw before gzip) |
+| Rule A | N/A — no route change |
+| Rule E | ✅ deployed v120, smoke battery green |
+
+### Gates
+
+| Gate | Result |
+|---|---|
+| `npm test` | **648/648 green** (unchanged) |
+| `npm run typecheck` | 3 projects clean (Rule G applied) |
+| `npm run build` | clean |
+
+### Rule E smoke + bundle verification (v120)
+
+| Smoke | Result |
+|---|---|
+| `/health` | `200 application/json` · `db:up redis:up` ✅ |
+| fly logs error scan | **zero** error/fatal/crash entries ✅ |
+| Messages chunk hash v119 → v120 | `Messages-8OYukFw1.js` → **`Messages-6SrjtOXj.js`** (rebuilt) ✅ |
+| Prod chunk content scan | `aria-modal` = 1 ✅ · `Escape` (ESC handler) = 1 ✅ · `Close photo viewer` (X aria) = 1 ✅ · `Attached photo viewer` (overlay aria) = 1 ✅ · `body.style.overflow` (save+apply+restore scroll lock) = 3 ✅ |
+
+### Awaiting
+
+Founder visual smoke on v120 (retailer flow):
+1. As retailer, open Messages → Queries tab
+2. Tap an attached customer photo → fullscreen viewer opens with dark overlay
+3. Backdrop tap → closes
+4. X button (top-right) → closes
+5. ESC key (desktop) → closes
+6. Tapping the image itself does NOT close the modal
+
 ## 2026-06-17 — Session 128.56 — Messages Queries: include images in backend + 60→96 preview + WCAG AA tab contrast on yellow header (Fly v118 → v119)
 
 **Bugs found (founder verified on v118 after the ask-nearby upload was unbroken):**
