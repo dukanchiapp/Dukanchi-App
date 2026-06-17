@@ -403,18 +403,44 @@ export default function SearchPage() {
     try {
       let uploadedImageUrls: string[] = [];
       if (askImages.length > 0) {
-        const uploadPromises = askImages.map(async (file) => {
-          const formData = new FormData();
-          formData.append('image', file);
-          const res = await apiFetch('/api/upload', {
-            method: 'POST',
-            body: formData,
+        try {
+          const uploadPromises = askImages.map(async (file, idx) => {
+            // Pre-flight size guard — mirror the server's 10 MB cap so we fail
+            // fast with a human-readable message instead of burning bandwidth
+            // on a request multer will reject.
+            const MAX_BYTES = 10 * 1024 * 1024;
+            if (file.size > MAX_BYTES) {
+              throw new Error(`Image ${idx + 1} bahut badi hai (10 MB se zyada). Chhoti file try karo.`);
+            }
+            const formData = new FormData();
+            // Server expects the field name "file" (multer upload.single("file")).
+            // Was 'image' historically — that mismatch silently 400'd every
+            // ask-nearby image and surfaced as a generic "Network error" toast.
+            formData.append('file', file);
+            const res = await apiFetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (!res.ok) {
+              let serverMsg = '';
+              try {
+                const errBody = await res.json();
+                serverMsg = errBody?.error || errBody?.message || '';
+              } catch { /* non-JSON response, fall through */ }
+              throw new Error(serverMsg || `Image upload fail hua (${res.status})`);
+            }
+            const data = await res.json();
+            if (!data.url) throw new Error('Upload response mein URL nahi mila');
+            return data.url as string;
           });
-          if (!res.ok) throw new Error('Upload failed');
-          const data = await res.json();
-          return data.url;
-        });
-        uploadedImageUrls = await Promise.all(uploadPromises);
+          uploadedImageUrls = await Promise.all(uploadPromises);
+        } catch (uploadErr) {
+          const msg = uploadErr instanceof Error ? uploadErr.message : 'Image upload fail';
+          showToast(msg);
+          Sentry.captureException(uploadErr, { extra: { context: 'search.askNearby.imageUpload', imageCount: askImages.length } });
+          setAskSending(false);
+          return;
+        }
       }
 
       const res = await apiFetch('/api/ask-nearby/send', {
@@ -437,7 +463,10 @@ export default function SearchPage() {
       setAskResult({ sentTo: data.sentTo, storeNames: data.storeNames });
       setAskLimitStatus(prev => prev ? { ...prev, count: prev.count + 1 } : null);
     } catch (err) {
-      showToast('Network error, dobara try karo');
+      const msg = err instanceof Error && err.message
+        ? `Request bhejne mein dikkat: ${err.message}`
+        : 'Network error, dobara try karo';
+      showToast(msg);
       Sentry.captureException(err, { extra: { context: 'search.askNearbySend' } });
     } finally {
       setAskSending(false);
@@ -1176,9 +1205,9 @@ export default function SearchPage() {
                         {/* Session 128: 3 Image Upload Support */}
                         <div style={{ position: 'absolute', bottom: 20, left: 16, right: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
                           <label style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 10,
-                            background: '#fff', border: '1px solid #D1D5DB', cursor: 'pointer', color: 'var(--b-ink)',
-                            boxShadow: '0 2px 6px rgba(0,0,0,0.05)', transition: 'all 0.2s'
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', width: 80, height: 80, borderRadius: 12,
+                            background: '#fff', border: '1px solid #E5E7EB', cursor: 'pointer', color: 'var(--b-ink)',
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.05)', transition: 'all 0.2s'
                           }}>
                             <input
                               type="file"
@@ -1192,16 +1221,17 @@ export default function SearchPage() {
                                 }
                               }}
                             />
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                           </label>
                           {askImages.map((file, idx) => (
-                            <div key={idx} style={{ position: 'relative', width: 40, height: 40, borderRadius: 10, overflow: 'hidden', border: '1px solid #D1D5DB' }}>
-                              <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <div key={idx} style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', border: '1px solid #E5E7EB', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                              <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                               <button
                                 onClick={() => setAskImages(prev => prev.filter((_, i) => i !== idx))}
-                                style={{ position: 'absolute', top: 2, right: 2, background: 'rgba(0,0,0,0.7)', borderRadius: '50%', padding: 3, border: 'none', cursor: 'pointer' }}
+                                aria-label="Remove attached image"
+                                style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)', borderRadius: '50%', padding: 0, border: 'none', cursor: 'pointer' }}
                               >
-                                <X size={12} color="#fff" />
+                                <X size={14} color="#fff" />
                               </button>
                             </div>
                           ))}
